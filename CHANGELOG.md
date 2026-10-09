@@ -56,3 +56,12 @@ Changed:
 - `CHANGELOG.md` — this entry; prior entries preserved unchanged, with one clarifying note added (see above) rather than rewritten, to avoid losing history.
 
 No backend/frontend/API/DB/auth/billing/Telegram/SMS/AI/Planning-Engine code was created. No new phases, features, or scope were added. No open question was answered or guessed. No secret, password, token, or credential is included in this file or in any commit message.
+
+### 2026-10-09 — Fourth Correction: Q-003 Restored; GitHub Access Reported Precisely
+`docs:` Commit `46563bec73dd965d392949be0dd5318d95edd087` on branch `docs/phase0-correction-pass-3` (added to open PR #1), per project owner's two requested fixes after reviewing commit `3b7c2dd3849ccc4f9f64d9baf0b0570487fecbb4`.
+
+Changed:
+- `PROJECT_STATE.md` — the "Open Questions" summary line had silently dropped Q-003 (depth of Billing in MVP) when previously written as "Q-001, Q-002, Q-004 through Q-010"; restored to explicitly name Q-001 through Q-011. Replaced the general claim about connector access with a precise, event-by-event, tested-only log, separated by environment (Claude's GitHub connector / Claude's manually-supplied temporary token / the Supervisor's own tooling — explicitly marked untested and not inferred from the other two) and by operation (Read vs. Write reported independently).
+- `OPEN_QUESTIONS.md` — Q-011 rewritten in the same tested-only, environment-separated, Read/Write-separated format as above, replacing the earlier narrative-style summary with a chronological table per environment.
+
+No backend/frontend/API/DB/auth/billing/Telegram/SMS/AI/Planning-Engine code. No new phases, features, or scope. No open question answered or closed on the project owner's behalf. `main` was not touched; all work stayed on `docs/phase0-correction-pass-3`.

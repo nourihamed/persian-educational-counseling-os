@@ -14,7 +14,7 @@ Scope authorized: documentation foundation only. Explicitly NOT authorized: back
 **Phase 0 is NOT marked APPROVED or DONE.** Final status is set only by the Supervisor Review process (see `SUPERVISOR_REVIEW.md`), not by this file.
 
 ### Current Milestone
-Third documentation correction pass, requested directly by Supervisor Review instruction, to fix remaining staleness in `PROJECT_STATE.md`/`ROADMAP.md`/`CHANGELOG.md`/`OPEN_QUESTIONS.md` and prepare all documents for an independent final Phase 0 review.
+Open Pull Request **#1** (branch `docs/phase0-correction-pass-3` → `main`), carrying three successive rounds of Supervisor-requested documentation corrections, is awaiting independent Supervisor re-review before merge. No milestone work is pending creation of the PR — it already exists and has been updated in place across all three rounds.
 
 ### Overall Progress
 Documentation foundation: present on `main` (commit `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`) and being further corrected on a separate branch (see below) pending review/merge.
@@ -32,7 +32,7 @@ Implementation: 0% (by design — no application code exists).
   - **Claude's environment, this session, via the connected OAuth-based GitHub connector ("Claude" App):** Read tested — succeeded once while the repository was temporarily public, failed (`404`) while private. Write tested — failed once while public (`403 Resource not accessible by integration`); not re-tested while private.
   - **Claude's environment, this session, via a manually supplied, short-lived Personal Access Token pasted into the conversation by the project owner:** Read tested — succeeded (repeatedly). Write tested — succeeded (two pushes to `main`, one push to this branch, one Pull Request created via the GitHub REST API). The project owner was asked to revoke this token after use each time it was supplied.
   - **The Supervisor's own environment/GitHub tooling:** Not tested, not observed, and not inferred by Claude in this session. Nothing here implies the Supervisor's access works or does not work — that is a separate, untested system. Do not read Claude's connector results as evidence about the Supervisor's tooling, or vice versa.
-- All commits currently on `main` (`bd24cf8d...`, `994d4529...`) and the commit on this branch (`3b7c2dd3...`) were made via the manual-token path described above, not via the connector.
+- All commits currently on `main` (`bd24cf8d...`, `994d4529...`) and all commits on this branch so far (`3b7c2dd3...`, superseded by the current branch HEAD `46563bec73dd965d392949be0dd5318d95edd087`) were made via the manual-token path described above, not via the connector.
 
 ### Completed
 - [x] 14 foundation documents authored (PRODUCT_REQUIREMENTS, PROJECT_SCOPE, ARCHITECTURE, DATABASE, API, ROADMAP, PROJECT_STATE, DECISION_LOG, OPEN_QUESTIONS, TEST_PLAN, SECURITY, CHANGELOG, DEVELOPMENT_GUIDE, README)
@@ -42,8 +42,8 @@ Implementation: 0% (by design — no application code exists).
 - [x] Confirmed no production feature implemented in any commit so far
 
 ### In Progress
-- This third correction pass (branch `docs/phase0-correction-pass-3`): fixing stale commit references in `PROJECT_STATE.md`, `ROADMAP.md`, `CHANGELOG.md`; re-examining `OPEN_QUESTIONS.md` Q-011 against the actual current (non-)state of connector access; confirming `SUPERVISOR_REVIEW.md` stays a neutral placeholder.
-- Opening a Pull Request from this branch into `main` for review, per explicit instruction not to push corrections directly to `main` this time. See Session Report for whether PR creation succeeded.
+- **Pull Request #1 is open** (`docs/phase0-correction-pass-3` → `main`, not merged) and awaiting independent Supervisor re-review. It is not "being opened" — it already exists; this update is the third commit pushed to the same branch, added to the same open PR.
+- No other work is in progress. `main` has not been touched by any of the three correction rounds.
 
 ### Blocked
 - Phase 0 final sign-off is blocked on **Supervisor Review**, not yet performed. See `SUPERVISOR_REVIEW.md` (placeholder only).
@@ -60,7 +60,11 @@ Implementation: 0% (by design — no application code exists).
 See `OPEN_QUESTIONS.md` for full detail. All of the following remain open and unanswered by the project owner: **Q-001** (tenant isolation mechanism), **Q-002** (MVP boundary), **Q-003** (depth of Billing in MVP — real Payment Gateway vs. Mock-only), **Q-004** (which Iranian payment gateway), **Q-005** (Telegram Bot setup), **Q-006** (which Iranian SMS provider), **Q-007** (Parent default access level), **Q-008** (default calendar/timezone handling), **Q-009** (initial Risk Engine sophistication), **Q-010** (hosting/deployment target). **Q-011** (GitHub repository access) is open/qualified, not simply resolved — see the "Repository Status (GitHub)" section above and `OPEN_QUESTIONS.md` Q-011 for the precise, tested-only, environment-separated breakdown.
 
 ### Last Verified Commit
-`994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` on `main` — directly confirmed by Claude via `git log`/`git ls-remote` against the real repository immediately before this update. This confirms the commit exists and matches its reported message; it is **not** a Supervisor content review and is **not** an approval of any kind.
+These are two separate facts about two separate refs — do not conflate them:
+- **On `main`:** `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` — directly confirmed by Claude via `git log`/`git ls-remote` against the real repository. `main` has not changed since this commit; this correction pass has not touched `main`.
+- **On branch `docs/phase0-correction-pass-3` (the branch backing open PR #1):** `46563bec73dd965d392949be0dd5318d95edd087` — the current HEAD of this branch, directly confirmed by Claude via `git log` immediately before this update. This supersedes the branch's previous commit `3b7c2dd3849ccc4f9f64d9baf0b0570487fecbb4`, which is no longer the branch's latest commit.
+
+In both cases, Claude confirming that a commit exists on a ref is not a Supervisor content review and is not an approval of any kind.
 
 ### Last Test Result
 — N/A (Phase 0 is documentation-only; `TEST_PLAN.md` defines future test strategy, nothing to run yet)
