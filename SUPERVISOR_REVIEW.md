@@ -47,4 +47,4 @@ NOT APPROVED / APPROVED
 
 ## تاریخچه Reviewها
 
-_(هنوز هیچ Review رسمی در این‌جا ثبت نشده است. وضعیت فعلی در `PROJECT_STATE.md` به‌عنوان "Phase 0 — IN PROGRESS — Pending Supervisor Approval" منعکس شده و تا دریافت متن واقعی Review، همین‌جا باقی می‌ماند.)_
+_(هنوز هیچ Review رسمی در این‌جا ثبت نشده است. وضعیت فعلی در `PROJECT_STATE.md` و `ROADMAP.md` به‌عنوان "Phase 0 — IN PROGRESS — Pending Supervisor Review" منعکس شده و تا دریافت متن واقعی Review، همین‌جا باقی می‌ماند. هیچ وضعیت APPROVED یا CONDITIONAL PASS بدون دریافت متن واقعی Review از Supervisor در این فایل ثبت نشده و نخواهد شد.)_

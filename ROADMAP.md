@@ -37,8 +37,15 @@ Status: DRAFT — Phase 0 — Pending Approval
 | 28 | Production Readiness | چک‌لیست بخش ۷۵ |
 
 ## وضعیت فعلی
-**Phase 0 — IN PROGRESS — Pending Supervisor Approval.**
+**Phase 0 — IN PROGRESS — Pending Supervisor Review.**
 
-مستندات فاز ۰ در Repository گیت‌هاب (`https://github.com/nourihamed/persian-educational-counseling-os`) موجود است (آخرین Commit تأییدشده: `bd24cf8de6e836eea5602fd504530f34343e80fa` — `docs: establish Phase 0 project foundation`، طبق تأیید مالک پروژه/Supervisor Review). این وضعیت به معنای **تأیید نهایی (APPROVED)** فاز ۰ نیست؛ تأیید نهایی فقط از طریق فرآیند رسمی Supervisor Review (`SUPERVISOR_REVIEW.md`) ثبت می‌شود.
+آخرین Commit واقعی و مستقیماً تأییدشده (توسط `git log`/`git ls-remote` روی خود Repository) روی شاخه `main`:
+```
+994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec
+docs: Phase 0 correction pass — align docs with actual repo state, add SUPERVISOR_REVIEW.md placeholder
+```
+این تأیید صرفاً به این معنی است که این Commit واقعاً در Repository وجود دارد — **نه** این‌که محتوای آن از نظر معماری یا کسب‌وکار توسط یک Supervisor مستقل بازبینی یا تأیید شده باشد. تأیید نهایی فاز ۰ فقط از طریق فرآیند رسمی Supervisor Review (`SUPERVISOR_REVIEW.md`) ثبت می‌شود و هنوز ثبت نشده است.
 
-**Phase 1 شروع نشده و مجاز اعلام نشده است.** هیچ کاری از فاز ۱ تا دریافت تأیید صریح مالک پروژه/Supervisor آغاز نمی‌شود.
+این سومین دور اصلاح مستندات (روی شاخه `docs/phase0-correction-pass-3`، نه مستقیم روی `main`) در حال انجام است تا اسناد برای همان بازبینی مستقل آماده شوند.
+
+**Phase 1 شروع نشده و مجاز اعلام نشده است. هیچ فاز، قابلیت یا دامنه جدیدی به این Roadmap اضافه نشده است.** هیچ کاری از فاز ۱ تا دریافت تأیید صریح مالک پروژه/Supervisor آغاز نمی‌شود.

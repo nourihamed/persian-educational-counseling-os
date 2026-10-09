@@ -1,75 +1,70 @@
 # PROJECT_STATE.md
 ## Operational Memory — Single Source of Truth for "Where are we now"
 
-Last Updated: 2026-10-08
+Last Updated: 2026-10-09
 
 ---
 
 ### Current Phase
-**PHASE 0 — Product & Business Model Foundation — IN PROGRESS (Pending Supervisor Approval)**
+**PHASE 0 — Product & Business Model Foundation — IN PROGRESS (Pending Supervisor Review)**
 
 Authorized by: project owner.
-Scope authorized: documentation foundation only. Explicitly NOT authorized: backend code, frontend code, database migrations, authentication, billing implementation, Telegram, SMS, AI, or any other application feature.
+Scope authorized: documentation foundation only. Explicitly NOT authorized: backend code, frontend code, database migrations, authentication, billing implementation, Telegram, SMS, AI, Planning Engine, or any other application feature.
 
 **Phase 0 is NOT marked APPROVED or DONE.** Final status is set only by the Supervisor Review process (see `SUPERVISOR_REVIEW.md`), not by this file.
 
 ### Current Milestone
-Phase 0 deliverable: 14 foundation documents, internally consistent, present in the GitHub repository. A correction pass (this update) was requested by the project owner based on the latest Supervisor Review, to align documentation with the repository's actual state.
+Third documentation correction pass, requested directly by Supervisor Review instruction, to fix remaining staleness in `PROJECT_STATE.md`/`ROADMAP.md`/`CHANGELOG.md`/`OPEN_QUESTIONS.md` and prepare all documents for an independent final Phase 0 review.
 
 ### Overall Progress
-Documentation foundation: present in the GitHub repository (see Repository Status below).
+Documentation foundation: present on `main` (commit `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`) and being further corrected on a separate branch (see below) pending review/merge.
 Implementation: 0% (by design — no application code exists).
 
+### Three distinct things this file tracks separately (do not conflate them)
+1. **Latest commit actually in the GitHub repository (`main`)** — directly verified by Claude just before this update: `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` ("docs: Phase 0 correction pass — align docs with actual repo state, add SUPERVISOR_REVIEW.md placeholder"). This is a fact about the repository, not a judgment about its quality.
+2. **Latest commit whose document content has been read/authored by Claude** — the same commit above; its content was written in this working process. This is not an independent review.
+3. **Supervisor final approval** — NOT given. No Supervisor Review has been recorded in `SUPERVISOR_REVIEW.md`. Nothing in this repository should be read as Supervisor-approved.
+
 ### Repository Status (GitHub)
-- Repository: `https://github.com/nourihamed/persian-educational-counseling-os` (made temporarily public by the project owner to unblock connector access; access level may change again — check GitHub directly for current visibility)
-- Latest known commit at time of connection: `bd24cf8de6e836eea5602fd504530f34343e80fa`
-- Commit message: `docs: establish Phase 0 project foundation`
-- This commit hash and the 14 files it contains were **independently verified by Claude** via a connected GitHub tool (directory listing fetched directly from the repository), not just reported by the owner.
-- This correction pass (the current update) is being pushed as a new commit on top of the above via the same connected GitHub tool.
-- An earlier commit hash (`102645863f1232b4a93ead00494946cdb9027d43`) was referenced in an earlier session from a local, unpushed git repository Claude created as a staging step. That local commit is superseded by the actual pushed commit above and is kept only as session history (see `DECISION_LOG.md` D-007).
+- Repository: `https://github.com/nourihamed/persian-educational-counseling-os` — currently **private**. Visibility was toggled public→private during this session by the project owner; treat current visibility as private unless re-verified.
+- The connected GitHub tool (OAuth-based connector in this session) does **not** currently have working read or write access to this private repository — repeated attempts returned `404 Not Found` (read) and `403 Resource not accessible by integration` (write) depending on the repository's visibility/App-installation state at the time. This is an unresolved access-configuration gap on the connector path, not a resolved connection. See `OPEN_QUESTIONS.md` Q-011.
+- Actual read/write access in this session has been obtained only via a **manually supplied, short-lived Personal Access Token** that the project owner pasted directly into the conversation and was asked to revoke after each use. All commits currently on `main` (`bd24cf8d...`, `994d4529...`) were pushed this way, not via the connector.
+- This correction pass is being made on branch `docs/phase0-correction-pass-3`, not directly on `main`, pending review (see Next Actions).
 
 ### Completed
-- [x] PRODUCT_REQUIREMENTS.md
-- [x] PROJECT_SCOPE.md
-- [x] ARCHITECTURE.md
-- [x] DATABASE.md
-- [x] API.md
-- [x] ROADMAP.md
-- [x] PROJECT_STATE.md (this file)
-- [x] DECISION_LOG.md
-- [x] OPEN_QUESTIONS.md
-- [x] TEST_PLAN.md
-- [x] SECURITY.md
-- [x] CHANGELOG.md
-- [x] DEVELOPMENT_GUIDE.md
-- [x] README.md
-- [x] Repository connected and Phase 0 documents pushed to GitHub (confirmed by project owner)
-- [x] Internal consistency review (naming collision found and recorded: "Plan" — see DECISION_LOG D-006)
-- [x] Confirmed no production feature implemented
+- [x] 14 foundation documents authored (PRODUCT_REQUIREMENTS, PROJECT_SCOPE, ARCHITECTURE, DATABASE, API, ROADMAP, PROJECT_STATE, DECISION_LOG, OPEN_QUESTIONS, TEST_PLAN, SECURITY, CHANGELOG, DEVELOPMENT_GUIDE, README)
+- [x] `SUPERVISOR_REVIEW.md` placeholder added (15th document)
+- [x] Two commits landed on `main` via manual token-based push: `bd24cf8d...` (initial foundation) and `994d4529...` (first correction pass)
+- [x] Internal consistency review across documents (naming collision found and recorded: "Plan" — see `DECISION_LOG.md` D-006)
+- [x] Confirmed no production feature implemented in any commit so far
 
 ### In Progress
-- Documentation correction pass requested after the latest Supervisor Review (this update): removing stale "push blocked / no GitHub access" language, correcting commit reference, closing Q-011, without declaring Phase 0 Approved or starting Phase 1.
+- This third correction pass (branch `docs/phase0-correction-pass-3`): fixing stale commit references in `PROJECT_STATE.md`, `ROADMAP.md`, `CHANGELOG.md`; re-examining `OPEN_QUESTIONS.md` Q-011 against the actual current (non-)state of connector access; confirming `SUPERVISOR_REVIEW.md` stays a neutral placeholder.
+- Opening a Pull Request from this branch into `main` for review, per explicit instruction not to push corrections directly to `main` this time. See Session Report for whether PR creation succeeded.
 
 ### Blocked
-- Phase 0 final sign-off is blocked on **Supervisor Approval** — not on GitHub access (resolved) and not on an open product question. See `SUPERVISOR_REVIEW.md` (currently a placeholder awaiting the actual review content).
-- Phase 1 (Architecture & Multi-Tenancy deep design + implementation) is explicitly **not started and not authorized**. It cannot start until: (a) Supervisor Approval of Phase 0 is recorded, and (b) Q-001 (tenant isolation mechanism), Q-002 (MVP boundary — draft exists, needs sign-off), and Q-010 (hosting target) are answered by the project owner. None of these has been answered yet; see `OPEN_QUESTIONS.md` for their current status.
+- Phase 0 final sign-off is blocked on **Supervisor Review**, not yet performed. See `SUPERVISOR_REVIEW.md` (placeholder only).
+- Reliable, persistent repository access (read and write) via a proper connector/App installation is still not established — current access depends on manually supplied, temporary tokens. This is an operational risk for future phases, not just a Phase 0 cosmetic issue.
+- Phase 1 (Architecture & Multi-Tenancy deep design + implementation) is explicitly **not started and not authorized**. It cannot start until: (a) a Supervisor Review of Phase 0 is actually recorded in `SUPERVISOR_REVIEW.md`, and (b) Q-001 (tenant isolation mechanism), Q-002 (MVP boundary), and Q-010 (hosting target) are answered by the project owner. None of these has been answered yet.
 
 ### Known Bugs
-— None (no code exists)
+— None (no application code exists)
 
 ### Failed Tests
-— None (no tests exist yet; Phase 0 has no automated tests by design — it is documentation only)
+— None (no tests exist yet; Phase 0 is documentation-only)
 
 ### Open Questions
-See `OPEN_QUESTIONS.md`. Q-011 (GitHub repository access) is now resolved/closed. Q-001, Q-002, Q-004 through Q-010 remain open and unanswered — their status has not been changed in this correction pass, per instruction not to guess.
+See `OPEN_QUESTIONS.md`. Q-001, Q-002, Q-004 through Q-010 remain open and unanswered. Q-011 (GitHub repository access) has been **re-opened/qualified** in this pass — see `OPEN_QUESTIONS.md` for why it is not simply "resolved."
 
 ### Last Verified Commit
-`bd24cf8de6e836eea5602fd504530f34343e80fa` — "docs: establish Phase 0 project foundation" — independently verified by Claude via a connected GitHub tool (repository directory listing fetched directly).
+`994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` on `main` — directly confirmed by Claude via `git log`/`git ls-remote` against the real repository immediately before this update. This confirms the commit exists and matches its reported message; it is **not** a Supervisor content review and is **not** an approval of any kind.
 
 ### Last Test Result
-— N/A (Phase 0 is documentation-only; TEST_PLAN.md defines future test strategy, nothing to run yet)
+— N/A (Phase 0 is documentation-only; `TEST_PLAN.md` defines future test strategy, nothing to run yet)
 
 ### Next Actions
-1. Project owner / Supervisor completes the formal Phase 0 review and records the outcome in `SUPERVISOR_REVIEW.md`.
-2. Project owner answers Q-001 (tenant isolation mechanism), confirms or amends Q-002 (MVP boundary), and answers Q-010 (hosting target).
-3. Phase 1 begins only after both of the above are complete and explicit authorization is given — not automatically.
+1. This branch (`docs/phase0-correction-pass-3`) needs to be reviewed and merged into `main` (via Pull Request if one could be created — see Session Report).
+2. Project owner/Supervisor establishes a reliable, persistent repository connection (proper GitHub App installation scoped to this repo) so future work doesn't depend on manually pasted, temporary tokens.
+3. Project owner/Supervisor performs and records an actual Phase 0 review in `SUPERVISOR_REVIEW.md`.
+4. Project owner answers Q-001 (tenant isolation mechanism), confirms or amends Q-002 (MVP boundary), and answers Q-010 (hosting target).
+5. Phase 1 begins only after all of the above are complete and explicit authorization is given — not automatically.

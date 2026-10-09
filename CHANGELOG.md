@@ -41,5 +41,18 @@ Added:
 
 No architecture, feature, or scope decisions were introduced in this pass beyond what is recorded above in `DECISION_LOG.md`.
 
-### 2026-10-08 — GitHub Connector Access Confirmed; Correction Pass Pushed
-`chore:` A GitHub connector was successfully connected for this session, and the repository (made temporarily public by the project owner to unblock access) was independently read by Claude, confirming the prior commit (`bd24cf8de6e836eea5602fd504530f34343e80fa`) and its 14 files. This correction pass (the entries above) is pushed as a new commit directly via the connected tool, at the project owner's request ("commit تا اینجا").
+### 2026-10-08 — GitHub Connector Access Confirmed (Read-Only); Correction Pass Pushed via Manual Token
+`chore:` A GitHub connector was connected for this session and briefly able to read the repository while it was made temporarily public, confirming the then-current commit (`bd24cf8de6e836eea5602fd504530f34343e80fa`, "docs: establish Phase 0 project foundation") and its 14 files. The connector was never able to write to the repository (write attempts failed with `403 Resource not accessible by integration` while public, and `404 Not Found` once the repository was returned to private). The correction pass described in the "Phase 0 Documentation Correction Pass" entry above was ultimately pushed to `main` as commit `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` using a manually supplied, short-lived Personal Access Token pasted into the conversation by the project owner, not via the connector. The project owner was asked to revoke that token after use.
+
+**Note for anyone reading history out of order:** the commit hash `bd24cf8de6e836eea5602fd504530f34343e80fa` referenced throughout the two entries above is the *first* Phase 0 commit (initial foundation). It was superseded by `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` (the correction pass itself) as the actual latest commit on `main`. Do not read `bd24cf8d...` as the current state of the repository.
+
+### 2026-10-09 — Third Documentation Correction Pass (Commit-Reference Cleanup)
+`docs:` Fix remaining stale commit references and re-examine Q-011, per a direct Supervisor Review instruction. Work done on branch `docs/phase0-correction-pass-3`, not directly on `main`.
+
+Changed:
+- `PROJECT_STATE.md` — corrected "Last Updated" date and "Last Verified Commit" to the actual current `main` HEAD (`994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`), which the previous correction pass had left pointing at the superseded `bd24cf8d...` commit; added an explicit three-way distinction (latest commit in GitHub vs. content reviewed by Claude vs. Supervisor approval); rewrote "Repository Status" to accurately state the connector has no working persistent access and that all pushes so far used manually supplied, temporary tokens; updated Completed/In Progress/Blocked/Next Actions accordingly.
+- `ROADMAP.md` — updated the "وضعیت فعلی" section to reference the correct latest commit (`994d4529...`) instead of the superseded one; made explicit that commit-existence verification is not the same as Supervisor content approval; noted this is the third correction pass, on a separate branch.
+- `OPEN_QUESTIONS.md` — Q-011 re-examined: since the connector does not currently have reliable, persistent access to the repository (only manual, temporary tokens have worked), Q-011 is no longer presented as simply resolved/closed; see the updated entry for the precise, non-guessed status.
+- `CHANGELOG.md` — this entry; prior entries preserved unchanged, with one clarifying note added (see above) rather than rewritten, to avoid losing history.
+
+No backend/frontend/API/DB/auth/billing/Telegram/SMS/AI/Planning-Engine code was created. No new phases, features, or scope were added. No open question was answered or guessed. No secret, password, token, or credential is included in this file or in any commit message.
