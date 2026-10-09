@@ -27,9 +27,12 @@ Implementation: 0% (by design — no application code exists).
 
 ### Repository Status (GitHub)
 - Repository: `https://github.com/nourihamed/persian-educational-counseling-os` — currently **private**. Visibility was toggled public→private during this session by the project owner; treat current visibility as private unless re-verified.
-- The connected GitHub tool (OAuth-based connector in this session) does **not** currently have working read or write access to this private repository — repeated attempts returned `404 Not Found` (read) and `403 Resource not accessible by integration` (write) depending on the repository's visibility/App-installation state at the time. This is an unresolved access-configuration gap on the connector path, not a resolved connection. See `OPEN_QUESTIONS.md` Q-011.
-- Actual read/write access in this session has been obtained only via a **manually supplied, short-lived Personal Access Token** that the project owner pasted directly into the conversation and was asked to revoke after each use. All commits currently on `main` (`bd24cf8d...`, `994d4529...`) were pushed this way, not via the connector.
-- This correction pass is being made on branch `docs/phase0-correction-pass-3`, not directly on `main`, pending review (see Next Actions).
+- This correction pass is being made on branch `docs/phase0-correction-pass-3`, not directly on `main`, and is attached to open Pull Request **#1**, pending review (see Next Actions).
+- A detailed, tested-only, environment-separated breakdown of GitHub access is maintained in `OPEN_QUESTIONS.md` Q-011. Summary only (see that file for the full breakdown and caveats):
+  - **Claude's environment, this session, via the connected OAuth-based GitHub connector ("Claude" App):** Read tested — succeeded once while the repository was temporarily public, failed (`404`) while private. Write tested — failed once while public (`403 Resource not accessible by integration`); not re-tested while private.
+  - **Claude's environment, this session, via a manually supplied, short-lived Personal Access Token pasted into the conversation by the project owner:** Read tested — succeeded (repeatedly). Write tested — succeeded (two pushes to `main`, one push to this branch, one Pull Request created via the GitHub REST API). The project owner was asked to revoke this token after use each time it was supplied.
+  - **The Supervisor's own environment/GitHub tooling:** Not tested, not observed, and not inferred by Claude in this session. Nothing here implies the Supervisor's access works or does not work — that is a separate, untested system. Do not read Claude's connector results as evidence about the Supervisor's tooling, or vice versa.
+- All commits currently on `main` (`bd24cf8d...`, `994d4529...`) and the commit on this branch (`3b7c2dd3...`) were made via the manual-token path described above, not via the connector.
 
 ### Completed
 - [x] 14 foundation documents authored (PRODUCT_REQUIREMENTS, PROJECT_SCOPE, ARCHITECTURE, DATABASE, API, ROADMAP, PROJECT_STATE, DECISION_LOG, OPEN_QUESTIONS, TEST_PLAN, SECURITY, CHANGELOG, DEVELOPMENT_GUIDE, README)
@@ -54,7 +57,7 @@ Implementation: 0% (by design — no application code exists).
 — None (no tests exist yet; Phase 0 is documentation-only)
 
 ### Open Questions
-See `OPEN_QUESTIONS.md`. Q-001, Q-002, Q-004 through Q-010 remain open and unanswered. Q-011 (GitHub repository access) has been **re-opened/qualified** in this pass — see `OPEN_QUESTIONS.md` for why it is not simply "resolved."
+See `OPEN_QUESTIONS.md` for full detail. All of the following remain open and unanswered by the project owner: **Q-001** (tenant isolation mechanism), **Q-002** (MVP boundary), **Q-003** (depth of Billing in MVP — real Payment Gateway vs. Mock-only), **Q-004** (which Iranian payment gateway), **Q-005** (Telegram Bot setup), **Q-006** (which Iranian SMS provider), **Q-007** (Parent default access level), **Q-008** (default calendar/timezone handling), **Q-009** (initial Risk Engine sophistication), **Q-010** (hosting/deployment target). **Q-011** (GitHub repository access) is open/qualified, not simply resolved — see the "Repository Status (GitHub)" section above and `OPEN_QUESTIONS.md` Q-011 for the precise, tested-only, environment-separated breakdown.
 
 ### Last Verified Commit
 `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` on `main` — directly confirmed by Claude via `git log`/`git ls-remote` against the real repository immediately before this update. This confirms the commit exists and matches its reported message; it is **not** a Supervisor content review and is **not** an approval of any kind.
