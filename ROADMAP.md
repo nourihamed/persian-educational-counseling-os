@@ -37,4 +37,8 @@ Status: DRAFT — Phase 0 — Pending Approval
 | 28 | Production Readiness | چک‌لیست بخش ۷۵ |
 
 ## وضعیت فعلی
-در حال انجام: **Phase 0**. هیچ فاز دیگری شروع نشده است.
+**Phase 0 — IN PROGRESS — Pending Supervisor Approval.**
+
+مستندات فاز ۰ در Repository گیت‌هاب (`https://github.com/nourihamed/persian-educational-counseling-os`) موجود است (آخرین Commit تأییدشده: `bd24cf8de6e836eea5602fd504530f34343e80fa` — `docs: establish Phase 0 project foundation`، طبق تأیید مالک پروژه/Supervisor Review). این وضعیت به معنای **تأیید نهایی (APPROVED)** فاز ۰ نیست؛ تأیید نهایی فقط از طریق فرآیند رسمی Supervisor Review (`SUPERVISOR_REVIEW.md`) ثبت می‌شود.
+
+**Phase 1 شروع نشده و مجاز اعلام نشده است.** هیچ کاری از فاز ۱ تا دریافت تأیید صریح مالک پروژه/Supervisor آغاز نمی‌شود.

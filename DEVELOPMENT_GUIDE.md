@@ -49,7 +49,7 @@ project-root/
 └── SUPERVISOR_REVIEW.md
 ```
 
-`backend/`, `frontend/`, `tests/`, `scripts/`, `deployment/` are created empty (with a `.gitkeep` or minimal placeholder) in Phase 0, and populated starting Phase 1/3 — no application code in Phase 0.
+`backend/`, `frontend/`, `tests/`, `scripts/`, `deployment/` are **not required to exist in Phase 0**. The repository is allowed to contain documentation only until the phase that actually needs a given folder starts populating it (e.g. `backend/` becomes meaningful starting Phase 3/4, `frontend/` starting the phase that builds UI). Creating these folders early (optionally with a `.gitkeep`) is a convenience some sessions may choose, not a Phase 0 requirement — do not treat an empty-folder skeleton as part of the Definition of Done for Phase 0. No application code goes into any of these folders until its corresponding phase is authorized and in progress.
 
 ## Commit Conventions (Master Prompt §62)
 Prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `security:`, `perf:`, `chore:`. Small, logical commits preferred over large batched ones.
