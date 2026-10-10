@@ -65,3 +65,27 @@ Changed:
 - `OPEN_QUESTIONS.md` — Q-011 rewritten in the same tested-only, environment-separated, Read/Write-separated format as above, replacing the earlier narrative-style summary with a chronological table per environment.
 
 No backend/frontend/API/DB/auth/billing/Telegram/SMS/AI/Planning-Engine code. No new phases, features, or scope. No open question answered or closed on the project owner's behalf. `main` was not touched; all work stayed on `docs/phase0-correction-pass-3`.
+
+### 2026-10-09 — Fifth Correction: Sync Branch-Commit Reference, Correct PR Status Wording
+`docs:` Commit `54eaa3d99510d12beb53eb310346700ff7893b24` on `docs/phase0-correction-pass-3` (added to open PR #1), per project owner's three requested fixes after reviewing commit `46563bec73dd965d392949be0dd5318d95edd087`. Diff stat: `CHANGELOG.md | 9 ++++++++`, `PROJECT_STATE.md | 14 +++++++++-----` (2 files changed, 18 insertions(+), 5 deletions(-)).
+
+Changed:
+- `PROJECT_STATE.md` — corrected the branch's latest-commit reference from the then-superseded `3b7c2dd3...` to the then-current branch HEAD `46563bec73dd965d392949be0dd5318d95edd087`, while keeping the `main`-branch commit (`994d4529c2...`) reported separately in its own line rather than merged into one statement.
+- `PROJECT_STATE.md` — "Current Milestone" and "In Progress" rewritten to state that PR #1 was already open (not "being opened").
+- `CHANGELOG.md` — added the "Fourth Correction: Q-003 Restored..." entry documenting what commit `46563bec...` had changed (this was itself the change made by `54eaa3d`, now being recorded here as its own entry since the CHANGELOG did not previously have a dedicated entry for `54eaa3d`'s own diff).
+
+### 2026-10-09 — Sixth Correction: Remove Self-Referential Stale-HEAD Claims; Correct Next Actions; Record Do-Not-Merge
+`docs:` Commit `926eb81c6cc1f401235d367dea8c89825ca24dec` on `docs/phase0-correction-pass-3` (added to open PR #1), per Supervisor review requesting three fixes after reviewing commit `54eaa3d99510d12beb53eb310346700ff7893b24`. Diff stat: `PROJECT_STATE.md | 21 ++++++++++++---------` (1 file changed, 12 insertions(+), 9 deletions(-)).
+
+Changed:
+- `PROJECT_STATE.md`, "Last Verified Commit" — removed the structurally-impossible claim that a specific SHA is "the current HEAD of this branch" (a file cannot truthfully state the hash of the commit it is itself part of, since the hash is only known after the commit is made). Rewrote to record only the branch HEAD immediately prior to each edit, plus the full commit history known at that point, with `git log`/GitHub named as the authoritative source for the true current HEAD.
+- `PROJECT_STATE.md`, "Next Actions" — removed stale "Pull Request if one could be created" language (PR #1 had already existed and been open since an earlier round); replaced with its actual status and the explicit "do not merge yet" recommendation from that review round.
+- `PROJECT_STATE.md`, "Blocked" — added the same do-not-merge recommendation for consistency; removed hardcoded round-counts ("three rounds", "the third commit", "four rounds") since those also go stale on every subsequent commit, pointing to `CHANGELOG.md`'s dated list as the authoritative count instead.
+
+### 2026-10-10 — Seventh Correction: Remove Remaining Hardcoded Round-Count
+`docs:` Commit `74be46e6d9e512f271e0f172621c0b6064a741ef` on `docs/phase0-correction-pass-3` (added to open PR #1), per Supervisor review requesting one fix after reviewing commit `926eb81c6cc1f401235d367dea8c89825ca24dec`. Diff stat: `PROJECT_STATE.md | 2 +-` (1 file changed, 1 insertion(+), 1 deletion(-)).
+
+Changed:
+- `PROJECT_STATE.md`, "In Progress" — replaced "main has not been touched by any of the three correction rounds" (a hardcoded, self-staling count) with "main has not been touched by the documentation correction work on this branch."
+
+No backend/frontend/API/DB/auth/billing/Telegram/SMS/AI/Planning-Engine code in any of the three commits above. No new phases, features, or scope. No open question answered or closed on the project owner's behalf. `main` was not touched by any of them; all work stayed on `docs/phase0-correction-pass-3` / PR #1. Diff stats and commit messages above were read directly from `git show --stat`/`git log` against the real repository, not reconstructed from memory.
