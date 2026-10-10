@@ -55,6 +55,14 @@
 **سؤال:** سرور/ابر مدنظر (ایران‌دیتاسنتر داخلی به‌دلیل محدودیت دسترسی به برخی سرویس‌های خارجی، یا ابر خارجی) چیست؟ این روی انتخاب Payment/SMS/Telegram adapters و حتی سرعت دسترسی اثر مستقیم دارد.
 **اولویت:** High — پیش از Phase 3 (Infrastructure)
 
+## Q-012 — تأیید MVP Versioning Policy برای Program Template و Student Plan
+**سؤال:** آیا Policy پیشنهادی ثبت‌شده در `DECISION_LOG.md` (D-008) — که حداقل سطح Versioning قابل‌ممیزی برای Program Template و Student Plan را در MVP الزامی می‌کند، و ویژگی‌های پیشرفته (مقایسه بصری، Rollback UI، Branching، گزارش Diff) را به بعد از MVP موکول می‌کند — به همین شکل تأیید می‌شود، یا نیاز به اصلاح دارد؟
+**چرا مهم است:** این Policy مستقیماً روی طراحی Schema در Phase 2 (جداول `ProgramVersion`، `PlanVersion`، فیلدهای Attribution/Tenant/Actor) و روی محدوده دقیق MVP در `PROJECT_SCOPE.md` اثر دارد. بدون تأیید صریح، نمی‌توان Schema نهایی Phase 2 را بر این اساس قطعی کرد.
+**گزینه پیشنهادی:** متن کامل Policy در `DECISION_LOG.md` D-008.
+**جایگزین‌ها:** (الف) حذف کامل الزام Versioning از MVP و موکول‌کردن همه‌چیز به Phase 15 — که Supervisor این گزینه را به‌دلیل ریسک از-دست‌رفتن قابلیت‌ممیزی رد کرده است؛ (ب) الزام سطح بالاتری از Versioning در MVP (مثلاً شامل بخشی از ویژگی‌های پیشرفته) — که هزینه زمانی MVP را افزایش می‌دهد.
+**اثر:** `DATABASE.md` (Schema نهایی Phase 2)، `PROJECT_SCOPE.md` (مرز دقیق MVP)، `ROADMAP.md` (محدوده واقعی Phase 15 در مقابل فازهای زودتر).
+**اولویت:** High — پیش از نهایی‌شدن Schema در Phase 2.
+
 ## Q-011 — دسترسی پایدار به Repository گیت‌هاب (بازبینی‌شده — دیگر صرفاً Closed نیست)
 **وضعیت: OPEN — نیازمند تصمیم مالک پروژه درباره روش دسترسی دائمی**
 

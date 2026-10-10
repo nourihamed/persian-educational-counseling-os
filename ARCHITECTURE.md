@@ -62,9 +62,14 @@ Rules:
 
 ## 6. Versioning (Master Prompt §71, §72)
 
-- `ProgramTemplate` has many `ProgramVersion`s. A `ProgramVersion` is immutable once published; "editing" a program creates a new version.
-- A `Student`'s active enrollment points at one specific `ProgramVersion`, never "the template" — so template edits never silently change a student's plan.
-- `Plan` (daily/weekly/etc.) is versioned per student per period (`WeekPlan v1, v2, v3...`); history is retained, never overwritten.
+**MVP status (per `DECISION_LOG.md` D-008, proposed, pending Product Owner confirmation in `OPEN_QUESTIONS.md` Q-012):** the minimum viable, auditable versioning described below is an **MVP requirement**, not a Phase-15-only feature. Only the *advanced* version-management tooling (visual diff, rollback UI, extensive history browsing, branching/parallel versions, change-impact reports) is deferred to Phase 15 and beyond. This resolves an earlier inconsistency where `PROJECT_SCOPE.md` and `ROADMAP.md` could be read as deferring versioning entirely to Phase 15.
+
+- `ProgramTemplate` has many `ProgramVersion`s. A `ProgramVersion` is immutable once published; "editing" a program creates a new version, never a silent overwrite of a published one.
+- A `Student`'s active enrollment points at one specific `ProgramVersion`, never "the template" — so template edits never silently change a student's plan. The `ProgramVersion` used to create each student plan is recorded, so the origin of any existing plan is explainable later.
+- `Plan` (daily/weekly/etc.) is versioned per student per period (`WeekPlan v1, v2, v3...`); history is retained, never overwritten. Which plan states are directly editable in place versus which require creating a new `PlanVersion` is a Phase 2 schema decision, not decided in this document.
+- **Tenant isolation and authorization implications:** every `ProgramVersion` and `PlanVersion` is scoped to exactly one tenant (the owning Counselor) and, for `PlanVersion`, to exactly one student within that tenant. Reading or writing any version — including listing version history — goes through the same tenant-scoped repository pattern described in §2/§3 of this document; there is no version-level exception to tenant isolation. Every version-creating or version-activating action records the acting user (actor attribution), consistent with the Explainability contract in §7 below.
+- **Transaction safety:** creating a new version and activating it (making it the current one referenced by an enrollment or an active plan period) must happen atomically — a partially-applied version switch must never leave an enrollment or plan pointing at an inconsistent state. This is a correctness requirement for whichever phase implements it; it is not implemented yet (Phase 0 is documentation-only).
+- This section describes conceptual behavior only. No migration, table, or endpoint implementing any of the above exists yet.
 
 ## 7. Explainability as an architectural concern (Master Prompt §31, §68)
 

@@ -29,6 +29,7 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 - **Admin impersonation (در صورت وجود)**: باید audit-logged و قابل محدودسازی باشد.
 - **Parent access**: پیش از نمایش هر داده، بررسی صریح Consent/Permission سطح دانش‌آموز+مشاور.
 - **File access (گزارش‌ها، PDF)**: لینک‌های دانلود باید Scoped و زمان‌دار (signed URL) باشند، نه public permanent link.
+- **Program/Plan Versioning** (طبق `DECISION_LOG.md` D-008، پیشنهادی): هر `ProgramVersion` به یک Tenant، و هر `PlanVersion` هم به یک Tenant و هم به یک Student خاص درون آن Tenant محدود است؛ Read و Write روی تاریخچه نسخه‌ها دقیقاً همان مسیر Tenant-scoped Repository را طی می‌کند که بقیه جداول Tenant طی می‌کنند — هیچ استثنای سطح-نسخه برای Tenant Isolation وجود ندارد. ساخت/فعال‌سازی هر نسخه باید Actor انجام‌دهنده را ثبت کند (Audit Log) تا هر تغییر قابل‌انتساب باشد. این بند مفهومی است؛ تا تأیید D-008 (`OPEN_QUESTIONS.md` Q-012) و پیاده‌سازی واقعی در فازهای بعد، هیچ کنترل فنی موجود نیست.
 
 ## Threat Model اولیه (خلاصه)
 | تهدید | ریسک | کنترل |
@@ -39,6 +40,7 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 | نشت Token/Secret در لاگ | متوسط-بالا | Log scrubbing، review قبل از هر PR |
 | Brute-force روی Login | متوسط | Rate limiting + lockout موقت |
 | آپلود فایل مخرب | متوسط | محدودیت نوع/حجم، اسکن، ذخیره خارج از مسیر اجرایی |
+| بازنویسی بی‌صدای نسخه منتشرشده Plan/Template، یا دسترسی به نسخه‌های Tenant/Student دیگر | بالا | عدم UPDATE روی نسخه منتشرشده (فقط ساخت نسخه جدید) + همان Tenant/Student-scoped Repository pattern + Actor attribution (D-008، پیشنهادی) |
 
 ## فرآیند قبل از Production (بخش ۷۵)
 چک‌لیست کامل در Master Prompt بخش ۷۵ باید قبل از هر انتشار Production تیک بخورد؛ Security Review و Tenant Isolation test جزو موارد غیرقابل‌حذف هستند.

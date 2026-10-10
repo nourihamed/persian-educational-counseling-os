@@ -22,16 +22,18 @@ Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual p
 - `Subject` (tenant-editable: add/delete/rename/deactivate/reorder/categorize/importance/specialized-or-general)
 - `CurriculumGrade`, `Book`, `Chapter`, `Topic`, `SubTopic` (hierarchy per §20, customizable)
 
-### Programs (Versioned — §15, §71)
-- `ProgramTemplate` (owned by a tenant or, later, platform-provided)
-- `ProgramVersion` (immutable snapshot: subjects, weekly rules, study/review/test rules)
-- `StudentProgramEnrollment` (student ↔ specific `ProgramVersion`, not the template)
+### Programs (Versioned — §15, §71; minimum viable versioning is an MVP requirement per `DECISION_LOG.md` D-008, proposed/pending confirmation — see `OPEN_QUESTIONS.md` Q-012)
+- `ProgramTemplate` (`id`, `tenant_id`, `name`, ..., stable identity that outlives any individual version; owned by a tenant or, later, platform-provided — platform-wide template ownership/authorization rules are not yet defined, tracked as part of Q-012)
+- `ProgramVersion` (`id`, `program_template_id`, `version_number`, immutable snapshot of subjects/weekly rules/study/review/test rules, `created_by` (actor attribution), `created_at`, `published_at`; immutable once published — no `UPDATE` after publish, only new rows)
+- `StudentProgramEnrollment` (student ↔ a specific `ProgramVersion`, not the template — this is the mechanism that records which `ProgramVersion` produced each student's plan, satisfying the "explain the origin of an existing plan" requirement in D-008)
 - `MarketSegment` (§17) and `ProgramTemplateSegment` (which segments a template targets)
 
-### Planning (Versioned — §72)
-- `Plan` (scope: daily/weekly/monthly/exam/review/recovery; belongs to a student + period)
-- `PlanVersion` (v1, v2, v3... immutable once superseded)
-- `PlanItem` (a scheduled activity instance within a plan version)
+### Planning (Versioned — §72; minimum viable versioning is an MVP requirement per D-008, proposed/pending confirmation)
+- `Plan` (`id`, `tenant_id`, `student_id`, scope: daily/weekly/monthly/exam/review/recovery; belongs to a student + period — the stable identity that persists across versions)
+- `PlanVersion` (`id`, `plan_id`, `version_number`, `created_by` (actor attribution), `created_at`, `activated_at`, `program_version_id` nullable FK recording which `ProgramVersion`, if any, informed this plan version; immutable once superseded — a later version never overwrites an earlier published one, consistent with D-008's "no silent overwrite" requirement)
+- `PlanItem` (a scheduled activity instance within a specific plan version)
+- Which `Plan` states are directly editable in place versus which require creating a new `PlanVersion`, and how an existing plan behaves when its source `ProgramVersion` is later updated, are open schema decisions for Phase 2 — not decided here (see D-008 points 5 and 7, and `OPEN_QUESTIONS.md` Q-012).
+- Every row above carries `tenant_id` (directly or via its parent `Plan`/`ProgramTemplate`) and is subject to the same tenant-scoped repository access pattern as every other tenant table (`ARCHITECTURE.md` §2/§3/§6) — there is no version-specific exception to tenant isolation or authorization.
 
 ### Activities & Records (§21–§28)
 - `Activity` (polymorphic-ish base: type = Study/Test/TestAnalysis/Review/Exam/Quiz/SchoolAssignment/OnlineClass/InPersonClass/Exercise/ProblemSolving/Summary/Flashcards/Remediation/Project/OverdueWork/RoutineTest/Custom)
@@ -61,7 +63,7 @@ Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual p
 - `AuditLog` (tenant_id nullable for platform-level actions; actor, action, entity, before/after where applicable, created_at)
 
 ## 2. Naming Decision Needed
-"Plan" is used in Master Prompt both for the **commercial Plan** (billing tier) and the **study Plan** (daily/weekly schedule). This document proposes renaming the commercial one to `BillingPlan` in the actual schema to avoid ambiguity. Recorded as a proposal in `DECISION_LOG.md`; not yet approved.
+"Plan" is used in Master Prompt both for the **commercial Plan** (billing tier) and the **study Plan** (daily/weekly schedule, now also carrying its own `PlanVersion` per D-008). This document proposes renaming the commercial one to `BillingPlan` in the actual schema to avoid ambiguity, so that `Plan`/`PlanVersion` unambiguously refer to the educational, student-facing concept. Recorded as a proposal in `DECISION_LOG.md` (D-006); not yet approved. This naming decision and the D-008 versioning policy are independent proposals — approving one does not imply approving the other.
 
 ## 3. Cross-cutting Rules
 - Every tenant-scoped table has a `tenant_id` column, indexed, `NOT NULL`.
@@ -73,3 +75,4 @@ Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual p
 - Full column-level types, constraints, and indexes → Phase 2.
 - Actual ERD diagram (image) and Alembic migrations → Phase 2.
 - Final decision on RLS policy definitions → Phase 1/2, pending Q-001.
+- Final column-level design of `ProgramVersion`/`PlanVersion` (exact fields beyond the conceptual ones listed above, editable-vs-new-version state rules, template-update-vs-existing-plan behavior) → Phase 2, pending Product Owner confirmation of the MVP Versioning Policy (`DECISION_LOG.md` D-008, `OPEN_QUESTIONS.md` Q-012). Nothing describing `ProgramVersion`/`PlanVersion` in this document has been implemented as a migration, table, or endpoint.

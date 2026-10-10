@@ -17,6 +17,7 @@ Status: DRAFT — Phase 0 — Pending Approval
 - Credit Ledger math (no negative balance)
 - Billing state transitions
 - Notification scheduling (quiet hours, retry/backoff logic)
+- **Program/Plan Versioning** (پیشنهادی، پیوست به D-008 — پوشش هنگام پیاده‌سازی، نه هم‌اکنون): شماره نسخه به‌درستی افزایش می‌یابد؛ ساخت نسخه جدید هرگز نسخه منتشرشده قبلی را Mutate نمی‌کند؛ کدام وضعیت‌های Plan قابل‌ویرایش مستقیم‌اند طبق قانون تعریف‌شده رفتار می‌کنند
 
 ### Integration
 - API endpoints (auth required, RBAC enforced)
@@ -28,6 +29,7 @@ Status: DRAFT — Phase 0 — Pending Approval
 - Notification delivery pipeline
 - Telegram adapter (mock bot API)
 - SMS adapter (mock provider)
+- **Program/Plan Versioning — Transaction Safety** (پیشنهادی، پیوست به D-008): ساخت + فعال‌سازی یک نسخه جدید Atomic است (هیچ حالت نیمه‌کاره‌ای که Enrollment/Plan را به وضعیت ناسازگار اشاره‌گر کند)؛ به‌روزرسانی یک Template هرگز یک Plan دانش‌آموزی موجود/فعال را بی‌صدا تغییر نمی‌دهد؛ دسترسی Read/Write به تاریخچه نسخه‌ها هم مشمول تست‌های Tenant Isolation زیر است (نه یک مسیر جدا)
 
 ### E2E
 سناریوی کامل بخش ۵۸ Master Prompt، از ثبت‌نام Counselor تا تولید Report، باید حداقل یک‌بار به‌صورت خودکار (Playwright/pytest) اجرا شود.
@@ -45,6 +47,7 @@ Counselor B → Student B
 - فایل‌های آپلودی B برای A قابل‌دسترس نیست (حتی با URL مستقیم)
 - نوتیفیکیشن‌های A/B به‌اشتباه قاطی نمی‌شوند
 - Background Job های اجراشده برای Tenant A داده B را پردازش نمی‌کنند
+- تاریخچه نسخه (`ProgramVersion`/`PlanVersion`) متعلق به B، از طریق API یا Repository، برای A قابل‌خواندن نیست؛ A نمی‌تواند روی `PlanVersion` دانش‌آموزی از Tenant B نسخه جدید بسازد یا نسخه‌ای را فعال کند (پیوست به D-008)
 
 این تست‌ها باید در CI روی هر PR اجرا شوند، نه فقط دستی.
 

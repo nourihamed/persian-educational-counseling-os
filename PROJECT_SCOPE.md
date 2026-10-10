@@ -11,8 +11,8 @@ Status: DRAFT — Phase 0 — Pending Approval
 1. Multi-tenant foundation (Counselor = Tenant) + Auth + RBAC پایه (Admin, Counselor, Student)
 2. Counselor–Student relationship (Add/Edit/Deactivate/Archive, status lifecycle)
 3. Student Profile + Default Subjects (3 رشته) + Curriculum ساده (Subject→Grade→Book→Chapter→Topic)
-4. Program Template (بدون Versioning کامل در MVP اول؛ Versioning از Phase 15 به‌صورت رسمی)
-5. Planning Engine نسخه اول: Daily/Weekly Plan دستی توسط مشاور + قوانین پایه تداخل‌زمانی
+4. Program Template با Versioning حداقلی/قابل‌ممیزی (Minimum Viable Versioning — طبق `DECISION_LOG.md` D-008، **پیشنهادی، نیازمند تأیید مالک محصول در `OPEN_QUESTIONS.md` Q-012**): شناسه پایدار Template + ProgramVersion غیرقابل‌تغییر هنگام انتشار؛ ویرایش Template نسخه جدید می‌سازد نه بازنویسی نسخه فعال؛ ثبت می‌شود کدام ProgramVersion برای ساخت هر Plan استفاده شده. ویژگی‌های پیشرفته (مقایسه بصری، Rollback UI، Branching، گزارش Diff پیشرفته) خارج از MVP است — نگاه کنید به بند Out-of-Scope.
+5. Planning Engine نسخه اول: Daily/Weekly Plan دستی توسط مشاور + قوانین پایه تداخل‌زمانی + Versioning حداقلی/قابل‌ممیزی برای Student Plan (طبق D-008، پیشنهادی): شناسه پایدار Plan + شماره نسخه صریح؛ تغییرات نسخه منتشرشده قبلی را بی‌صدا بازنویسی نمی‌کنند؛ نسخه‌های قبلی حفظ می‌شوند؛ هر نسخه به Tenant و Student قابل‌انتساب است و Authorization روی هر Read/Write اعمال می‌شود.
 6. Activity execution: Study Session, Test, Review (فقط همین سه نوع در ابتدا)
 7. Error Analysis پایه (Error types ثابت + Custom)
 8. Review Engine با الگوی ثابت 1-3-7 (Configurable بعداً)
@@ -30,7 +30,7 @@ Status: DRAFT — Phase 0 — Pending Approval
 - Parent Panel کامل (Phase 23)
 - AI Assistance (Phase 24)
 - PWA (Phase 25)
-- Program/Plan Versioning کامل با تاریخچه مقایسه (نسخه ساده در MVP، کامل در Phase 15/71/72)
+- ویژگی‌های **پیشرفته** مدیریت نسخه Program/Plan (طبق D-008؛ خودِ Versioning حداقلی/قابل‌ممیزی IN-SCOPE است، فقط موارد زیر موکول می‌شوند): مقایسه بصری نسخه‌به‌نسخه، رابط کاربری پیشرفته Rollback/Restoration، مرور گسترده تاریخچه نسخه‌ها، Branching یا نسخه‌های موازی Template، گزارش‌های پیشرفته Diff و تحلیل اثر تغییر — این‌ها در Phase 15 و بعد از آن ساخته می‌شوند (§71، §72 Master Prompt)
 - Risk Engine پیشرفته با مدل امتیازدهی چندبعدی (نسخه ساده قانون‌محور در MVP)
 - Marketplace عمومی
 
@@ -40,4 +40,4 @@ Status: DRAFT — Phase 0 — Pending Approval
 
 ## وابستگی به تأیید
 
-این سند placeholder است؛ قطعی‌شدن محدوده MVP منوط به پاسخ به سؤالات ثبت‌شده در `OPEN_QUESTIONS.md` (به‌خصوص دامنه فاز اول، استراتژی Tenant Isolation، و عمق Billing در MVP) است.
+این سند placeholder است؛ قطعی‌شدن محدوده MVP منوط به پاسخ به سؤالات ثبت‌شده در `OPEN_QUESTIONS.md` (به‌خصوص دامنه فاز اول، استراتژی Tenant Isolation، عمق Billing در MVP، و اکنون Q-012 — تأیید MVP Versioning Policy برای Program Template و Student Plan) است.

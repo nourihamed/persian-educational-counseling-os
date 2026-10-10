@@ -94,7 +94,7 @@ Platform → Counselor → Student
 
 - **Core Domain هرگز به Telegram/SMS/Payment/AI وابسته نیست** — از طریق Interface/Adapter.
 - **Explainability اجباری** برای: ریسک دانش‌آموز، اولویت‌بندی برنامه، تولید Review، flagging.
-- **Program Template و Plan باید Versioned باشند**؛ تغییر Template روی دانش‌آموزان موجود اثر خودکار ندارد.
+- **Program Template و Student Plan باید حداقل Versioning قابل‌ممیزی داشته باشند، همین از MVP** (پیشنهادی، طبق `DECISION_LOG.md` D-008، نیازمند تأیید مالک محصول — `OPEN_QUESTIONS.md` Q-012)؛ تغییر Template روی Planهای دانش‌آموزان موجود اثر خودکار و بی‌صدا ندارد. ویژگی‌های پیشرفته مدیریت نسخه (مقایسه بصری، Rollback UI، Branching) می‌توانند بعد از MVP بیایند، ولی خودِ شناسه نسخه + تاریخچه + Attribution از MVP الزامی است. توجه: «Plan» اینجا به معنای Plan مطالعاتی دانش‌آموز است، نه Plan تجاری Billing — این دو مفهوم جدا نگه داشته می‌شوند (`DECISION_LOG.md` D-006).
 - **Credit Ledger باید Append-only/Immutable باشد** (نه overwrite موجودی).
 - **Business Logic هرگز داخل Route/Controller نیست** (لایه‌بندی API → Application → Domain → Infrastructure).
 - **Integration failure (Telegram/SMS/Payment) هرگز نباید Core را متوقف کند.**
