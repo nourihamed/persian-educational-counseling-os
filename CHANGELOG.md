@@ -89,3 +89,15 @@ Changed:
 - `PROJECT_STATE.md`, "In Progress" — replaced "main has not been touched by any of the three correction rounds" (a hardcoded, self-staling count) with "main has not been touched by the documentation correction work on this branch."
 
 No backend/frontend/API/DB/auth/billing/Telegram/SMS/AI/Planning-Engine code in any of the three commits above. No new phases, features, or scope. No open question answered or closed on the project owner's behalf. `main` was not touched by any of them; all work stayed on `docs/phase0-correction-pass-3` / PR #1. Diff stats and commit messages above were read directly from `git show --stat`/`git log` against the real repository, not reconstructed from memory.
+
+### 2026-10-10 — Eighth Correction: Sync PROJECT_STATE.md "Last Updated" Date
+`docs:` Commit on `docs/phase0-correction-pass-3` (added to open PR #1), following commit `a616f4841b525d1c8e658d1247448c2d68416bdc`, per Supervisor review flagging one remaining issue. **This entry intentionally does not state this commit's own SHA**, since that hash is not known until after the commit is made — stating it here would be the same self-referential, structurally-impossible claim that earlier correction rounds removed elsewhere in these documents (see the "Sixth Correction" entry above). The actual SHA is reported separately, outside this file, in the session's commit/report output.
+
+Purpose of this change: `PROJECT_STATE.md`'s top-of-file `Last Updated` field still read `2026-10-09`, even though the most recent documentation edit on this branch (commit `a616f4841b525d1c8e658d1247448c2d68416bdc`) was made on `2026-10-10` (confirmed via that commit's actual author/committer date on GitHub). The field is purely a human-readable freshness indicator at the top of the file and does not feed into or get read by any other section, so updating it carries no architectural, scope, or open-question implication.
+
+Changed:
+- `PROJECT_STATE.md` — `Last Updated: 2026-10-09` → `Last Updated: 2026-10-10`.
+
+No backend/frontend/API/DB/auth/billing/Telegram/SMS/AI/Planning-Engine code. No new phases, features, or scope. No open question answered or closed on the project owner's behalf. No architecture or business decision made. `main` was not touched; all work stayed on `docs/phase0-correction-pass-3` / PR #1. Only `PROJECT_STATE.md` and this `CHANGELOG.md` entry were changed in this round — no unrelated edits were made.
+
+**Known gap, reported rather than silently fixed (out of scope for this round):** commit `a616f4841b525d1c8e658d1247448c2d68416bdc` itself also has no dedicated CHANGELOG entry describing its own diff (it was the commit that backfilled entries for three earlier commits, but never got one for itself). This was not in the scope of the two fixes requested for this round, so it was left as-is rather than fixed without being asked. Flagging it here for the Supervisor's awareness in case a future round should address it.
