@@ -136,3 +136,7 @@ Changed, to make every document internally consistent with the D-008 proposal (a
 - `OPEN_QUESTIONS.md` — added Q-012 (Open).
 
 No backend/frontend/API/DB migration/auth/billing/Telegram/SMS/AI/Planning-Engine code anywhere in this change. No existing open question (Q-001 through Q-011) was answered or closed on the project owner's behalf. No architecture or business decision was finalized — D-008 is explicitly Proposed, pending confirmation. `main` was not touched; all work stayed on `docs/phase0-correction-pass-3` / PR #1. Phase 0 not declared Approved by this entry; only an independent Supervisor may make that assessment.
+
+
+### 2026-10-10 — Product Owner Decision: Accept MVP Versioning Policy (D-008 / Q-012)
+`docs:` Recorded the Product Owner's explicit decision to accept option B: minimum viable, auditable versioning for Program Template and Student Plan is mandatory in MVP; advanced version-management tooling remains deferred. Updated `DECISION_LOG.md` to mark D-008 Accepted, moved Q-012 from Open to Resolved/Closed in `OPEN_QUESTIONS.md`, and synchronized `PROJECT_STATE.md`. No other open question was closed. No implementation code, migrations, endpoints, or tests were added. No merge or Phase 1 authorization was granted.
