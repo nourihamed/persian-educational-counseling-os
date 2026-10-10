@@ -53,11 +53,11 @@ message: docs: establish Phase 0 project foundation
 **وضعیت نهایی:** Resolved — صرفاً جنبه تاریخی/آرشیوی دارد.
 
 ## D-008 — MVP Versioning Policy برای Program Template و Student Plan
-**وضعیت: PROPOSED — Pending Product Owner Confirmation. این تصمیم هنوز Accepted نیست و تا تأیید صریح مالک محصول، صرفاً یک پیشنهاد مستندشده است.**
+**وضعیت: ACCEPTED — تأیید صریح مالک محصول در گفتگو در تاریخ 2026-10-10.**
 
 **زمینه:** بازبینی مستقل Supervisor یک تناقض در اسناد فاز ۰ شناسایی کرد: `PROJECT_SCOPE.md` در یک بند می‌گفت «هیچ Versioning کاملی در MVP نیست؛ Versioning رسماً از Phase 15 شروع می‌شود» و در بند دیگری (لیست Out-of-Scope) می‌گفت «نسخه ساده در MVP، نسخه کامل در Phase 15» — این دو با هم همخوان نبودند. هم‌زمان، `ARCHITECTURE.md` و `DATABASE.md` مفهوم Versioning را به‌عنوان یک اصل معماری پایه (بدون قید فاز) توصیف کرده بودند، در حالی که `ROADMAP.md` کلمه «Versioning» را فقط زیر Phase 15 لیست کرده بود.
 
-**تصمیم پیشنهادی (Policy):**
+**تصمیم مصوب مالک محصول (Policy):**
 
 MVP باید حداقل سطح ممکن از Versioning قابل‌ممیزی (Minimum Viable, Auditable Versioning) را برای Student Plan و Program Template داشته باشد؛ ویژگی‌های پیشرفته مدیریت نسخه می‌تواند به بعد از MVP موکول شود.
 
@@ -88,7 +88,7 @@ MVP باید حداقل سطح ممکن از Versioning قابل‌ممیزی (M
 
 **این موکول‌شدن به معنای حذف الزامات حداقلی قابلیت‌ممیزی و تاریخچه بالا نیست.**
 
-**اثر این تصمیم روی سایر اسناد (در صورت تأیید):** `PROJECT_SCOPE.md`، `ARCHITECTURE.md`، `DATABASE.md`، `ROADMAP.md`، `API.md`، `SECURITY.md`، `TEST_PLAN.md`، `PRODUCT_REQUIREMENTS.md` بر همین اساس به‌روزرسانی شدند (در همین Commit) تا با این Policy هماهنگ باشند؛ ولی این هماهنگ‌سازی مستندی، به‌معنای Accepted شدن خودِ Policy نیست — فقط به این معناست که اسناد دیگر از نظر داخلی با یکدیگر و با همین پیشنهاد سازگارند، تا وقتی مالک محصول آن را تأیید یا اصلاح کند.
+**اثر این تصمیم روی سایر اسناد:** `PROJECT_SCOPE.md`، `ARCHITECTURE.md`، `DATABASE.md`، `ROADMAP.md`، `API.md`، `SECURITY.md`، `TEST_PLAN.md`، `PRODUCT_REQUIREMENTS.md` بر همین اساس به‌روزرسانی شده‌اند تا با این Policy هماهنگ باشند. مالک محصول این Policy را صریحاً تأیید کرده است؛ این تأیید فقط D-008/Q-012 را تعیین تکلیف می‌کند و هیچ سؤال باز دیگری را نمی‌بندد.
 
 **دلیل:** درخواست مستقیم Supervisor Review برای رفع تناقض Template/Plan Versioning؛ اصل کلی‌تر این است که تصمیمات معماری/محصول باید صریحاً ثبت شوند، نه این‌که به‌صورت ضمنی و ناهماهنگ در چند سند مختلف حل شوند.
-**وضعیت:** **Proposed — Pending Product Owner Confirmation.**
+**وضعیت:** **Accepted — صریحاً توسط Product Owner در گفتگو تأیید شد؛ 2026-10-10.**
