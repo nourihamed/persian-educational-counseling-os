@@ -43,7 +43,7 @@ Implementation: 0% (by design — no application code exists).
 
 ### In Progress
 - **Pull Request #1 is open** (`docs/phase0-correction-pass-3` → `main`, not merged) and awaiting independent Supervisor re-review. It is not "being opened" — it already exists; this update is one more commit pushed to the same branch, added to the same open PR. See `CHANGELOG.md` for the exact count and content of every round.
-- No other work is in progress. `main` has not been touched by any of the three correction rounds.
+- No other work is in progress. `main` has not been touched by the documentation correction work on this branch.
 
 ### Blocked
 - **PR #1 should not be merged yet**, per the latest Supervisor review round's explicit recommendation. This is a recommendation to hold, not a technical block — but it is treated as binding until a Supervisor explicitly says otherwise.
