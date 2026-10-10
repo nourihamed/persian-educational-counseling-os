@@ -36,11 +36,11 @@ Status: DRAFT — Phase 0 — Pending Approval
 | 27 | Performance | Query profiling، N+1، caching |
 | 28 | Production Readiness | چک‌لیست بخش ۷۵ |
 
-## یادداشت — جایگاه Versioning در این Roadmap (پیشنهادی، پیوست به D-008)
+## یادداشت — جایگاه Versioning در این Roadmap (پیوست به D-008 — Accepted)
 کلمه «Versioning» فقط زیر Phase 15 در جدول بالا ظاهر می‌شد، که قبلاً می‌توانست این‌طور خوانده شود که Program Template/Plan Versioning اصلاً تا Phase 15 وجود ندارد — این خوانش با `ARCHITECTURE.md`/`DATABASE.md` (که Versioning را یک اصل پایه توصیف می‌کنند) و با Policy جدید `DECISION_LOG.md` D-008 (که حداقل Versioning را جزو MVP می‌داند) همخوان نیست. برای رفع این تناقض، بدون تغییر شماره یا ترتیب فازها:
 - **حداقل Versioning قابل‌ممیزی** (شناسه پایدار + شماره نسخه + عدم بازنویسی بی‌صدا + تاریخچه + Attribution) بخشی از **مدل داده پایه** است که در Phase 2 (Database & Domain Model) طراحی می‌شود و هرجا Program Template یا Plan در فازهای زودتر از ۱۵ ساخته/استفاده شود (مثلاً Phase 12 Planning Engine به یک ساختار Plan نیاز دارد)، همان حداقل Versioning را دارد.
 - **Phase 15** مشخصاً به معنای معرفی اصل Versioning نیست، بلکه شامل منطق Personalization (Baseline→Personalized Plan) و ابزارهای **پیشرفته** مدیریت نسخه (مقایسه بصری، Rollback UI، Branching، گزارش Diff) است که در بالای همان حداقل MVP ساخته می‌شوند.
-- این یادداشت یک توضیح/هماهنگ‌سازی مستندی است، نه تصمیم تجاری یا معماری جدید؛ تصمیم اصلی در D-008 ثبت شده و هنوز Pending Product Owner Confirmation است (`OPEN_QUESTIONS.md` Q-012).
+- این یادداشت یک توضیح/هماهنگ‌سازی مستندی است، نه تصمیم تجاری یا معماری جدید؛ تصمیم اصلی در `DECISION_LOG.md` D-008 ثبت شده و توسط مالک محصول در تاریخ ۲۰۲۶-۱۰-۱۰ تأیید شده است (Accepted؛ `OPEN_QUESTIONS.md` Q-012 Resolved). این تأیید فقط خودِ Policy را تعیین‌تکلیف می‌کند؛ جزئیات دقیق پیاده‌سازی Schema همچنان به فاز طراحی مربوطه (Phase 2) تعلق دارد.
 
 ## وضعیت فعلی
 **Phase 0 — IN PROGRESS — Pending Supervisor Review.**

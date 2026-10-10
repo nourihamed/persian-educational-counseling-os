@@ -38,9 +38,9 @@ List endpoints (e.g., counselor's student list) use cursor- or offset-based pagi
 ## 7. Explainability in Responses
 Any endpoint returning a risk flag, auto-generated plan item, or auto-generated review must include the `reasons[]` structure defined in ARCHITECTURE.md §7 — this is a response-contract rule, not optional metadata.
 
-## 8. Versioning Endpoints (conceptual — MVP scope pending confirmation, D-008 / Q-012)
-If the minimum viable versioning policy in `DECISION_LOG.md` D-008 is confirmed, `/counselor/programs/{id}/versions` (list/create/publish a `ProgramVersion`) and a student plan's version history (e.g. `/student/plans/{id}/versions`) are conceptually part of the `/counselor/*` and `/student/*` resource groups above. Every such endpoint follows the same AuthZ rule in §2 — tenant and, for plan versions, student-scoped — with no version-specific bypass. **No such endpoint is designed in detail or implemented yet**; this is a placeholder noting where they will live once Phase 2's schema (informed by Q-012's resolution) and the relevant implementation phase exist.
+## 8. Versioning Endpoints (conceptual — MVP scope confirmed by D-008, detailed design still pending)
+Per the accepted MVP Versioning Policy (`DECISION_LOG.md` D-008 — Accepted, Product Owner confirmation 2026-10-10; `OPEN_QUESTIONS.md` Q-012 Resolved), `/counselor/programs/{id}/versions` (list/create/publish a `ProgramVersion`) and a student plan's version history (e.g. `/student/plans/{id}/versions`) are conceptually part of the `/counselor/*` and `/student/*` resource groups above. Every such endpoint follows the same AuthZ rule in §2 — tenant and, for plan versions, student-scoped — with no version-specific bypass. **No such endpoint is designed in detail or implemented yet**; this is a placeholder noting where they will live once Phase 2's schema exists and the relevant implementation phase is reached. D-008's acceptance confirms these endpoints belong in MVP scope; it does not design them.
 
 ## 9. Deferred
 - OpenAPI schema generation conventions, error code catalog, and concrete DTOs → Phase 3/4 onward, per domain as each phase is implemented.
-- Detailed design of versioning endpoints (§8) → pending Q-012 and Phase 2 schema finalization.
+- Detailed design of versioning endpoints (§8) → Phase 2 schema finalization. (Not pending a Product Owner decision anymore — D-008/Q-012 already settled the policy question; this is ordinary design work.)

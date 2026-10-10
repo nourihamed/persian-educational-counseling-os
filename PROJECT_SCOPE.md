@@ -11,8 +11,8 @@ Status: DRAFT — Phase 0 — Pending Approval
 1. Multi-tenant foundation (Counselor = Tenant) + Auth + RBAC پایه (Admin, Counselor, Student)
 2. Counselor–Student relationship (Add/Edit/Deactivate/Archive, status lifecycle)
 3. Student Profile + Default Subjects (3 رشته) + Curriculum ساده (Subject→Grade→Book→Chapter→Topic)
-4. Program Template با Versioning حداقلی/قابل‌ممیزی (Minimum Viable Versioning — طبق `DECISION_LOG.md` D-008، **پیشنهادی، نیازمند تأیید مالک محصول در `OPEN_QUESTIONS.md` Q-012**): شناسه پایدار Template + ProgramVersion غیرقابل‌تغییر هنگام انتشار؛ ویرایش Template نسخه جدید می‌سازد نه بازنویسی نسخه فعال؛ ثبت می‌شود کدام ProgramVersion برای ساخت هر Plan استفاده شده. ویژگی‌های پیشرفته (مقایسه بصری، Rollback UI، Branching، گزارش Diff پیشرفته) خارج از MVP است — نگاه کنید به بند Out-of-Scope.
-5. Planning Engine نسخه اول: Daily/Weekly Plan دستی توسط مشاور + قوانین پایه تداخل‌زمانی + Versioning حداقلی/قابل‌ممیزی برای Student Plan (طبق D-008، پیشنهادی): شناسه پایدار Plan + شماره نسخه صریح؛ تغییرات نسخه منتشرشده قبلی را بی‌صدا بازنویسی نمی‌کنند؛ نسخه‌های قبلی حفظ می‌شوند؛ هر نسخه به Tenant و Student قابل‌انتساب است و Authorization روی هر Read/Write اعمال می‌شود.
+4. Program Template با Versioning حداقلی/قابل‌ممیزی (Minimum Viable Versioning — طبق `DECISION_LOG.md` D-008، **Accepted، تأیید صریح مالک محصول در تاریخ ۲۰۲۶-۱۰-۱۰، `OPEN_QUESTIONS.md` Q-012 Resolved**): شناسه پایدار Template + ProgramVersion غیرقابل‌تغییر هنگام انتشار؛ ویرایش Template نسخه جدید می‌سازد نه بازنویسی نسخه فعال؛ ثبت می‌شود کدام ProgramVersion برای ساخت هر Plan استفاده شده. ویژگی‌های پیشرفته (مقایسه بصری، Rollback UI، Branching، گزارش Diff پیشرفته) خارج از MVP است — نگاه کنید به بند Out-of-Scope. جزئیات دقیق سطح Schema (کدام وضعیت‌ها مستقیماً قابل‌ویرایش‌اند، رفتار دقیق هنگام به‌روزرسانی Template) همچنان به فاز طراحی Phase 2 تعلق دارد — این بخش توسط خودِ تأیید Q-012 بسته نشده است.
+5. Planning Engine نسخه اول: Daily/Weekly Plan دستی توسط مشاور + قوانین پایه تداخل‌زمانی + Versioning حداقلی/قابل‌ممیزی برای Student Plan (طبق D-008، Accepted): شناسه پایدار Plan + شماره نسخه صریح؛ تغییرات نسخه منتشرشده قبلی را بی‌صدا بازنویسی نمی‌کنند؛ نسخه‌های قبلی حفظ می‌شوند؛ هر نسخه به Tenant و Student قابل‌انتساب است و Authorization روی هر Read/Write اعمال می‌شود.
 6. Activity execution: Study Session, Test, Review (فقط همین سه نوع در ابتدا)
 7. Error Analysis پایه (Error types ثابت + Custom)
 8. Review Engine با الگوی ثابت 1-3-7 (Configurable بعداً)
@@ -40,4 +40,4 @@ Status: DRAFT — Phase 0 — Pending Approval
 
 ## وابستگی به تأیید
 
-این سند placeholder است؛ قطعی‌شدن محدوده MVP منوط به پاسخ به سؤالات ثبت‌شده در `OPEN_QUESTIONS.md` (به‌خصوص دامنه فاز اول، استراتژی Tenant Isolation، عمق Billing در MVP، و اکنون Q-012 — تأیید MVP Versioning Policy برای Program Template و Student Plan) است.
+این سند placeholder است؛ قطعی‌شدن محدوده MVP منوط به پاسخ به سؤالات ثبت‌شده در `OPEN_QUESTIONS.md` (به‌خصوص دامنه فاز اول، استراتژی Tenant Isolation، و عمق Billing در MVP) است. Q-012 (MVP Versioning Policy) دیگر جزو این وابستگی‌ها نیست — مالک محصول آن را در تاریخ ۲۰۲۶-۱۰-۱۰ تأیید کرد (`DECISION_LOG.md` D-008، Accepted).
