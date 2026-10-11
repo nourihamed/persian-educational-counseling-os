@@ -29,7 +29,11 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 - **Admin impersonation (در صورت وجود)**: باید audit-logged و قابل محدودسازی باشد.
 - **Parent access**: پیش از نمایش هر داده، بررسی صریح Consent/Permission سطح دانش‌آموز+مشاور.
 - **File access (گزارش‌ها، PDF)**: لینک‌های دانلود باید Scoped و زمان‌دار (signed URL) باشند، نه public permanent link.
-- **Program/Plan Versioning** (طبق `DECISION_LOG.md` D-008 — Accepted، تأیید مالک محصول در تاریخ ۲۰۲۶-۱۰-۱۰): هر `ProgramVersion` به یک Tenant، و هر `PlanVersion` هم به یک Tenant و هم به یک Student خاص درون آن Tenant محدود است؛ Read و Write روی تاریخچه نسخه‌ها دقیقاً همان مسیر Tenant-scoped Repository را طی می‌کند که بقیه جداول Tenant طی می‌کنند — هیچ استثنای سطح-نسخه برای Tenant Isolation وجود ندارد. ساخت/فعال‌سازی هر نسخه باید Actor انجام‌دهنده را ثبت کند (Audit Log) تا هر تغییر قابل‌انتساب باشد. این بند مفهومی است؛ Policy تأیید شده، ولی تا پیاده‌سازی واقعی در فازهای بعد، هیچ کنترل فنی موجود نیست.
+- **Program/Plan Versioning** (طبق `DECISION_LOG.md` D-008 — Accepted، تأیید مالک محصول در تاریخ ۲۰۲۶-۱۰-۱۰): این بند بین سه مورد مالکیت تمایز صریح قائل می‌شود (جزئیات کامل در `DATABASE.md` بخش Programs):
+  1. `ProgramTemplate` متعلق به یک Tenant — همان مسیر Tenant-scoped معمول.
+  2. `ProgramTemplate` سطح‌پلتفرم (احتمالی، آینده) — مدل مالکیت و Authorization آن **هنوز تصمیم‌گیری نشده** (`OPEN_QUESTIONS.md` Q-013)؛ این یک کار طراحی باز است، نه تصمیم‌گرفته‌شده و نه چیزی که این‌جا حدس زده شود.
+  3. **`StudentProgramEnrollment` و `PlanVersion` — همیشه و بدون استثنا به یک Tenant و یک Student خاص محدودند**، مستقل از این‌که Template منشأ آن‌ها Tenant-owned بوده یا (در آینده) Platform-owned. Read و Write روی این دو، دقیقاً همان مسیر Tenant/Student-scoped Repository را طی می‌کند که بقیه جداول Tenant طی می‌کنند — هیچ استثنای سطح-نسخه یا سطح-Template برای Tenant Isolation روی داده واقعی دانش‌آموز وجود ندارد و نمی‌تواند وجود داشته باشد؛ Template سطح‌پلتفرم هرگز به معنای اشتراک‌گذاری داده دانش‌آموز بین Tenantها نیست.
+  ساخت/فعال‌سازی هر نسخه باید Actor انجام‌دهنده را ثبت کند (Audit Log) تا هر تغییر قابل‌انتساب باشد. این بند مفهومی است؛ Policy اصل Versioning تأیید شده (D-008)، ولی تا پیاده‌سازی واقعی در فازهای بعد، هیچ کنترل فنی موجود نیست.
 
 ## Threat Model اولیه (خلاصه)
 | تهدید | ریسک | کنترل |

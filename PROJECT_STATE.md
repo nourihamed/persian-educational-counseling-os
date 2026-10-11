@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 ## Operational Memory — Single Source of Truth for "Where are we now"
 
-Last Updated: 2026-10-10
+Last Updated: 2026-10-11
 
 ---
 
@@ -66,8 +66,28 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-001** (t
 
 **Structural note — read this before trusting any SHA below:** this file is itself part of every commit it describes, so it can never truthfully state "the current HEAD of this branch is `<SHA>`" — the act of committing this very edit creates a new commit whose SHA cannot be known while writing the file, which immediately makes any such claim stale. To stop this file from repeatedly going stale on a long-running branch, from this point on it records only: (a) the commit immediately **prior** to the edit being made (a fact that is true and checkable), and (b) a pointer to the authoritative live source. It does not claim to name "the current HEAD."
 
-- **On `main`:** `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` — directly confirmed by Claude via `git log`/`git ls-remote` against the real repository. `main` has not changed since this commit; none of the correction passes so far have touched `main`.
-- **On branch `docs/phase0-correction-pass-3` (the branch backing open PR #1):** immediately before this edit, the branch's HEAD was `0648c3c5b529375137d73341343749f76fc5531b`, independently confirmed by Claude via `git log -1` against the real repository immediately before writing this line. **Note:** the six commits `765617f8...` through `0648c3c5...` below were made directly by the project owner (GitHub user `nourihamed`), not by Claude in this session — this file had gone stale (it previously stopped at `fd128f74...`) until this edit caught up with the real repository state. This edit adds one more commit on top of `0648c3c5...`, so by the time this text is read, the true HEAD is one commit newer than the SHA named here. Commit history on this branch, oldest to newest, as of immediately before this edit: `3b7c2dd3849ccc4f9f64d9baf0b0570487fecbb4` → `46563bec73dd965d392949be0dd5318d95edd087` → `54eaa3d99510d12beb53eb310346700ff7893b24` → `926eb81c6cc1f401235d367dea8c89825ca24dec` → `74be46e6d9e512f271e0f172621c0b6064a741ef` → `fd128f74ae9fd60537c718829cb8afd66ea7f5b3` → `765617f85dd3dafe5ab5d0c364b72e57e0dbfd1a` → `96ca6092f49811b68d31314e84b72810b02c94f9` → `6681ff52f0d0a7496b6424a122386f243757ce04` → `8c0df1f2f65de1714b25d700d67344c9918a3d1d` → `c3433feb8f5c9a23cd157dc80963cc42beffef39` → `e150c9530a4cafddf773e490b6cea89838a9114f` → `0648c3c5b529375137d73341343749f76fc5531b` → (this edit's commit, SHA not yet known while writing this line). For the complete, permanently up-to-date history, see `CHANGELOG.md` rather than this list, which (as explained above) is only ever current as of its last edit. **Authoritative source for the actual current HEAD: run `git log -1` on the branch, or check the PR #1 page on GitHub — not this file.**
+- **On `main`:** `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` — directly confirmed by Claude via `git log`/`git ls-remote` against the real repository immediately before writing this line. `main` has not changed since this commit; none of the correction passes so far have touched `main`.
+- **Branch-vs-`main` relationship:** independently verified (`git rev-list`/`git merge-base`) immediately before writing this line: this branch is exactly **16 commits ahead** of `main` and **0 commits behind** — `main` is a clean ancestor of this branch (no divergence, no need for a rebase or merge-conflict resolution before a future merge).
+- **On branch `docs/phase0-correction-pass-3` (the branch backing open PR #1):** immediately before this edit, the branch's HEAD was `b2babcfef12f308b843fe0b94c118d9375845fe9`, independently confirmed by Claude via `git log -1` against the real repository immediately before writing this line. **Verified, complete commit history on this branch (`main`..HEAD), oldest to newest, as of immediately before this edit — all 16 SHAs below were read directly from `git log` against the live repository, not reconstructed from memory:**
+  1. `3b7c2dd3849ccc4f9f64d9baf0b0570487fecbb4`
+  2. `46563bec73dd965d392949be0dd5318d95edd087`
+  3. `54eaa3d99510d12beb53eb310346700ff7893b24`
+  4. `926eb81c6cc1f401235d367dea8c89825ca24dec`
+  5. `74be46e6d9e512f271e0f172621c0b6064a741ef`
+  6. `a616f4841b525d1c8e658d1247448c2d68416bdc`
+  7. `d00dabcf407a1a7a8a782b428b6826ce86c11f1d`
+  8. `fd128f74ae9fd60537c718829cb8afd66ea7f5b3`
+  9. `765617f85dd3dafe5ab5d0c364b72e57e0dbfd1a`
+  10. `96ca6092f49811b68d31314e84b72810b02c94f9` — authored directly by the project owner (GitHub user `nourihamed`), not by Claude
+  11. `6681ff52f0d0a7496b6424a122386f243757ce04` — same, project owner
+  12. `8c0df1f2f65de1714b25d700d67344c9918a3d1d` — same, project owner
+  13. `c3433feb8f5c9a23cd157dc80963cc42beffef39` — same, project owner
+  14. `e150c9530a4cafddf773e490b6cea89838a9114f` — same, project owner
+  15. `0648c3c5b529375137d73341343749f76fc5531b` — same, project owner
+  16. `b2babcfef12f308b843fe0b94c118d9375845fe9` — Claude, the HEAD immediately prior to this edit (named above)
+
+  **After** this list, one more commit exists: the one this very edit creates. Per the structural note above, **this commit's own SHA is deliberately not recorded here** — it cannot be known while the file is being written, and guessing or reconstructing it would make a false claim. For the complete, permanently up-to-date history including that commit, see `CHANGELOG.md` and/or `git log`/GitHub directly — not this list, which is only ever current as of its last edit. **Authoritative source for the actual current HEAD: run `git log -1` on the branch, or check the PR #1 page on GitHub.**
+  **What could not be independently verified by Claude in this session:** the authorship/intent behind the six project-owner commits (items 10–15) beyond what their commit messages state — Claude did not have access to any private reasoning, chat, or tooling the project owner used to produce them, only the public commit content on GitHub.
 
 In all cases, Claude confirming that a commit exists on a ref is not a Supervisor content review and is not an approval of any kind.
 
