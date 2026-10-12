@@ -109,3 +109,29 @@ MVP باید حداقل سطح ممکن از Versioning قابل‌ممیزی (M
 
 ## Product Owner decisions recorded on 2026-10-12
 See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
+
+
+## D-009 — Tenant Isolation برای MVP
+**وضعیت: ACCEPTED — تصمیم صریح مالک محصول در 2026-10-12؛ پاسخ Q-001.**
+
+**تصمیم:** یک PostgreSQL database/schema مشترک؛ ستون مستقیم، indexed و `NOT NULL` به نام `tenant_id` روی همه ردیف‌های tenant-scoped؛ authorization در Application/API layer و PostgreSQL RLS به‌عنوان defense in depth. قیدها و روابط composite یا سازوکار معادل باید سازگاری tenant والد/فرزند را enforce کنند. دسترسی cross-tenant برای Platform Admin فقط با مجوز صریح، محدود و audit‌شده مجاز است.
+
+**الزامات اجرا:** tenant context از هویت احراز‌شده مشتق شود؛ IDهای path/body به‌تنهایی مجوز نیستند؛ هر resource و عملیات object-level بررسی شود؛ نقش runtime نباید مالک جدول‌های tenant یا دارای دسترسی privileged برای bypass کردن RLS باشد؛ policyها و رفتار owner/privileged roles بررسی شوند و در صورت اقتضا RLS اجباری یا کنترل معادل اعمال شود. تست‌های منفی cross-tenant برای API، repository، background jobs، reports/exports، files و notifications الزامی‌اند. RLS به‌تنهایی کافی نیست.
+
+**دلیل:** سادگی عملیاتی برای MVP همراه با دفاع چندلایه در برابر نشت tenant. Schema-per-tenant و database-per-tenant برای MVP انتخاب نشدند. این تصمیم مستندی، پیاده‌سازی یا اثبات امنیت runtime نیست.
+
+## D-010 — محدوده کنترل‌شده MVP
+**وضعیت: ACCEPTED — تصمیم صریح مالک محصول در 2026-10-12؛ پاسخ Q-002.**
+
+**تصمیم:** `PROJECT_SCOPE.md` مرجع محدوده MVP است. MVP باید حلقه ارزش «برنامه‌ریزی → اجرا و ثبت → تحلیل → اصلاح برنامه» را با امکانات پایه واقعی پوشش دهد: Auth/RBAC پایه؛ رابطه مشاور–دانش‌آموز و پروفایل/دروس؛ برنامه روزانه/هفتگی و حداقل versioning قابل‌ممیزی برای Program Template و Student Plan طبق D-008؛ فعالیت‌های اولیه Study Session/Test/Review، تکالیف و کلاس‌های لازم؛ تحلیل خطا و عملکرد پایه، کارهای عقب‌افتاده، اعلان درون‌برنامه‌ای و StudentCredit/CreditTransaction ledger قابل‌ممیزی. Billing MVP به Mock/manual flow محدود است.
+
+**خارج از MVP:** native mobile app؛ Telegram/SMS عملیاتی؛ درگاه واقعی پرداخت؛ AI/planning black box؛ analytics و risk engine پیشرفته؛ ابزارهای پیشرفته versioning؛ پنل کامل والد. گسترش محدوده فقط با تصمیم صریح و ثبت‌شده Product Owner مجاز است. Q-007 درباره دسترسی والد همچنان باز می‌ماند.
+
+## D-011 — هدف میزبانی Pilot و قابلیت انتقال
+**وضعیت: ACCEPTED — تصمیم صریح مالک محصول در 2026-10-12؛ پاسخ Q-010.**
+
+**تصمیم:** هدف اولیه Pilot یک VPS داخل ایران با استقرار قابل‌انتقال مبتنی بر Docker Compose است. هنوز هیچ Vendor یا پلن مشخصی انتخاب نشده است. PostgreSQL باید در شبکه خصوصی باشد؛ HTTPS، مدیریت امن secrets، لاگ بدون secrets/اطلاعات حساس، backup رمزگذاری‌شده خارج از سرور و آزمون restore الزامی‌اند. Redis فقط در صورت توجیه فنی/عملکردی وارد پیکربندی می‌شود.
+
+**قید:** Core/Domain نباید به Vendor وابسته شود. Docker Compose انتخاب شروع و Pilot است، نه تضمین High Availability یا Production Readiness. دسترسی به سرویس‌های خارجی باید برای هر Adapter جداگانه بررسی شود.
+
+**دلیل:** کاهش پیچیدگی و هزینه آغازین در کنار قابلیت انتقال و محافظت از داده.
