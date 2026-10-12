@@ -6,7 +6,10 @@ Status: DRAFT — Phase 0 — Product Owner decisions Q-001/Q-002/Q-010 recorded
 
 مرز دقیق MVP را مشخص می‌کند تا توسعه بدون Scope Creep پیش برود. "MVP" یعنی کوچک‌ترین نسخه‌ای که **کل حلقه ارزش** (Counselor Strategy → ... → Plan Adjustment) را واقعی و قابل‌استفاده می‌کند — نه یک محصول ناقص یک‌طرفه.
 
-## MVP IN-SCOPE (پیشنهادی — نیازمند تأیید)
+## MVP IN-SCOPE (تأییدشده توسط مالک محصول در 2026-10-12؛ مرجع تصمیم: Q-002 و D-010)
+
+**تصمیم محدوده MVP — 2026-10-12:** این فهرست مرز کنترل‌شده MVP است و هدف آن تکمیل حلقه آموزشی «برنامه‌ریزی → اجرا و ثبت → تحلیل → اصلاح برنامه» است، نه افزودن همه قابلیت‌های محصول نهایی. Auth/RBAC پایه، مدیریت مشاور/دانش‌آموز، برنامه روزانه/هفتگی با حداقل versioning قابل‌ممیزی طبق D-008، فعالیت‌های اولیه، تحلیل پایه، کارهای عقب‌افتاده، اعلان درون‌برنامه‌ای و ledger اعتبار قابل‌ممیزی در محدوده می‌مانند. درگاه واقعی، Telegram/SMS عملیاتی، AI/planning black box، اپ native، analytics/risk پیشرفته و پنل کامل والد خارج از MVP هستند. هر تغییر دامنه به تصمیم صریح و ثبت‌شده مالک محصول نیاز دارد؛ Q-007 درباره دسترسی والد همچنان باز است.
+
 
 1. Multi-tenant foundation (Counselor = Tenant) + Auth + RBAC پایه (Admin, Counselor, Student)
 2. Counselor–Student relationship (Add/Edit/Deactivate/Archive, status lifecycle)
@@ -22,7 +25,7 @@ Status: DRAFT — Phase 0 — Product Owner decisions Q-001/Q-002/Q-010 recorded
 12. Notification: فقط In-App (Telegram/SMS به‌عنوان Adapter آماده ولی فعال‌سازی در فازهای 19/20)
 13. Reports: حداقل یک خروجی PDF ساده RTL برای دانش‌آموز
 
-## MVP OUT-OF-SCOPE (فازهای بعدی)
+## MVP OUT-OF-SCOPE (فازهای بعدی؛ خارج از MVP تأییدشده)
 
 - Telegram Bot عملیاتی (Phase 19)
 - SMS عملیاتی (Phase 20)
