@@ -215,3 +215,13 @@ Scope and safeguards:
 - No application code, migrations, endpoints, automated tests, or infrastructure were added; Phase 0 remains documentation-only.
 - Q-001, Q-002, Q-010, and Q-013 were not silently resolved. Q-012 remains Resolved and D-008 remains Accepted.
 - No merge was performed; `main` remains unchanged by this correction pass. Formal Supervisor review is recorded in `SUPERVISOR_REVIEW.md` after verification of these corrections.
+
+
+### 2026-10-12 — Product Owner Decisions for Q-001, Q-002, Q-010
+`docs:` Record the Product Owner's explicit acceptance of the recommended tenant-isolation mechanism, controlled MVP boundary, and initial Pilot hosting approach.
+
+- Q-001: shared PostgreSQL with direct `tenant_id`, application authorization, and RLS defense in depth; schema-per-tenant and database-per-tenant were not selected for MVP.
+- Q-002: `PROJECT_SCOPE.md` is the controlled MVP boundary, centered on the full educational loop and minimum auditable versioning; real payment gateway, operational Telegram/SMS, native app, AI/planning black box, advanced analytics/risk, and full parent portal remain out of scope.
+- Q-010: initial Pilot target is an Iran-based VPS with portable Docker Compose deployment; no provider or plan selected. Secure secrets, private database networking, HTTPS, off-host encrypted backups, and restore tests remain required.
+- Updated `OPEN_QUESTIONS.md`, `PROJECT_SCOPE.md`, `ARCHITECTURE.md`, `DATABASE.md`, `SECURITY.md`, `ROADMAP.md`, and `PROJECT_STATE.md` to reflect these decisions.
+- No application code, migrations, endpoints, automated tests, or deployment configuration were added. Q-007, Q-011, and Q-013 remain open. Phase 0 closure is still pending, PR #1 remains unmerged, and Phase 1 is not authorized.
