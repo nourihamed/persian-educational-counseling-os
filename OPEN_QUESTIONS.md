@@ -8,18 +8,6 @@
 
 ## بخش Open (Active)
 
-## Q-001 — استراتژی Tenant Isolation
-**چرا مهم است:** پایه کل معماری Database/API را تعیین می‌کند؛ تغییر آن بعداً بسیار پرهزینه است.
-**گزینه پیشنهادی:** Row-Level با `tenant_id` + Postgres RLS.
-**جایگزین‌ها:** Schema-per-tenant، DB-per-tenant.
-**اثر:** مدل داده، لایه Authorization، تست‌های Isolation، استراتژی Backup/Restore.
-**اولویت:** High — باید قبل از Phase 1 پاسخ داده شود.
-
-## Q-002 — محدوده دقیق MVP
-**چرا مهم است:** بدون مرز روشن، ریسک Scope Creep بالا می‌رود (محصول فوق‌العاده وسیع تعریف شده است).
-**گزینه پیشنهادی:** محدوده در PROJECT_SCOPE.md.
-**اولویت:** High
-
 ## Q-003 — عمق Billing در MVP
 **سؤال:** آیا در MVP باید Payment Gateway واقعی وصل شود یا فقط MockPaymentProvider + صدور فاکتور دستی کافی است؟
 **پیشنهاد:** Mock در MVP، Gateway واقعی در Phase 22 طبق Roadmap.
@@ -50,10 +38,6 @@
 **سؤال:** آیا در MVP یک مدل ریسک قانون‌محور ساده (if/else قابل توضیح) کافی است یا از ابتدا باید وزن‌دهی numeric داشته باشد؟
 **پیشنهاد:** قانون‌محور ساده، explainable، در MVP؛ وزن‌دهی پیشرفته در Phase 14 تکمیلی.
 **اولویت:** Medium
-
-## Q-010 — میزبانی و Deployment
-**سؤال:** سرور/ابر مدنظر (ایران‌دیتاسنتر داخلی به‌دلیل محدودیت دسترسی به برخی سرویس‌های خارجی، یا ابر خارجی) چیست؟ این روی انتخاب Payment/SMS/Telegram adapters و حتی سرعت دسترسی اثر مستقیم دارد.
-**اولویت:** High — پیش از Phase 3 (Infrastructure)
 
 
 ## Q-011 — دسترسی پایدار به Repository گیت‌هاب (بازبینی‌شده — دیگر صرفاً Closed نیست)
@@ -111,6 +95,37 @@
 ---
 
 ## بخش Resolved / Closed
+
+## Q-001 — استراتژی Tenant Isolation
+**وضعیت: RESOLVED — تصمیم صریح مالک محصول، 2026-10-12؛ تصمیم فنی ثبت‌شده در `DECISION_LOG.md` D-009.**
+
+**تصمیم:** دیتابیس و schema مشترک PostgreSQL با ستون مستقیم، indexed و `NOT NULL` به نام `tenant_id` روی هر ردیف tenant-scoped؛ authorization در Application/API layer و PostgreSQL Row-Level Security (RLS) به‌عنوان defense in depth. قیدها و روابط composite یا سازوکار معادل باید تضمین کنند ردیف فرزند نتواند به والد tenant دیگری متصل شود. دسترسی cross-tenant برای Platform Admin فقط با مجوز صریح، محدود و audit‌شده مجاز است.
+
+**شرط‌های اجرایی غیرقابل‌حذف:** context مربوط به tenant از principal احراز هویت‌شده تعیین شود، نه از ID قابل‌اعتماد فرض‌شده در path/body؛ هر عملیات object-level مجوزسنجی شود؛ نقش runtime دیتابیس مالک جدول یا دارای `BYPASSRLS` نباشد؛ policyها و رفتار owner/privileged roles بررسی شوند؛ RLS و application filters با تست‌های منفی cross-tenant، background jobs، reports/exports، files و notifications پوشش داده شوند. فعال‌کردن RLS به‌تنهایی کافی نیست.
+
+**رد گزینه‌های جایگزین برای MVP:** Schema-per-tenant و Database-per-tenant به‌دلیل سربار migration، عملیات، backup/restore و نگهداری، انتخاب نشدند؛ این تصمیم مانع بازبینی آینده برای نیازهای مشخص نمی‌شود، اما مهاجرت به آن‌ها بدون تصمیم معماری جدید مجاز نیست.
+
+---
+
+## Q-002 — محدوده دقیق MVP
+**وضعیت: RESOLVED — تصمیم صریح مالک محصول، 2026-10-12؛ مرجع محدوده `PROJECT_SCOPE.md` و تصمیم `DECISION_LOG.md` D-010 است.**
+
+**تصمیم:** MVP کنترل‌شده باید حلقه آموزشی واقعی «برنامه‌ریزی → اجرا و ثبت → تحلیل → اصلاح برنامه» را پوشش دهد. محدوده شامل Auth/RBAC پایه، مدیریت مشاور و دانش‌آموز/دروس، برنامه روزانه و هفتگی با minimum auditable versioning برای Program Template و Student Plan، فعالیت‌های اولیه Study Session/Test/Review، تکالیف و کلاس‌های موردنیاز این حلقه، تحلیل خطا و عملکرد پایه، وضعیت عقب‌افتادگی، اعلان درون‌برنامه‌ای، و StudentCredit/CreditTransaction ledger قابل‌ممیزی است. Billing در MVP به Mock/manual flow محدود می‌ماند و درگاه واقعی پرداخت وارد MVP نمی‌شود.
+
+**خارج از MVP:** اپ native موبایل، اتصال عملیاتی Telegram/SMS، درگاه واقعی پرداخت، توصیه‌گر AI به‌عنوان منبع تصمیم یا planning black box، analytics و risk engine پیشرفته، ابزارهای پیشرفته versioning، و پنل کامل والد. هر توسعه خارج از `PROJECT_SCOPE.md` نیازمند تصمیم صریح و ثبت‌شده مالک محصول است. جزئیات دسترسی والد همچنان تابع Q-007 است و با این تصمیم بسته نشده است.
+
+---
+
+## Q-010 — میزبانی و Deployment
+**وضعیت: RESOLVED — تصمیم صریح مالک محصول، 2026-10-12؛ تصمیم ثبت‌شده در `DECISION_LOG.md` D-011.**
+
+**تصمیم:** هدف اولیه برای Pilot، یک VPS داخل ایران با استقرار قابل‌انتقال مبتنی بر Docker Compose است. این تصمیم یک رویکرد است، نه انتخاب Vendor یا پلن مشخص؛ انتخاب ارائه‌دهنده، قیمت و SLA بعداً با مقایسه زنده انجام می‌شود. PostgreSQL فقط در شبکه خصوصی در دسترس باشد؛ HTTPS، مدیریت امن secrets، logهای بدون اطلاعات حساس، backup رمزگذاری‌شده خارج از سرور و آزمون دوره‌ای restore الزامی‌اند. Redis فقط در صورت نیاز معماری/عملکردی واقعی اضافه یا فعال شود.
+
+**قید:** وابستگی به ارائه‌دهنده خاص نباید وارد Domain/Core شود. Compose برای شروع و Pilot مناسب است، اما به‌خودی‌خود تضمین High Availability یا آمادگی Production نیست. محدودیت‌های دسترسی سرویس‌های بیرونی باید برای هر Adapter پیش از فعال‌سازی جداگانه ارزیابی شوند.
+
+---
+
+
 
 ## Q-012 — تأیید MVP Versioning Policy برای Program Template و Student Plan
 **وضعیت: RESOLVED — تصمیم صریح مالک محصول در گفتگو، 2026-10-10.**
