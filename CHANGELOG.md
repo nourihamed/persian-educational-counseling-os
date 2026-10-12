@@ -225,3 +225,9 @@ Scope and safeguards:
 - Q-010: initial Pilot target is an Iran-based VPS with portable Docker Compose deployment; no provider or plan selected. Secure secrets, private database networking, HTTPS, off-host encrypted backups, and restore tests remain required.
 - Updated `OPEN_QUESTIONS.md`, `PROJECT_SCOPE.md`, `ARCHITECTURE.md`, `DATABASE.md`, `SECURITY.md`, `ROADMAP.md`, and `PROJECT_STATE.md` to reflect these decisions.
 - No application code, migrations, endpoints, automated tests, or deployment configuration were added. Q-007, Q-011, and Q-013 remain open. Phase 0 closure is still pending, PR #1 remains unmerged, and Phase 1 is not authorized.
+
+
+### 2026-10-12 — Tenant Ownership and Commit-Tracking Consistency Fix
+`docs:` Corrected a newly identified ambiguity between the universal tenant-column rule and the unresolved Q-013 platform-owned `ProgramTemplate`/`ProgramVersion` cases. The cross-cutting rule now applies to tenant-owned rows and explicitly does not decide the representation of platform-owned catalog rows; `ARCHITECTURE.md` carries the matching qualification. Updated `PROJECT_STATE.md` to distinguish `main` from the PR branch and from verified Claude authorship/review evidence. Unchecked the contradiction-free checklist item pending a fresh full-document consistency pass. `Last Updated` was already `2026-10-12` in the current branch and remains current.
+
+No code, migrations, endpoints, automated tests, merge, or Phase 1 work was performed. Q-013 remains open; Phase 0 remains `CONDITIONAL PASS`.
