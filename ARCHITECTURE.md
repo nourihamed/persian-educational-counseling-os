@@ -17,15 +17,16 @@ Rule (non-negotiable, Master Prompt §50, §66): business logic never lives in r
 
 **Tenant = Counselor.** Every tenant-scoped row carries a `tenant_id` (= owning Counselor's id, even when the row is logically a Student's — the Student belongs to exactly one tenant via `CounselorStudent`).
 
-Decision status: the concrete isolation mechanism (Row-Level with Postgres RLS vs. schema-per-tenant vs. database-per-tenant) is **not yet finalized** — see `OPEN_QUESTIONS.md` Q-001 and `DECISION_LOG.md` D-004. This document records the **default working assumption** used for planning Phase 1/2, which is:
+**Decision accepted by the Product Owner on 2026-10-12:** use one shared PostgreSQL database/schema with direct, indexed, `NOT NULL` `tenant_id` on every tenant-scoped row; application/API authorization and PostgreSQL Row-Level Security (RLS) are both required layers. See `DECISION_LOG.md` D-009 and resolved `OPEN_QUESTIONS.md` Q-001. This is the selected MVP mechanism, not proof of implemented or tested runtime security.
 
-- Single shared Postgres database.
-- `tenant_id` column (indexed, `NOT NULL`) on every tenant-scoped table.
-- Postgres Row-Level Security (RLS) policies as a second, DB-enforced layer beneath the application-level filter — so a bug in the application layer cannot leak data.
-- A request-scoped "current tenant" context set once (from the authenticated user) and required by every repository call; repositories must refuse to run an unscoped query against a tenant table.
-- Platform Admin is modeled as a cross-tenant role with explicit, audited exceptions — never a default bypass.
+- Derive the request-scoped tenant context from the authenticated principal; never trust a path/body tenant identifier by itself.
+- Require explicit tenant context for every tenant repository operation and object-level authorization for each resource/action.
+- Enforce parent/child tenant consistency using composite foreign keys/constraints or an equivalent database-enforced mechanism.
+- Keep Platform Admin cross-tenant access explicit, least-privileged, and audited.
+- Database runtime roles must not own tenant tables or have privileged RLS-bypass capabilities; review table-owner behavior and use forced RLS or equivalent safeguards where appropriate.
+- Add negative isolation tests for API/repositories and for background jobs, reports/exports, files, and notifications.
 
-This assumption must be re-confirmed (not silently kept) at the start of Phase 1.
+Schema-per-tenant and database-per-tenant are not selected for the MVP because of their operational/migration/backup overhead. Reconsideration requires a documented architecture decision; the choice must not weaken the non-negotiable tenant-isolation requirement.
 
 ## 3. Isolation applies to every surface (Master Prompt §3)
 
