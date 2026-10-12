@@ -107,7 +107,7 @@
 
 ## بخش Resolved / Closed
 
-### Q-012 — تأیید MVP Versioning Policy برای Program Template و Student Plan
+## Q-012 — تأیید MVP Versioning Policy برای Program Template و Student Plan
 **وضعیت: RESOLVED — تصمیم صریح مالک محصول در گفتگو، 2026-10-10.**
 
 **تصمیم ثبت‌شده:** گزینه B تأیید شد. حداقل Versioning قابل‌ممیزی برای Program Template و Student Plan جزو MVP است؛ قابلیت‌های پیشرفته مدیریت نسخه (از جمله مقایسه بصری، رابط Rollback، Branching و گزارش‌های Diff/تحلیل اثر) به مراحل بعد موکول می‌شوند. حفظ تاریخچه، شناسه پایدار و نسخه صریح، انتساب تغییرات، و جلوگیری از تغییر بی‌صدای برنامه دانش‌آموز هنگام ویرایش Template همچنان الزامی است.

@@ -16,6 +16,17 @@ Scope authorized: documentation foundation only. Explicitly NOT authorized: back
 ### Current Milestone
 Open Pull Request **#1** (branch `docs/phase0-correction-pass-3` → `main`), carrying multiple successive rounds of Supervisor-requested documentation corrections (see `CHANGELOG.md` for the dated, itemized list of every round), is awaiting independent Supervisor re-review before merge. No milestone work is pending creation of the PR — it already exists and has been updated in place across every round so far.
 
+### Phase 0 Documentation-Readiness Checklist
+This is the checklist `DEVELOPMENT_GUIDE.md` refers to as Phase 0's Definition of Done. **Completing every item below means the documentation is ready for review — it is explicitly NOT the same as independent Supervisor approval, which is a separate, not-yet-occurred event tracked in `SUPERVISOR_REVIEW.md`.** Each checked item states the evidence for it; nothing is checked without one.
+
+- [x] All 15 foundation documents present in the repository (14 core + `SUPERVISOR_REVIEW.md`) — verified by repeated `git`/GitHub API file listings across correction rounds (see `CHANGELOG.md`).
+- [x] No internal contradiction currently known to Claude across the 15 documents — true as of the most recent consistency pass recorded in `CHANGELOG.md`; this is a claim about what has been checked and found resolved so far, not a guarantee that no issue will ever be found (several real contradictions *were* found and fixed across prior rounds — see `CHANGELOG.md` for each).
+- [x] No application code, database migration, API endpoint, or automated test exists anywhere in the repository — verified by directory listing (`backend/frontend/tests/scripts/deployment` contain only `.gitkeep`) each round.
+- [x] All documentation changes are on branch `docs/phase0-correction-pass-3`, attached to open Pull Request #1 — not pushed directly to `main` — verified via GitHub API each round.
+- [ ] Independent Supervisor Review recorded in `SUPERVISOR_REVIEW.md` with an explicit Status (`NOT READY` / `CONDITIONAL PASS` / `APPROVED`) — **not done.** This is the one item that is not Claude's to check off.
+- [ ] Explicit Product Owner confirmation that Phase 0 documentation is ready to close — **not done**, distinct from individual Q-### resolutions (e.g., Q-012 being Resolved answers one question; it is not a statement that Phase 0 as a whole is ready).
+- [ ] PR #1 merged into `main` — **deliberately not done**; merging is withheld pending the two items above.
+
 ### Overall Progress
 Documentation foundation: present on `main` (commit `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`) and being further corrected on a separate branch (see below) pending review/merge.
 Implementation: 0% (by design — no application code exists).
@@ -64,32 +75,21 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-001** (t
 
 ### Last Verified Commit
 
-**Structural note — read this before trusting any SHA below:** this file is itself part of every commit it describes, so it can never truthfully state "the current HEAD of this branch is `<SHA>`" — the act of committing this very edit creates a new commit whose SHA cannot be known while writing the file, which immediately makes any such claim stale. To stop this file from repeatedly going stale on a long-running branch, from this point on it records only: (a) the commit immediately **prior** to the edit being made (a fact that is true and checkable), and (b) a pointer to the authoritative live source. It does not claim to name "the current HEAD."
+**Live source of truth — read this first:** repeatedly re-embedding a "complete" branch commit list in this file has gone stale multiple times on this long-running branch, because the list is necessarily one commit behind the moment it is written (see structural note below). This section no longer attempts to maintain that list. Instead:
+- **For the current branch HEAD, right now:** check **PR #1** directly — `https://github.com/nourihamed/persian-educational-counseling-os/pull/1` — or run `git log -1` against the real repository. Neither this file nor any other document in this repository is the authoritative source for "what is the current HEAD"; GitHub is.
+- **For the complete, per-commit history of what changed and when:** see `CHANGELOG.md`. Unlike this section, `CHANGELOG.md` is append-only and dated — each entry describes a commit that has already happened by the time it's written, so it does not have this section's self-referential staleness problem.
+- `main` (`https://github.com/.../tree/main`) and this correction branch (`docs/phase0-correction-pass-3`, backing PR #1) are **two separate refs**. Edits to the branch never affect `main` unless and until PR #1 is merged — which has not happened.
 
-- **On `main`:** `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` — directly confirmed by Claude via `git log`/`git ls-remote` against the real repository immediately before writing this line. `main` has not changed since this commit; none of the correction passes so far have touched `main`.
-- **Branch-vs-`main` relationship:** independently verified (`git rev-list`/`git merge-base`) immediately before writing this line: this branch is exactly **16 commits ahead** of `main` and **0 commits behind** — `main` is a clean ancestor of this branch (no divergence, no need for a rebase or merge-conflict resolution before a future merge).
-- **On branch `docs/phase0-correction-pass-3` (the branch backing open PR #1):** immediately before this edit, the branch's HEAD was `b2babcfef12f308b843fe0b94c118d9375845fe9`, independently confirmed by Claude via `git log -1` against the real repository immediately before writing this line. **Verified, complete commit history on this branch (`main`..HEAD), oldest to newest, as of immediately before this edit — all 16 SHAs below were read directly from `git log` against the live repository, not reconstructed from memory:**
-  1. `3b7c2dd3849ccc4f9f64d9baf0b0570487fecbb4`
-  2. `46563bec73dd965d392949be0dd5318d95edd087`
-  3. `54eaa3d99510d12beb53eb310346700ff7893b24`
-  4. `926eb81c6cc1f401235d367dea8c89825ca24dec`
-  5. `74be46e6d9e512f271e0f172621c0b6064a741ef`
-  6. `a616f4841b525d1c8e658d1247448c2d68416bdc`
-  7. `d00dabcf407a1a7a8a782b428b6826ce86c11f1d`
-  8. `fd128f74ae9fd60537c718829cb8afd66ea7f5b3`
-  9. `765617f85dd3dafe5ab5d0c364b72e57e0dbfd1a`
-  10. `96ca6092f49811b68d31314e84b72810b02c94f9` — authored directly by the project owner (GitHub user `nourihamed`), not by Claude
-  11. `6681ff52f0d0a7496b6424a122386f243757ce04` — same, project owner
-  12. `8c0df1f2f65de1714b25d700d67344c9918a3d1d` — same, project owner
-  13. `c3433feb8f5c9a23cd157dc80963cc42beffef39` — same, project owner
-  14. `e150c9530a4cafddf773e490b6cea89838a9114f` — same, project owner
-  15. `0648c3c5b529375137d73341343749f76fc5531b` — same, project owner
-  16. `b2babcfef12f308b843fe0b94c118d9375845fe9` — Claude, the HEAD immediately prior to this edit (named above)
+**Last independently verified snapshot** (a historical fact about one specific point in time — not a claim about the current state; it goes stale the moment any new commit lands on either ref, exactly like the list it replaces would have, but it does not pretend otherwise):
+- **Verified:** at the start of this editing session (immediately before this round's edits), directly against the real repository via `git log`, `git ls-remote`, `git rev-list --count` (both directions), and `git merge-base --is-ancestor`.
+- `main` HEAD at that moment: `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`.
+- This branch's HEAD at that moment: `119b18dacd099ade26c349b4d6bf4d7cf12f058f`.
+- Branch-vs-`main` relationship at that moment: **18 commits ahead, 0 behind** — `main` a clean ancestor of the branch, no divergence.
+- **This commit's own SHA is not recorded here and will not be**, for the structural reason below — check GitHub for the actual current value.
 
-  **After** this list, one more commit exists: the one this very edit creates. Per the structural note above, **this commit's own SHA is deliberately not recorded here** — it cannot be known while the file is being written, and guessing or reconstructing it would make a false claim. For the complete, permanently up-to-date history including that commit, see `CHANGELOG.md` and/or `git log`/GitHub directly — not this list, which is only ever current as of its last edit. **Authoritative source for the actual current HEAD: run `git log -1` on the branch, or check the PR #1 page on GitHub.**
-  **What could not be independently verified by Claude in this session:** the authorship/intent behind the six project-owner commits (items 10–15) beyond what their commit messages state — Claude did not have access to any private reasoning, chat, or tooling the project owner used to produce them, only the public commit content on GitHub.
+**Structural note — why no SHA for "this commit" ever appears here:** this file is part of every commit that edits it, so it can never truthfully state "the current HEAD is `<SHA>`" while being written — the SHA depends on this file's final content, which doesn't exist as a hash until after the commit is made. Any attempt to name it would be a guess presented as a fact.
 
-In all cases, Claude confirming that a commit exists on a ref is not a Supervisor content review and is not an approval of any kind.
+**What is and isn't established by any of the above:** a commit's existence on a ref (verified directly, as above) is a fact Claude can check. A document's content having been edited and reviewed in this session is Claude's own work, not independent review. **Independent Supervisor approval of Phase 0 is a separate, third thing that has not occurred and is recorded nowhere as having occurred** — see `SUPERVISOR_REVIEW.md`. None of these three substitutes for either of the others.
 
 ### Last Test Result
 — N/A (Phase 0 is documentation-only; `TEST_PLAN.md` defines future test strategy, nothing to run yet)

@@ -55,7 +55,7 @@ project-root/
 Prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `security:`, `perf:`, `chore:`. Small, logical commits preferred over large batched ones.
 
 ## Definition of Done (Master Prompt §65)
-A feature is Done only when: requirement implemented, backend, frontend, API, DB migration, tests, integration, edge cases, security, documentation, regression, and no blocking issue remain. Phase 0 has no "feature" in this sense — its Definition of Done is the Phase 0 Checklist in `PROJECT_STATE.md`.
+A feature is Done only when: requirement implemented, backend, frontend, API, DB migration, tests, integration, edge cases, security, documentation, regression, and no blocking issue remain. Phase 0 has no "feature" in this sense — its Definition of Done is the **"Phase 0 Documentation-Readiness Checklist"** section in `PROJECT_STATE.md`. Completing that checklist means the documentation is ready for review; it is explicitly not the same as independent Supervisor approval, which is a separate item on that same checklist.
 
 ## No-Guessing Rule (Master Prompt §78)
 If a requirement is unclear, it is **recorded in `OPEN_QUESTIONS.md`** (question, why it matters, recommended option, alternatives, impact) — never silently decided.
