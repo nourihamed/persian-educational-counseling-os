@@ -17,7 +17,7 @@ Rule (non-negotiable, Master Prompt §50, §66): business logic never lives in r
 
 **Tenant = Counselor.** Every tenant-scoped row carries a `tenant_id` (= owning Counselor's id, even when the row is logically a Student's — the Student belongs to exactly one tenant via `CounselorStudent`).
 
-**Decision accepted by the Product Owner on 2026-10-12:** use one shared PostgreSQL database/schema with direct, indexed, `NOT NULL` `tenant_id` on every tenant-scoped row; application/API authorization and PostgreSQL Row-Level Security (RLS) are both required layers. See `DECISION_LOG.md` D-009 and resolved `OPEN_QUESTIONS.md` Q-001. This is the selected MVP mechanism, not proof of implemented or tested runtime security.
+**Decision accepted by the Product Owner on 2026-10-12:** use one shared PostgreSQL database/schema with direct, indexed, `NOT NULL` `tenant_id` on every tenant-scoped row; application/API authorization and PostgreSQL Row-Level Security (RLS) are both required layers. See the resolved `OPEN_QUESTIONS.md` Q-001 and the Product Owner decision addendum in `SUPERVISOR_REVIEW.md`. This is the selected MVP mechanism, not proof of implemented or tested runtime security.
 
 - Derive the request-scoped tenant context from the authenticated principal; never trust a path/body tenant identifier by itself.
 - Require explicit tenant context for every tenant repository operation and object-level authorization for each resource/action.
