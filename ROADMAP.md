@@ -7,7 +7,7 @@ Status: DRAFT — Phase 0 — Pending Approval
 | # | فاز | خروجی کلیدی |
 |---|---|---|
 | 0 | Product & Business Model | این مجموعه اسناد (در حال انجام) |
-| 1 | Architecture & Multi-Tenancy | ARCHITECTURE.md، تصمیم نهایی استراتژی Tenant Isolation |
+| 1 | Architecture & Multi-Tenancy | جزئیات اجرای تصمیم مصوب shared PostgreSQL + tenant_id + RLS؛ طراحی authorization و تست‌های tenant isolation |
 | 2 | Database & Domain Model | ERD کامل، مدل‌های Core (Counselor, Student, Program, Activity...) |
 | 3 | Infrastructure | FastAPI skeleton، Alembic، Docker، CI اولیه، Redis |
 | 4 | Authentication & RBAC | Register/Login/Refresh/Reset، Policy engine |
