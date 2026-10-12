@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 ## Operational Memory — Single Source of Truth for "Where are we now"
 
-Last Updated: 2026-10-11
+Last Updated: 2026-10-12
 
 ---
 
@@ -33,7 +33,7 @@ Implementation: 0% (by design — no application code exists).
 
 ### Three distinct things this file tracks separately (do not conflate them)
 1. **Latest commit actually in the GitHub repository (`main`)** — directly verified by Claude just before this update: `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` ("docs: Phase 0 correction pass — align docs with actual repo state, add SUPERVISOR_REVIEW.md placeholder"). This is a fact about the repository, not a judgment about its quality.
-2. **Latest commit whose document content has been read/authored by Claude** — the same commit above; its content was written in this working process. This is not an independent review.
+2. **Latest branch content reviewed by the Supervisor** — use the live head SHA and file diff shown by PR #1; do not embed a branch HEAD SHA in this file because updating this file itself makes such a value stale. A content review is not the same as final Phase 0 approval.
 3. **Supervisor final approval** — NOT given. No Supervisor Review has been recorded in `SUPERVISOR_REVIEW.md`. Nothing in this repository should be read as Supervisor-approved.
 
 ### Repository Status (GitHub)
@@ -42,8 +42,8 @@ Implementation: 0% (by design — no application code exists).
 - A detailed, tested-only, environment-separated breakdown of GitHub access is maintained in `OPEN_QUESTIONS.md` Q-011. Summary only (see that file for the full breakdown and caveats):
   - **Claude's environment, this session, via the connected OAuth-based GitHub connector ("Claude" App):** Read tested — succeeded once while the repository was temporarily public, failed (`404`) while private. Write tested — failed once while public (`403 Resource not accessible by integration`); not re-tested while private.
   - **Claude's environment, this session, via a manually supplied, short-lived Personal Access Token pasted into the conversation by the project owner:** Read tested — succeeded (repeatedly). Write tested — succeeded (two pushes to `main`, one push to this branch, one Pull Request created via the GitHub REST API). The project owner was asked to revoke this token after use each time it was supplied.
-  - **The Supervisor's own environment/GitHub tooling:** Not tested, not observed, and not inferred by Claude in this session. Nothing here implies the Supervisor's access works or does not work — that is a separate, untested system. Do not read Claude's connector results as evidence about the Supervisor's tooling, or vice versa.
-- All commits currently on `main` (`bd24cf8d...`, `994d4529...`) and every commit made on this branch so far were made via the manual-token path described above, not via the connector. See the "Last Verified Commit" section below for the full, up-to-date branch commit history — do not rely on a specific SHA named here as "the latest branch commit," since that claim goes stale on every new commit (see the structural note below).
+  - **The Supervisor's connected GitHub tooling (this environment, tested 2026-10-12):** Read and write both succeeded against this private repository. The Supervisor created an isolated test branch from the PR #1 head, created a test file, read it back, deleted it, and verified the file was absent afterward. No application code was added and neither `main` nor PR #1 was modified by that test. The test branch inherits the PR's documentation commits plus test commits and must not be merged or used as a delivery branch. This confirms access in this session only; persistence and reliability across future sessions remain unproven. These results do not change the historical results recorded for Claude's separate environment.
+- The two commits currently on `main` (`bd24cf8d...`, `994d4529...`) and branch commits made before the Supervisor's 2026-10-12 write test were recorded as using the manual-token path in the prior session. This correction round is being committed through the Supervisor's connected GitHub tooling. Do not rely on a specific SHA in this file as the latest branch commit; use the live PR #1 head.
 
 ### Completed
 - [x] 14 foundation documents authored (PRODUCT_REQUIREMENTS, PROJECT_SCOPE, ARCHITECTURE, DATABASE, API, ROADMAP, PROJECT_STATE, DECISION_LOG, OPEN_QUESTIONS, TEST_PLAN, SECURITY, CHANGELOG, DEVELOPMENT_GUIDE, README)
@@ -96,7 +96,7 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-001** (t
 
 ### Next Actions
 1. **Pull Request #1 (`docs/phase0-correction-pass-3` → `main`) already exists and is open, carrying several rounds of Supervisor-requested documentation corrections so far (see `CHANGELOG.md` for the full, dated list).** It has not been merged. Current explicit recommendation from the latest Supervisor review round: **do not merge PR #1 yet** — further independent re-review is expected before any merge decision. The next action here is independent Supervisor re-review of the latest commit on this branch, not PR creation (already done) and not a merge decision (not authorized).
-2. Project owner/Supervisor establishes a reliable, persistent repository connection (proper GitHub App installation scoped to this repo) so future work doesn't depend on manually pasted, temporary tokens — see `OPEN_QUESTIONS.md` Q-011.
+2. Q-011 remains open only for the operational decision and repeatability across sessions: the Supervisor's connected GitHub integration passed a read/write test on 2026-10-12, but persistence has not yet been established. Keep future work on isolated branches and verify access at the start of each session until reliability is demonstrated — see `OPEN_QUESTIONS.md` Q-011.
 3. Project owner/Supervisor performs and records an actual Phase 0 review in `SUPERVISOR_REVIEW.md`.
 4. Project owner answers Q-001 (tenant isolation mechanism), confirms or amends Q-002 (MVP boundary), and answers Q-010 (hosting target). Q-012 (MVP Versioning Policy, `DECISION_LOG.md` D-008) is no longer in this list — it was answered by the project owner (Accepted, 2026-10-10) and moved to `OPEN_QUESTIONS.md`'s Resolved/Closed section; see Completed above.
 5. Phase 1 begins only after all of the above are complete, PR #1 is merged, and explicit authorization is given — not automatically.
