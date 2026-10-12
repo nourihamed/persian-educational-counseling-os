@@ -49,4 +49,4 @@ Status: DRAFT — Phase 0 — Pending Approval
 
 بازبینی رسمی Supervisor در `SUPERVISOR_REVIEW.md` ثبت شده و وضعیت آن `CONDITIONAL PASS` است، نه `APPROVED`. اصلاحات این دور روی شاخه `docs/phase0-correction-pass-3` و در PR #1 قرار دارند؛ PR هنوز Merge نشده است. جزئیات اصلاحات در `CHANGELOG.md` آمده است.
 
-**Phase 1 شروع نشده و مجاز اعلام نشده است.** پیش از شروع آن، Product Owner باید Q-001 (Tenant Isolation)، Q-002 (MVP Scope) و Q-010 (Hosting/Deployment) را تعیین تکلیف کند و صریحاً درباره بسته‌شدن Phase 0 تصمیم بگیرد. این وضعیت هیچ فاز، قابلیت یا دامنه جدیدی به Roadmap اضافه نمی‌کند.
+**تصمیم‌های Q-001، Q-002 و Q-010 در 2026-10-12 ثبت و در OPEN_QUESTIONS.md به Resolved منتقل شده‌اند.** این تصمیم‌ها به‌تنهایی Phase 0 را نمی‌بندند و مجوز Phase 1 نیستند. **Phase 1 شروع نشده و همچنان نیازمند تأیید صریح Product Owner برای بستن Phase 0، بررسی نهایی PR #1 و مجوز جداگانه شروع فاز است.**
