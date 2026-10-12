@@ -135,3 +135,15 @@ Phase 0 کد اجرایی برای unit/integration/API/E2E ندارد؛ نبو�
 
 ## Gate Status
 **CONDITIONAL PASS**
+
+
+---
+
+## Product Owner Decision Addendum — 2026-10-12
+
+The Product Owner has explicitly accepted the recommended choices for Q-001, Q-002, and Q-010. The decisions and their operational boundaries are recorded in `OPEN_QUESTIONS.md`, with scope and implementation constraints reflected in `PROJECT_SCOPE.md`, `ARCHITECTURE.md`, `DATABASE.md`, `SECURITY.md`, `ROADMAP.md`, `PROJECT_STATE.md`, and `CHANGELOG.md`.
+
+- Q-001: shared PostgreSQL with direct `tenant_id`, application authorization, and RLS defense in depth. This is not evidence of runtime implementation or security testing.
+- Q-002: controlled MVP scope in `PROJECT_SCOPE.md`; out-of-scope integrations and advanced features remain deferred.
+- Q-010: initial Pilot target is a portable Docker Compose deployment on an Iran-based VPS; no provider or plan has been selected.
+- **Gate remains CONDITIONAL PASS.** These product decisions do not themselves close Phase 0, merge PR #1, or authorize Phase 1. A fresh review of the final PR diff and explicit Product Owner closure/authorization remain separate steps.
