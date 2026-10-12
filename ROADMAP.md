@@ -43,15 +43,10 @@ Status: DRAFT — Phase 0 — Pending Approval
 - این یادداشت یک توضیح/هماهنگ‌سازی مستندی است، نه تصمیم تجاری یا معماری جدید؛ تصمیم اصلی در `DECISION_LOG.md` D-008 ثبت شده و توسط مالک محصول در تاریخ ۲۰۲۶-۱۰-۱۰ تأیید شده است (Accepted؛ `OPEN_QUESTIONS.md` Q-012 Resolved). این تأیید فقط خودِ Policy را تعیین‌تکلیف می‌کند؛ جزئیات دقیق پیاده‌سازی Schema همچنان به فاز طراحی مربوطه (Phase 2) تعلق دارد.
 
 ## وضعیت فعلی
-**Phase 0 — IN PROGRESS — Pending Supervisor Review.**
+**Phase 0 — IN PROGRESS — Supervisor Gate: CONDITIONAL PASS (2026-10-12); Product Owner closure pending.**
 
-آخرین Commit واقعی و مستقیماً تأییدشده (توسط `git log`/`git ls-remote` روی خود Repository) روی شاخه `main`:
-```
-994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec
-docs: Phase 0 correction pass — align docs with actual repo state, add SUPERVISOR_REVIEW.md placeholder
-```
-این تأیید صرفاً به این معنی است که این Commit واقعاً در Repository وجود دارد — **نه** این‌که محتوای آن از نظر معماری یا کسب‌وکار توسط یک Supervisor مستقل بازبینی یا تأیید شده باشد. تأیید نهایی فاز ۰ فقط از طریق فرآیند رسمی Supervisor Review (`SUPERVISOR_REVIEW.md`) ثبت می‌شود و هنوز ثبت نشده است.
+آخرین Commit تأییدشده روی `main` که در این سند به‌عنوان snapshot تاریخی ثبت شده، `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` است. برای وضعیت زنده `main` و HEAD شاخه اصلاحات، مستقیماً به GitHub مراجعه کنید؛ این فایل مرجع HEAD جاری نیست.
 
-اصلاحات مستندات Phase 0 روی شاخه `docs/phase0-correction-pass-3` (نه مستقیم روی `main`) در حال انجام است تا اسناد برای همان بازبینی مستقل آماده شوند؛ برای فهرست کامل و تاریخ‌دار هر دور اصلاح، به `CHANGELOG.md` مراجعه شود.
+بازبینی رسمی Supervisor در `SUPERVISOR_REVIEW.md` ثبت شده و وضعیت آن `CONDITIONAL PASS` است، نه `APPROVED`. اصلاحات این دور روی شاخه `docs/phase0-correction-pass-3` و در PR #1 قرار دارند؛ PR هنوز Merge نشده است. جزئیات اصلاحات در `CHANGELOG.md` آمده است.
 
-**Phase 1 شروع نشده و مجاز اعلام نشده است. هیچ فاز، قابلیت یا دامنه جدیدی به این Roadmap اضافه نشده است.** هیچ کاری از فاز ۱ تا دریافت تأیید صریح مالک پروژه/Supervisor آغاز نمی‌شود.
+**Phase 1 شروع نشده و مجاز اعلام نشده است.** پیش از شروع آن، Product Owner باید Q-001 (Tenant Isolation)، Q-002 (MVP Scope) و Q-010 (Hosting/Deployment) را تعیین تکلیف کند و صریحاً درباره بسته‌شدن Phase 0 تصمیم بگیرد. این وضعیت هیچ فاز، قابلیت یا دامنه جدیدی به Roadmap اضافه نمی‌کند.
