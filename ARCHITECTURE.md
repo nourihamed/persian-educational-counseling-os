@@ -97,7 +97,7 @@ Jalali⇄Gregorian conversion lives in one isolated module (`domain/calendar` or
 ## 9. Deferred Architectural Decisions
 
 Tracked in `OPEN_QUESTIONS.md`:
-- Tenant isolation mechanism, final choice (Q-001)
+- Detailed policy/constraint/test design for the accepted tenant isolation mechanism (Q-001 resolved)
 - Hosting/deployment target (Q-010), which affects whether external SDKs (payment/SMS/Telegram) are reachable
 - Payment gateway target (Q-004)
 
