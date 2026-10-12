@@ -201,3 +201,17 @@ No backend/frontend/API/DB-migration/auth/billing/Telegram/SMS/AI/Planning-Engin
 **7. Scope discipline.** No backend/frontend code, migration, endpoint, automated test, CI workflow, or deployment configuration was added anywhere in this pass.
 
 Changed: `ARCHITECTURE.md`, `API.md`, `DATABASE.md`, `PROJECT_STATE.md`, `DEVELOPMENT_GUIDE.md`, `DECISION_LOG.md`, `OPEN_QUESTIONS.md`, `CHANGELOG.md` (this entry). `main` untouched. PR #1 not merged. Phase 0 not declared Approved by this entry — only an independent Supervisor may make that call. Phase 1 not started.
+
+
+### 2026-10-12 — Fourth Supervisor Documentation Correction Pass
+`docs:` Resolve the remaining documented inconsistencies found in the independent Phase 0 re-review; all changes remain on the existing PR #1 branch, not `main`.
+
+Changed:
+- `DATABASE.md` — aligned the planning model with `ARCHITECTURE.md`: the working conceptual assumption is a direct, indexed, non-null `tenant_id` on `Plan`, `PlanVersion`, and `PlanItem`; explicitly kept Q-001 open and required parent/child tenant consistency safeguards at schema design time.
+- `PROJECT_STATE.md` — updated the date; removed the stale claim that the main commit was also the latest content reviewed; recorded the Supervisor's actual read/write test in this session; clarified that cross-session persistence is not yet proven.
+- `OPEN_QUESTIONS.md` — updated Q-011 with the Supervisor environment's successful private-repository read/write test and the limitations of that test; Q-011 remains open only for repeatability/persistent operating policy, and historical Claude-environment results remain separate.
+
+Scope and safeguards:
+- No application code, migrations, endpoints, automated tests, or infrastructure were added; Phase 0 remains documentation-only.
+- Q-001, Q-002, Q-010, and Q-013 were not silently resolved. Q-012 remains Resolved and D-008 remains Accepted.
+- No merge was performed; `main` remains unchanged by this correction pass. Formal Supervisor review is recorded in `SUPERVISOR_REVIEW.md` after verification of these corrections.
