@@ -86,7 +86,7 @@ Fields (conceptual, not implemented):
 ## 4. Explicitly Deferred
 - Full column-level types, constraints, and indexes → Phase 2.
 - Actual ERD diagram (image) and Alembic migrations → Phase 2.
-- Final decision on RLS policy definitions → Phase 1/2, pending Q-001.
+- Detailed RLS policy definitions, runtime role, trusted tenant context, and executable isolation tests → Phase 1/2; Q-001's mechanism is accepted, but implementation details remain to be designed and tested.
 - Final column-level design of `ProgramVersion`/`PlanVersion` (exact fields beyond the conceptual ones listed above, editable-vs-new-version state rules, template-update-vs-existing-plan behavior) → Phase 2. The MVP Versioning *policy* itself is no longer pending (`DECISION_LOG.md` D-008 — Accepted, `OPEN_QUESTIONS.md` Q-012 Resolved); what remains pending is ordinary Phase 2 schema design work, not a Product Owner decision. Nothing describing `ProgramVersion`/`PlanVersion` in this document has been implemented as a migration, table, or endpoint.
 
 
