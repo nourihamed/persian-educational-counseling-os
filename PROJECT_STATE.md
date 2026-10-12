@@ -61,8 +61,8 @@ Implementation: 0% (by design — no application code exists).
 ### Blocked
 - **PR #1 should not be merged yet**, per the latest Supervisor review round's explicit recommendation. This is a recommendation to hold, not a technical block — but it is treated as binding until a Supervisor explicitly says otherwise.
 - Phase 0 closure is pending Product Owner confirmation. Supervisor Review is recorded as `CONDITIONAL PASS`; see `SUPERVISOR_REVIEW.md`. This is not final approval.
-- Reliable, persistent repository access (read and write) via a proper connector/App installation is still not established — current access depends on manually supplied, temporary tokens. This is an operational risk for future phases, not just a Phase 0 cosmetic issue.
-- Phase 1 (Architecture & Multi-Tenancy deep design + implementation) is explicitly **not started and not authorized**. It cannot start until: (a) a Supervisor Review of Phase 0 is actually recorded in `SUPERVISOR_REVIEW.md`, and (b) the project owner answers Q-001 (tenant isolation mechanism), confirms or amends Q-002 (MVP boundary), and answers Q-010 (hosting target). Q-012 (MVP Versioning Policy, D-008) has been answered and closed.
+- Cross-session reliability of the Supervisor's connected GitHub access is not yet established. Read/Write succeeded in the 2026-10-12 session; verify access at the start of future sessions until repeated success establishes reliability. Historical Claude-environment results remain separate (see Q-011).
+- Phase 1 (Architecture & Multi-Tenancy deep design + implementation) is explicitly **not started and not authorized**. A Supervisor Review is now recorded with `CONDITIONAL PASS`, but Phase 1 cannot start until the Product Owner answers Q-001 (tenant isolation mechanism), confirms or amends Q-002 (MVP boundary), answers Q-010 (hosting target), confirms Phase 0 closure, and separately authorizes the next phase. Q-012 (MVP Versioning Policy, D-008) is resolved.
 
 ### Known Bugs
 — None (no application code exists)
@@ -81,7 +81,7 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-001** (t
 - `main` (`https://github.com/.../tree/main`) and this correction branch (`docs/phase0-correction-pass-3`, backing PR #1) are **two separate refs**. Edits to the branch never affect `main` unless and until PR #1 is merged — which has not happened.
 
 **Last independently verified snapshot** (a historical fact about one specific point in time — not a claim about the current state; it goes stale the moment any new commit lands on either ref, exactly like the list it replaces would have, but it does not pretend otherwise):
-- **Verified:** at the start of this editing session (immediately before this round's edits), directly against the real repository via `git log`, `git ls-remote`, `git rev-list --count` (both directions), and `git merge-base --is-ancestor`.
+- **Historical note:** the values below are preserved from an earlier version of this file as a prior snapshot. They were not re-verified as current during the 2026-10-12 Supervisor review; consult the live PR and `main` refs for current values.
 - `main` HEAD at that moment: `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`.
 - This branch's HEAD at that moment: `119b18dacd099ade26c349b4d6bf4d7cf12f058f`.
 - Branch-vs-`main` relationship at that moment: **18 commits ahead, 0 behind** — `main` a clean ancestor of the branch, no divergence.
@@ -89,7 +89,7 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-001** (t
 
 **Structural note — why no SHA for "this commit" ever appears here:** this file is part of every commit that edits it, so it can never truthfully state "the current HEAD is `<SHA>`" while being written — the SHA depends on this file's final content, which doesn't exist as a hash until after the commit is made. Any attempt to name it would be a guess presented as a fact.
 
-**What is and isn't established by any of the above:** a commit's existence on a ref (verified directly, as above) is a fact Claude can check. A document's content having been edited and reviewed in this session is Claude's own work, not independent review. **Independent Supervisor approval of Phase 0 is a separate, third thing that has not occurred and is recorded nowhere as having occurred** — see `SUPERVISOR_REVIEW.md`. None of these three substitutes for either of the others.
+**What is and isn't established by any of the above:** commit existence and current refs must be verified against GitHub. A document's content being edited is not itself approval. The Supervisor has recorded `CONDITIONAL PASS` in `SUPERVISOR_REVIEW.md`; final `APPROVED`, Product Owner closure, PR merge, and authorization for Phase 1 have not occurred. None substitutes for another.
 
 ### Last Test Result
 — N/A (Phase 0 is documentation-only; `TEST_PLAN.md` defines future test strategy, nothing to run yet)
@@ -97,6 +97,6 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-001** (t
 ### Next Actions
 1. **Pull Request #1 (`docs/phase0-correction-pass-3` → `main`) is open and not merged.** The formal Supervisor Review dated 2026-10-12 records `CONDITIONAL PASS`. The next action is Product Owner review of that verdict and the latest PR diff; merge remains a separate explicit decision.
 2. Q-011 remains open only for the operational decision and repeatability across sessions: the Supervisor's connected GitHub integration passed a read/write test on 2026-10-12, but persistence has not yet been established. Keep future work on isolated branches and verify access at the start of each session until reliability is demonstrated — see `OPEN_QUESTIONS.md` Q-011.
-3. Project owner/Supervisor performs and records an actual Phase 0 review in `SUPERVISOR_REVIEW.md`.
+3. Product Owner reviews the recorded `CONDITIONAL PASS` and explicitly decides whether Phase 0 can be closed; the review itself is already recorded.
 4. Project owner answers Q-001 (tenant isolation mechanism), confirms or amends Q-002 (MVP boundary), and answers Q-010 (hosting target). Q-012 (MVP Versioning Policy, `DECISION_LOG.md` D-008) is no longer in this list — it was answered by the project owner (Accepted, 2026-10-10) and moved to `OPEN_QUESTIONS.md`'s Resolved/Closed section; see Completed above.
 5. Phase 1 begins only after all of the above are complete, PR #1 is merged, and explicit authorization is given — not automatically.
