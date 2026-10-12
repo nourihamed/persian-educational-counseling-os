@@ -88,3 +88,16 @@ Fields (conceptual, not implemented):
 - Actual ERD diagram (image) and Alembic migrations → Phase 2.
 - Final decision on RLS policy definitions → Phase 1/2, pending Q-001.
 - Final column-level design of `ProgramVersion`/`PlanVersion` (exact fields beyond the conceptual ones listed above, editable-vs-new-version state rules, template-update-vs-existing-plan behavior) → Phase 2. The MVP Versioning *policy* itself is no longer pending (`DECISION_LOG.md` D-008 — Accepted, `OPEN_QUESTIONS.md` Q-012 Resolved); what remains pending is ordinary Phase 2 schema design work, not a Product Owner decision. Nothing describing `ProgramVersion`/`PlanVersion` in this document has been implemented as a migration, table, or endpoint.
+
+
+## Tenant Isolation — Accepted MVP Mechanism (2026-10-12)
+
+Per `DECISION_LOG.md` D-009 and resolved `OPEN_QUESTIONS.md` Q-001, the selected MVP design is a shared PostgreSQL database/schema, with a direct indexed `tenant_id NOT NULL` on every tenant-scoped row, application-level authorization, and PostgreSQL RLS as defense in depth. This is a design decision only; no migrations or executable policies exist yet.
+
+- For tenant-owned relationships, use composite foreign keys/unique constraints or equivalent safeguards so a child row cannot reference a parent from another tenant.
+- The runtime database role must be least-privileged and must not own tenant tables or have RLS-bypass privileges. Review table-owner and privileged-role behavior; apply forced RLS or an equivalent control where appropriate.
+- RLS policies must use a trusted tenant context established by the authenticated application request, not a caller-supplied tenant ID.
+- Add database and integration tests for cross-tenant reads, writes, joins, and invalid cross-tenant relationships. Also test jobs, reports/exports, files, and notifications.
+- RLS supplements, but does not replace, object-level authorization and application tenant filters.
+
+Schema-per-tenant and database-per-tenant are not selected for MVP. Any future change requires a recorded architecture decision and migration/backup impact review.
