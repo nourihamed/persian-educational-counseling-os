@@ -20,7 +20,7 @@ Open Pull Request **#1** (branch `docs/phase0-correction-pass-3` → `main`) con
 This is the checklist `DEVELOPMENT_GUIDE.md` refers to as Phase 0's Definition of Done. Documentation readiness, Supervisor gate status, Product Owner closure, and PR merge are distinct states. Each checked item states the evidence for it; nothing is checked without one.
 
 - [x] All 15 foundation documents present in the repository (14 core + `SUPERVISOR_REVIEW.md`) — verified by repeated `git`/GitHub API file listings across correction rounds (see `CHANGELOG.md`).
-- [x] No unresolved contradiction from the latest documented review pass is currently known across the 15 documents; the three remaining findings from the previous Supervisor pass have been corrected and logged in `CHANGELOG.md`. This is not a guarantee that no future issue will be found.
+- [ ] Full cross-document contradiction check after the latest review findings — **pending**. A new review identified a tenant-column rule/Q-013 ambiguity and stale commit-tracking language in this file; corrections are being recorded on this branch. Do not mark this item complete until the relevant documents and the full 15-document set have been rechecked.
 - [x] No application code, database migration, API endpoint, or automated test exists anywhere in the repository — verified by directory listing (`backend/frontend/tests/scripts/deployment` contain only `.gitkeep`) each round.
 - [x] All documentation changes are on branch `docs/phase0-correction-pass-3`, attached to open Pull Request #1 — not pushed directly to `main` — verified via GitHub API each round.
 - [x] Independent Supervisor Review recorded in `SUPERVISOR_REVIEW.md` with explicit status `CONDITIONAL PASS` on 2026-10-12; this is not final `APPROVED` and does not authorize Phase 1.
@@ -31,10 +31,11 @@ This is the checklist `DEVELOPMENT_GUIDE.md` refers to as Phase 0's Definition o
 Documentation foundation: present on `main` (commit `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`) and being further corrected on a separate branch (see below) pending review/merge.
 Implementation: 0% (by design — no application code exists).
 
-### Three distinct things this file tracks separately (do not conflate them)
-1. **Latest commit actually in the GitHub repository (`main`)** — directly verified by Claude just before this update: `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` ("docs: Phase 0 correction pass — align docs with actual repo state, add SUPERVISOR_REVIEW.md placeholder"). This is a fact about the repository, not a judgment about its quality.
-2. **Latest branch content reviewed by the Supervisor** — use the live head SHA and file diff shown by PR #1; do not embed a branch HEAD SHA in this file because updating this file itself makes such a value stale. A content review is not the same as final Phase 0 approval.
-3. **Supervisor gate status** — `CONDITIONAL PASS` is recorded in `SUPERVISOR_REVIEW.md` as of 2026-10-12. Final `APPROVED` and Product Owner closure have not been given; Phase 1 is not authorized.
+### Commit and review tracking — keep these states separate
+1. **Latest commit on `main`:** the last known verified SHA recorded by an earlier check is `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`. Treat this as a historical checkpoint, not a guaranteed current HEAD; verify the live `main` ref before relying on it.
+2. **Current PR #1 branch content:** `docs/phase0-correction-pass-3` is a separate branch with changes beyond `main`. The live PR head and diff are authoritative for the branch's current content. Never equate the latest `main` commit with the latest PR-branch commit, or describe the `main` SHA as the latest commit read/authored by Claude.
+3. **Claude authorship/read history:** do not infer that Claude read or authored the `main` HEAD merely because that SHA was verified. Attribute authorship/review only from commit metadata and recorded session evidence; when the precise latest Claude-reviewed/authored commit is not verified, state that it is not established.
+4. **Supervisor review and gate:** the Supervisor must review the live PR head/diff independently. The recorded gate remains `CONDITIONAL PASS` as of 2026-10-12; Product Owner closure, any PR merge, and authorization of Phase 1 are separate decisions.
 
 ### Repository Status (GitHub)
 - Repository: `https://github.com/nourihamed/persian-educational-counseling-os` — currently **private**. Visibility was toggled public→private during this session by the project owner; treat current visibility as private unless re-verified.
