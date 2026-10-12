@@ -98,7 +98,7 @@ Jalali⇄Gregorian conversion lives in one isolated module (`domain/calendar` or
 
 Tracked in `OPEN_QUESTIONS.md`:
 - Detailed policy/constraint/test design for the accepted tenant isolation mechanism (Q-001 resolved)
-- Hosting/deployment target (Q-010), which affects whether external SDKs (payment/SMS/Telegram) are reachable
+- Concrete VPS provider/plan and adapter-specific external-service reachability (Q-010 approach accepted; vendor remains unselected)
 - Payment gateway target (Q-004)
 
 No code, migration, or infrastructure provisioning happens in Phase 0.
