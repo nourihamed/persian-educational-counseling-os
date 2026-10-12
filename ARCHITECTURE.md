@@ -19,6 +19,8 @@ Rule (non-negotiable, Master Prompt §50, §66): business logic never lives in r
 
 **Decision accepted by the Product Owner on 2026-10-12:** use one shared PostgreSQL database/schema with direct, indexed, `NOT NULL` `tenant_id` on every tenant-scoped row; application/API authorization and PostgreSQL Row-Level Security (RLS) are both required layers. See the resolved `OPEN_QUESTIONS.md` Q-001 and the Product Owner decision addendum in `SUPERVISOR_REVIEW.md`. This is the selected MVP mechanism, not proof of implemented or tested runtime security.
 
+**Scope qualification (Q-013 remains open):** “every tenant-scoped row” means every row owned by a counselor tenant, and does not decide the ownership representation for a future platform-owned/shared `ProgramTemplate` or its `ProgramVersion` rows. Those two catalog ownership questions remain unresolved. Do not infer that `tenant_id` may be nullable, that a shared table is approved for mixed ownership, or that platform-level rows bypass authorization. Before implementation, Q-013 must determine an explicit ownership model and access policy for those catalog rows. Student enrollments, plans, and student-facing records remain tenant-owned without exception.
+
 - Derive the request-scoped tenant context from the authenticated principal; never trust a path/body tenant identifier by itself.
 - Require explicit tenant context for every tenant repository operation and object-level authorization for each resource/action.
 - Enforce parent/child tenant consistency using composite foreign keys/constraints or an equivalent database-enforced mechanism.
