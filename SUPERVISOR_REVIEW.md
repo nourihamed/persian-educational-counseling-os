@@ -147,3 +147,19 @@ The Product Owner has explicitly accepted the recommended choices for Q-001, Q-0
 - Q-002: controlled MVP scope in `PROJECT_SCOPE.md`; out-of-scope integrations and advanced features remain deferred.
 - Q-010: initial Pilot target is a portable Docker Compose deployment on an Iran-based VPS; no provider or plan has been selected.
 - **Gate remains CONDITIONAL PASS.** These product decisions do not themselves close Phase 0, merge PR #1, or authorize Phase 1. A fresh review of the final PR diff and explicit Product Owner closure/authorization remain separate steps.
+
+
+## Follow-up Review Findings — 2026-10-12
+
+The Product Owner identified two substantive documentation inconsistencies and one checklist/status issue. They are treated as real findings, not dismissed as wording-only.
+
+### MEDIUM — Tenant-column rule insufficiently qualified against Q-013
+`DATABASE.md` §3 stated that every tenant-scoped table must have a non-null `tenant_id`, while the Programs section leaves the ownership model for a possible platform-owned `ProgramTemplate` and its `ProgramVersion` rows unresolved under Q-013. The universal rule could be read as prematurely deciding how platform-owned catalog rows are represented. Corrected on the PR branch by qualifying the rule to tenant-owned rows, explicitly preserving Q-013, prohibiting inference of nullable/mixed-ownership schema, and keeping student-facing plans/enrollments tenant-owned without exception. `ARCHITECTURE.md` now contains the matching qualification.
+
+### MEDIUM — PROJECT_STATE commit attribution conflated main with branch review
+The commit-tracking section could be read as treating the latest verified `main` SHA as the latest commit whose content Claude read/authored, despite the separate PR branch. Corrected to distinguish the last-known `main` checkpoint, live PR branch head/diff, verified Claude authorship/read evidence, and the Supervisor gate. The recorded `main` SHA is explicitly historical and must be live-verified before being treated as current.
+
+### LOW — Contradiction checklist asserted completion prematurely
+The Phase 0 checklist item claiming no known contradiction was checked while these findings remained. It has been unchecked and marked pending until a fresh full cross-document contradiction review is completed. `PROJECT_STATE.md` already reports `Last Updated: 2026-10-12`; that date is current for this correction round.
+
+**Disposition:** The targeted corrections are recorded on the PR branch. This does not establish that every contradiction in all 15 documents has been found, and the Phase 0 gate remains **CONDITIONAL PASS** pending a fresh full review and explicit Product Owner closure.
