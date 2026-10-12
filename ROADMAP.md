@@ -9,7 +9,7 @@ Status: DRAFT — Phase 0 — Pending Approval
 | 0 | Product & Business Model | این مجموعه اسناد (در حال انجام) |
 | 1 | Architecture & Multi-Tenancy | جزئیات اجرای تصمیم مصوب shared PostgreSQL + tenant_id + RLS؛ طراحی authorization و تست‌های tenant isolation |
 | 2 | Database & Domain Model | ERD کامل، مدل‌های Core (Counselor, Student, Program, Activity...) |
-| 3 | Infrastructure | FastAPI skeleton، Alembic، Docker، CI اولیه، Redis |
+| 3 | Infrastructure | FastAPI skeleton، Alembic، Docker Compose برای Pilot روی VPS داخل ایران، CI اولیه؛ Redis فقط در صورت توجیه |
 | 4 | Authentication & RBAC | Register/Login/Refresh/Reset، Policy engine |
 | 5 | Counselor/Student Relationship | CounselorStudent entity + lifecycle |
 | 6 | Student Profile & Subjects | Profile fields، Default subjects قابل ویرایش |
