@@ -105,3 +105,7 @@ MVP باید حداقل سطح ممکن از Versioning قابل‌ممیزی (M
 
 **دلیل:** درخواست مستقیم Supervisor Review برای رفع تناقض Template/Plan Versioning؛ اصل کلی‌تر این است که تصمیمات معماری/محصول باید صریحاً ثبت شوند، نه این‌که به‌صورت ضمنی و ناهماهنگ در چند سند مختلف حل شوند.
 **وضعیت:** **Accepted — صریحاً توسط Product Owner در گفتگو تأیید شد؛ 2026-10-10.**
+
+
+## Product Owner decisions recorded on 2026-10-12
+See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
