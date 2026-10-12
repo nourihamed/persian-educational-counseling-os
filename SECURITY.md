@@ -3,6 +3,8 @@
 Status: DRAFT — Phase 0 — Pending Approval
 
 ## اصول پایه
+
+**مکانیزم MVP مصوب مالک محصول در 2026-10-12 (D-009 / Q-001):** PostgreSQL مشترک با `tenant_id` مستقیم و غیرقابل‌تهی، Application/API authorization و RLS به‌عنوان دفاع چندلایه. این تصمیم هنوز پیاده‌سازی یا آزمون نشده است. نقش runtime نباید مالک جدول‌های tenant یا دارای دسترسی bypass به RLS باشد؛ policyها، رفتار owner/privileged roles و tenant context قابل‌اعتماد باید بررسی شوند. تست‌های منفی cross-tenant برای API، دیتابیس و سطوح جانبی (jobs، exports، files و notifications) شرط پذیرش‌اند.
 1. **Tenant Isolation امنیتی است، نه فقط معماری.** هر نشتی داده بین Counselorها یک Security Incident محسوب می‌شود.
 2. **Defense in Depth**: Authorization در Application layer + محدودیت در DB layer (RLS) هم‌زمان، نه فقط یکی.
 3. **Least Privilege**: هر Role فقط به چیزی که لازم دارد دسترسی دارد؛ Parent و Student هرگز به یادداشت خصوصی مشاور دسترسی پیش‌فرض ندارند.
