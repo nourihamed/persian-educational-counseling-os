@@ -253,3 +253,15 @@ This is a test-plan/documentation change only. No runtime tests, application cod
 - `PROJECT_STATE.md` — refreshed the current milestone/checklist wording to point to the 2026-10-13 follow-up review; this remains separate from Product Owner closure, PR merge, and Phase 1 authorization.
 
 Verification boundary: documentation-only. No application code, database migrations, API endpoints, executable tests, CI workflows, or deployment configuration were added. No runtime security claim is made. Q-011 remains open; Q-013 remains open; Phase 0 remains CONDITIONAL PASS; PR #1 remains unmerged and Phase 1 is not authorized.
+
+
+### 2026-10-13 — Resolve Q-013: Tenant-Owned Program Templates Only in MVP
+`docs(decision):` Recorded the Product Owner's explicit Option A decision for Q-013 as D-012.
+
+- `OPEN_QUESTIONS.md` marks Q-013 Resolved.
+- In MVP, `ProgramTemplate` and `ProgramVersion` are tenant-owned only; each `ProgramVersion` must reference a template from the same Tenant.
+- Platform-owned/shared catalog templates and versions are out of MVP and require a separate future decision before implementation.
+- `ARCHITECTURE.md`, `DATABASE.md`, `API.md`, `PRODUCT_REQUIREMENTS.md`, `PROJECT_SCOPE.md`, and `SECURITY.md` reflect the decision and its authorization boundary.
+- The supervisor follow-up review and PR #1 description are aligned to the current decision and review status.
+
+This is documentation-only. No application code, migrations, endpoints, executable tests, CI, or deployment changes were made. PR #1 remains open and unmerged; Phase 0 remains CONDITIONAL PASS pending post-edit verification and Product Owner closure; Phase 1 is not authorized.
