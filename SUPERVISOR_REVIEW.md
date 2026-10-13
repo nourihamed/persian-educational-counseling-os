@@ -269,3 +269,72 @@ The identified documentation inconsistencies have been corrected. Keep the gate 
 
 ## Gate Status
 **CONDITIONAL PASS**
+
+---
+
+# SUPERVISOR FOLLOW-UP — 2026-10-13 (Q-013 Decision and Documentation Recheck)
+
+## Phase
+**Phase 0 — Product & Business Model Foundation**
+
+## Scope Reviewed
+Follow-up against the Product Owner's explicit Q-013 decision (Option A), D-012, and the current PR branch copies of `OPEN_QUESTIONS.md`, `DECISION_LOG.md`, `DATABASE.md`, `SECURITY.md`, `CHANGELOG.md`, and PR #1 metadata. This is a documentation-only review; no application implementation or executable tests are present.
+
+## Summary
+The Product Owner resolved Q-013 by selecting Option A: the MVP supports only Tenant-owned `ProgramTemplate` and `ProgramVersion`; each version must belong to a template owned by the same Tenant. Platform-owned/shared catalog templates and versions are out of MVP. D-012 records this decision. The earlier Q-013-open statements in the 2026-10-13 Final Documentation Consistency Pass above are historical snapshots and are superseded only with respect to Q-013 by this addendum; the earlier review text is retained to preserve the audit trail.
+
+The targeted documentation follow-up is now recorded in `DATABASE.md`, `SECURITY.md`, and `CHANGELOG.md`. Live reads confirmed Q-013 is marked Resolved in `OPEN_QUESTIONS.md` and D-012 exists in `DECISION_LOG.md`.
+
+## Passed
+- Q-013 is resolved by the Product Owner; no platform-owned template/version model is implied for MVP.
+- `DATABASE.md` no longer has the identified stray closing parenthesis in the ProgramVersion ownership description.
+- `SECURITY.md` now states the same-Tenant Template/Version relationship and keeps Student enrollment/Plan data Tenant/Student-scoped.
+- `CHANGELOG.md` contains the dated D-012/Q-013 resolution entry.
+- PR #1 remains open and unmerged; `main` has not been merged with this branch.
+
+## Findings
+
+### CRITICAL
+None confirmed in this documentation-only follow-up. This is not a runtime security verdict.
+
+### HIGH
+None confirmed in this documentation-only follow-up. Runtime tenant isolation, authorization, database constraints, and executable tests remain unverified because implementation is not in scope and no runtime code was reviewed.
+
+### MEDIUM
+- **Corrected:** `SECURITY.md` previously described three ownership cases despite listing two numbered cases and did not clearly state the same-Tenant relationship. The section is now aligned with D-012 and the MVP boundary.
+- **Corrected:** `DATABASE.md`'s identified punctuation typo is removed.
+- **Corrected:** the dated `CHANGELOG.md` entry records the Product Owner decision and its limits.
+
+### LOW
+- The PR description still requires a final metadata recheck so it does not imply that a current review record or review comment exists where it does not. This is documentation/PR metadata housekeeping, not a reason to merge.
+- Q-011 remains open: a successful GitHub operation in one session does not prove cross-session persistence or establish a durable operating policy.
+- No claim is made that every conceivable documentation inconsistency or runtime issue has been ruled out.
+
+## Architecture
+MVP ownership is now unambiguous for program templates and versions: both are Tenant-owned, and each version must belong to a template in the same Tenant. Platform/shared catalog ownership is out of scope. This is a domain rule to enforce in the eventual schema, repositories, API authorization, and tests; it is not evidence of implementation.
+
+## Database
+The documentation must enforce same-Tenant consistency between `ProgramTemplate` and `ProgramVersion`, using a database constraint or an equivalent reliable mechanism in the future implementation. `Plan`, `PlanVersion`, and student enrollments remain Tenant/Student-scoped. No live schema or migrations were reviewed.
+
+## API
+No endpoints are implemented. Future endpoints must enforce object-level authorization and Tenant scoping for template/version reads and writes, including attempts to reference another Tenant's template ID.
+
+## Security
+The D-009 defense-in-depth mechanism remains a design decision, not proof of runtime security. Future implementation must enforce trusted Tenant context, authorization, RLS role/policy requirements, and negative cross-Tenant tests. The versioning wording update does not replace those checks.
+
+## Testing
+No executable tests were added or run in this follow-up. Future regression tests must cover same-Tenant template/version ownership, cross-Tenant ID substitution, immutable published versions, and Tenant isolation for student plans/enrollments.
+
+## Documentation
+The Q-013 decision is recorded in `OPEN_QUESTIONS.md` and `DECISION_LOG.md`; the corresponding database/security descriptions and changelog are synchronized. Earlier statements that Q-013 remained open are retained as dated historical records and must not be read as the current decision.
+
+## Required Changes
+1. **Completed:** synchronize `DATABASE.md`, `SECURITY.md`, and `CHANGELOG.md` with D-012/Q-013.
+2. **Still to verify:** final PR description accurately reflects the current branch and does not imply a review comment or file update that has not actually landed.
+3. Product Owner must separately decide whether to close Phase 0 and merge PR #1. Phase 1 remains unauthorized unless explicitly approved.
+
+## Recommendation
+**CONDITIONAL PASS.** The identified Q-013-related documentation cleanup is recorded. Do not merge PR #1 or start Phase 1 automatically. A final live diff review and explicit Product Owner phase-closure/merge decision remain separate requirements.
+
+## Gate Status
+**CONDITIONAL PASS**
