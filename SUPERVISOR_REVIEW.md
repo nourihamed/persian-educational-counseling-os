@@ -163,3 +163,28 @@ The commit-tracking section could be read as treating the latest verified `main`
 The Phase 0 checklist item claiming no known contradiction was checked while these findings remained. It has been unchecked and marked pending until a fresh full cross-document contradiction review is completed. `PROJECT_STATE.md` already reports `Last Updated: 2026-10-12`; that date is current for this correction round.
 
 **Disposition:** The targeted corrections are recorded on the PR branch. This does not establish that every contradiction in all 15 documents has been found, and the Phase 0 gate remains **CONDITIONAL PASS** pending a fresh full review and explicit Product Owner closure.
+
+
+## Follow-up Review Findings — 2026-10-13
+
+### MEDIUM — TEST_PLAN.md did not operationalize accepted D-009 controls
+
+**Finding:** The prior tenant-isolation checklist did not explicitly require checking the runtime database role's table ownership/effective BYPASSRLS privileges, inspecting RLS policy configuration, or separating RLS-only tests from Application-authorization-only tests.
+
+**Correction recorded:** `TEST_PLAN.md` now requires (1) verifying the runtime role is not owner of tenant-owned tables and has no effective BYPASSRLS privilege, (2) checking RLS enablement, FORCE ROW LEVEL SECURITY where applicable, policies, and policy roles, (3) isolated negative tests of RLS without application filtering, (4) isolated tests of Application/Repository authorization without relying on RLS, and (5) integrated tests with both layers enabled. It also explicitly forbids weakening production security or making the runtime role privileged to run tests. The matching change is recorded in `CHANGELOG.md` dated 2026-10-13.
+
+**Verification boundary:** This fixes the planned test specification only. There is no runtime implementation, database role, RLS policy, or executable test suite in Phase 0; none of these controls has been implemented or proven operational by this documentation change.
+
+### LOW — CHANGELOG granularity and history claims
+
+**Finding:** `PROJECT_STATE.md` described `CHANGELOG.md` as a complete per-commit history, although entries are sometimes grouped by correction pass and do not map one-to-one to commits.
+
+**Correction required/recorded:** The state document now distinguishes the human-readable, dated summary of correction rounds in `CHANGELOG.md` from the authoritative per-commit record in GitHub/`git log`. The changelog remains append-only, but is not represented as a substitute for commit history.
+
+### LOW — Isolated GitHub write-test branch remains
+
+The branch `test/github-write-access-20261012` was reported as isolated and with no net file changes, but remains a remote branch. The available GitHub connector in this session does not expose a branch-delete operation, so it was not deleted. This is housekeeping only; do not merge or use it as a delivery branch. The repository owner may delete it in GitHub after confirming it is no longer needed.
+
+### Disposition
+
+The MEDIUM test-plan documentation finding is corrected on the PR branch. The changelog/history wording mismatch is corrected. The test branch cleanup remains outstanding due to tool capability limits. No runtime security claim is made. Phase 0 remains **CONDITIONAL PASS** pending the full cross-document recheck and explicit Product Owner closure; PR #1 remains unmerged and Phase 1 remains unauthorized.
