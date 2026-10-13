@@ -248,4 +248,8 @@ This is a test-plan/documentation change only. No runtime tests, application cod
 - `ROADMAP.md` — clarified that the minimum auditable credit ledger is an MVP deliverable; Phase 21 is for complementary/expanded Billing work, not for postponing the MVP ledger.
 - `PROJECT_STATE.md` and `SUPERVISOR_REVIEW.md` — reconciled the open-question summary, marked the full 15-document semantic consistency check complete for this bounded documentation pass, and recorded the current follow-up review. The 2026-10-12 review is retained as historical context and labeled accordingly.
 
+
+- PR #1 description — updated the live pull-request summary so it no longer incorrectly lists Q-001/Q-002/Q-010 as open, and accurately lists resolved Q-003, still-open questions, the current CONDITIONAL PASS gate, and the no-runtime-implementation verification boundary.
+- `PROJECT_STATE.md` — refreshed the current milestone/checklist wording to point to the 2026-10-13 follow-up review; this remains separate from Product Owner closure, PR merge, and Phase 1 authorization.
+
 Verification boundary: documentation-only. No application code, database migrations, API endpoints, executable tests, CI workflows, or deployment configuration were added. No runtime security claim is made. Q-011 remains open; Q-013 remains open; Phase 0 remains CONDITIONAL PASS; PR #1 remains unmerged and Phase 1 is not authorized.
