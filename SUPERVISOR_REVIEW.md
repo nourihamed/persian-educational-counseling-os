@@ -64,7 +64,7 @@ NOT APPROVED / APPROVED
 
 ---
 
-# SUPERVISOR REVIEW — 2026-10-12
+# SUPERVISOR REVIEW — 2026-10-12 (Historical snapshot; superseded where noted by 2026-10-13 follow-up)
 
 ## Phase
 **Phase 0 — Product & Business Model Foundation**
@@ -188,3 +188,84 @@ The branch `test/github-write-access-20261012` was reported as isolated and with
 ### Disposition
 
 The MEDIUM test-plan documentation finding is corrected on the PR branch. The changelog/history wording mismatch is corrected. The test branch cleanup remains outstanding due to tool capability limits. No runtime security claim is made. Phase 0 remains **CONDITIONAL PASS** pending the full cross-document recheck and explicit Product Owner closure; PR #1 remains unmerged and Phase 1 remains unauthorized.
+
+
+---
+
+# SUPERVISOR REVIEW — 2026-10-13 Final Documentation Consistency Pass
+
+## Phase
+**Phase 0 — Product & Business Model Foundation**
+
+## Scope Reviewed
+Live GitHub branch `docs/phase0-correction-pass-3` and all 15 foundation documents: `PRODUCT_REQUIREMENTS.md`, `PROJECT_SCOPE.md`, `ARCHITECTURE.md`, `DATABASE.md`, `API.md`, `ROADMAP.md`, `PROJECT_STATE.md`, `DECISION_LOG.md`, `OPEN_QUESTIONS.md`, `TEST_PLAN.md`, `SECURITY.md`, `CHANGELOG.md`, `SUPERVISOR_REVIEW.md`, `DEVELOPMENT_GUIDE.md`, and `README.md`. The live PR/branch relationship was also checked through GitHub. This was a documentation-only review; there is no application code, migration, or executable test suite to validate.
+
+## Summary
+This pass found and corrected six current-state documentation inconsistencies: (1) stale tenant-isolation wording in `PRODUCT_REQUIREMENTS.md`; (2) stale approval-dependency/placeholder wording in `PROJECT_SCOPE.md`; (3) Q-003 not reconciled with the accepted MVP boundary; (4) README still describing the review as a placeholder; (5) ambiguous placement of the MVP credit ledger versus Phase 21 in `ROADMAP.md`; and (6) older review text that could still be read as current operational guidance. The active open-question summary in `PROJECT_STATE.md` was also reconciled with Q-003's resolution. The full 15-document consistency checklist is now marked complete for the current documentation pass, not as a claim that every possible future ambiguity is impossible.
+
+**Gate remains CONDITIONAL PASS.** The targeted documentation corrections are recorded on the existing PR branch. This is not final `APPROVED`, does not close Phase 0 on the Product Owner's behalf, and does not authorize Phase 1.
+
+## Passed
+- The accepted D-009 tenant-isolation mechanism is consistently described as a decision, not as proof of implementation.
+- D-010's MVP boundary includes the minimum auditable `StudentCredit`/`CreditTransaction` ledger and excludes a real payment gateway.
+- Q-003 now records the MVP billing-depth decision as resolved; Q-004 remains open for selection of a future real payment provider.
+- Minimum auditable Program Template and Student Plan versioning remains an MVP requirement under D-008; advanced version tooling remains deferred.
+- Q-013 remains open for the two separate platform-owned `ProgramTemplate` and `ProgramVersion` ownership/authorization questions. No ownership model was guessed or silently chosen.
+- Historical changelog entries and the original 2026-10-12 review are retained as history, but are explicitly not allowed to override the current decision state.
+- No application code, migrations, endpoints, executable tests, CI workflows, or deployment configuration were added.
+
+## Findings
+
+### CRITICAL
+None confirmed in the documentation reviewed. This is not a runtime security verdict.
+
+### HIGH
+None confirmed in the documentation reviewed. Runtime tenant isolation and object-level authorization remain untested because the implementation does not exist.
+
+### MEDIUM
+- **Corrected:** `PRODUCT_REQUIREMENTS.md` now states the accepted D-009 mechanism and its implementation/testing boundary.
+- **Corrected:** `PROJECT_SCOPE.md` no longer describes the MVP boundary as an unresolved placeholder or conditions it on already-resolved Q-001/Q-002.
+- **Corrected:** Q-003 was moved from Open to Resolved under D-010; the decision explicitly leaves Q-004 (future gateway provider) open.
+- **Corrected:** `README.md` now describes `SUPERVISOR_REVIEW.md` as a real review log with a current CONDITIONAL PASS gate.
+- **Corrected:** `ROADMAP.md` now states that the minimum credit ledger is an MVP deliverable and Phase 21 covers complementary Billing work, not deferral of the MVP ledger.
+- **Corrected:** the 2026-10-12 review is labeled as a historical snapshot; this 2026-10-13 review records the current findings and disposition.
+
+### LOW
+- **Outstanding housekeeping:** remote branch `test/github-write-access-20261012` still exists. The available GitHub connector tools in this session do not expose branch deletion; it was not deleted and must not be represented as deleted. The repository owner can delete it manually if it is no longer needed.
+- **Q-011 remains open:** successful access in a single session does not prove cross-session persistence or define a long-term operating policy.
+- **Q-013 remains open:** resolve before implementing platform-owned catalog templates/versions; it is not silently resolved by this review.
+
+## Architecture
+The documented architecture remains layered and keeps planning deterministic/explainable. Tenant isolation is a non-negotiable requirement; D-009 chooses the MVP mechanism. The mechanism still needs detailed policy design and executable tests in later authorized phases. The accepted minimum versioning policy is distinct from its detailed schema design.
+
+## Database
+The conceptual model describes tenant-owned rows as directly scoped and keeps student plans/enrollments tenant-isolated. No migration, live schema, constraints, indexes, or database transactions were available to inspect. Platform-owned template/version ownership remains unresolved under Q-013.
+
+## API
+The API document remains conceptual; no endpoints are implemented. Object-level authorization, tenant filtering, validation, pagination, error behavior, idempotency, and negative cross-tenant tests must be verified against the future implementation.
+
+## Security
+No runtime security claim is made. D-009's defense-in-depth design still requires checking runtime role ownership and effective `BYPASSRLS`, RLS policies, trusted tenant context, and cross-tenant access through APIs, jobs, exports, files, and notifications.
+
+## Testing
+`TEST_PLAN.md` now specifies separate RLS-only tests, application-authorization-only tests, and integrated tests. These are requirements only: no executable tests or CI results exist in Phase 0.
+
+## Documentation
+All 15 foundation documents were re-read for current-state contradictions, decision/open-question status, scope, unsupported implementation claims, and stale operational instructions. The six current-state inconsistencies listed above were corrected and recorded in `CHANGELOG.md`. Historical entries remain intact as history. The full semantic recheck item in `PROJECT_STATE.md` is marked complete for this pass.
+
+## Technical Debt
+- Runtime architecture, database, API, security, and test quality cannot yet be assessed through code because implementation is intentionally not authorized in Phase 0.
+- The isolated GitHub test branch cleanup is still outstanding due to tool capability limits.
+- Q-011 remains operationally open; Q-013 remains a future ownership/authorization decision.
+
+## Required Changes
+1. **Completed in this pass:** six documentation corrections listed above.
+2. **Owner housekeeping (optional):** delete `test/github-write-access-20261012` through GitHub if confirmed unnecessary.
+3. **No further Phase 0 document edit is identified by this pass**, subject to the explicit limitation that this is a bounded documentation review, not proof of runtime correctness or absence of all conceivable ambiguities.
+4. Product Owner must independently decide whether to close Phase 0 and merge PR #1. Phase 1 requires separate explicit authorization.
+
+## Recommendation
+The identified documentation inconsistencies have been corrected. Keep the gate at **CONDITIONAL PASS** pending Product Owner review/closure and the separate PR merge decision. Do not begin Phase 1 automatically.
+
+## Gate Status
+**CONDITIONAL PASS**
