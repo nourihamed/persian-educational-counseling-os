@@ -31,13 +31,11 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 - **Admin impersonation (در صورت وجود)**: باید audit-logged و قابل محدودسازی باشد.
 - **Parent access**: پیش از نمایش هر داده، بررسی صریح Consent/Permission سطح دانش‌آموز+مشاور.
 - **File access (گزارش‌ها، PDF)**: لینک‌های دانلود باید Scoped و زمان‌دار (signed URL) باشند، نه public permanent link.
-- **Program/Plan Versioning** (طبق `DECISION_LOG.md` D-008 — Accepted، تأیید مالک محصول در تاریخ ۲۰۲۶-۱۰-۱۰): این بند بین سه مورد مالکیت تمایز صریح قائل می‌شود (جزئیات کامل در `DATABASE.md` بخش Programs):
-  1. `ProgramTemplate` متعلق به یک Tenant — همان مسیر Tenant-scoped معمول.
-  2. طبق D-012 / Q-013، در MVP فقط `ProgramTemplate` و `ProgramVersion` متعلق به Tenant پشتیبانی می‌شوند؛ قالب‌ها و نسخه‌های سطح‌پلتفرم خارج از MVP هستند.
-
-  3. **`StudentProgramEnrollment`، `Plan`، و `PlanVersion` — همیشه و بدون استثنا به یک Tenant و یک Student خاص محدودند.** Read و Write روی این‌ها دقیقاً همان مسیر Tenant/Student-scoped Repository را طی می‌کند که بقیه جداول Tenant طی می‌کنند. استفاده از Template/Version هیچ‌گاه مجوز اشتراک‌گذاری داده دانش‌آموز بین Tenantها نیست.
-  ساخت/فعال‌سازی هر نسخه باید Actor انجام‌دهنده را ثبت کند (Audit Log) تا هر تغییر قابل‌انتساب باشد. این بند مفهومی است؛ Policy اصل Versioning تأیید شده (D-008)، ولی تا پیاده‌سازی واقعی در فازهای بعد، هیچ کنترل فنی موجود نیست.
-
+- **Program/Plan Versioning** (طبق D-008 — Accepted و D-012 — Accepted؛ الزامات مفهومی‌اند و تا پیاده‌سازی و تست در فازهای مجاز، کنترل فنی موجود نیست):
+  1. در MVP، فقط `ProgramTemplate` و `ProgramVersion` متعلق به یک Tenant پشتیبانی می‌شوند. هر `ProgramVersion` باید به Template همان Tenant تعلق داشته باشد. قالب‌ها و نسخه‌های متعلق به Platform یا کاتالوگ مشترک خارج از MVP هستند (D-012 / Q-013 — Resolved).
+  2. `StudentProgramEnrollment`، `Plan` و `PlanVersion` بدون استثنا به Tenant و Student مربوط محدود می‌مانند. Read/Write روی آن‌ها باید از کنترل‌های Tenant/Student-scoped عبور کند؛ استفاده از Template/Version مجوز اشتراک‌گذاری داده دانش‌آموز بین Tenantها نیست.
+  3. ساخت/فعال‌سازی نسخه باید Actor را ثبت کند (Audit Log). نسخه منتشرشده نباید بی‌صدا بازنویسی شود؛ تغییرات باید از مسیر نسخه جدید و قواعد وضعیت تعریف‌شده انجام شوند.
+  4. این تصمیم‌ها مالکیت و محدوده MVP را مشخص می‌کنند، نه پیاده‌سازی یا اثبات امنیت runtime.
 ## Threat Model اولیه (خلاصه)
 | تهدید | ریسک | کنترل |
 |---|---|---|
