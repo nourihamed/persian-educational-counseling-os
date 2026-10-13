@@ -135,3 +135,15 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 **قید:** Core/Domain نباید به Vendor وابسته شود. Docker Compose انتخاب شروع و Pilot است، نه تضمین High Availability یا Production Readiness. دسترسی به سرویس‌های خارجی باید برای هر Adapter جداگانه بررسی شود.
 
 **دلیل:** کاهش پیچیدگی و هزینه آغازین در کنار قابلیت انتقال و محافظت از داده.
+
+## D-012 — مالکیت Tenant-only برای ProgramTemplate و ProgramVersion در MVP
+**وضعیت: ACCEPTED — تصمیم صریح مالک محصول در 2026-10-13؛ Q-013 حل شد.**
+
+**تصمیم مصوب (گزینه A):**
+1. در MVP، هر `ProgramTemplate` متعلق به یک Tenant است و `tenant_id` آن `NOT NULL` خواهد بود.
+2. در MVP، هر `ProgramVersion` نیز متعلق به همان Tenant صاحب Template منبع است. روابط و constraints دیتابیس باید مانع اتصال Version به Template متعلق به Tenant دیگر شوند.
+3. قالب‌های عمومی/سطح‌پلتفرم و `ProgramVersion`های وابسته به آن‌ها خارج از MVP هستند. هیچ مدل nullable-tenant، جدول مشترک با مالکیت مختلط، یا دسترسی عمومی read-only برای این قابلیت در MVP انتخاب نشده است.
+4. افزودن کتابخانه قالب‌های سطح‌پلتفرم در آینده نیازمند تصمیم معماری و تعریف جداگانه مالکیت، انتشار، کپی/مصرف، نسخه‌بندی و Authorization پیش از پیاده‌سازی است.
+5. این تصمیم فقط به catalog قالب‌ها و نسخه‌هایشان مربوط است. `StudentProgramEnrollment`، `Plan` و `PlanVersion` همیشه tenant- و student-scoped باقی می‌مانند. هر عملیات خواندن/نوشتن/انتشار/فعال‌سازی روی Template یا Version باید Authorization را اعمال کند.
+
+**دلیل:** این مدل برای MVP ساده‌تر است، با قاعده `tenant_id NOT NULL` برای ردیف‌های tenant-owned سازگار می‌ماند و از معرفی زودهنگام الگوی مالکیت مختلط یا استثنای دسترسی جلوگیری می‌کند. این تصمیم به‌تنهایی پیاده‌سازی یا امنیت runtime را اثبات نمی‌کند.
