@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 ## Operational Memory — Single Source of Truth for "Where are we now"
 
-Last Updated: 2026-10-12
+Last Updated: 2026-10-13
 
 ---
 
@@ -20,7 +20,7 @@ Open Pull Request **#1** (branch `docs/phase0-correction-pass-3` → `main`) con
 This is the checklist `DEVELOPMENT_GUIDE.md` refers to as Phase 0's Definition of Done. Documentation readiness, Supervisor gate status, Product Owner closure, and PR merge are distinct states. Each checked item states the evidence for it; nothing is checked without one.
 
 - [x] All 15 foundation documents present in the repository (14 core + `SUPERVISOR_REVIEW.md`) — verified by repeated `git`/GitHub API file listings across correction rounds (see `CHANGELOG.md`).
-- [ ] Full cross-document contradiction check after the latest review findings — **pending**. A new review identified a tenant-column rule/Q-013 ambiguity and stale commit-tracking language in this file; corrections are being recorded on this branch. Do not mark this item complete until the relevant documents and the full 15-document set have been rechecked.
+- [ ] Full cross-document contradiction check after the latest review findings — **pending**. A prior review identified a tenant-column rule/Q-013 ambiguity and stale commit-tracking language; those targeted corrections are recorded on this branch. A later review found that TEST_PLAN.md needed explicit RLS/BYPASSRLS test requirements, now added. The full 15-document semantic consistency recheck is still pending; do not mark this item complete until it is completed.
 - [x] No application code, database migration, API endpoint, or automated test exists anywhere in the repository — verified by directory listing (`backend/frontend/tests/scripts/deployment` contain only `.gitkeep`) each round.
 - [x] All documentation changes are on branch `docs/phase0-correction-pass-3`, attached to open Pull Request #1 — not pushed directly to `main` — verified via GitHub API each round.
 - [x] Independent Supervisor Review recorded in `SUPERVISOR_REVIEW.md` with explicit status `CONDITIONAL PASS` on 2026-10-12; this is not final `APPROVED` and does not authorize Phase 1.
@@ -55,7 +55,7 @@ Implementation: 0% (by design — no application code exists).
 - [x] Confirmed no production feature implemented in any commit so far
 
 ### In Progress
-- **Pull Request #1 is open** (`docs/phase0-correction-pass-3` → `main`, not merged) and awaiting independent Supervisor re-review. It is not "being opened" — it already exists; this update is one more commit pushed to the same branch, added to the same open PR. See `CHANGELOG.md` for the exact count and content of every round.
+- **Pull Request #1 is open** (`docs/phase0-correction-pass-3` → `main`, not merged) and awaiting independent Supervisor re-review. It is not "being opened" — it already exists; this update is one more commit pushed to the same branch, added to the same open PR. See `CHANGELOG.md` for dated summaries of correction rounds; use GitHub commit history / `git log` for exact per-commit details.
 - This round's work: resolved a Supervisor-identified contradiction about Program Template/Student Plan versioning across `PROJECT_SCOPE.md`, `ARCHITECTURE.md`, `DATABASE.md`, `ROADMAP.md`, `API.md`, `SECURITY.md`, `TEST_PLAN.md`, `PRODUCT_REQUIREMENTS.md`, `DECISION_LOG.md` (D-008, now Accepted by explicit Product Owner confirmation), and `OPEN_QUESTIONS.md` (new Q-012). See "Completed" above for what the contradiction was and how it was resolved.
 - No other work is in progress. `main` has not been touched by the documentation correction work on this branch.
 
@@ -78,7 +78,7 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-003** (d
 
 **Live source of truth — read this first:** repeatedly re-embedding a "complete" branch commit list in this file has gone stale multiple times on this long-running branch, because the list is necessarily one commit behind the moment it is written (see structural note below). This section no longer attempts to maintain that list. Instead:
 - **For the current branch HEAD, right now:** check **PR #1** directly — `https://github.com/nourihamed/persian-educational-counseling-os/pull/1` — or run `git log -1` against the real repository. Neither this file nor any other document in this repository is the authoritative source for "what is the current HEAD"; GitHub is.
-- **For the complete, per-commit history of what changed and when:** see `CHANGELOG.md`. Unlike this section, `CHANGELOG.md` is append-only and dated — each entry describes a commit that has already happened by the time it's written, so it does not have this section's self-referential staleness problem.
+- **For the complete, per-commit history of what changed and when:** see `CHANGELOG.md` for dated, human-readable summaries of correction passes (append-only, but some entries group multiple commits and are not a one-entry-per-commit ledger). For the authoritative per-commit history, authorship, timestamps, and exact diffs, use the live GitHub commit history / `git log`.
 - `main` (`https://github.com/.../tree/main`) and this correction branch (`docs/phase0-correction-pass-3`, backing PR #1) are **two separate refs**. Edits to the branch never affect `main` unless and until PR #1 is merged — which has not happened.
 
 **Last independently verified snapshot** (a historical fact about one specific point in time — not a claim about the current state; it goes stale the moment any new commit lands on either ref, exactly like the list it replaces would have, but it does not pretend otherwise):
