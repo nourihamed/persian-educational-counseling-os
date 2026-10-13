@@ -87,7 +87,6 @@ Changed:
 
 Changed:
 - `PROJECT_STATE.md`, "In Progress" — replaced "main has not been touched by any of the three correction rounds" (a hardcoded, self-staling count) with "main has not been touched by the documentation correction work on this branch."
-
 No backend/frontend/API/DB/auth/billing/Telegram/SMS/AI/Planning-Engine code in any of the three commits above. No new phases, features, or scope. No open question answered or closed on the project owner's behalf. `main` was not touched by any of them; all work stayed on `docs/phase0-correction-pass-3` / PR #1. Diff stats and commit messages above were read directly from `git show --stat`/`git log` against the real repository, not reconstructed from memory.
 
 ### 2026-10-10 — Eighth Correction: Sync PROJECT_STATE.md "Last Updated" Date
@@ -176,7 +175,6 @@ No backend/frontend/API/DB-migration/auth/billing/Telegram/SMS/AI/Planning-Engin
 **M-01.** Q-013 and `DATABASE.md`/`SECURITY.md` previously distinguished tenant-owned vs. potential platform-owned `ProgramTemplate`, and separately stated `StudentProgramEnrollment`/`PlanVersion` are always tenant-and-student-scoped — but never explicitly addressed `ProgramVersion`'s own ownership/authorization model when its source template is platform-owned. Fixed by splitting Q-013 into two explicit parts (Template ownership; `ProgramVersion` ownership, independently) and updating `DATABASE.md`'s case-2 description and the `ProgramVersion` field entry, and `SECURITY.md`'s matching list, to state plainly that no model has been chosen for either part — not nullable `tenant_id`, not a separate flag, not a separate table, not copy-on-use, not read-only sharing, nor any other option. The tenant/student-scoping invariant for `StudentProgramEnrollment`/`Plan`/`PlanVersion` was reaffirmed as unaffected by either open question.
 
 **M-02.** `PROJECT_STATE.md`'s Open Questions summary line listed Q-001–Q-003 through Q-011 but omitted Q-013 entirely. Added it, phrased to match its actual (two-part, still-Open, Low-priority) status in `OPEN_QUESTIONS.md`.
-
 Changed: `DATABASE.md`, `SECURITY.md`, `OPEN_QUESTIONS.md`, `PROJECT_STATE.md`. This `CHANGELOG.md` entry was added as a directly-necessary consistency step consistent with `DEVELOPMENT_GUIDE.md`'s per-change-record workflow, not as unrelated scope expansion — no other document was touched.
 
 No backend/frontend/API/DB-migration/auth/billing/Telegram/SMS/AI/Planning-Engine code or test. D-008 remains Accepted (unchanged). Q-012 remains Resolved (unchanged). D-006 remains Proposed, independent of D-008 (unchanged). Q-013 remains Open (expanded in detail, not closed). No other open question touched. `main` untouched. PR #1 not merged. Phase 0 not declared Approved; Phase 1 not started.
@@ -231,3 +229,10 @@ Scope and safeguards:
 `docs:` Corrected a newly identified ambiguity between the universal tenant-column rule and the unresolved Q-013 platform-owned `ProgramTemplate`/`ProgramVersion` cases. The cross-cutting rule now applies to tenant-owned rows and explicitly does not decide the representation of platform-owned catalog rows; `ARCHITECTURE.md` carries the matching qualification. Updated `PROJECT_STATE.md` to distinguish `main` from the PR branch and from verified Claude authorship/review evidence. Unchecked the contradiction-free checklist item pending a fresh full-document consistency pass. `Last Updated` was already `2026-10-12` in the current branch and remains current.
 
 No code, migrations, endpoints, automated tests, merge, or Phase 1 work was performed. Q-013 remains open; Phase 0 remains `CONDITIONAL PASS`.
+
+### 2026-10-13 — Align Tenant-Isolation Test Plan with D-009
+`docs(test-plan):` Updated `TEST_PLAN.md` after the independent Phase 0 review found that its tenant-isolation checklist had not caught up with accepted decision D-009.
+
+Added mandatory, distinct checks for: runtime DB-role ownership and effective BYPASSRLS privileges; RLS enablement/policies and applicable roles; RLS-only negative tests without application filtering; application-authorization-only tests in a controlled isolated test setup; and integrated tests with both layers enabled. The plan explicitly prohibits weakening production security or making the runtime role privileged just to run tests.
+
+This is a test-plan/documentation change only. No runtime tests, application code, migrations, CI workflows, or deployment settings were created. Q-013 remains open; Phase 0 remains CONDITIONAL PASS; PR #1 remains unmerged and Phase 1 is not authorized.
