@@ -64,7 +64,7 @@ Platform → Counselor → Student
 
 هر Counselor یک Tenant مستقل است. هیچ داده، query، گزارش، فایل، نوتیفیکیشن یا background job نباید بین Tenantها نشت کند. این اصل باید در تمام لایه‌ها اعمال شود: DB، API، Authorization، Services، Reports، Files، Notifications، Jobs.
 
-جزئیات استراتژی Multi-Tenancy در ARCHITECTURE.md (فاز ۱) مشخص می‌شود؛ گزینه‌های ممکن (Row-Level با tenant_id + RLS، Schema-per-tenant، DB-per-tenant) در OPEN_QUESTIONS.md ثبت شده‌اند.
+**مکانیزم MVP مصوب مالک محصول در D-009 / Q-001 (2026-10-12):** یک PostgreSQL مشترک با `tenant_id` مستقیم، indexed و `NOT NULL` برای هر ردیف tenant-owned، همراه با authorization در Application/API و PostgreSQL RLS به‌عنوان defense in depth. Schema-per-tenant و DB-per-tenant برای MVP انتخاب نشده‌اند. `ARCHITECTURE.md`، `DATABASE.md` و `SECURITY.md` جزئیات طراحی اجرایی را پوشش می‌دهند؛ این تصمیم به‌معنای پیاده‌سازی یا اثبات امنیت runtime نیست. Policyهای RLS، نقش runtime، tenant context قابل‌اعتماد و تست‌های منفی cross-tenant باید در فازهای اجرایی طراحی و آزمون شوند. مالکیت احتمالی `ProgramTemplate` و `ProgramVersion` سطح‌پلتفرم همچنان تحت Q-013 باز است و نباید با این تصمیم حدس زده شود.
 
 ---
 
