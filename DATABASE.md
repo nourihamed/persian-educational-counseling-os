@@ -34,7 +34,7 @@ Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual p
 
 Fields (conceptual, not implemented):
 - `ProgramTemplate` (`id`, `tenant_id NOT NULL`, `name`, ..., stable identity that outlives any individual version; MVP supports tenant-owned templates only)
-- `ProgramVersion` (`id`, `program_template_id`, `version_number`, immutable snapshot of subjects/weekly rules/study/review/test rules, `created_by` (actor attribution), `created_at`, `published_at`; immutable once published — no `UPDATE` after publish, only new rows. **MVP ownership:** tenant-scoped, same Tenant as the source `ProgramTemplate`; platform-template versions are out of MVP under D-012)
+- `ProgramVersion` (`id`, `program_template_id`, `version_number`, immutable snapshot of subjects/weekly rules/study/review/test rules, `created_by` (actor attribution), `created_at`, `published_at`; immutable once published — no `UPDATE` after publish, only new rows. **MVP ownership:** tenant-scoped, same Tenant as the source `ProgramTemplate`; platform-template versions are out of MVP under D-012.
 - `StudentProgramEnrollment` (`id`, `tenant_id` `NOT NULL`, `student_id` `NOT NULL`, student ↔ a specific `ProgramVersion`, not the template — this is the mechanism that records which `ProgramVersion` produced each student's plan, satisfying the "explain the origin of an existing plan" requirement in D-008)
 - `MarketSegment` (§17) and `ProgramTemplateSegment` (which segments a template targets)
 
