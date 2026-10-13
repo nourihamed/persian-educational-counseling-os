@@ -236,3 +236,16 @@ No code, migrations, endpoints, automated tests, merge, or Phase 1 work was perf
 Added mandatory, distinct checks for: runtime DB-role ownership and effective BYPASSRLS privileges; RLS enablement/policies and applicable roles; RLS-only negative tests without application filtering; application-authorization-only tests in a controlled isolated test setup; and integrated tests with both layers enabled. The plan explicitly prohibits weakening production security or making the runtime role privileged just to run tests.
 
 This is a test-plan/documentation change only. No runtime tests, application code, migrations, CI workflows, or deployment settings were created. Q-013 remains open; Phase 0 remains CONDITIONAL PASS; PR #1 remains unmerged and Phase 1 is not authorized.
+
+
+### 2026-10-13 — Final Phase 0 Documentation Consistency Corrections
+`docs:` Corrected six current-state inconsistencies identified by the independent Supervisor's live review of all 15 foundation documents.
+
+- `PRODUCT_REQUIREMENTS.md` — replaced stale wording that left the tenant-isolation mechanism undecided with the accepted D-009/Q-001 mechanism and explicit implementation/testing caveat.
+- `PROJECT_SCOPE.md` — removed the stale placeholder/approval-dependency paragraph; the controlled MVP boundary is already decided under D-010, while future technical design work remains.
+- `OPEN_QUESTIONS.md` — moved Q-003 (MVP billing depth) to Resolved under D-010. The minimum StudentCredit/CreditTransaction ledger and manual/mock flow are MVP; a real gateway is out of MVP. Q-004 remains open for future provider selection.
+- `README.md` — updated the SUPERVISOR_REVIEW.md description to reflect the actual recorded CONDITIONAL PASS review.
+- `ROADMAP.md` — clarified that the minimum auditable credit ledger is an MVP deliverable; Phase 21 is for complementary/expanded Billing work, not for postponing the MVP ledger.
+- `PROJECT_STATE.md` and `SUPERVISOR_REVIEW.md` — reconciled the open-question summary, marked the full 15-document semantic consistency check complete for this bounded documentation pass, and recorded the current follow-up review. The 2026-10-12 review is retained as historical context and labeled accordingly.
+
+Verification boundary: documentation-only. No application code, database migrations, API endpoints, executable tests, CI workflows, or deployment configuration were added. No runtime security claim is made. Q-011 remains open; Q-013 remains open; Phase 0 remains CONDITIONAL PASS; PR #1 remains unmerged and Phase 1 is not authorized.
