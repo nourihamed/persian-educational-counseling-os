@@ -27,7 +27,7 @@ Status: DRAFT — Phase 0 — Pending Approval
 | 18 | Notification Engine | Core + InAppAdapter، صف تحویل |
 | 19 | Telegram | Linking، دستورات، Adapter |
 | 20 | SMS | Adapter، Retry/Backoff |
-| 21 | Billing / Subscription / Credits | Full ledger، Plan/Order/Invoice |
+| 21 | Billing / Subscription / Credits | توسعه تکمیلی Billing (Subscription/Plan/Order/Invoice و قابلیت‌های فراتر از ledger حداقلی MVP)؛ ledger حداقلی StudentCredit/CreditTransaction باید در محدوده MVP و همراه با جریان فعال‌سازی دانش‌آموز پیاده‌سازی شود، نه اینکه تا Phase 21 به تعویق بیفتد |
 | 22 | Payment Gateway | RealPaymentProvider، Webhook idempotency |
 | 23 | Parent Panel | دسترسی سطح‌بالا، Privacy rules |
 | 24 | AI Assistance | Explain/Summarize/Recommend (غیر منبع حقیقت) |
@@ -41,6 +41,13 @@ Status: DRAFT — Phase 0 — Pending Approval
 - **حداقل Versioning قابل‌ممیزی** (شناسه پایدار + شماره نسخه + عدم بازنویسی بی‌صدا + تاریخچه + Attribution) بخشی از **مدل داده پایه** است که در Phase 2 (Database & Domain Model) طراحی می‌شود و هرجا Program Template یا Plan در فازهای زودتر از ۱۵ ساخته/استفاده شود (مثلاً Phase 12 Planning Engine به یک ساختار Plan نیاز دارد)، همان حداقل Versioning را دارد.
 - **Phase 15** مشخصاً به معنای معرفی اصل Versioning نیست، بلکه شامل منطق Personalization (Baseline→Personalized Plan) و ابزارهای **پیشرفته** مدیریت نسخه (مقایسه بصری، Rollback UI، Branching، گزارش Diff) است که در بالای همان حداقل MVP ساخته می‌شوند.
 - این یادداشت یک توضیح/هماهنگ‌سازی مستندی است، نه تصمیم تجاری یا معماری جدید؛ تصمیم اصلی در `DECISION_LOG.md` D-008 ثبت شده و توسط مالک محصول در تاریخ ۲۰۲۶-۱۰-۱۰ تأیید شده است (Accepted؛ `OPEN_QUESTIONS.md` Q-012 Resolved). این تأیید فقط خودِ Policy را تعیین‌تکلیف می‌کند؛ جزئیات دقیق پیاده‌سازی Schema همچنان به فاز طراحی مربوطه (Phase 2) تعلق دارد.
+
+## یادداشت — جایگاه Billing و Credit Ledger در Roadmap (هماهنگ با D-010)
+
+- **MVP:** پیاده‌سازی `StudentCredit` و `CreditTransaction` به‌صورت ledger قابل‌ممیزی و append-only، قواعد مصرف/بازگشت اعتبار، و جلوگیری از فعال‌سازی دانش‌آموز در صورت اعتبار ناکافی. این بخش جزو MVP در `PROJECT_SCOPE.md` است و نباید تا Phase 21 عقب بیفتد.
+- **Phase 21:** توسعه تکمیلی Billing شامل مدل‌های تجاری و گردش‌کارهای Subscription/Plan/Order/Invoice و قابلیت‌های پیشرفته‌تر که در محدوده MVP تعریف نشده‌اند. پیش از اجرای آن فاز باید با مدل‌های پایه و تصمیم‌های ثبت‌شده سازگار بماند.
+- **Phase 22:** اتصال درگاه واقعی؛ خارج از MVP. `Q-004` درباره انتخاب ارائه‌دهنده واقعی برای زمان مناسب همچنان باز است.
+- این یادداشت مرزهای موجود را هماهنگ می‌کند و دامنه جدیدی را تصویب نمی‌کند. هر گسترش MVP نیازمند تصمیم صریح مالک محصول است.
 
 ## وضعیت فعلی
 **Phase 0 — IN PROGRESS — Supervisor Gate: CONDITIONAL PASS (2026-10-12); Product Owner closure pending.**
