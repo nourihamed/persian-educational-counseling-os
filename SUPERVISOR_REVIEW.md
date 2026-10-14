@@ -482,7 +482,7 @@ None newly established from the documentation-only merge-state check. Tenant iso
 
 ### LOW
 - Older dated entries in CHANGELOG.md and earlier review sections contain statements that were true at the time, such as “PR #1 not merged.” They are retained as history, not rewritten; a dated post-merge entry and this addendum establish the current state.
-- The original PR description may also contain stale pre-merge wording and should be updated as a separate metadata housekeeping action.
+- **Resolved during this pass:** PR #1's description was updated after this review note was drafted to state the final closed/merged status, merge commit, open questions, and runtime-verification boundary.
 
 ## Architecture, Database, API, and Security
 The merged documents specify intended architecture and security controls only. No runtime implementation was added by PR #1 or by this documentation reconciliation. Do not treat the design of tenant_id, PostgreSQL RLS, object-level authorization, versioning, or the credit ledger as proof of implementation.
@@ -492,7 +492,7 @@ No executable tests were run in this documentation-only reconciliation. No workf
 
 ## Required Changes / Disposition
 1. **Completed on the reconciliation branch:** synchronize PROJECT_STATE.md, README.md, ROADMAP.md, PRODUCT_REQUIREMENTS.md, SECURITY.md, and TEST_PLAN.md with the actual Phase 0 closure and PR #1 merge state.
-2. **Still required:** update PR #1's description to identify it as merged and distinguish the documentation approval from runtime security verification.
+2. **Completed during this pass:** update PR #1's description to identify it as merged and distinguish documentation approval from runtime security verification.
 3. Perform a final cross-document scan after the corrections are committed and review the resulting follow-up PR before merging it.
 4. Phase 1 remains **not started and not authorized** until the Product Owner separately authorizes it.
 
