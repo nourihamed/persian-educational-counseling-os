@@ -284,3 +284,7 @@ No application code, migration, endpoint, executable test, CI workflow, or deplo
 
 ### 2026-10-14 — Clarify Gate Approval Versus Phase Closure
 `docs:` Clarified in `PROJECT_STATE.md` that the Supervisor's APPROVED status applies to Phase 0 documentation readiness only. Formal Phase 0 closure remains a separate Product Owner decision, and neither status implies PR merge or Phase 1 authorization.
+
+
+### 2026-10-14 — Mergeability Metadata Recheck
+`docs(review):` Subsequent live reads returned both `mergeable: true` and `mergeable: false` across recent PR heads; the latest reviewed value was false. The compare still reports 0 commits behind `main`, but the connector does not expose enough detail to explain the discrepancy. The Supervisor documentation gate remains APPROVED; merging is held until the live GitHub conflict/status view is reconciled. No code or runtime configuration was changed.
