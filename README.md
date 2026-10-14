@@ -32,7 +32,7 @@ No backend, frontend, database, authentication, billing, Telegram, SMS, or AI fu
 | `SECURITY.md` | Security requirements and threat model |
 | `DEVELOPMENT_GUIDE.md` | Required per-phase workflow and repo conventions |
 | `CHANGELOG.md` | History of what changed, by phase |
-| `SUPERVISOR_REVIEW.md` | External review log (placeholder until a real review is recorded) |
+| `SUPERVISOR_REVIEW.md` | Independent Supervisor reviews and findings; current gate is CONDITIONAL PASS, not final approval |
 
 ## Core Principles
 

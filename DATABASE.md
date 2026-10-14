@@ -22,16 +22,28 @@ Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual p
 - `Subject` (tenant-editable: add/delete/rename/deactivate/reorder/categorize/importance/specialized-or-general)
 - `CurriculumGrade`, `Book`, `Chapter`, `Topic`, `SubTopic` (hierarchy per §20, customizable)
 
-### Programs (Versioned — §15, §71)
-- `ProgramTemplate` (owned by a tenant or, later, platform-provided)
-- `ProgramVersion` (immutable snapshot: subjects, weekly rules, study/review/test rules)
-- `StudentProgramEnrollment` (student ↔ specific `ProgramVersion`, not the template)
+### Programs (Versioned — §15, §71; minimum viable versioning is an MVP requirement per `DECISION_LOG.md` D-008 — **Accepted**, explicit Product Owner confirmation on 2026-10-10; `OPEN_QUESTIONS.md` Q-012 Resolved)
+
+**MVP ownership rule (D-012 accepted; Q-013 resolved):**
+
+1. **Tenant-owned `ProgramTemplate`:** every template in MVP belongs to exactly one Counselor Tenant and has `tenant_id NOT NULL`.
+2. **Tenant-owned `ProgramVersion`:** every version in MVP belongs to the same Tenant as its source `ProgramTemplate`. Database foreign-key/unique constraints or equivalent safeguards must prevent a version from linking to a template owned by another Tenant.
+3. **Platform-owned/shared catalog:** platform-level `ProgramTemplate` and their `ProgramVersion` rows are explicitly out of MVP. Do not implement nullable `tenant_id`, mixed-ownership shared catalog rows, or global read-only access based on the old hypothetical case. If a central catalog is needed later, its ownership, publication, copying, versioning, and authorization model must be decided before implementation.
+4. **Student data remains strictly scoped:** `StudentProgramEnrollment`, `Plan`, and `PlanVersion` always carry tenant/student scope and never become platform-owned or cross-tenant-visible as a result of template/version reuse. Every operation on a template or version requires authorization.
+
+
+Fields (conceptual, not implemented):
+- `ProgramTemplate` (`id`, `tenant_id NOT NULL`, `name`, ..., stable identity that outlives any individual version; MVP supports tenant-owned templates only)
+- `ProgramVersion` (`id`, `program_template_id`, `version_number`, immutable snapshot of subjects/weekly rules/study/review/test rules, `created_by` (actor attribution), `created_at`, `published_at`; immutable once published — no `UPDATE` after publish, only new rows. **MVP ownership:** tenant-scoped, same Tenant as the source `ProgramTemplate`; platform-template versions are out of MVP under D-012.
+- `StudentProgramEnrollment` (`id`, `tenant_id` `NOT NULL`, `student_id` `NOT NULL`, student ↔ a specific `ProgramVersion`, not the template — this is the mechanism that records which `ProgramVersion` produced each student's plan, satisfying the "explain the origin of an existing plan" requirement in D-008)
 - `MarketSegment` (§17) and `ProgramTemplateSegment` (which segments a template targets)
 
-### Planning (Versioned — §72)
-- `Plan` (scope: daily/weekly/monthly/exam/review/recovery; belongs to a student + period)
-- `PlanVersion` (v1, v2, v3... immutable once superseded)
-- `PlanItem` (a scheduled activity instance within a plan version)
+### Planning (Versioned — §72; minimum viable versioning is an MVP requirement per D-008 — Accepted, Q-012 Resolved)
+- `Plan` (`id`, `tenant_id`, `student_id`, scope: daily/weekly/monthly/exam/review/recovery; belongs to a student + period — the stable identity that persists across versions)
+- `PlanVersion` (`id`, `plan_id`, `version_number`, `created_by` (actor attribution), `created_at`, `activated_at`, `program_version_id` nullable FK recording which `ProgramVersion`, if any, informed this plan version; immutable once superseded — a later version never overwrites an earlier published one, consistent with D-008's "no silent overwrite" requirement)
+- `PlanItem` (a scheduled activity instance within a specific plan version)
+- Which `Plan` states are directly editable in place versus which require creating a new `PlanVersion`, and how an existing plan behaves when its source `ProgramVersion` is later updated, are open schema decisions for Phase 2 — not decided here (see D-008 points 5 and 7). D-008's acceptance (Q-012 Resolved) settles that these questions *must* have an answer before implementation, not what that answer is.
+- **Tenant-column contract (conceptual design for the accepted Q-001 mechanism; no migration exists):** To keep this model consistent with `ARCHITECTURE.md` §2 and §3, each tenant-scoped table in this planning group — `Plan`, `PlanVersion`, and `PlanItem` — is expected to have its own direct `tenant_id` column, indexed and `NOT NULL`; tenant scope is not represented only by joining through a parent. The mechanism (shared PostgreSQL + direct tenant_id + application authorization + RLS) is accepted under Q-001; detailed policies, constraints, and executable tests remain to be designed before implementation. When the schema is designed, constraints or equivalent safeguards must ensure a child row's `tenant_id` agrees with its parent `Plan`/`PlanVersion`, so a valid tenant identifier cannot be paired with another tenant's parent record. All three entities remain subject to tenant-and-student-scoped authorization, with no version-specific exception. **This statement applies only to `Plan`/`PlanVersion`/`PlanItem`, not `ProgramVersion`**, whose MVP ownership is tenant-scoped under D-012 and must match its source `ProgramTemplate`. `ProgramTemplate` is not a parent of `Plan` and does not supply the tenant identifier for these rows.
 
 ### Activities & Records (§21–§28)
 - `Activity` (polymorphic-ish base: type = Study/Test/TestAnalysis/Review/Exam/Quiz/SchoolAssignment/OnlineClass/InPersonClass/Exercise/ProblemSolving/Summary/Flashcards/Remediation/Project/OverdueWork/RoutineTest/Custom)
@@ -61,10 +73,10 @@ Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual p
 - `AuditLog` (tenant_id nullable for platform-level actions; actor, action, entity, before/after where applicable, created_at)
 
 ## 2. Naming Decision Needed
-"Plan" is used in Master Prompt both for the **commercial Plan** (billing tier) and the **study Plan** (daily/weekly schedule). This document proposes renaming the commercial one to `BillingPlan` in the actual schema to avoid ambiguity. Recorded as a proposal in `DECISION_LOG.md`; not yet approved.
+"Plan" is used in Master Prompt both for the **commercial Plan** (billing tier) and the **study Plan** (daily/weekly schedule, now also carrying its own `PlanVersion` per the accepted D-008 policy). This document proposes renaming the commercial one to `BillingPlan` in the actual schema to avoid ambiguity, so that `Plan`/`PlanVersion` unambiguously refer to the educational, student-facing concept. Recorded as a proposal in `DECISION_LOG.md` (D-006); **D-006 itself is still Proposed, not yet approved** — this is a separate, independent decision from D-008. D-008's acceptance on 2026-10-10 settled only the versioning policy; it did not approve or otherwise decide D-006's naming question.
 
 ## 3. Cross-cutting Rules
-- Every tenant-scoped table has a `tenant_id` column, indexed, `NOT NULL`.
+- Every **tenant-owned** row/table has a direct `tenant_id` column, indexed and `NOT NULL`. Do not interpret this as requiring `tenant_id` on platform-owned/global catalog rows. MVP does not support platform-owned `ProgramTemplate`/`ProgramVersion` rows (D-012). Do not implement nullable-tenant or mixed-ownership catalog rows. A future platform catalog requires a separate decision before implementation. Regardless of catalog ownership, student enrollments, plans, and all student-facing records remain tenant-owned and isolated.
 - Append-only tables (`CreditTransaction`, `AuditLog`) have no `UPDATE`/`DELETE` grants at the application layer.
 - Every "versioned" concept (`ProgramVersion`, `PlanVersion`) is immutable once superseded; edits create new rows, never mutate history.
 - Soft-delete (`Archived`/`Ended` status) is preferred over hard delete for anything with historical/reporting value (students, plans, programs).
@@ -72,4 +84,18 @@ Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual p
 ## 4. Explicitly Deferred
 - Full column-level types, constraints, and indexes → Phase 2.
 - Actual ERD diagram (image) and Alembic migrations → Phase 2.
-- Final decision on RLS policy definitions → Phase 1/2, pending Q-001.
+- Detailed RLS policy definitions, runtime role, trusted tenant context, and executable isolation tests → Phase 1/2; Q-001's mechanism is accepted, but implementation details remain to be designed and tested.
+- Final column-level design of `ProgramVersion`/`PlanVersion` (exact fields beyond the conceptual ones listed above, editable-vs-new-version state rules, template-update-vs-existing-plan behavior) → Phase 2. The MVP Versioning *policy* itself is no longer pending (`DECISION_LOG.md` D-008 — Accepted, `OPEN_QUESTIONS.md` Q-012 Resolved); what remains pending is ordinary Phase 2 schema design work, not a Product Owner decision. Nothing describing `ProgramVersion`/`PlanVersion` in this document has been implemented as a migration, table, or endpoint.
+
+
+## Tenant Isolation — Accepted MVP Mechanism (2026-10-12)
+
+Per `DECISION_LOG.md` D-009 and resolved `OPEN_QUESTIONS.md` Q-001, the selected MVP design is a shared PostgreSQL database/schema, with a direct indexed `tenant_id NOT NULL` on every tenant-scoped row, application-level authorization, and PostgreSQL RLS as defense in depth. This is a design decision only; no migrations or executable policies exist yet.
+
+- For tenant-owned relationships, use composite foreign keys/unique constraints or equivalent safeguards so a child row cannot reference a parent from another tenant.
+- The runtime database role must be least-privileged and must not own tenant tables or have RLS-bypass privileges. Review table-owner and privileged-role behavior; apply forced RLS or an equivalent control where appropriate.
+- RLS policies must use a trusted tenant context established by the authenticated application request, not a caller-supplied tenant ID.
+- Add database and integration tests for cross-tenant reads, writes, joins, and invalid cross-tenant relationships. Also test jobs, reports/exports, files, and notifications.
+- RLS supplements, but does not replace, object-level authorization and application tenant filters.
+
+Schema-per-tenant and database-per-tenant are not selected for MVP. Any future change requires a recorded architecture decision and migration/backup impact review.

@@ -38,5 +38,9 @@ List endpoints (e.g., counselor's student list) use cursor- or offset-based pagi
 ## 7. Explainability in Responses
 Any endpoint returning a risk flag, auto-generated plan item, or auto-generated review must include the `reasons[]` structure defined in ARCHITECTURE.md §7 — this is a response-contract rule, not optional metadata.
 
-## 8. Deferred
+## 8. Versioning Endpoints (conceptual — MVP scope confirmed by D-008, detailed design still pending)
+Per D-012 / resolved Q-013, MVP endpoints for program versions handle only tenant-owned `ProgramTemplate` and `ProgramVersion` rows; a version must belong to the same Tenant as its source template. Platform-owned/shared catalog endpoints are out of MVP and require a separate future decision. Student plan-version endpoints remain tenant- and student-scoped without exception. No endpoint bypasses authorization. No endpoint is designed in detail or implemented yet. D-008 confirms minimum versioning is in MVP scope; D-012 resolves MVP ownership but does not design endpoints in detail.
+
+## 9. Deferred
 - OpenAPI schema generation conventions, error code catalog, and concrete DTOs → Phase 3/4 onward, per domain as each phase is implemented.
+- Detailed design of versioning endpoints (§8) → Phase 2 schema finalization. (Not pending a Product Owner decision anymore — D-008/Q-012 already settled the policy question; this is ordinary design work.)

@@ -17,15 +17,18 @@ Rule (non-negotiable, Master Prompt §50, §66): business logic never lives in r
 
 **Tenant = Counselor.** Every tenant-scoped row carries a `tenant_id` (= owning Counselor's id, even when the row is logically a Student's — the Student belongs to exactly one tenant via `CounselorStudent`).
 
-Decision status: the concrete isolation mechanism (Row-Level with Postgres RLS vs. schema-per-tenant vs. database-per-tenant) is **not yet finalized** — see `OPEN_QUESTIONS.md` Q-001 and `DECISION_LOG.md` D-004. This document records the **default working assumption** used for planning Phase 1/2, which is:
+**Decision accepted by the Product Owner on 2026-10-12:** use one shared PostgreSQL database/schema with direct, indexed, `NOT NULL` `tenant_id` on every tenant-scoped row; application/API authorization and PostgreSQL Row-Level Security (RLS) are both required layers. See the resolved `OPEN_QUESTIONS.md` Q-001 and the Product Owner decision addendum in `SUPERVISOR_REVIEW.md`. This is the selected MVP mechanism, not proof of implemented or tested runtime security.
 
-- Single shared Postgres database.
-- `tenant_id` column (indexed, `NOT NULL`) on every tenant-scoped table.
-- Postgres Row-Level Security (RLS) policies as a second, DB-enforced layer beneath the application-level filter — so a bug in the application layer cannot leak data.
-- A request-scoped "current tenant" context set once (from the authenticated user) and required by every repository call; repositories must refuse to run an unscoped query against a tenant table.
-- Platform Admin is modeled as a cross-tenant role with explicit, audited exceptions — never a default bypass.
+**Scope qualification (D-012 accepted; Q-013 resolved):** In the MVP, `ProgramTemplate` and its `ProgramVersion` rows are tenant-owned only, with `tenant_id NOT NULL`; a Version must belong to the same Tenant as its source Template. Platform-owned/shared catalog templates and their versions are out of MVP. Do not implement nullable tenant ownership or mixed-ownership shared rows under the MVP decision. A future platform catalog requires a separate architecture decision before implementation. Student enrollments, plans, and student-facing records remain tenant-owned without exception.
 
-This assumption must be re-confirmed (not silently kept) at the start of Phase 1.
+- Derive the request-scoped tenant context from the authenticated principal; never trust a path/body tenant identifier by itself.
+- Require explicit tenant context for every tenant repository operation and object-level authorization for each resource/action.
+- Enforce parent/child tenant consistency using composite foreign keys/constraints or an equivalent database-enforced mechanism.
+- Keep Platform Admin cross-tenant access explicit, least-privileged, and audited.
+- Database runtime roles must not own tenant tables or have privileged RLS-bypass capabilities; review table-owner behavior and use forced RLS or equivalent safeguards where appropriate.
+- Add negative isolation tests for API/repositories and for background jobs, reports/exports, files, and notifications.
+
+Schema-per-tenant and database-per-tenant are not selected for the MVP because of their operational/migration/backup overhead. Reconsideration requires a documented architecture decision; the choice must not weaken the non-negotiable tenant-isolation requirement.
 
 ## 3. Isolation applies to every surface (Master Prompt §3)
 
@@ -62,9 +65,17 @@ Rules:
 
 ## 6. Versioning (Master Prompt §71, §72)
 
-- `ProgramTemplate` has many `ProgramVersion`s. A `ProgramVersion` is immutable once published; "editing" a program creates a new version.
-- A `Student`'s active enrollment points at one specific `ProgramVersion`, never "the template" — so template edits never silently change a student's plan.
-- `Plan` (daily/weekly/etc.) is versioned per student per period (`WeekPlan v1, v2, v3...`); history is retained, never overwritten.
+**MVP status (per `DECISION_LOG.md` D-008 — Accepted, explicit Product Owner confirmation on 2026-10-10; `OPEN_QUESTIONS.md` Q-012 Resolved):** the minimum viable, auditable versioning described below is an **MVP requirement**, not a Phase-15-only feature. Only the *advanced* version-management tooling (visual diff, rollback UI, extensive history browsing, branching/parallel versions, change-impact reports) is deferred to Phase 15 and beyond. This resolves an earlier inconsistency where `PROJECT_SCOPE.md` and `ROADMAP.md` could be read as deferring versioning entirely to Phase 15. Detailed state-transition rules and the exact schema are still open design work for Phase 2 — D-008's acceptance settles the *policy*, not the final column-level design.
+
+- `ProgramTemplate` has many `ProgramVersion`s. A `ProgramVersion` is immutable once published; "editing" a program creates a new version, never a silent overwrite of a published one.
+- A `Student`'s active enrollment points at one specific `ProgramVersion`, never "the template" — so template edits never silently change a student's plan. The `ProgramVersion` used to create each student plan is recorded, so the origin of any existing plan is explainable later.
+- `Plan` (daily/weekly/etc.) is versioned per student per period (`WeekPlan v1, v2, v3...`); history is retained, never overwritten. Which plan states are directly editable in place versus which require creating a new `PlanVersion` is a Phase 2 schema decision, not decided in this document.
+- **Tenant isolation and authorization implications — stated precisely, not blanket:**
+  - **`PlanVersion` is scoped to exactly one tenant and exactly one student within that tenant, unconditionally, with no exception.** Reading or writing any `PlanVersion` — including listing its history — goes through the same tenant-and-student-scoped repository pattern described in §2/§3; there is no version-level exception to this, regardless of anything else in this section.
+  - **MVP rule (D-012 / Q-013):** `ProgramVersion` is tenant-owned and must belong to the same Tenant as its source `ProgramTemplate`; platform-owned source templates and their versions are out of MVP. Any future platform catalog requires a separate decision before implementation. Every read, write, publish, activation, and history-access operation on a `ProgramVersion` must be authorized.
+  - Every version-creating or version-activating action, on either `ProgramVersion` or `PlanVersion`, records the acting user (actor attribution), consistent with the Explainability contract in §7 below — this requirement does not depend on how Q-013 is resolved.
+- **Transaction safety:** creating a new version and activating it (making it the current one referenced by an enrollment or an active plan period) must happen atomically — a partially-applied version switch must never leave an enrollment or plan pointing at an inconsistent state. This is a correctness requirement for whichever phase implements it; it is not implemented yet (Phase 0 is documentation-only).
+- This section describes conceptual behavior only. No migration, table, or endpoint implementing any of the above exists yet.
 
 ## 7. Explainability as an architectural concern (Master Prompt §31, §68)
 
@@ -88,8 +99,8 @@ Jalali⇄Gregorian conversion lives in one isolated module (`domain/calendar` or
 ## 9. Deferred Architectural Decisions
 
 Tracked in `OPEN_QUESTIONS.md`:
-- Tenant isolation mechanism, final choice (Q-001)
-- Hosting/deployment target (Q-010), which affects whether external SDKs (payment/SMS/Telegram) are reachable
+- Detailed policy/constraint/test design for the accepted tenant isolation mechanism (Q-001 resolved)
+- Concrete VPS provider/plan and adapter-specific external-service reachability (Q-010 approach accepted; vendor remains unselected)
 - Payment gateway target (Q-004)
 
 No code, migration, or infrastructure provisioning happens in Phase 0.

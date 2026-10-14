@@ -64,7 +64,7 @@ Platform → Counselor → Student
 
 هر Counselor یک Tenant مستقل است. هیچ داده، query، گزارش، فایل، نوتیفیکیشن یا background job نباید بین Tenantها نشت کند. این اصل باید در تمام لایه‌ها اعمال شود: DB، API، Authorization، Services، Reports، Files، Notifications، Jobs.
 
-جزئیات استراتژی Multi-Tenancy در ARCHITECTURE.md (فاز ۱) مشخص می‌شود؛ گزینه‌های ممکن (Row-Level با tenant_id + RLS، Schema-per-tenant، DB-per-tenant) در OPEN_QUESTIONS.md ثبت شده‌اند.
+**مکانیزم MVP مصوب مالک محصول در D-009 / Q-001 (2026-10-12):** یک PostgreSQL مشترک با `tenant_id` مستقیم، indexed و `NOT NULL` برای هر ردیف tenant-owned، همراه با authorization در Application/API و PostgreSQL RLS به‌عنوان defense in depth. Schema-per-tenant و DB-per-tenant برای MVP انتخاب نشده‌اند. `ARCHITECTURE.md`، `DATABASE.md` و `SECURITY.md` جزئیات طراحی اجرایی را پوشش می‌دهند؛ این تصمیم به‌معنای پیاده‌سازی یا اثبات امنیت runtime نیست. Policyهای RLS، نقش runtime، tenant context قابل‌اعتماد و تست‌های منفی cross-tenant باید در فازهای اجرایی طراحی و آزمون شوند. طبق D-012 / Q-013، در MVP فقط `ProgramTemplate` و `ProgramVersion` متعلق به Tenant پشتیبانی می‌شوند؛ قالب‌های سطح‌پلتفرم و نسخه‌های آن‌ها خارج از MVP هستند. هر توسعه آتی در این زمینه نیازمند تصمیم معماری جداگانه است.
 
 ---
 
@@ -94,7 +94,7 @@ Platform → Counselor → Student
 
 - **Core Domain هرگز به Telegram/SMS/Payment/AI وابسته نیست** — از طریق Interface/Adapter.
 - **Explainability اجباری** برای: ریسک دانش‌آموز، اولویت‌بندی برنامه، تولید Review، flagging.
-- **Program Template و Plan باید Versioned باشند**؛ تغییر Template روی دانش‌آموزان موجود اثر خودکار ندارد.
+- **Program Template و Student Plan باید حداقل Versioning قابل‌ممیزی داشته باشند، همین از MVP** (طبق `DECISION_LOG.md` D-008 — Accepted، تأیید صریح مالک محصول در تاریخ ۲۰۲۶-۱۰-۱۰؛ `OPEN_QUESTIONS.md` Q-012 Resolved)؛ تغییر Template روی Planهای دانش‌آموزان موجود اثر خودکار و بی‌صدا ندارد. ویژگی‌های پیشرفته مدیریت نسخه (مقایسه بصری، Rollback UI، Branching) می‌توانند بعد از MVP بیایند، ولی خودِ شناسه نسخه + تاریخچه + Attribution از MVP الزامی است. توجه: «Plan» اینجا به معنای Plan مطالعاتی دانش‌آموز است، نه Plan تجاری Billing — این دو مفهوم جدا نگه داشته می‌شوند (`DECISION_LOG.md` D-006، که خودش همچنان Proposed و جداگانه از D-008 است).
 - **Credit Ledger باید Append-only/Immutable باشد** (نه overwrite موجودی).
 - **Business Logic هرگز داخل Route/Controller نیست** (لایه‌بندی API → Application → Domain → Infrastructure).
 - **Integration failure (Telegram/SMS/Payment) هرگز نباید Core را متوقف کند.**
