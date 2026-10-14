@@ -1,6 +1,6 @@
 # SECURITY.md
 
-Status: DRAFT — Phase 0 — Pending Approval
+Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14; security controls are requirements only and runtime implementation remains unverified.
 
 ## اصول پایه
 
