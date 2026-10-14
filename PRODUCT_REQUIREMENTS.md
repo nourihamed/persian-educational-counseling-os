@@ -1,7 +1,7 @@
 # PRODUCT_REQUIREMENTS.md
 ## Persian Educational Counseling & Study OS
 
-Status: DRAFT — Phase 0 — Pending Approval
+Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14; product requirements remain a maintained baseline and do not imply implementation.
 
 ---
 
