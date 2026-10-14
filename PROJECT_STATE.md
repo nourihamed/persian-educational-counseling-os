@@ -39,7 +39,7 @@ Implementation: 0% (by design — no application code exists).
 
 ### Repository Status (GitHub)
 - Repository: `https://github.com/nourihamed/persian-educational-counseling-os` — currently **private**. Visibility was toggled public→private during this session by the project owner; treat current visibility as private unless re-verified.
-- This correction pass is being made on branch `docs/phase0-correction-pass-3`, not directly on `main`, and is attached to open Pull Request **#1**, pending review (see Next Actions).
+- This correction pass is on branch `docs/phase0-correction-pass-3`, not directly on `main`, and is attached to open Pull Request **#1**. Phase 0 is formally closed by the Product Owner; PR merge remains pending a separate decision and live mergeability check.
 - A detailed, tested-only, environment-separated breakdown of GitHub access is maintained in `OPEN_QUESTIONS.md` Q-011. Summary only (see that file for the full breakdown and caveats):
   - **Claude's environment, this session, via the connected OAuth-based GitHub connector ("Claude" App):** Read tested — succeeded once while the repository was temporarily public, failed (`404`) while private. Write tested — failed once while public (`403 Resource not accessible by integration`); not re-tested while private.
   - **Claude's environment, this session, via a manually supplied, short-lived Personal Access Token pasted into the conversation by the project owner:** Read tested — succeeded (repeatedly). Write tested — succeeded (two pushes to `main`, one push to this branch, one Pull Request created via the GitHub REST API). The project owner was asked to revoke this token after use each time it was supplied.
@@ -90,7 +90,7 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-004** (w
 
 **Structural note — why no SHA for "this commit" ever appears here:** this file is part of every commit that edits it, so it can never truthfully state "the current HEAD is `<SHA>`" while being written — the SHA depends on this file's final content, which doesn't exist as a hash until after the commit is made. Any attempt to name it would be a guess presented as a fact.
 
-**What is and isn't established by any of the above:** commit existence and current refs must be verified against GitHub. A document's content being edited is not itself approval. The Supervisor has recorded `CONDITIONAL PASS` in `SUPERVISOR_REVIEW.md`; final `APPROVED`, Product Owner closure, PR merge, and authorization for Phase 1 have not occurred. None substitutes for another.
+**What is and isn't established by any of the above:** commit existence and current refs must be verified against GitHub. The Supervisor's final documentation gate is `APPROVED`, and the Product Owner formally closed Phase 0 on 2026-10-14. PR merge and authorization for Phase 1 have not occurred; neither follows automatically from phase closure.
 
 ### Last Test Result
 — N/A (Phase 0 is documentation-only; `TEST_PLAN.md` defines future test strategy, nothing to run yet)
@@ -99,5 +99,5 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-004** (w
 1. **Pull Request #1 (`docs/phase0-correction-pass-3` → `main`) is open and not merged.** The final live Supervisor recheck dated 2026-10-14 records `APPROVED` for documentation readiness only, and the Product Owner formally closed Phase 0 on 2026-10-14. GitHub's mergeability metadata has varied across recent reads; recheck the live PR conflict/status view before any merge. PR merge remains a separate pending decision.
 2. Q-011 remains open only for the operational decision and repeatability across sessions: the Supervisor's connected GitHub integration passed a read/write test on 2026-10-12, but persistence has not yet been established. Keep future work on isolated branches and verify access at the start of each session until reliability is demonstrated — see `OPEN_QUESTIONS.md` Q-011.
 3. The Product Owner confirmed formal Phase 0 closure on 2026-10-14. Do not treat this as approval to merge PR #1 or to start Phase 1.
-4. Q-001 (tenant isolation), Q-002 (MVP scope), Q-003 (MVP billing depth under D-010), and Q-010 (Pilot hosting) were decided by the Product Owner on 2026-10-12 and moved to Resolved/Closed. The decisions do not constitute Phase 0 closure or authorization to start Phase 1.
+4. Q-001 (tenant isolation), Q-002 (MVP scope), Q-003 (MVP billing depth under D-010), and Q-010 (Pilot hosting) were decided by the Product Owner on 2026-10-12 and moved to Resolved/Closed. Those earlier product decisions were separate from phase closure; Phase 0 was subsequently formally closed on 2026-10-14. They do not authorize Phase 1.
 5. Phase 1 begins only after PR #1 is reviewed/merged as appropriate and the Product Owner separately authorizes Phase 1 — not automatically.
