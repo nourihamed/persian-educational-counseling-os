@@ -1,12 +1,12 @@
 # ROADMAP.md
 
-Status: Phase 0 formally closed by Product Owner on 2026-10-14; PR #1 merge pending; Phase 1 not authorized
+Status: Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged on 2026-10-14; Phase 1 not authorized
 
 قانون: هر فاز طبق `Mandatory Development Workflow` (بخش ۷۶ Master Prompt) اجرا می‌شود و بعد از اتمام، **خودکار به فاز بعد نمی‌رویم** — منتظر تأیید می‌مانیم.
 
 | # | فاز | خروجی کلیدی |
 |---|---|---|
-| 0 | Product & Business Model | این مجموعه اسناد (در حال انجام) |
+| 0 | Product & Business Model | مجموعه اسناد پایه — تکمیل و تأیید شده؛ Phase 0 در 2026-10-14 بسته شد |
 | 1 | Architecture & Multi-Tenancy (design only) | اسناد طراحی اجرای shared PostgreSQL + tenant_id + RLS، قراردادهای authorization و طراحی تست‌های tenant isolation؛ بدون کد برنامه، migration یا پیاده‌سازی infrastructure. هر تغییر این مرز نیازمند تصمیم صریح Product Owner پیش از شروع است. |
 | 2 | Database & Domain Model | ERD کامل، مدل‌های Core (Counselor, Student, Program, Activity...) |
 | 3 | Infrastructure | FastAPI skeleton، Alembic، Docker Compose برای Pilot روی VPS داخل ایران، CI اولیه؛ Redis فقط در صورت توجیه |
@@ -50,10 +50,10 @@ Status: Phase 0 formally closed by Product Owner on 2026-10-14; PR #1 merge pend
 - این یادداشت مرزهای موجود را هماهنگ می‌کند و دامنه جدیدی را تصویب نمی‌کند. هر گسترش MVP نیازمند تصمیم صریح مالک محصول است.
 
 ## وضعیت فعلی
-**Phase 0 — CLOSED by Product Owner (2026-10-14) — Supervisor documentation gate: APPROVED.** PR #1 remains open/unmerged; this does not authorize Phase 1. Runtime implementation/security has not been verified.
+**Phase 0 — CLOSED by Product Owner (2026-10-14) — Supervisor documentation gate: APPROVED.** PR #1 was merged into `main` on 2026-10-14 (squash commit `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b`). Phase 1 remains unauthorized. Runtime implementation/security has not been verified.
 
 آخرین Commit تأییدشده روی `main` که در این سند به‌عنوان snapshot تاریخی ثبت شده، `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` است. برای وضعیت زنده `main` و HEAD شاخه اصلاحات، مستقیماً به GitHub مراجعه کنید؛ این فایل مرجع HEAD جاری نیست.
 
-بازبینی رسمی Supervisor در `SUPERVISOR_REVIEW.md` ثبت شده و وضعیت آن `CONDITIONAL PASS` است، نه `APPROVED`. اصلاحات این دور روی شاخه `docs/phase0-correction-pass-3` و در PR #1 قرار دارند؛ PR هنوز Merge نشده است. جزئیات اصلاحات در `CHANGELOG.md` آمده است.
+بازبینی رسمی Supervisor در `SUPERVISOR_REVIEW.md` ثبت شده و Gate فعلی برای مستندات Phase 0 برابر `APPROVED` است؛ این تأیید فقط آمادگی مستندات/معماری را پوشش می‌دهد، نه امنیت زمان اجرا. اصلاحات شاخه `docs/phase0-correction-pass-3` از طریق PR #1 در `main` ادغام شده‌اند. جزئیات تاریخی اصلاحات در `CHANGELOG.md` آمده است.
 
-**تصمیم‌های Q-001، Q-002 و Q-010 در 2026-10-12 ثبت و در OPEN_QUESTIONS.md به Resolved منتقل شده‌اند.** این تصمیم‌ها به‌تنهایی Phase 0 را نمی‌بندند و مجوز Phase 1 نیستند. **Phase 1 شروع نشده و همچنان نیازمند تأیید صریح Product Owner برای بستن Phase 0، بررسی نهایی PR #1 و مجوز جداگانه شروع فاز است.**
+**تصمیم‌های Q-001، Q-002 و Q-010 در 2026-10-12 ثبت و در `OPEN_QUESTIONS.md` به Resolved منتقل شده‌اند.** Phase 0 در 2026-10-14 توسط Product Owner بسته شد و PR #1 نیز ادغام شده است. **Phase 1 شروع نشده و همچنان نیازمند تأیید صریح و جداگانه Product Owner است.**

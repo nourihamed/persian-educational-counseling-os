@@ -12,7 +12,7 @@ Counselor Feedback → Plan Adjustment → Repeat
 
 ## Project Status
 
-**Phase 0 — Product & Business Model Foundation — IN PROGRESS.**
+**Phase 0 — Product & Business Model Foundation — CLOSED (Product Owner, 2026-10-14).** PR #1 was merged into `main` on 2026-10-14. Phase 1 is not authorized.
 No backend, frontend, database, authentication, billing, Telegram, SMS, or AI functionality exists yet. This repository currently contains documentation only. See `PROJECT_STATE.md` for the authoritative current status.
 
 ## Start Here
@@ -32,7 +32,7 @@ No backend, frontend, database, authentication, billing, Telegram, SMS, or AI fu
 | `SECURITY.md` | Security requirements and threat model |
 | `DEVELOPMENT_GUIDE.md` | Required per-phase workflow and repo conventions |
 | `CHANGELOG.md` | History of what changed, by phase |
-| `SUPERVISOR_REVIEW.md` | Independent Supervisor reviews and findings; current gate is CONDITIONAL PASS, not final approval |
+| `SUPERVISOR_REVIEW.md` | Independent Supervisor reviews and findings; current Phase 0 documentation gate is APPROVED (documentation/architecture only; no runtime security approval) |
 
 ## Core Principles
 

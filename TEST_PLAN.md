@@ -1,6 +1,6 @@
 # TEST_PLAN.md
 
-Status: DRAFT — Phase 0 — Pending Approval
+Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14; this is a planned test strategy, not evidence that tests have run or passed.
 
 ## فلسفه تست
 هیچ فازی بدون تست تمام نمی‌شود. تست‌های Tenant Isolation و Billing **mandatory** هستند و رد نمی‌شوند.
