@@ -1,6 +1,6 @@
 # PROJECT_SCOPE.md
 
-Status: DRAFT — Phase 0 — Product Owner decisions Q-001/Q-002/Q-010 recorded 2026-10-12; Phase 0 closure still pending
+Status: Phase 0 scope baseline approved; Product Owner formally closed Phase 0 on 2026-10-14. Scope changes still require explicit Product Owner approval.
 
 ## هدف این سند
 
