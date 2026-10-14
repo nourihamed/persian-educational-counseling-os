@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-Status: DRAFT — Phase 0 — Pending Approval
+Status: Phase 0 formally closed by Product Owner on 2026-10-14; PR #1 merge pending; Phase 1 not authorized
 
 قانون: هر فاز طبق `Mandatory Development Workflow` (بخش ۷۶ Master Prompt) اجرا می‌شود و بعد از اتمام، **خودکار به فاز بعد نمی‌رویم** — منتظر تأیید می‌مانیم.
 
@@ -50,7 +50,7 @@ Status: DRAFT — Phase 0 — Pending Approval
 - این یادداشت مرزهای موجود را هماهنگ می‌کند و دامنه جدیدی را تصویب نمی‌کند. هر گسترش MVP نیازمند تصمیم صریح مالک محصول است.
 
 ## وضعیت فعلی
-**Phase 0 — IN PROGRESS — Supervisor Gate: CONDITIONAL PASS (2026-10-12); Product Owner closure pending.**
+**Phase 0 — CLOSED by Product Owner (2026-10-14) — Supervisor documentation gate: APPROVED.** PR #1 remains open/unmerged; this does not authorize Phase 1. Runtime implementation/security has not been verified.
 
 آخرین Commit تأییدشده روی `main` که در این سند به‌عنوان snapshot تاریخی ثبت شده، `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` است. برای وضعیت زنده `main` و HEAD شاخه اصلاحات، مستقیماً به GitHub مراجعه کنید؛ این فایل مرجع HEAD جاری نیست.
 
