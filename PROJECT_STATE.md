@@ -11,7 +11,7 @@ Last Updated: 2026-10-14
 Authorized by: project owner.
 Scope authorized: documentation foundation only. Explicitly NOT authorized: backend code, frontend code, database migrations, authentication, billing implementation, Telegram, SMS, AI, Planning Engine, or any other application feature.
 
-**Phase 0 is NOT marked APPROVED or DONE.** Final status is set only by the Supervisor Review process (see `SUPERVISOR_REVIEW.md`), not by this file.
+**The Phase 0 documentation gate is APPROVED by the Supervisor, but Phase 0 is not yet formally CLOSED/DONE.** Formal phase closure remains a separate Product Owner decision; this file records that decision only after it is made. Supervisor documentation approval does not imply runtime security approval, PR merge, or Phase 1 authorization.
 
 ### Current Milestone
 Open Pull Request **#1** (branch `docs/phase0-correction-pass-3` → `main`) contains the documentation correction rounds, the formal 2026-10-12 review, the 2026-10-13 consistency follow-up, and the 2026-10-14 live PR recheck. Its current Supervisor gate is `APPROVED` for the Phase 0 documentation/architecture foundation only; Product Owner closure and a separate merge decision remain pending.
