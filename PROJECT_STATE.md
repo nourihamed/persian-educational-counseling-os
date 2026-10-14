@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 ## Operational Memory — Single Source of Truth for "Where are we now"
 
-Last Updated: 2026-10-13
+Last Updated: 2026-10-14
 
 ---
 
@@ -63,7 +63,7 @@ Implementation: 0% (by design — no application code exists).
 - **PR #1 should not be merged yet**, per the latest Supervisor review round's explicit recommendation. This is a recommendation to hold, not a technical block — but it is treated as binding until a Supervisor explicitly says otherwise.
 - Phase 0 closure is pending Product Owner confirmation. Supervisor Review is recorded as `CONDITIONAL PASS`; see `SUPERVISOR_REVIEW.md`. This is not final approval.
 - Cross-session reliability of the Supervisor's connected GitHub access is not yet established. Read/Write succeeded in the 2026-10-12 session; verify access at the start of future sessions until repeated success establishes reliability. Historical Claude-environment results remain separate (see Q-011).
-- Phase 1 (Architecture & Multi-Tenancy deep design + implementation) is explicitly **not started and not authorized**. A Supervisor Review is now recorded with `CONDITIONAL PASS`, but Phase 1 cannot start until the Product Owner explicitly confirms Phase 0 closure and separately authorizes Phase 1; PR #1 must also pass final review and be merged only after that separate decision. Q-001, Q-002, and Q-010 were decided on 2026-10-12 and are recorded in `DECISION_LOG.md` / `OPEN_QUESTIONS.md`. Q-012 (MVP Versioning Policy, D-008) is resolved.
+- Phase 1 (Architecture & Multi-Tenancy design) is explicitly **not started and not authorized**. Under the current `ROADMAP.md`, Phase 1 is limited to architecture/design artifacts and tenant-isolation test contracts; it does not authorize application code, database migrations, or infrastructure implementation. If the Product Owner wants implementation moved into Phase 1, that scope change must be explicitly decided and recorded before work starts. A Supervisor Review is now recorded with `CONDITIONAL PASS`, but Phase 1 cannot start until the Product Owner explicitly confirms Phase 0 closure and separately authorizes Phase 1; PR #1 must also pass final review and be merged only after that separate decision. Q-001, Q-002, and Q-010 were decided on 2026-10-12 and are recorded in `DECISION_LOG.md` / `OPEN_QUESTIONS.md`. Q-012 (MVP Versioning Policy, D-008) is resolved.
 
 ### Known Bugs
 — None (no application code exists)
