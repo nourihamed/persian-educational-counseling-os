@@ -6,15 +6,15 @@ Last Updated: 2026-10-14
 ---
 
 ### Current Phase
-**PHASE 0 — Product & Business Model Foundation — FORMALLY CLOSED by Product Owner on 2026-10-14; PR #1 merge pending**
+**PHASE 0 — Product & Business Model Foundation — FORMALLY CLOSED by Product Owner on 2026-10-14; PR #1 merged on 2026-10-14**
 
 Authorized by: project owner.
 Scope authorized: documentation foundation only. Explicitly NOT authorized: backend code, frontend code, database migrations, authentication, billing implementation, Telegram, SMS, AI, Planning Engine, or any other application feature.
 
-**Phase 0 was formally approved/closed by the Product Owner on 2026-10-14**, following the Supervisor's `APPROVED` documentation/architecture gate. This closure applies to the Phase 0 documentation foundation only; it does not imply runtime security approval, PR merge, or Phase 1 authorization.
+**Phase 0 was formally approved/closed by the Product Owner on 2026-10-14**, following the Supervisor's `APPROVED` documentation/architecture gate. This closure applies to the Phase 0 documentation foundation only; it does not imply runtime security approval or Phase 1 authorization. PR #1 was subsequently merged on 2026-10-14.
 
 ### Current Milestone
-Open Pull Request **#1** (branch `docs/phase0-correction-pass-3` → `main`) contains the documentation correction rounds, the formal 2026-10-12 review, the 2026-10-13 consistency follow-up, and the 2026-10-14 live PR recheck. Its current Supervisor gate is `APPROVED` for the Phase 0 documentation/architecture foundation only; the Product Owner confirmed Phase 0 closure on 2026-10-14. PR merge remains a separate pending decision.
+Pull Request **#1** (`docs/phase0-correction-pass-3` → `main`) was merged on 2026-10-14 using squash merge. GitHub reports merge commit `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b`. Its scope was documentation-only (15 foundation documents); the Supervisor gate was `APPROVED` for documentation/architecture readiness and the Product Owner closed Phase 0 on 2026-10-14. Phase 1 remains not started and not authorized.
 
 ### Phase 0 Documentation-Readiness Checklist
 This is the checklist `DEVELOPMENT_GUIDE.md` refers to as Phase 0's Definition of Done. Documentation readiness, Supervisor gate status, Product Owner closure, and PR merge are distinct states. Each checked item states the evidence for it; nothing is checked without one.
@@ -22,24 +22,24 @@ This is the checklist `DEVELOPMENT_GUIDE.md` refers to as Phase 0's Definition o
 - [x] All 15 foundation documents present in the repository (14 core + `SUPERVISOR_REVIEW.md`) — verified by repeated `git`/GitHub API file listings across correction rounds (see `CHANGELOG.md`).
 - [x] Full cross-document contradiction check after the latest review findings — completed in the 2026-10-13 Supervisor pass across all 15 foundation documents. Six current-state inconsistencies were corrected in `PRODUCT_REQUIREMENTS.md`, `PROJECT_SCOPE.md`, `OPEN_QUESTIONS.md`, `README.md`, `ROADMAP.md`, and this document / `SUPERVISOR_REVIEW.md`. Historical `CHANGELOG.md` entries remain as historical records and are not treated as current operational instructions. This check covers documentation consistency only, not runtime implementation or security.
 - [x] No application code, database migration, API endpoint, or automated test exists anywhere in the repository — verified by directory listing (`backend/frontend/tests/scripts/deployment` contain only `.gitkeep`) each round.
-- [x] All documentation changes are on branch `docs/phase0-correction-pass-3`, attached to open Pull Request #1 — not pushed directly to `main` — verified via GitHub API each round.
+- [x] All 15 foundation-document changes from `docs/phase0-correction-pass-3` were merged into `main` through PR #1 on 2026-10-14 (squash merge commit `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b`).
 - [x] Independent Supervisor Review and final live follow-up through 2026-10-14 recorded in `SUPERVISOR_REVIEW.md`; the documentation gate is `APPROVED`, limited to Phase 0 documentation/architecture readiness, and does not authorize Phase 1.
 - [x] Explicit Product Owner confirmation that Phase 0 documentation is ready to close — **confirmed on 2026-10-14** in the conversation; this closes Phase 0's documentation gate, not the PR or runtime implementation.
-- [ ] PR #1 merged into `main` — **deliberately not done**; Product Owner has approved Phase 0 closure but has not separately authorized merging PR #1.
+- [x] PR #1 merged into `main` on 2026-10-14; verified live via GitHub PR metadata (`merged: true`, state `closed`).
 
 ### Overall Progress
-Documentation foundation: present on `main` (commit `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`) and being further corrected on a separate branch (see below) pending review/merge.
+Documentation foundation: present on `main`; PR #1 corrections were merged in squash commit `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b`.
 Implementation: 0% (by design — no application code exists).
 
 ### Commit and review tracking — keep these states separate
-1. **Latest commit on `main`:** the last known verified SHA recorded by an earlier check is `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec`. Treat this as a historical checkpoint, not a guaranteed current HEAD; verify the live `main` ref before relying on it.
-2. **Current PR #1 branch content:** `docs/phase0-correction-pass-3` is a separate branch with changes beyond `main`. The live PR head and diff are authoritative for the branch's current content. Never equate the latest `main` commit with the latest PR-branch commit, or describe the `main` SHA as the latest commit read/authored by Claude.
+1. **PR #1 merge commit:** `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b` (verified from live PR metadata). This is the PR's squash-merge commit; it is not a claim that `main` has not advanced since then. Verify the live `main` HEAD before relying on a current branch tip.
+2. **PR #1 status:** closed and merged. Its historical head was `b2b7f67c7024292c9357617482d16b69b0091b09`; its changes were incorporated into `main` by the squash-merge commit above. Use GitHub for current refs and full history.
 3. **Claude authorship/read history:** do not infer that Claude read or authored the `main` HEAD merely because that SHA was verified. Attribute authorship/review only from commit metadata and recorded session evidence; when the precise latest Claude-reviewed/authored commit is not verified, state that it is not established.
-4. **Supervisor review and gate:** the Supervisor independently reviewed the live PR head/diff. The documentation gate is `APPROVED` and the Product Owner formally closed Phase 0 on 2026-10-14. PR merge and authorization of Phase 1 remain separate decisions.
+4. **Supervisor review and gate:** the documentation gate is `APPROVED`, and the Product Owner formally closed Phase 0 on 2026-10-14. PR #1 is merged; authorization of Phase 1 remains a separate decision.
 
 ### Repository Status (GitHub)
 - Repository: `https://github.com/nourihamed/persian-educational-counseling-os` — currently **private**. Visibility was toggled public→private during this session by the project owner; treat current visibility as private unless re-verified.
-- This correction pass is on branch `docs/phase0-correction-pass-3`, not directly on `main`, and is attached to open Pull Request **#1**. Phase 0 is formally closed by the Product Owner; PR merge remains pending a separate decision and live mergeability check.
+- PR #1 (`docs/phase0-correction-pass-3` → `main`) was merged on 2026-10-14. The merged changes are now part of `main`; the PR is closed. Phase 0 is formally closed. Phase 1 remains unauthorized.
 - A detailed, tested-only, environment-separated breakdown of GitHub access is maintained in `OPEN_QUESTIONS.md` Q-011. Summary only (see that file for the full breakdown and caveats):
   - **Claude's environment, this session, via the connected OAuth-based GitHub connector ("Claude" App):** Read tested — succeeded once while the repository was temporarily public, failed (`404`) while private. Write tested — failed once while public (`403 Resource not accessible by integration`); not re-tested while private.
   - **Claude's environment, this session, via a manually supplied, short-lived Personal Access Token pasted into the conversation by the project owner:** Read tested — succeeded (repeatedly). Write tested — succeeded (two pushes to `main`, one push to this branch, one Pull Request created via the GitHub REST API). The project owner was asked to revoke this token after use each time it was supplied.
@@ -55,13 +55,13 @@ Implementation: 0% (by design — no application code exists).
 - [x] Confirmed no production feature implemented in any commit so far
 
 ### In Progress
-- **Pull Request #1 is open** (`docs/phase0-correction-pass-3` → `main`, not merged) and awaiting independent Supervisor re-review. It is not "being opened" — it already exists; this update is one more commit pushed to the same branch, added to the same open PR. See `CHANGELOG.md` for dated summaries of correction rounds; use GitHub commit history / `git log` for exact per-commit details.
-- This round's work: resolved a Supervisor-identified contradiction about Program Template/Student Plan versioning across `PROJECT_SCOPE.md`, `ARCHITECTURE.md`, `DATABASE.md`, `ROADMAP.md`, `API.md`, `SECURITY.md`, `TEST_PLAN.md`, `PRODUCT_REQUIREMENTS.md`, `DECISION_LOG.md` (D-008, now Accepted by explicit Product Owner confirmation), and `OPEN_QUESTIONS.md` (new Q-012). See "Completed" above for what the contradiction was and how it was resolved.
-- No other work is in progress. `main` has not been touched by the documentation correction work on this branch.
+- No application implementation is currently authorized or recorded as in progress.
+- PR #1's documentation corrections have been merged into `main`; the follow-up post-merge reconciliation is tracked separately in its own branch/PR.
+- Phase 1 has not started and remains unauthorized.
 
 ### Blocked
-- **PR #1 should not be merged yet**, per the latest Supervisor review round's explicit recommendation. This is a recommendation to hold, not a technical block — but it is treated as binding until a Supervisor explicitly says otherwise.
-- Phase 0 was formally closed by the Product Owner on 2026-10-14 after the Supervisor's `APPROVED` documentation gate. PR #1 remains unmerged; this closure does not authorize Phase 1.
+- No active merge blocker remains for PR #1; GitHub confirms it is merged and closed.
+- Phase 0 was formally closed by the Product Owner on 2026-10-14. The merge does not authorize Phase 1.
 - Cross-session reliability of the Supervisor's connected GitHub access is not yet established. Read/Write succeeded in the 2026-10-12 session; verify access at the start of future sessions until repeated success establishes reliability. Historical Claude-environment results remain separate (see Q-011).
 - Phase 1 (Architecture & Multi-Tenancy design) is explicitly **not started and not authorized**. Under the current `ROADMAP.md`, Phase 1 is limited to architecture/design artifacts and tenant-isolation test contracts; it does not authorize application code, database migrations, or infrastructure implementation. If the Product Owner wants implementation moved into Phase 1, that scope change must be explicitly decided and recorded before work starts. The latest Supervisor Review records `APPROVED` for documentation readiness, and the Product Owner confirmed Phase 0 closure on 2026-10-14. Phase 1 remains unauthorized until the Product Owner separately authorizes it and the required PR/review workflow is completed. Q-001, Q-002, and Q-010 were decided on 2026-10-12 and are recorded in `DECISION_LOG.md` / `OPEN_QUESTIONS.md`. Q-012 (MVP Versioning Policy, D-008) is resolved.
 
@@ -77,9 +77,9 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-004** (w
 ### Last Verified Commit
 
 **Live source of truth — read this first:** repeatedly re-embedding a "complete" branch commit list in this file has gone stale multiple times on this long-running branch, because the list is necessarily one commit behind the moment it is written (see structural note below). This section no longer attempts to maintain that list. Instead:
-- **For the current branch HEAD, right now:** check **PR #1** directly — `https://github.com/nourihamed/persian-educational-counseling-os/pull/1` — or run `git log -1` against the real repository. Neither this file nor any other document in this repository is the authoritative source for "what is the current HEAD"; GitHub is.
+- **For the current `main` HEAD, right now:** check the repository's `main` ref or run `git log -1` against the real repository. PR #1 is closed/merged; its URL is retained for historical review: `https://github.com/nourihamed/persian-educational-counseling-os/pull/1`.
 - **For the complete, per-commit history of what changed and when:** see `CHANGELOG.md` for dated, human-readable summaries of correction passes (append-only, but some entries group multiple commits and are not a one-entry-per-commit ledger). For the authoritative per-commit history, authorship, timestamps, and exact diffs, use the live GitHub commit history / `git log`.
-- `main` (`https://github.com/.../tree/main`) and this correction branch (`docs/phase0-correction-pass-3`, backing PR #1) are **two separate refs**. Edits to the branch never affect `main` unless and until PR #1 is merged — which has not happened.
+- `main` (`https://github.com/nourihamed/persian-educational-counseling-os/tree/main`) now contains the PR #1 changes through squash merge. The source branch and PR remain part of the historical record.
 
 **Last independently verified snapshot** (a historical fact about one specific point in time — not a claim about the current state; it goes stale the moment any new commit lands on either ref, exactly like the list it replaces would have, but it does not pretend otherwise):
 - **Historical note:** the values below are preserved from an earlier version of this file as a prior snapshot. They were not re-verified as current during the 2026-10-12 Supervisor review; consult the live PR and `main` refs for current values.
@@ -90,14 +90,14 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-004** (w
 
 **Structural note — why no SHA for "this commit" ever appears here:** this file is part of every commit that edits it, so it can never truthfully state "the current HEAD is `<SHA>`" while being written — the SHA depends on this file's final content, which doesn't exist as a hash until after the commit is made. Any attempt to name it would be a guess presented as a fact.
 
-**What is and isn't established by any of the above:** commit existence and current refs must be verified against GitHub. The Supervisor's final documentation gate is `APPROVED`, and the Product Owner formally closed Phase 0 on 2026-10-14. PR merge and authorization for Phase 1 have not occurred; neither follows automatically from phase closure.
+**What is and isn't established by any of the above:** commit existence and current refs must be verified against GitHub. The Supervisor's final documentation gate is `APPROVED`, the Product Owner formally closed Phase 0 on 2026-10-14, and PR #1 was merged on that date. Phase 1 has not been authorized; it does not follow automatically from phase closure or PR merge.
 
 ### Last Test Result
 — N/A (Phase 0 is documentation-only; `TEST_PLAN.md` defines future test strategy, nothing to run yet)
 
 ### Next Actions
-1. **Pull Request #1 (`docs/phase0-correction-pass-3` → `main`) is open and not merged.** The final live Supervisor recheck dated 2026-10-14 records `APPROVED` for documentation readiness only, and the Product Owner formally closed Phase 0 on 2026-10-14. GitHub's mergeability metadata has varied across recent reads; recheck the live PR conflict/status view before any merge. PR merge remains a separate pending decision.
+1. **PR #1 (`docs/phase0-correction-pass-3` → `main`) was merged on 2026-10-14** by squash merge, commit `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b`. The live PR state is closed and merged; no further merge action is pending for PR #1.
 2. Q-011 remains open only for the operational decision and repeatability across sessions: the Supervisor's connected GitHub integration passed a read/write test on 2026-10-12, but persistence has not yet been established. Keep future work on isolated branches and verify access at the start of each session until reliability is demonstrated — see `OPEN_QUESTIONS.md` Q-011.
-3. The Product Owner confirmed formal Phase 0 closure on 2026-10-14. Do not treat this as approval to merge PR #1 or to start Phase 1.
+3. The Product Owner confirmed formal Phase 0 closure on 2026-10-14. PR #1 is now merged; neither closure nor merge authorizes Phase 1.
 4. Q-001 (tenant isolation), Q-002 (MVP scope), Q-003 (MVP billing depth under D-010), and Q-010 (Pilot hosting) were decided by the Product Owner on 2026-10-12 and moved to Resolved/Closed. Those earlier product decisions were separate from phase closure; Phase 0 was subsequently formally closed on 2026-10-14. They do not authorize Phase 1.
-5. Phase 1 begins only after PR #1 is reviewed/merged as appropriate and the Product Owner separately authorizes Phase 1 — not automatically.
+5. Phase 1 may begin only after the Product Owner separately authorizes it and its required workflow/gates are satisfied. PR #1 is already merged and is no longer a pending prerequisite.
