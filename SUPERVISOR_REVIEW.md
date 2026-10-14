@@ -415,7 +415,7 @@ The PR-description/review-history mismatch was corrected. The Phase 1 scope word
 
 # SUPERVISOR GATE UPDATE — 2026-10-14 (Final Live Recheck)
 
-The prior 2026-10-14 recheck recorded an intermediate `mergeable: false` result at an earlier branch HEAD. After the latest documentation commits, the live PR metadata was re-read and now reports `mergeable: true`; the live comparison still reports 0 commits behind `main`. The earlier mergeability warning is therefore superseded for the current HEAD. Recheck immediately before any merge because GitHub's mergeability value may change as the branch changes.
+The live PR metadata has returned both `mergeable: true` and `mergeable: false` across recent reads/HEADs. At the latest check for HEAD `174b75f9b586ef688a58250ea24e11b633cd0c8f`, it reports `mergeable: false`, while the compare reports `main` as the merge base and 0 commits behind. The available connector does not expose enough detail to explain this disagreement. Treat mergeability as unresolved and do not merge until the live GitHub PR conflict/status view is checked. This operational merge caution does not change the documentation-readiness gate below.
 
 ## Final Phase 0 Assessment
 
