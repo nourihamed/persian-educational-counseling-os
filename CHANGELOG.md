@@ -307,5 +307,6 @@ Changed on the follow-up branch docs/post-merge-state-reconciliation:
 - ROADMAP.md — marked Phase 0 deliverables complete, recorded the merge commit, and aligned the current gate status.
 - PRODUCT_REQUIREMENTS.md, SECURITY.md, and TEST_PLAN.md — removed stale “Pending Approval” status labels while explicitly preserving the boundary between approved documentation, unimplemented requirements, and unrun tests.
 - SUPERVISOR_REVIEW.md — added a dated post-merge review that separates current state from historical review snapshots.
+- PR #1 description — updated after merge to show the final closed/merged state, merge commit, unresolved questions, and runtime-verification boundary.
 
 Verification boundary: PR #1 changed 15 documentation files only. GitHub returned no workflow runs or commit statuses for its head. No application code, database migrations, endpoints, executable tests, CI workflows, deployment configuration, or runtime security proof were added. Phase 1 remains not started and not authorized. These corrections are on a separate follow-up branch and have not yet been merged into main.
