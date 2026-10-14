@@ -265,3 +265,12 @@ Verification boundary: documentation-only. No application code, database migrati
 - The supervisor follow-up review and PR #1 description are aligned to the current decision and review status.
 
 This is documentation-only. No application code, migrations, endpoints, executable tests, CI, or deployment changes were made. PR #1 remains open and unmerged; Phase 0 remains CONDITIONAL PASS pending post-edit verification and Product Owner closure; Phase 1 is not authorized.
+
+
+### 2026-10-14 — Phase 0 Follow-up: PR Review Metadata and Phase 1 Boundary
+`docs:` Corrected two verified process/documentation ambiguities during the live final review of PR #1.
+
+- PR #1 description now accurately states that a `COMMENTED` GitHub review exists and was submitted by repository owner `nourihamed`; it does not imply a separate review from a distinct Supervisor GitHub account.
+- `PROJECT_STATE.md` and `ROADMAP.md` now consistently define Phase 1 as design artifacts and tenant-isolation test contracts only. Application code, database migrations, and infrastructure implementation remain unauthorized in Phase 1 unless the Product Owner explicitly changes and records that scope before work starts.
+
+No application code, migration, endpoint, executable test, CI workflow, or deployment configuration was added. `main` was not changed; PR #1 remains open and unmerged. Phase 0 closure, merge, and Phase 1 authorization remain separate Product Owner decisions.
