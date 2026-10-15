@@ -1,170 +1,251 @@
 # TENANT_ISOLATION_TEST_CONTRACTS.md
 
-Phase: 1 — design-only test contracts. No test code exists yet. Nothing in this document has been run.
-
-Purpose: specify the mandatory tenant-isolation tests (Master Prompt §59, `TEST_PLAN.md`, D-009) precisely enough that a later authorized phase can implement them without re-deciding their intent. Each contract states the layer it targets, so a failure can be attributed to RLS, the application layer, or the integration.
-
----
-
-## 0. Test Modes (from `TEST_PLAN.md`, D-009)
-
-Every data-access contract below is run in three modes:
-- **RLS-only (R):** application/repository tenant filters deliberately disabled in an isolated test harness; only the database policy stands. A pass proves RLS denies the access by itself. A harness that is misconfigured and accidentally returns rows through the app layer must not count as a pass.
-- **App-only (A):** RLS deliberately neutralized in an isolated test harness (never in a real environment); only application authorization and repository filters stand.
-- **Integrated (I):** both layers enabled, normal configuration.
-
-Test environment rules:
-- Isolated Postgres instance per test run (TEST_PLAN). Not SQLite.
-- RLS-bypass setups use a dedicated test role with the minimum privileges needed and are never applied to any shared or production-like environment.
-- The runtime application role is never made privileged to make tests pass.
+Phase: 1 — design-only test contracts (revision 2, corrective pass).
+Status: SPECIFICATIONS ONLY. No test code exists. No test has been run or passed. Nothing in this file is evidence that isolation works.
 
 ---
 
-## 1. Standard Fixture
+## 0. Modes, Columns and Rules
 
-- Tenant A (Counselor A) with Student A1 (active relationship), Student A2 (archived relationship), a Program Template A with two Versions (v1 published, v2 draft), Plan A1 with PlanVersion v1 and v2, a Credit balance, one stored file, one pending notification, one report.
-- Tenant B (Counselor B) with mirror objects: Student B1, Program Template B, Plan B1, file, notification, report.
-- Platform admin principal P (no tenant).
-- Student principal S1 (linked to A1 only). Student principal S2 (linked to B1 only).
-- Parent principal (out of MVP scope for detailed tests; included only as a placeholder for TI-API-09 once Q-007 is decided).
+### 0.1 Modes (each contract lists the modes it needs)
+- **C — Configuration:** checks catalog state of the real test database (roles, ownership, privileges, RLS flags, policies, views). Runs against an isolated test DB built from the same migrations.
+- **S — Static:** checks source code and migration files (forbidden patterns, signatures, allowlists). No database needed.
+- **R — RLS-only:** database session as the runtime role, repository/application filters deliberately absent in the test harness. Pass means RLS alone blocks the access. The harness must first prove a positive control (same query succeeds with the correct tenant), otherwise a broken harness produces a false pass.
+- **A — Application-only:** RLS deliberately neutralized in an isolated test database only (never in any shared or real environment). Pass means application authorization and repository filters alone block the access. A dedicated test role is used for the neutralization; the runtime role is never made privileged.
+- **I — Integrated:** normal configuration, RLS and application layers both active. Each negative test also checks that a failure in one layer would be visible on its own (see R and A).
 
-Assertion style: every negative test asserts both the response (or zero rows) **and** that no tenant-B data appears in any response body, log line, or error message.
+A contract lists every mode it needs. A mode absent from a contract is stated as "—" with a reason in the Notes column only where the reason is not obvious.
+
+### 0.2 CI column
+- **PR:** runs on every pull request in CI against an isolated Postgres instance.
+- **ENV:<name>:** needs a specific environment (for example a pooler container). Runs in that environment's pipeline; must be green before the phase that owns the feature closes.
+- **BLOCKED:<Q-id>:** cannot run until the named open question is decided. A BLOCKED contract prevents closing the phase that owns it.
+
+### 0.3 Standard fixture
+- Tenant A: Counselor A1 (principal), Student SA1 (active relationship), Student SA2 (archived relationship), ProgramTemplate TA with ProgramVersion TA-v1 (published) and TA-v2 (draft), Plan PA1 with PlanVersion PA1-v1 and PA1-v2, CreditLedger with positive balance, one stored file FA1, one notification NA1, one report RA1, one export EA1, one audit record AA1.
+- Tenant B: mirror objects with the same shape (Counselor B1, Student SB1, ProgramTemplate TB, PlanVersion PB1-v1, file FB1, notification NB1, report RB1, export EB1, audit record AB1).
+- Platform admin principal P (no tenant), without grant unless stated.
+- Student principal SS1 linked to SA1 only; SS2 linked to SB1 only.
+- Parent principal: placeholder only, see TI-API-09.
+
+### 0.4 Negative-test rules
+- Every negative test asserts: (a) the denial outcome, (b) zero tenant-B data in the response body, log output, and error message, and (c) a positive control for the correct tenant.
+- Cross-tenant "not found" checks compare the response with the response for a nonexistent id of the same type. The contract passes if they are identical in status and body, which is independent of the exact status decided in Q-014.
+
+### 0.5 Security consequence of failure
+Every contract states the consequence if it fails. Any failure of a PR-column contract blocks merge.
 
 ---
 
-## 2. Test Groups
+## 1. Group Index and Counts
 
-### TI-ROLE — Database role and catalog configuration (no data-access mode)
-
-| ID | Check | Pass criterion |
+| Group | Scope | Count |
 |---|---|---|
-| TI-ROLE-01 | Runtime role attributes | `app_runtime` has no `BYPASSRLS`, `SUPERUSER`, `CREATEROLE`, `CREATEDB` (checked in `pg_roles`) |
-| TI-ROLE-02 | Table ownership | No tenant-owned table is owned by `app_runtime` (`pg_tables.tableowner`) |
-| TI-ROLE-03 | RLS enabled and forced | Every tenant-owned table has `relrowsecurity = true` and `relforcerowsecurity = true` (`pg_class`); exceptions must be listed and justified in a reviewed allowlist |
-| TI-ROLE-04 | Policies present | Every tenant-owned table has a tenant policy with both `USING` and `WITH CHECK` on `tenant_id` (`pg_policies`) |
-| TI-ROLE-05 | Runtime grants are minimal | `app_runtime` has no DDL privilege and no grant on tables outside the tenant-owned allowlist (`information_schema.role_table_grants`) |
-| TI-ROLE-06 | Membership | `app_runtime` is not a member of any role that has `BYPASSRLS` or ownership of tenant tables (`pg_auth_members`, recursive) |
+| TI-CFG | Runtime role and catalog configuration | 11 |
+| TI-CTX | Tenant context behavior and pooling | 14 |
+| TI-FK | Composite constraints and immutability | 8 |
+| TI-BYP | Bypass surfaces: views, functions, TRUNCATE, materialized views, rules | 6 |
+| TI-API | API and object-level authorization | 17 |
+| TI-REPO | Repository layer used directly | 6 |
+| TI-RPT | Reports | 3 |
+| TI-EXP | Exports | 3 |
+| TI-FILE | Files and storage links | 7 |
+| TI-NOTIF | Notifications | 5 |
+| TI-JOB | Background jobs | 5 |
+| TI-VER | Program and Plan version history | 7 |
+| TI-AUD | Audit logs | 3 |
+| TI-PLAT | Platform admin cross-tenant access | 8 |
+| **Total** | | **103** |
 
-### TI-CTX — Tenant context propagation and fail-closed behavior
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-CTX-01 | R | Session with no `app.current_tenant_id` set reads `plan` | Zero rows |
-| TI-CTX-02 | R | Session with empty-string `app.current_tenant_id` reads `plan` | Zero rows, no cast error |
-| TI-CTX-03 | R | Set context to A; read rows of B directly | Zero rows of B |
-| TI-CTX-04 | R | Set context to A; insert row with `tenant_id = B` | Rejected by `WITH CHECK` |
-| TI-CTX-05 | R | Set context to A; update row of B to change nothing | Zero rows affected |
-| TI-CTX-06 | R | Set context to A; delete row of B | Zero rows affected |
-| TI-CTX-07 | I | Pooled connection: request for A sets context, commits; next request for B on the same connection with no set | No A data visible to B request |
-| TI-CTX-08 | I | Transaction rollback after `set_config(..., true)` | Context does not persist outside the transaction |
-| TI-CTX-09 | I | Session-level `SET` (non-local) is never issued by the application | Static check of repository code path; also detected via `pg_stat_statements` or a query log in integration runs (documented as a static + runtime check, not a DB-enforced guarantee) |
-
-### TI-DB-FK — Composite constraint enforcement
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-DB-FK-01 | I | Insert `plan_version` with `tenant_id = A` pointing at `plan` of tenant B | Foreign key violation |
-| TI-DB-FK-02 | I | Insert `plan_version` with `program_version_id` NULL | Accepted (NULL is allowed, composite FK not enforced); verify no false rejection |
-| TI-DB-FK-03 | I | Insert `plan_version` with `program_version_id` of tenant B, `tenant_id = A` | FK violation |
-| TI-DB-FK-04 | I | `program_version` referencing template of another tenant (D-012) | FK violation |
-| TI-DB-FK-05 | I | `student_program_enrollment` referencing a student of another tenant | FK violation |
-| TI-DB-FK-06 | I | `plan_item` referencing `plan_version` of another tenant | FK violation |
-| TI-DB-FK-07 | I | Same-tenant valid chain (template → version → enrollment → plan → version → item) | Accepted |
-
-### TI-DB-VIEW / TI-DB-FN — Bypass surfaces
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-DB-VIEW-01 | I | Each view over tenant tables is created with `security_invoker = true` (checked in `pg_class.reloptions`) | All views pass; none without the option |
-| TI-DB-VIEW-02 | R | Query a view as `app_runtime` with context set to A | Only A rows |
-| TI-DB-FN-01 | I | Static inventory: no `SECURITY DEFINER` function touches a tenant table | Empty allowlist (or each entry individually reviewed and listed) |
-
-### TI-API — API and object-level authorization (application layer)
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-API-01 | A | Counselor B GETs Student A1 by ID | 404 (Q-014 recommended); no A1 data in body |
-| TI-API-02 | A | Counselor B PATCHes Plan A1 | 404; no change in DB |
-| TI-API-03 | A | Counselor B DELETEs Program Version A2 | 404; no change |
-| TI-API-04 | A | Counselor A creates Plan referencing Student B1 in body | 422 generic message; no row created |
-| TI-API-05 | A | Counselor A enrolls Student A1 into Program Version of tenant B | 422 generic message; no row created |
-| TI-API-06 | A | Path tenant ID set to B while token belongs to A | Path value not used for authorization; response reflects tenant A only, or 404; no B data |
-| TI-API-07 | A | Body contains `tenant_id = B` on create | Field ignored or rejected; created row's tenant equals A |
-| TI-API-08 | A | Student S2 reads Plan A1 | 404 |
-| TI-API-09 | A | Parent principal reads Student A1 | Placeholder: pass criterion defined when Q-007 is decided |
-| TI-API-10 | A | Counselor A (archived relationship with A2) edits A2 | 403; no change |
-| TI-API-11 | A | Student S1 edits its own plan item not in active PlanVersion | 403 or 404 per contract; no change |
-| TI-API-12 | I | List endpoint for students as Counselor B | Only B's students; total count equals B's count |
-| TI-API-13 | I | Pagination cursor from tenant A reused with tenant B token | Rejected or returns B-only data; never A data |
-| TI-API-14 | I | Search as Counselor B for a name that exists only in tenant A | No A results |
-| TI-API-15 | I | Validation error responses for a cross-tenant ID vs. a nonexistent ID | Byte-identical error bodies (no enumeration) |
-| TI-API-16 | I | Published `ProgramVersion` update attempt | 403 or 409; row unchanged |
-| TI-API-17 | I | Versioned plan: counselor edits Program Template A; existing Plan A1 unchanged | Existing `PlanVersion` rows byte-identical after edit (D-008) |
-
-### TI-PLAT — Platform admin cross-tenant access
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-PLAT-01 | I | Ordinary Counselor principal attempts platform cross-tenant read | Refused; no data |
-| TI-PLAT-02 | I | Platform admin without grant attempts cross-tenant read | Refused |
-| TI-PLAT-03 | I | Platform admin with grant reads tenant A | Succeeds only for A; audit record written before response |
-| TI-PLAT-04 | I | Audit write fails | Access refused; no data returned |
-| TI-PLAT-05 | I | Platform admin access leaves no tenant context set for the next request | Next request isolated (TI-CTX-07 style) |
-
-### TI-JOB — Background jobs
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-JOB-01 | I | Job payload for tenant A processes only tenant A rows | No B rows read or written |
-| TI-JOB-02 | I | Job for tenant A fails mid-way and retries | Retry stays in tenant A; no B writes |
-| TI-JOB-03 | I | Job payload missing `tenant_id` | Rejected before execution |
-| TI-JOB-04 | I | Platform aggregate job | Reads aggregates only; no tenant row content in its output |
-
-### TI-FILE — Files and storage
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-FILE-01 | A | Counselor B requests signed URL for file of tenant A | Refused (404) |
-| TI-FILE-02 | A | Storage path manipulation: request for `tenants/A/...` path with B's token | Refused |
-| TI-FILE-03 | I | Signed URL expires after its TTL | Access denied after expiry |
-| TI-FILE-04 | I | Stored file metadata row for B not visible to A under RLS | Zero rows |
-| TI-FILE-05 | I | File path derived from DB record, not request | Request-supplied path ignored or rejected |
-
-### TI-RPT / TI-EXP — Reports and exports
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-RPT-01 | I | Report for Student A1 generated under tenant A | Contains only A1 and A data; no B names or IDs |
-| TI-RPT-02 | A | Request report for Student B1 as Counselor A | Refused (404) |
-| TI-EXP-01 | I | CSV/Excel export as Counselor A | Row set equals A's rows; no B rows |
-| TI-EXP-02 | I | Export filename and metadata | Contains no other tenant identifiers |
-
-### TI-NOTIF — Notifications
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-NOTIF-01 | I | In-app notification created for A's student | Delivery row carries `tenant_id = A`; not visible to B under RLS |
-| TI-NOTIF-02 | A | Notification adapter called for one recipient | Adapter receives exactly one recipient and tenant content |
-| TI-NOTIF-03 | I | Retry of failed delivery for tenant A | Retry uses A's recipient only |
-| TI-NOTIF-04 | I | Adapter (Telegram/SMS mock) failure | Core remains functional; failure recorded tenant-scoped |
-
-### TI-AUDIT — Audit logs
-
-| ID | Mode | Scenario | Pass criterion |
-|---|---|---|---|
-| TI-AUDIT-01 | I | State-changing action by Counselor A | Audit row with actor, `tenant_id = A`, request_id |
-| TI-AUDIT-02 | I | Counselor A reads audit rows | Only A's rows; B's audit invisible |
-| TI-AUDIT-03 | I | Audit rows cannot be updated or deleted by `app_runtime` | Permission denied |
+The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3.
 
 ---
 
-## 3. Coverage Requirements
+## 2. Contracts
 
-- Every test group above must have a runnable implementation before any feature in its area is declared Done (Definition of Done §65).
-- Tenant-isolation paths require 100% coverage (`TEST_PLAN.md`); coverage is measured per documented path, not as a line-count proxy alone.
-- Each endpoint's contract entry (`AUTHORIZATION_CONTRACT.md` §7) must link at least one TI-API negative test.
+### 2.1 TI-CFG — Runtime role and catalog configuration
 
-## 4. Pass/Fail Policy
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-CFG-01 | C | Read `pg_roles` for app_runtime | Not superuser; no BYPASSRLS, CREATEROLE, CREATEDB, REPLICATION | Runtime can bypass RLS | PR |
+| TI-CFG-02 | C | Check `pg_tables.tableowner` and view owners for all tenant tables | app_runtime owns none | Owner bypass path | PR |
+| TI-CFG-03 | C | Check `pg_class.relrowsecurity` and `relforcerowsecurity` for every tenant table in the allowlist | Both true for every tenant table; exceptions only if listed in a reviewed allowlist | Policies not enforced | PR |
+| TI-CFG-04 | C | Check `pg_policies` for each tenant table | A policy with both USING and WITH CHECK on tenant_id, applying to app_runtime or PUBLIC | Missing policy means unprotected table | PR |
+| TI-CFG-05 | C | Recursive `pg_auth_members` from app_runtime | No reachable role with BYPASSRLS, superuser, or ownership of tenant tables | Bypass through membership | PR |
+| TI-CFG-06 | C | `has_table_privilege` for app_runtime on each tenant table for each privilege type | Only the DML set in the allowlist (SELECT, INSERT, UPDATE, DELETE as specified per table); nothing else | Excess privileges | PR |
+| TI-CFG-07 | C | `has_table_privilege(..., 'TRUNCATE')` for app_runtime on tenant tables | False for all tenant tables | TRUNCATE is not subject to RLS | PR |
+| TI-CFG-08 | C | `has_schema_privilege(app_runtime, schema, 'CREATE')` and DDL attempt in test | False; DDL attempt is denied | Runtime can alter schema or policies | PR |
+| TI-CFG-09 | C | List EXECUTE grants of app_runtime on functions; check SECURITY DEFINER flag | No SECURITY DEFINER function touching tenant tables is executable, except allowlisted and reviewed ones | Privilege escalation through function owner | PR |
+| TI-CFG-10 | S | Scan runtime configuration templates and environment examples for app_migrator credentials | None present | Runtime can run migrations and bypass policy | PR |
+| TI-CFG-11 | C | Compare default privileges (`pg_default_acl`) for schemas holding tenant tables | No default privilege grants new tables to app_runtime unless listed | New tables silently exposed | PR |
 
-- Any failing TI test blocks the phase. There is no "known failure" exception for tenant isolation.
-- A test that passes only because a harness silently returns nothing (for example, a wrong credential) is a failure of the test, not a pass. Each negative test must first assert a positive control (the same query succeeds for the correct tenant).
+### 2.2 TI-CTX — Tenant context behavior and pooling
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-CTX-01 | R | Session as app_runtime, context unset, SELECT from tenant table | Zero rows | Fail-open on missing context | PR |
+| TI-CTX-02 | R | Context set to empty string, SELECT | Zero rows; no unhandled exception | Fail-open or crash that leaks details | PR |
+| TI-CTX-03 | R | Context set to 'not-a-uuid', SELECT | Error raised; zero rows; error text contains no tenant data | Data returned, or tenant data in error | PR |
+| TI-CTX-04 | R | Context = A; SELECT rows of tenant B | Zero rows of B; positive control: rows of A visible | Cross-tenant read | PR |
+| TI-CTX-05 | R | Context = A; INSERT row with tenant_id = B | Rejected by WITH CHECK; zero rows written | Cross-tenant write | PR |
+| TI-CTX-06 | R | Context = A; UPDATE row of tenant B | Zero rows affected; row unchanged | Cross-tenant update | PR |
+| TI-CTX-07 | R | Context = A; DELETE row of tenant B | Zero rows affected; row remains | Cross-tenant delete | PR |
+| TI-CTX-08 | R | Context = A; UPDATE an A row setting tenant_id = B | Rejected by WITH CHECK; row unchanged | Row moved to another tenant | PR |
+| TI-CTX-09 | I | Repository attempts a second context set within one transaction | Repository API refuses; a static check forbids the pattern | Context switch mid-transaction | PR |
+| TI-CTX-10 | I | Set context in transaction, then ROLLBACK; new transaction without set | No rows visible; context not carried | Context leaks across transactions | PR |
+| TI-CTX-11 | I | Pooled connection: request for A commits; next request for B runs on same physical connection without set | No A rows visible to B's request | Pool leakage | ENV:pooler (Q-016) |
+| TI-CTX-12 | I | Request for A raises an exception mid-transaction; next request for B on same connection | No A rows visible; connection state clean | Pool leakage after failure | ENV:pooler (Q-016) |
+| TI-CTX-13 | S | Static scan: no `set_config(..., false)` and no session-level `SET` for app.current_tenant_id in application code | None present | Context outlives transaction | PR |
+| TI-CTX-14 | A | Repository call outside a transaction attempts a tenant query | Repository refuses (no implicit context); no query executed | Query run without context | PR |
+
+### 2.3 TI-FK — Composite constraints and immutability
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-FK-01 | I | Insert plan_version with tenant_id = A referencing plan of tenant B | Foreign key violation | Cross-tenant parent/child link | PR |
+| TI-FK-02 | I | Insert plan_version with program_version_id NULL | Accepted; no false FK rejection | Valid rows rejected | PR |
+| TI-FK-03 | I | Insert plan_version with tenant A and program_version_id of tenant B | Foreign key violation | Cross-tenant version link | PR |
+| TI-FK-04 | I | Insert program_version with tenant A referencing template of tenant B (D-012) | Foreign key violation | Cross-tenant template link | PR |
+| TI-FK-05 | I | Insert enrollment with tenant A referencing student of tenant B | Foreign key violation | Cross-tenant enrollment | PR |
+| TI-FK-06 | I | Insert plan_item with tenant A referencing plan_version of tenant B | Foreign key violation | Cross-tenant plan item | PR |
+| TI-FK-07 | I | Insert full valid same-tenant chain: template, version, enrollment, plan, plan version, item | All accepted | Integrity rules too strict | PR |
+| TI-FK-08 | I | Update tenant_id of an existing tenant-owned row | Rejected by immutability rule | Row moved between tenants | PR |
+
+### 2.4 TI-BYP — Bypass surfaces
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-BYP-01 | C | Check `pg_class.reloptions` for security_invoker on every view touching tenant tables | True for all such views; none without it | View executes with owner rights and bypasses RLS | PR |
+| TI-BYP-02 | R | Query each allowed view as app_runtime, context = A | Only A rows | View leaks tenant data | PR |
+| TI-BYP-03 | S + C | Inventory SECURITY DEFINER functions; compare with reviewed allowlist | Inventory equals allowlist; allowlist entries have review reference | Unreviewed function bypasses RLS | PR |
+| TI-BYP-04 | C | Check grants of app_runtime on materialized views over tenant data | No such grant | Materialized views are not covered by RLS | PR |
+| TI-BYP-05 | C | Check `pg_rules` and tenant-table triggers that rewrite or redirect queries | None on tenant tables, or each reviewed | Query rewrite bypass | PR |
+| TI-BYP-06 | I | Application code path attempting TRUNCATE on tenant table as app_runtime | Denied | Full-table wipe that ignores RLS | PR |
+
+### 2.5 TI-API — API and object-level authorization
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-API-01 | A | Counselor B1 GET /students/{SA1} | Response identical in status and body to GET of a nonexistent id | Existence of A students revealed | PR |
+| TI-API-02 | A | Counselor B1 PATCH plan PA1 | Response identical to nonexistent id; DB unchanged | Cross-tenant write | PR |
+| TI-API-03 | A | Counselor B1 DELETE program version TA-v2 | Response identical to nonexistent id; row exists | Cross-tenant delete | PR |
+| TI-API-04 | A | Counselor A1 creates plan with student_id of SB1 in body | Generic validation error (same body as nonexistent student); no row created | Cross-tenant link | PR |
+| TI-API-05 | A | Counselor A1 enrolls SA1 into program version TB-v1 | Generic validation error; no enrollment row | Cross-tenant enrollment | PR |
+| TI-API-06 | A | Token of A1; request path contains tenant B's id in a tenant-scoped route | Path tenant not used for authorization; response contains only A data or same not-found response | Path tenant trusted | PR |
+| TI-API-07 | A | Token of A1; create resource with body field tenant_id = B | Field ignored or rejected; stored tenant_id = A | Client-set tenant | PR |
+| TI-API-08 | A | Student SS2 GET plan PA1 | Response identical to nonexistent id | Student reads other student's plan | PR |
+| TI-API-09 | A | Parent principal GET student SA1 | Pass criterion defined only after Q-007 | Parent over-exposure | BLOCKED:Q-007 |
+| TI-API-10 | A | Counselor A1 edits SA2 (archived relationship) | 403; no change | Write after relationship ended | PR |
+| TI-API-11 | A | Student SS1 edits plan item not in active PlanVersion | 403 or not-found; no change | Student edits outside active plan | PR |
+| TI-API-12 | I | Counselor B1 lists students | Only B students; total equals B count | Count or row leak | PR |
+| TI-API-13 | I | Cursor from A's listing used with B's token | Rejected or returns only B; never A rows | Pagination leak | PR |
+| TI-API-14 | I | Counselor B1 searches for a name existing only in A | No A results; same response as no-match | Search leak | PR |
+| TI-API-15 | I | Error body for cross-tenant id vs nonexistent id, across three endpoint types | Identical status and body in each pair | Enumeration | PR |
+| TI-API-16 | I | Update attempt on published ProgramVersion TA-v1 | Rejected (403 or 409, fixed per endpoint); row unchanged | Silent mutation of published version | PR |
+| TI-API-17 | I | Counselor A1 edits ProgramTemplate TA; existing PlanVersion PA1-v1 | PA1-v1 byte-identical after edit (D-008) | Existing student plans change silently | PR |
+
+### 2.6 TI-REPO — Repository layer used directly
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-REPO-01 | S | Inspect repository signatures for tenant-owned entities | Every method takes TenantContext; no method without it | Unscoped access path | PR |
+| TI-REPO-02 | A | Repository `get(id)` for SA1 with context B | Returns None (same as nonexistent id) | Cross-tenant read | PR |
+| TI-REPO-03 | A | Repository `list()` with context B | Only B rows; positive control with A | Cross-tenant list | PR |
+| TI-REPO-04 | A | Repository bulk update with context B on a filter matching A rows | Zero A rows changed | Bulk cross-tenant write | PR |
+| TI-REPO-05 | S | Scan code outside Infrastructure for raw SQL touching tenant tables | None present | Filter bypass through raw SQL | PR |
+| TI-REPO-06 | A | Repository create with tenant_id of B while context is A | Rejected before write | Write with wrong tenant | PR |
+
+### 2.7 TI-RPT — Reports
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-RPT-01 | I | Generate report RA1 (student SA1) as A1 | Contains only A data; no B names or ids | Report leak | PR |
+| TI-RPT-02 | A | Request report for SB1 as A1 | Response identical to nonexistent id | Cross-tenant report | PR |
+| TI-RPT-03 | I | Multi-student report as A1 | Only A students included; totals computed over A only | Aggregate leak | PR |
+
+### 2.8 TI-EXP — Exports
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-EXP-01 | I | CSV export as A1 | Row set equals A's rows; no B rows | Data leak in export | PR |
+| TI-EXP-02 | I | File name and metadata of export EA1 | Contain no B identifiers | Identifier leak | PR |
+| TI-EXP-03 | I | Concurrent exports by A1 and B1 | Each file contains only its own tenant rows | Mixed-tenant file | PR |
+
+### 2.9 TI-FILE — Files and storage links
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-FILE-01 | A | A1 requests signed URL for FB1 | Response identical to nonexistent id; no URL issued | Cross-tenant file access | PR |
+| TI-FILE-02 | A | A1 requests a storage key beginning tenants/B/ | Refused; no URL | Path traversal across tenants | PR |
+| TI-FILE-03 | I | Signed URL for FA1 used after TTL | Access denied after expiry | Indefinite link validity | PR |
+| TI-FILE-04 | R | SELECT file metadata rows as app_runtime, context A | Only A rows | Metadata leak | PR |
+| TI-FILE-05 | A | Upload request supplies a storage key that does not match the record's tenant | Rejected; nothing stored | Mis-filed tenant data | PR |
+| TI-FILE-06 | I | Direct unsigned storage URL for FA1, no token | Denied | Public file exposure | PR |
+| TI-FILE-07 | A | Path for download derived from request field instead of record | Request-supplied path ignored or rejected | Arbitrary object read | PR |
+
+### 2.10 TI-NOTIF — Notifications
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-NOTIF-01 | I | In-app notification for SA1 created | Delivery row has tenant A; not visible under context B | Cross-tenant notification read | PR |
+| TI-NOTIF-02 | A | Adapter invoked for one notification | Adapter receives exactly one recipient and one tenant's content | Fan-out to wrong tenant | PR |
+| TI-NOTIF-03 | I | Retry of failed delivery for NA1 | Retry uses A's recipient only | Retry to wrong recipient | PR |
+| TI-NOTIF-04 | I | Adapter (Telegram or SMS mock) fails | Core flow still completes; failure recorded with tenant A | Channel failure breaks core or leaks | PR |
+| TI-NOTIF-05 | I | Notifications for A and B created in parallel | No row mixes A and B data or recipients | Mixed-tenant delivery | PR |
+
+### 2.11 TI-JOB — Background jobs
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-JOB-01 | I | Job with payload tenant A | Reads and writes only A rows | Cross-tenant processing | PR |
+| TI-JOB-02 | I | Job for A fails mid-way and retries | Retry under A only; no B writes | Retry crosses tenants | PR |
+| TI-JOB-03 | A | Job enqueued without tenant_id | Rejected before execution | Unscoped job | PR |
+| TI-JOB-04 | I | Platform aggregate job | Output contains aggregates only; no tenant row content | Aggregate job leaks rows | PR |
+| TI-JOB-05 | I | Job fails with context set; next job runs on same worker | Next job sets its own context; no leftover context | Context leak in worker | ENV:worker (Q-017) |
+
+### 2.12 TI-VER — Program and Plan version history
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-VER-01 | A | A1 reads PB1-v1 via API | Response identical to nonexistent id | Cross-tenant plan history read | PR |
+| TI-VER-02 | A | Repository read of PB1-v1 with context A | None returned | Cross-tenant history read | PR |
+| TI-VER-03 | A | A1 creates PlanVersion for SB1 | Refused; no row created | Cross-tenant plan write | PR |
+| TI-VER-04 | A | A1 activates PB1-v2 | Refused; state unchanged | Cross-tenant activation | PR |
+| TI-VER-05 | A | A1 reads TB-v1 ProgramVersion | Response identical to nonexistent id | Cross-tenant program read | PR |
+| TI-VER-06 | I | Attempt to modify published PlanVersion | Rejected; history unchanged (D-008) | Silent mutation | PR |
+| TI-VER-07 | I | Activation of a new version fails midway | No partial state: enrollment and plan pointer both old or both new | Inconsistent plan state | PR |
+
+### 2.13 TI-AUD — Audit logs
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-AUD-01 | I | A1 performs a state-changing action | Audit row with actor, tenant A, request_id | Missing evidence | PR |
+| TI-AUD-02 | I | A1 reads audit rows | Only A rows; AB1 not visible | Audit leak | PR |
+| TI-AUD-03 | C | app_runtime attempts UPDATE and DELETE on audit table | Denied for both | Audit tampering | PR |
+
+### 2.14 TI-PLAT — Platform admin cross-tenant access
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-PLAT-01 | I | Counselor A1 attempts platform cross-tenant read | Refused; no data | Privilege escalation | PR |
+| TI-PLAT-02 | I | Platform admin P without grant attempts cross-tenant read | Refused; no data | Unauthorized operator access | PR |
+| TI-PLAT-03 | I | P with grant for tenant A reads SA1 | Succeeds for A only; audit record committed before response | Access without evidence | PR |
+| TI-PLAT-04 | I | Audit write fails during P's read | Access refused; no data returned | Unaudited access | PR |
+| TI-PLAT-05 | I | P's request followed by a counselor B request on same connection | B request sees no A data | Context leak after platform access | ENV:pooler (Q-016) |
+| TI-PLAT-06 | C | Check that no application role (including the platform path's role) has BYPASSRLS unless Q-015 chose it; if chosen, verify its only use is the audited path | Holds for the decided mechanism | Silent bypass | BLOCKED:Q-015 |
+| TI-PLAT-07 | I | P's grant expires; P attempts read | Refused after expiry | Standing access | PR |
+| TI-PLAT-08 | I | P attempts a write under a read-only grant | Refused; no change | Write by read-only operator | PR |
+
+---
+
+## 3. Coverage and Gate Rules
+- Tenant isolation paths: 100% of documented paths must have at least one contract; measured by a path inventory (`docs/phase1/` future file), not by line coverage alone.
+- Every endpoint contract (`AUTHORIZATION_CONTRACT.md` §7) links at least one TI-API or TI-REPO contract.
+- A contract marked BLOCKED prevents closing the phase that owns it. BLOCKED contracts are not counted as passing.
+- No contract is considered passing unless it has run and produced its expected result in the stated CI column.
+
+## 4. Remaining Work Before Any Contract Can Count as Passing
+1. Implement fixtures and the isolated Postgres harness (Phase 2/3).
+2. Implement TI-CFG and TI-CTX first; they validate the foundation for all other groups.
+3. Resolve BLOCKED items (Q-007, Q-015, Q-016, Q-017) for their owning phases.
+4. Run the PR-column contracts in CI on a real PR.

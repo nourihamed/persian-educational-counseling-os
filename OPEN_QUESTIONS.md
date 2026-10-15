@@ -79,44 +79,58 @@
 
 ---
 
-## Phase 1 Design Questions (opened 2026-10-15)
+## Phase 1 Design Questions (revision 2, 2026-10-15)
 
-Raised by `docs/phase1/TENANT_ISOLATION_DESIGN.md` §11. Each lists a recommended option; none is decided. Affected implementation must not start until answered.
+Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written, not accepted. Nothing in this block is decided by the assistant. "Blocks Phase 1 approval" means the owner or reviewer cannot approve Phase 1 until the item is resolved or explicitly accepted.
 
-## Q-014 — Response for cross-tenant object access (404 vs 403)
-**Why it matters:** determines whether a probing client can learn that an ID exists in another tenant.
-**Recommended option:** 404 (not found) for any object not visible within the caller's tenant, with identical bodies for "other tenant" and "nonexistent" (`AUTHORIZATION_CONTRACT.md` §4, §6).
-**Alternatives:** 403 for all cross-tenant access (leaks existence).
-**Impact:** API contract, TI-API-01/15 expectations, client error handling.
-**Priority:** High before Phase 4 (Auth/RBAC endpoints).
+## Q-014 — Response for cross-tenant object access (exact status)
+**Status:** OPEN (recommended: 404 with body identical to a nonexistent object).
+**Decision needed from owner:** the exact status code for cross-tenant and nonexistent objects, and whether 403 is ever used for objects the caller can see but may not act on.
+**Why it matters:** existence of records in other tenants must not be revealed.
+**Dependency:** the test contracts (TI-API-01, TI-API-15, TI-REPO-02, TI-RPT-02, TI-FILE-01, TI-VER-01/05) are written so they pass under any choice, as long as the cross-tenant response equals the nonexistent-object response.
+**Must be resolved before:** Phase 4 endpoint implementation.
+**Blocks Phase 1 approval:** No.
 
 ## Q-015 — Platform-admin cross-tenant access mechanism
-**Why it matters:** the only legitimate path for cross-tenant reads (support, billing reconciliation) and a high-risk one.
-**Recommended option:** no bypass role in MVP; cross-tenant reads only through a narrow, audited, read-only application path requiring a named grant, a reason, and an audit write before the response (`TENANT_ISOLATION_DESIGN.md` §6).
-**Alternatives:** a `platform_ops` role with `BYPASSRLS` plus the same audit requirement (simpler queries, larger blast radius).
-**Impact:** whether `platform_ops` exists; TI-PLAT group; Phase 4 and Phase 21 planning.
-**Priority:** High before Phase 4.
+**Status:** OPEN (recommended: no bypass role by default; narrow audited read-only path with per-request grant expiry, reason, and audit committed before data is returned; `TENANT_ISOLATION_DESIGN.md` §8).
+**Decision needed from owner:** (a) audited application path only, or (b) a `platform_ops` role with BYPASSRLS plus the same audit rules; (c) whether write access is in MVP at all.
+**Why it matters:** the only legitimate cross-tenant path, and the largest impact if an operator or an attacker misuses it.
+**Dependency:** TI-PLAT-01 to TI-PLAT-08; TI-PLAT-06 is BLOCKED until this is decided.
+**Must be resolved before:** Phase 4 (roles and permissions) and any support tooling.
+**Blocks Phase 1 approval:** Yes, unless the owner accepts the recommended default in writing for the Phase 1 review. Without that acceptance, the design may be reviewed but not approved.
 
-## Q-016 — PostgreSQL connection pooling mode
-**Why it matters:** transaction-local tenant context is safe only if the pooler and the application never carry session state between requests.
-**Recommended option:** transaction pooling is acceptable only with transaction-local `set_config(..., true)` and the TI-CTX-07 test passing; otherwise use direct connections for the pilot.
-**Alternatives:** session pooling (simpler, more connections); no pooler in pilot (fewest moving parts, lower concurrency ceiling).
-**Impact:** Infrastructure phase (Phase 3) configuration and TI-CTX tests.
-**Priority:** Medium, needed before Phase 3.
+## Q-016 — PostgreSQL connection pooling mode and transaction-local context
+**Status:** OPEN (recommended: transaction pooling only if TI-CTX-11, TI-CTX-12 and TI-PLAT-05 pass in the chosen configuration; otherwise direct connections for the pilot).
+**Decision needed from owner:** pooler mode for the pilot. Owner may also choose to defer pooling altogether.
+**Why it matters:** a pooled connection carrying one tenant's context into another tenant's request is a direct cross-tenant leak.
+**Dependency:** TI-CTX-11, TI-CTX-12, TI-PLAT-05 (ENV:pooler).
+**Must be resolved before:** Phase 3 infrastructure configuration.
+**Blocks Phase 1 approval:** No.
 
 ## Q-017 — Background-job execution model
-**Why it matters:** jobs are a common cross-tenant leak path and retries can cross contexts.
-**Recommended option:** one tenant per job run (payload-bound `tenant_id`), plus explicitly marked platform jobs restricted to aggregates (`TENANT_ISOLATION_DESIGN.md` §8, §6.3).
-**Alternatives:** a single global job processing all tenants with per-row checks (higher risk, harder to audit).
-**Impact:** Phase 3 queue design; notification and report scheduling (Phase 17-18).
-**Priority:** Medium, needed before Phase 3.
+**Status:** OPEN (recommended: one tenant per job run with payload-bound tenant_id; platform jobs restricted to aggregates; failure leaves no context set).
+**Decision needed from owner:** per-tenant job model versus one global job with per-row checks (not recommended).
+**Why it matters:** jobs and retries are a common cross-tenant path.
+**Dependency:** TI-JOB-01 to TI-JOB-05 (TI-JOB-05 is ENV:worker).
+**Must be resolved before:** Phase 3 queue design; Phase 17–18 scheduling.
+**Blocks Phase 1 approval:** No.
 
 ## Q-018 — Tenant-scoped file storage for the pilot
-**Why it matters:** file access must be tenant-namespaced and use expiring signed URLs; the storage provider determines how this is enforced.
-**Recommended option:** object storage on the pilot VPS (S3-compatible, self-hosted or local) with `tenants/{tenant_id}/` namespacing, server-side authorization before URL signing, and TTL-limited URLs.
-**Alternatives:** database BLOB storage (simpler RLS coverage, poor scaling); a third-party object store (requires a provider decision and Iran-reachability check per D-011).
-**Impact:** Files section of Phase 3 and Phase 17 exports.
-**Priority:** Medium, needed before the first file feature.
+**Status:** OPEN (recommended: S3-compatible object storage on the pilot host with `tenants/{tenant_id}/` namespacing, server-side authorization before signing, short TTL; no public buckets).
+**Decision needed from owner:** storage provider and hosting location (must be checked against D-011 for reachability), and maximum link lifetime.
+**Why it matters:** files are a direct cross-tenant read path if keys or links are guessable.
+**Dependency:** TI-FILE-01 to TI-FILE-07.
+**Must be resolved before:** the first file feature.
+**Blocks Phase 1 approval:** No.
+
+## Q-019 — Stronger tenant-context boundary against arbitrary SQL (threat T4)
+**Status:** OPEN. Residual risk is documented; no option is selected.
+**Background:** under D-009's session-variable mechanism, an attacker who can run arbitrary SQL as the runtime role can set any tenant value and bypass RLS. Options A to E are compared in `TENANT_ISOLATION_DESIGN.md` §2.3. Recommended for MVP: Option A (accepted D-009) plus strict SQL injection prevention and privilege minimization, with the residual risk accepted in writing, and a decision on Option D or C before any real-data pilot.
+**Decision needed from owner:** (1) accept the residual risk T4 for MVP in writing, or (2) require Option D or C now. Also: whether real student data may enter the pilot before Q-019 is decided.
+**Why it matters:** this is the difference between "RLS prevents accidental leaks" and "a compromised application cannot read another tenant". The current documents state only the first.
+**Dependency:** a dedicated security review of any SECURITY DEFINER design (TI-BYP-03); a test that the runtime role cannot set the context to a tenant without a valid token if Option D is chosen (new contract required, not yet written).
+**Must be resolved before:** any pilot with real student data; Phase 26 (Security Hardening).
+**Blocks Phase 1 approval:** Yes, unless the owner explicitly accepts residual risk T4 for MVP in writing during the Phase 1 review.
 
 ---
 

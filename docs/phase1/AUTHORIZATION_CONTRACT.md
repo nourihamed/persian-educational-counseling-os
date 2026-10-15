@@ -1,7 +1,9 @@
 # AUTHORIZATION_CONTRACT.md
 
 Phase: 1 — Architecture & Multi-Tenancy (design only)
-Status: DRAFT for Product Owner review. Contract only; no endpoint exists yet. Endpoint shapes remain in `API.md`.
+Status: DRAFT (revision 2, corrective pass) for Product Owner review. Contract only; no endpoint exists yet. Endpoint shapes remain in `API.md`. Nothing here is verified by tests.
+
+Scope note: object-level authorization in this contract is the PRIMARY control against authenticated users (threats T1, T3 in `TENANT_ISOLATION_DESIGN.md` §1). It is not a control against arbitrary SQL execution (T4); see `TENANT_ISOLATION_DESIGN.md` §2.
 
 Purpose: define, before any endpoint is built, how every resource and action is authorized. Every future endpoint must declare its entries in this contract. An endpoint without a declared entry is not reviewable and must not be merged.
 
@@ -14,13 +16,13 @@ For every request, in order:
 1. **Authenticate.** Resolve the principal. Unauthenticated → 401.
 2. **Resolve tenant context** from the principal (`TENANT_ISOLATION_DESIGN.md` §1). Never from path/body.
 3. **Check the action permission** against RBAC (table-driven, D-005): does the principal's role grant this action type? Failing → forbidden (403).
-4. **Load the target object within the tenant** (tenant-scoped query). Not found within tenant → not-found (404) per Q-014 recommendation.
+4. **Load the target object within the tenant** (tenant-scoped query). Not found within tenant → not-found response. The exact status (404 recommended) is pending Q-014; cross-tenant and nonexistent objects must produce identical responses whichever status is chosen.
 5. **Check object-level rules**: relationship and status (§3). Failing → forbidden (403) for an object the principal can see but may not act on.
 6. **Check referenced objects in the body** belong to the same tenant (§4). Failing → validation error without disclosing the other tenant's existence.
 7. **Execute** in one transaction with tenant context set (`TENANT_ISOLATION_DESIGN.md` §4).
 8. **Audit** state-changing actions with actor, action, target, and request_id.
 
-Steps 3 and 5 must not be skipped even when RLS would also deny the operation. RLS is the backstop, not the check.
+Steps 3 and 5 must not be skipped even when RLS would also deny the operation. RLS is the backstop for application defects, not the check and not a boundary against arbitrary SQL.
 
 ---
 
@@ -74,7 +76,7 @@ Any request that references another object by ID (for example, `student_id` when
 |---|---|
 | Not authenticated | 401 |
 | Authenticated, action not granted by role | 403 |
-| Object not visible in tenant (includes other tenant's objects) | 404 (recommended, Q-014) |
+| Object not visible in tenant (includes other tenant's objects) | Not-found response; status 404 recommended, pending Q-014; identical to a nonexistent object |
 | Object visible, relationship/status forbids action | 403 |
 | Validation or referenced-object failure | 422 with generic message (§4) |
 | Conflict (version race, duplicate review) | 409 |
@@ -94,4 +96,4 @@ A reviewer rejects an endpoint that cannot answer all of these from its contract
 - [ ] Every body/path ID checked for tenant membership?
 - [ ] List query filter applied in SQL?
 - [ ] Audit event declared for state changes?
-- [ ] Negative cross-tenant test IDs (from `TENANT_ISOLATION_TEST_CONTRACTS.md`) linked?
+- [ ] Negative cross-tenant test IDs (from `TENANT_ISOLATION_TEST_CONTRACTS.md`) linked, with expected response identical to the nonexistent-object response?

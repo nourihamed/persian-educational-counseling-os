@@ -1,82 +1,165 @@
 # TENANT_ISOLATION_DESIGN.md
 
 Phase: 1 — Architecture & Multi-Tenancy (design only)
-Status: DRAFT for Product Owner review. Design artifact only. No code, migration, role, policy, or infrastructure exists or is created by this document.
+Status: DRAFT (revision 2, corrective pass). Design artifact only. No code, migration, role, policy, grant, or infrastructure exists or was created. No test was run. Nothing here is a security proof. Phase 1 is NOT approved by this document.
 
-Binding inputs (accepted, not re-decided here):
-- Master Prompt §3 (tenant isolation is non-negotiable), §48 (security baseline)
-- D-009 / Q-001: shared PostgreSQL, direct `tenant_id NOT NULL` indexed on tenant-scoped rows, application authorization plus PostgreSQL RLS as defense in depth
-- D-012 / Q-013: MVP `ProgramTemplate` and `ProgramVersion` are tenant-owned only; a version must belong to the same tenant as its template
-- D-008 / Q-012: minimum auditable versioning in MVP; `PlanVersion` is tenant- and student-scoped with no exception
-- D-010 / Q-002: MVP boundary per `PROJECT_SCOPE.md`
+Binding inputs (accepted decisions, not re-decided here):
+- D-009 (ACCEPTED 2026-10-12, answer to Q-001): shared PostgreSQL database/schema; direct `tenant_id NOT NULL` indexed on tenant-scoped rows; authorization in the Application/API layer with PostgreSQL RLS as defense in depth; composite constraints or equivalent for parent/child tenant consistency; Platform Admin cross-tenant access only with explicit, limited, audited permission; "RLS به‌تنهایی کافی نیست".
+- D-010 (ACCEPTED): MVP scope per `PROJECT_SCOPE.md`.
+- D-008 / Q-012 (ACCEPTED): minimum auditable versioning in MVP.
+- D-012 / Q-013 (ACCEPTED): MVP Program Template/Version is tenant-owned; a version belongs to the same tenant as its template.
+- TEST_PLAN.md: mandatory tenant isolation test groups; R/A/I test modes; isolated Postgres per test run.
 
-What this document does: turns the accepted mechanism into a concrete, reviewable design (layers, roles, context propagation, constraint patterns, surface rules, failure behavior) and identifies the decisions that still need an owner. What it does not do: prove anything runs. Every claim below is a design requirement until executable tests from `TENANT_ISOLATION_TEST_CONTRACTS.md` pass in a later authorized phase.
+Terminology used throughout:
+- **Defense in depth against application defects:** protects against a missing or wrong filter in our own code (developer error, forgotten WHERE clause).
+- **Security boundary against an attacker:** an attacker who can execute arbitrary SQL as the runtime database role, or who holds the runtime database credentials, must not be able to read or write another tenant's data. This document does NOT claim that property for the current design (see §2).
 
 ---
 
-## 1. Principal and Tenant Context
+## 1. Threat Model
 
-1.1 Request identity comes only from the authenticated principal (session or token validated by the Auth layer). The principal resolves to a `TenantContext`:
+### 1.1 Assets
+Student personal and educational data (potentially minors), counselor business data, billing ledger, uploaded files, reports and exports, audit records.
+
+### 1.2 Actors and threats
+
+| ID | Actor / threat | Example | Primary control in this design | Covered by RLS session context? |
+|---|---|---|---|---|
+| T1 | Authenticated user probes IDs in another tenant | Counselor B requests `/students/{A1}` | Application authorization (tenant from principal; object lookup tenant-scoped; §8) | Partially (only if the query reaches the table with context set) |
+| T2 | Developer defect: query omits tenant filter | Repository method forgets `WHERE tenant_id` | Repository API requires TenantContext; RLS denies cross-tenant rows | Yes (this is the main intended use) |
+| T3 | Developer defect: wrong tenant passed to repository | Service passes B's id while processing A's request | Composite FKs, WITH CHECK on writes, tests TI-REPO | No (context is set to the wrong tenant consistently) |
+| T4 | Attacker achieves arbitrary SQL execution as `app_runtime` (SQL injection, RCE in app, stolen runtime DB credentials) | Attacker runs `SELECT set_config('app.current_tenant_id', '<B>', true); SELECT * FROM student;` | Prevent injection (parameterized queries only, static checks, code review), least-privilege grants, secret management, network isolation. The session variable itself is NOT a boundary against T4 | **No.** The attacker can set any tenant value. This is an accepted residual risk of the D-009 mechanism unless §2.3 option D or another boundary is adopted (Q-019). |
+| T5 | Misconfigured privileges (owner role, BYPASSRLS, membership, TRUNCATE, views, SECURITY DEFINER) | Runtime role owns tables; TRUNCATE bypasses RLS | Configuration and catalog tests (TI-CFG, TI-BYP) | Depends on config; RLS is not sufficient if misconfigured |
+| T6 | Platform operator misuse | Platform admin reads tenant data without permission | Audited access path (§8), no default BYPASSRLS | No |
+| T7 | Background job / notification / file pipeline crosses tenants | Job loads tenant B rows while processing A | Job payload tenant binding, per-job context (§9) | Partially |
+| T8 | Connection-pool context leakage | Request for B reuses a connection still holding A's setting | Transaction-local context, pooling tests (§6.4) | Yes, if transaction-local settings are used correctly |
+
+### 1.3 What this document asserts
+- It mitigates T1, T2, T5 (when configuration tests pass), T7, and T8 (when tests pass).
+- It does not mitigate T4 by itself. Mitigation of T4 relies on SQL injection prevention and privilege minimization, and is not a property the session variable provides.
+- T3 and T6 are addressed by API/repository design and audited access, not by RLS.
+
+---
+
+## 2. Trust Boundary: What RLS Does and Does Not Prove
+
+### 2.1 Why the current mechanism is not a boundary against arbitrary SQL
+The tenant value lives in a session variable (`app.current_tenant_id`) that the runtime role can set with `set_config`. Any code path that can run arbitrary SQL as `app_runtime` can therefore set any tenant value before querying. RLS then faithfully enforces the wrong tenant. The policy is correct; the input it trusts is not authenticated by the database.
+
+### 2.2 Consequences
+- Claims of the form "RLS guarantees tenant isolation" are FALSE for this design and must not appear in any document.
+- Claims that are TRUE, once the tests pass: RLS prevents accidental cross-tenant access by application code that does not set the right tenant, and prevents cross-tenant access from ordinary queries issued under a correctly set context.
+- Preventing T4 is a separate control set (§2.4) and must be reviewed in Phase 3 and Phase 26 (Security Hardening).
+
+### 2.3 Options for a stronger tenant-context boundary (for owner decision, Q-019)
+
+| Option | Mechanism | Resists T4? | Advantages | Costs and risks |
+|---|---|---|---|---|
+| A (current D-009 design) | `set_config` transaction-local; RLS reads it | No | Simple; works with a shared pool; standard Postgres | Injection can choose any tenant |
+| B | Per-tenant database roles; RLS on `current_user`; app switches with `SET ROLE` | Partly. Runtime role needs membership in tenant roles, so injected SQL can also `SET ROLE` to any of them | Familiar model | Role explosion; membership is itself an escalation path; does not solve T4 by itself |
+| C | Per-tenant database credentials or per-tenant connection pools | Yes for the connection's tenant. Injection can only reach that tenant's role, provided no other role is reachable | Strongest DB-side separation without separate databases | Pool per tenant; credential management per tenant; operational cost; scales poorly |
+| D | Tenant context set only by a `SECURITY DEFINER` function that verifies a signed, short-lived token (HMAC with a secret not stored in the database); the runtime role cannot set the context directly | Yes, if the function is correct and the signing secret is outside the database | Injected SQL cannot forge a tenant without a valid token for that tenant | Complex; needs a dedicated security review; the function is itself a bypass surface (TI-BYP-03); token issuance and revocation design required |
+| E | Separate database or schema per tenant (D-009 rejected this for MVP) | Yes | Strongest isolation | Operationally heavy; contradicts accepted D-009 for MVP |
+
+### 2.4 Recommended approach (proposal, not decision)
+- Keep D-009 as the accepted MVP mechanism (Option A) for defense against defects (T1, T2, T5, T7, T8).
+- Treat T4 as a named residual risk for MVP. Mitigate it through: parameterized queries only; banning string-built SQL in the codebase with a static check; least-privilege runtime role; no runtime access to migration credentials; secrets outside the repository; network restriction of the database to the application host.
+- Before any pilot with real student data, the owner decides whether Option D (or C) is required. This decision is recorded as Q-019 and must be resolved before Phase 26 (Security Hardening) and before any real-data pilot. It is NOT resolved by this document.
+- This recommendation does not change D-009.
+
+### 2.5 Claims ledger
+
+| Claim | Status |
+|---|---|
+| Repository and API design enforce tenant scoping on every tenant-owned query | Designed (this document). Not implemented. |
+| RLS denies cross-tenant rows for a correctly configured runtime role with context set | Designed. Requires TI-CTX and TI-CFG tests to pass. |
+| Composite keys prevent cross-tenant parent/child links | Designed. Requires TI-DB-FK tests to pass. |
+| Runtime role cannot bypass RLS through privileges | Designed. Requires TI-CFG tests to pass. |
+| Arbitrary-SQL attacker cannot cross tenants | **NOT claimable.** Residual risk T4 (§2.3, Q-019). |
+| Platform Admin access is limited and audited | Designed as proposal (§8, Q-015). Not decided. |
+| Tenant isolation holds in production | **NOT claimable in Phase 1.** |
+
+---
+
+## 3. Principal and Tenant Context (Application Level)
+
+3.1 Request identity comes only from the authenticated principal. The principal resolves to an immutable `TenantContext`:
 
 ```
 TenantContext {
-  tenant_id      : UUID        # derived from the principal's active CounselorStudent / Counselor membership
-  principal_id  : UUID
-  roles         : set<Role>
-  scope         : TENANT | PLATFORM_ADMIN_AUDITED
-  request_id    : UUID        # correlation for audit
+  tenant_id     : UUID     # derived from the principal's membership / active relationship
+  principal_id : UUID
+  roles        : set<Role>
+  scope        : TENANT | PLATFORM_ADMIN_AUDITED
+  request_id   : UUID
 }
 ```
 
-1.2 `tenant_id` values supplied in a path, query string, or request body are never sufficient for authorization. They are treated as untrusted identifiers to be checked against the resource's real tenant (see §5 and `AUTHORIZATION_CONTRACT.md`).
+3.2 `tenant_id` values in path, query, or body are never sufficient for authorization. They are untrusted identifiers checked against the resource's real tenant (§8 and `AUTHORIZATION_CONTRACT.md`).
 
-1.3 A `Student` principal's tenant is the tenant of its single active `CounselorStudent` relationship. Students with no active relationship have no tenant data scope and receive an empty, not erroneous, result for tenant-scoped reads.
+3.3 A Student principal's tenant is the tenant of its single active `CounselorStudent` relationship. A Student with no active relationship has no tenant data scope and receives an empty result for tenant-scoped reads.
 
-1.4 A `TenantContext` is immutable for the lifetime of a request or job. It is never mutated mid-operation and never reused across requests.
+3.4 `TenantContext` is immutable for the lifetime of a request or job.
 
-1.5 `PLATFORM_ADMIN_AUDITED` scope is a separate, explicit scope (see §6). It is never implied by a role name alone.
+3.5 `PLATFORM_ADMIN_AUDITED` is a distinct scope. It is never implied by a role name.
 
 ---
 
-## 2. Layer Responsibilities
+## 4. Layer Responsibilities
 
-| Layer | Responsibility for isolation | Must not |
+| Layer | Responsibility | Must not |
 |---|---|---|
-| API (routers) | Resolve `TenantContext` from the principal; validate input shape; map domain outcomes to HTTP | Query data directly; trust path/body tenant IDs; contain tenant conditions as business logic |
-| Application services | Take `TenantContext` as an explicit parameter; enforce object-level authorization and business rules; own transaction boundaries | Read a global/ambient tenant; construct raw SQL |
-| Repositories (Infrastructure) | Inject `tenant_id` filter on every query; set the DB tenant session variable inside the transaction (§4) | Expose unscoped query methods to the application layer |
-| Database | RLS policies on every tenant-owned table; composite constraints that make cross-tenant parent/child links impossible | Be the only control (RLS alone is insufficient, see §7) |
+| API (routers) | Resolve TenantContext from principal; validate shape; map outcomes to HTTP | Trust path/body tenant IDs; query data directly |
+| Application services | Take TenantContext explicitly; enforce object-level authorization and business rules; own transaction boundaries | Use an ambient/global tenant; build raw SQL |
+| Repositories (Infrastructure) | Require TenantContext in every method signature; inject tenant filter; set transaction-local DB context once per transaction | Expose unscoped methods for tenant-owned tables; accept tenant IDs from callers without a context object |
+| Database | RLS policies on tenant-owned tables; composite constraints; immutable `tenant_id` on tenant-owned rows | Be the only control (see §2) |
 
-Rule: the application layer has no API to query tenant-owned data without a `TenantContext`. Repository method signatures require it; there is no `get_all()` on a tenant-owned repository.
+Rule: no tenant-owned repository method exists without a required TenantContext parameter. There is no `get_all()` on a tenant-owned repository.
 
 ---
 
-## 3. Database Roles
+## 5. Database Roles and Required Properties
 
-Three distinct database roles are required. Names are illustrative; final naming is a Phase 2/3 detail.
+### 5.1 Roles
 
-| Role | Purpose | Ownership of tenant tables | Attributes |
+| Role | Purpose | Owns tenant tables? | Used by |
 |---|---|---|---|
-| `app_migrator` | Runs Alembic migrations only; never used by the running application | Owns schema objects | Not used at runtime; credentials isolated from app config |
-| `app_runtime` | Used by the API and workers | **Must not own** any tenant-owned table | No `BYPASSRLS`, no `SUPERUSER`, no `CREATEROLE`, no `CREATEDB`; only DML grants on the tables it needs |
-| `platform_ops` | Reserved for audited platform-admin operations (§6) | Must not own tenant tables | Open question Q-015 decides whether it exists in MVP and how it bypasses or avoids RLS |
+| `app_migrator` | Schema migrations only | Yes (owner) | Migration job only; credentials never present in application runtime configuration |
+| `app_runtime` | API and workers | **No** | Application runtime |
+| `platform_ops` | Audited platform-admin operations (§8); existence decided in Q-015 | No | Platform admin tooling only; not used by normal application requests |
 
-Requirements:
-- `FORCE ROW LEVEL SECURITY` is enabled on every tenant-owned table, so that even the table owner is subject to policies if it ever connects. The owner role must still not be `app_runtime`.
-- The runtime role's effective privileges are verified from catalogs (`pg_roles`, `pg_class.relrowsecurity`, `pg_class.relforcerowsecurity`, `pg_policies`, `information_schema.table_privileges`), not from configuration files alone. This is the basis of test group TI-ROLE in the test contracts.
-- Managed-hosting caveat: some managed PostgreSQL offerings grant superuser-like roles. The pilot target (Q-010, Iran-based VPS with Docker Compose) is self-managed, which makes role configuration verifiable. Any future managed host must pass the same TI-ROLE tests before adoption.
+Role names are illustrative; final names are a Phase 2/3 detail.
+
+### 5.2 Required properties of `app_runtime` (each becomes a TI-CFG test)
+- R-DB-01: not superuser; no `BYPASSRLS`; no `CREATEROLE`; no `CREATEDB`; no `REPLICATION`.
+- R-DB-02: owns no tenant-owned table, view, sequence used for tenant data, or schema containing them.
+- R-DB-03: is not a member, directly or through any chain of memberships, of any role with the above privileges or ownership of tenant tables. Checked recursively through `pg_auth_members`.
+- R-DB-04: has no `TRUNCATE` privilege on tenant-owned tables. TRUNCATE is not subject to RLS in PostgreSQL, so it is a bypass.
+- R-DB-05: has no `CREATE` on schemas containing tenant tables and no DDL privilege.
+- R-DB-06: has no `EXECUTE` privilege on any `SECURITY DEFINER` function that touches tenant tables, unless the function is on a reviewed allowlist (TI-BYP-03).
+- R-DB-07: effective privileges on each tenant table are checked with `has_table_privilege` and `pg_class` ACLs, not only with configuration files. Only the DML privileges needed by the application are granted.
+- R-DB-08: no RULE objects and no row-security-bypassing triggers on tenant tables (`pg_rules`, `pg_trigger`), reviewed.
+
+### 5.3 `FORCE ROW LEVEL SECURITY`
+Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason: the owner role must not silently bypass policies if it ever connects through a path other than the migration job. Impact: migrations that move tenant data must either run with context set explicitly or be written as reviewed migration steps; this is a Phase 2 design rule, recorded here. If the owner later rejects FORCE, that is a change to this rule and must be recorded as a decision, not a silent exception.
+
+### 5.4 `app_migrator`
+- Owns schema objects; runs only in the migration pipeline.
+- Its credentials must not appear in application runtime configuration (static check TI-CFG-10).
+- Migration pipeline is a privileged surface and is listed in Phase 3 review.
 
 ---
 
-## 4. Tenant Context Propagation into PostgreSQL
+## 6. Tenant Context Propagation into PostgreSQL
 
-4.1 Mechanism: inside each transaction, the repository layer sets a transaction-local variable before any tenant-owned query:
+### 6.1 Mechanism
+Inside each transaction, the repository layer sets the context once, before any tenant-owned statement:
 
 ```sql
-SELECT set_config('app.current_tenant_id', $1, true);  -- true = transaction-local (SET LOCAL semantics)
+SELECT set_config('app.current_tenant_id', $1, true);  -- transaction-local
 ```
 
-4.2 Policy template (illustrative; not a migration):
+### 6.2 Policy template (illustrative only; not a migration)
 
 ```sql
 ALTER TABLE plan ENABLE ROW LEVEL SECURITY;
@@ -87,116 +170,122 @@ CREATE POLICY tenant_isolation ON plan
   WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 ```
 
-4.3 Fail-closed behavior:
-- If the variable is unset, `current_setting(..., true)` returns NULL, so the predicate is NULL and no rows are visible or writable.
-- `NULLIF(..., '')` prevents a cast error when the variable is set to an empty string and turns it into the same fail-closed NULL.
-- Writes with a `tenant_id` that does not match the context are rejected by `WITH CHECK`.
+### 6.3 Required behavior of the context (each becomes a TI-CTX test)
+- Unset setting: no rows visible, no rows writable (fail closed).
+- Empty string: same as unset (handled by NULLIF).
+- Invalid UUID text (e.g. `'abc'`): the cast raises an error. Requirement: the error is raised, zero rows are returned or written, and the error message contains no tenant data. The application maps it to an internal error, never a data response.
+- Context changed within one transaction: the repository API must not allow it. The database would apply the last value. A static check and a repository test enforce a single set per transaction.
+- Context outside a transaction: `set_config(..., true)` outside a transaction has no effect beyond the statement; the application must never rely on it. Enforced by static check and TI-CTX-14.
+- Commit and rollback: the context does not survive the end of the transaction (TI-CTX-10).
 
-4.4 Connection pooling: transaction-local settings are the only permitted form. Session-level `SET` (without `LOCAL`) is forbidden in application code because a pooled connection could carry one tenant's context into another tenant's request. Pooler mode (session vs. transaction pooling in PgBouncer or equivalent) is open question Q-016; the design requires that transaction-local context works in whichever mode is chosen, and that a test proves no context leaks between consecutive requests on the same pooled connection (TI-CTX tests).
+### 6.4 Connection pooling and transaction boundaries
+- Transaction-local settings are the only permitted form. Session-level `set_config(..., false)` and `SET` are forbidden in application code (static check).
+- Pooler mode (session, transaction, or none) is open question Q-016. The design requires that TI-CTX-11 and TI-CTX-12 pass for the chosen mode.
+- A failed transaction must not leave the connection in a state where the next request sees a previous context (TI-CTX-12).
 
-4.5 Views: any view over tenant-owned tables must be created with `security_invoker = true` (PostgreSQL 15+) or must not exist in MVP. Views owned by a privileged role without `security_invoker` bypass the caller's RLS. This is a named test (TI-DB-VIEW).
-
-4.6 Functions: `SECURITY DEFINER` functions are forbidden on tenant-owned tables in MVP unless individually reviewed, because they run with the owner's privileges and can bypass policies.
+### 6.5 Views, functions, rules
+- Views over tenant tables must use `security_invoker = true` (PostgreSQL 15+) or must not exist in MVP (TI-BYP-01).
+- `SECURITY DEFINER` functions are forbidden on tenant tables in MVP unless individually reviewed and allowlisted (TI-BYP-03). Note: Option D in §2.3 would require such a function and therefore a dedicated review.
+- Materialized views over tenant data must not be readable by `app_runtime`, because RLS does not apply to them (TI-BYP-04).
 
 ---
 
-## 5. Relational Integrity Across Tenants (Composite Keys)
+## 7. Relational Integrity Across Tenants
 
-RLS restricts which rows are visible. It does not stop a child row in tenant A from pointing at a parent row in tenant B if the foreign key ignores `tenant_id`. The design therefore requires composite keys wherever a tenant-owned child references a tenant-owned parent.
-
-Pattern:
+RLS restricts which rows are visible. It does not stop a child row of tenant A from referencing a parent row of tenant B unless the foreign key includes `tenant_id`. Required pattern:
 
 ```sql
--- parent
 ALTER TABLE plan ADD CONSTRAINT plan_id_tenant_uq UNIQUE (id, tenant_id);
-
--- child
 ALTER TABLE plan_version
   ADD CONSTRAINT plan_version_plan_fk
   FOREIGN KEY (plan_id, tenant_id) REFERENCES plan (id, tenant_id);
 ```
 
-Applied to, at minimum:
-- `ProgramVersion (program_template_id, tenant_id) → ProgramTemplate (id, tenant_id)` (D-012 requirement)
-- `StudentProgramEnrollment (program_version_id, tenant_id) → ProgramVersion (id, tenant_id)`
-- `StudentProgramEnrollment (student_id, tenant_id) → Student (id, tenant_id)`
-- `PlanVersion (plan_id, tenant_id) → Plan (id, tenant_id)`
-- `PlanItem (plan_version_id, tenant_id) → PlanVersion (id, tenant_id)`
-- `PlanVersion (program_version_id, tenant_id) → ProgramVersion (id, tenant_id)` where set (nullable FK column: the composite FK is only enforced when the referencing column is non-null; NULL semantics must be tested, TI-DB-FK-02)
-- `CounselorStudent (counselor_id, tenant_id) → Counselor (id, tenant_id)` and the student side, as applicable
+Required pairs (minimum):
+- `ProgramVersion (program_template_id, tenant_id)` → `ProgramTemplate (id, tenant_id)` (D-012)
+- `StudentProgramEnrollment (program_version_id, tenant_id)` → `ProgramVersion (id, tenant_id)`
+- `StudentProgramEnrollment (student_id, tenant_id)` → `Student (id, tenant_id)`
+- `PlanVersion (plan_id, tenant_id)` → `Plan (id, tenant_id)`
+- `PlanItem (plan_version_id, tenant_id)` → `PlanVersion (id, tenant_id)`
+- `PlanVersion (program_version_id, tenant_id)` → `ProgramVersion (id, tenant_id)`, where the referencing column is nullable. NULL semantics are tested (TI-DB-FK-02).
+- `CounselorStudent` references to Counselor and Student with `tenant_id`.
 
-Every such child table also stores its own `tenant_id NOT NULL`, consistent with the D-009 contract in `DATABASE.md`. The composite FK guarantees that the child's tenant equals its parent's tenant.
+Additional requirement: `tenant_id` on a tenant-owned row is immutable after insert (trigger or equivalent; TI-DB-FK-08). Without this, a row could be moved between tenants with a valid key shape.
 
----
-
-## 6. Platform Admin Cross-Tenant Access
-
-6.1 Requirement (Master Prompt §5, §3; D-009): platform-level access to tenant data is explicit, least-privileged, and audited.
-
-6.2 Proposed design (requires Q-015 decision before implementation):
-- No ordinary admin account gets `BYPASSRLS` or `scope = PLATFORM_ADMIN_AUDITED` by default.
-- A cross-tenant read requires: a named platform-admin principal with a dedicated permission, a stated reason, a target `tenant_id`, and a time-bounded grant.
-- Each such access writes an audit record (actor, target tenant, resource, reason, request_id, timestamp) before data is returned. If the audit write fails, the access is refused.
-- Preferred technical route: a narrow set of audited, read-only SECURITY DEFINER-free query paths in the application, with the tenant context set explicitly to the target tenant. Creating a bypass role is the fallback only if Q-015 chooses it, and then only with the audit requirement above.
-
-6.3 Platform jobs (aggregate metrics, billing reconciliation) must operate on aggregates or on a per-tenant loop with the tenant context set per iteration. They must not read unscoped tenant rows.
+Composite keys guarantee tenant consistency at the database level for the listed relations, independent of RLS and of the session context. This is a real database-enforced property, not an application convention.
 
 ---
 
-## 7. Why RLS Is Defense in Depth, Not the Primary Control
+## 8. Platform Admin Cross-Tenant Access (revision 2)
 
-RLS is necessary but not sufficient, for these reasons:
-- Mis-set or missing context fails closed, but a bug that sets the wrong tenant still passes RLS. Application-level authorization catches IDOR-style cases RLS cannot see (for example, a valid tenant A user requesting a student of tenant A whom they are not assigned to).
-- Some operations legitimately need object-level rules (active `CounselorStudent` relationship, student's own plan vs. counselor's plan) that RLS does not express.
-- RLS does not protect against a privileged role, a view without `security_invoker`, or a `SECURITY DEFINER` function, which is why §3, §4.5 and §4.6 exist.
+### 8.1 Difference between roles
+- Counselor: acts only within its own tenant, via relationships and role permissions.
+- Student and Parent: act only on their own objects or explicitly linked objects.
+- Platform Admin: operates across tenants for support and operations. This is the only role allowed to see data across tenants, and only under §8.2 rules. A Platform Admin is not a counselor with extra permissions.
 
-Therefore the test contracts require each layer to be tested alone (RLS-only, application-only) and together (integrated), as mandated in `TEST_PLAN.md`.
+### 8.2 Required conditions for any cross-tenant read (proposal, Q-015)
+1. Named platform-admin principal with a dedicated platform permission.
+2. Stated reason from a controlled list, plus free text.
+3. Target `tenant_id` and resource scope explicitly stated.
+4. Time-bounded grant (expiry enforced at each request, not only at grant time).
+5. Read-only by default. Any write requires a separate permission and its own audit record.
+6. Audit record written and committed BEFORE data is returned. If the audit write fails, access is refused. The response is not streamed before the audit commit.
+7. Audit record contains: actor, grant id, target tenant, resource ids, reason, request_id, timestamp, result (allowed/denied).
+
+### 8.3 Technical path and trust boundary
+- Preferred proposal: a narrow set of audited, read-only application query paths that set the transaction context to the explicit target tenant for each query. Platform admin code paths are separate modules, reviewed separately.
+- Alternative: a `platform_ops` role with `BYPASSRLS`. This is NOT the default. It is allowed only if Q-015 owner decision chooses it, and then only with §8.2 applied and a separate configuration test (TI-PLAT-06).
+- Under T4 (§2), a platform-admin context does not add a new weakness to the context boundary, but it does increase the impact of an arbitrary SQL attacker if a bypass role exists. This is an explicit reason the default is no bypass role.
+
+### 8.4 Platform jobs
+Platform aggregate jobs operate on aggregates or on a per-tenant loop with per-iteration context. They never read unscoped tenant rows.
 
 ---
 
-## 8. Surface Rules
+## 9. Surface Rules
 
-| Surface | Design rule | Failure mode addressed |
+| Surface | Rule | Failure addressed |
 |---|---|---|
-| API | Tenant derived from principal; object-level check on every resource ID; list endpoints apply tenant filter in the query, never post-filter in memory | IDOR, post-filter leaks, pagination leaks |
-| Services | Explicit `TenantContext` parameter; no thread-local/global tenant | Ambient-context bugs in async code |
-| Repositories | Tenant filter injected; raw SQL forbidden outside Infrastructure; bulk operations must be tenant-scoped | Unscoped `UPDATE`/`DELETE`, bulk-export leaks |
-| Reports / exports | Generated inside a tenant-scoped transaction; file name and content contain only that tenant's data; no cross-tenant aggregation in tenant reports | Export of other tenants' rows |
-| Files | Storage path namespaced: `tenants/{tenant_id}/...`; the path tenant is derived from the stored record, not from the request; access via short-lived signed URLs generated only after an authorization check; file metadata row is tenant-scoped under RLS | Guessable or shared file URLs, path traversal across tenants |
-| Notifications | Delivery rows carry `tenant_id` and recipient; adapters receive one recipient and one tenant's content; no fan-out across tenants in a single adapter call; delivery status updates are tenant-scoped | Message sent to wrong tenant's recipient, duplicate cross-tenant sends |
-| Background jobs | Every job payload carries exactly one `tenant_id` (or an explicit `platform` marker with aggregate-only access, §6.3); worker sets the tenant context per job within its transaction; a failed job for tenant A must not retry or write under tenant B's context | Cross-tenant processing, retry leaks |
-| Audit logs | Each entry records actor, action, target `tenant_id` (nullable only for pure platform events), request_id; audit rows are append-only | Missing evidence for platform access |
+| API | Tenant from principal; object-level check for every resource id; list filtering in SQL | IDOR, post-filter leaks |
+| Services | Explicit TenantContext parameter; no ambient tenant | Async context bugs |
+| Repositories | Signature requires TenantContext; raw SQL only in Infrastructure; bulk writes tenant-scoped | Unscoped update/delete |
+| Reports / exports | Generated inside one tenant transaction; file name and metadata contain only that tenant's identifiers | Cross-tenant export |
+| Files | Storage key `tenants/{tenant_id}/…` derived from the stored record; access via short-lived signed URLs issued only after authorization; file metadata is tenant-owned with RLS; direct unsigned URLs are denied | Guessable or shared URLs |
+| Notifications | Delivery rows carry tenant_id and recipient; adapters receive one recipient and one tenant's content; status updates tenant-scoped | Message to wrong recipient |
+| Background jobs | Payload carries exactly one tenant_id (or the explicit platform marker with aggregate-only access); worker sets context per job; failure leaves no context set (see Q-017) | Cross-tenant processing and retries |
+| Audit logs | Append-only for `app_runtime` (no UPDATE/DELETE); tenant-scoped reads; platform events carry actor and target | Missing evidence |
+| Version history | `ProgramVersion` and `PlanVersion` are tenant- and student-scoped; published versions immutable (D-008); activation atomic | Cross-tenant version read or write; silent mutation |
 
 ---
 
-## 9. Failure Behavior (Summary)
+## 10. Failure Behavior
 
 | Condition | Required behavior |
 |---|---|
-| Tenant context missing in a repository call | Programming error: raise an internal error; never run an unscoped query |
-| RLS session variable unset | Queries return no rows / write nothing (fail-closed) |
-| Object exists but belongs to another tenant | Respond as if it does not exist (not-found response), see `AUTHORIZATION_CONTRACT.md` and Q-014 |
-| Audit write fails during platform-admin access | Refuse the access |
-| Cross-tenant composite FK violation | Database rejects the write; application maps it to a validation/conflict error without revealing the other tenant's data |
+| TenantContext missing in a repository call | Programming error; raise internal error; no unscoped query |
+| DB context unset or empty | No rows; no writes |
+| DB context invalid UUID | Error; no rows; no tenant data in error |
+| Object exists in another tenant | Same response as for a nonexistent object (status and body); exact status is Q-014 |
+| Audit write fails during platform access | Access refused |
+| Cross-tenant composite FK violation | Database rejects; application maps to validation error without revealing other tenant's data |
+| Job retry after tenant failure | Retry under the same tenant only; never under another |
 
 ---
 
-## 10. Non-Goals for Phase 1
-
-- No schema, migration, RLS policy, role, or grant is created in this phase.
-- No choice of PgBouncer mode, managed host, or storage provider.
-- No Parent-access design (Q-007 remains open).
-- No runtime security claim.
+## 11. Non-Goals for Phase 1
+- No schema, migration, policy, role, or grant is created.
+- No pooler mode, managed host, or storage provider is chosen.
+- No Parent access design (Q-007 open).
+- No claim of runtime security (§2.5).
+- No change to D-009.
 
 ---
 
-## 11. Open Decisions Raised by This Design
-
-Recorded in `OPEN_QUESTIONS.md` with recommended option, alternatives, and impact (per the No-Guessing rule):
-- Q-014: Not-found vs. forbidden response for cross-tenant object access
-- Q-015: Platform-admin cross-tenant access mechanism (audited query path vs. bypass role)
-- Q-016: PostgreSQL connection-pooling mode and its interaction with transaction-local tenant context
-- Q-017: Background-job execution model (per-tenant jobs vs. platform aggregate jobs)
-- Q-018: Tenant-scoped file storage provider and signed-URL mechanism for the pilot
-
-Until these are answered, the affected parts of Phase 2 and later must not be implemented.
+## 12. Open Decisions Raised by This Design
+Recorded in `OPEN_QUESTIONS.md` with status, options, and dependency:
+- Q-014: response policy for cross-tenant object access (exact status code)
+- Q-015: platform-admin mechanism (audited path vs bypass role)
+- Q-016: pooler mode and transaction-local context
+- Q-017: background job model
+- Q-018: tenant file storage and signed URLs
+- Q-019: stronger tenant-context boundary against arbitrary SQL (§2.3); owner decision required before real-data pilot
