@@ -498,3 +498,58 @@ No executable tests were run in this documentation-only reconciliation. No workf
 
 ## Gate Status
 **APPROVED for the Phase 0 documentation foundation only.** This addendum does not approve runtime implementation/security and does not authorize Phase 1.
+
+---
+
+# TEMPORARY SECTION — Phase 1 Pending Supervisor Review
+
+> **Temporary status marker.** This section records that Phase 1 design artifacts are waiting for external review. It is **not** a verdict. The Supervisor enters the verdict. Until the Supervisor records a verdict and the Product Owner accepts it, this section must read `PENDING`. After approval, this section is finalized in a separate commit, and this temporary marker is removed.
+
+## Phase
+PHASE 1 — Architecture & Multi-Tenancy (design only)
+
+## Current State
+PENDING SUPERVISOR REVIEW
+
+## Scope Under Review
+- `docs/phase1/TENANT_ISOLATION_DESIGN.md`
+- `docs/phase1/AUTHORIZATION_CONTRACT.md`
+- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`
+- `docs/phase1/PHASE1_REPORT.md`
+- `OPEN_QUESTIONS.md` (Q-014 to Q-018)
+- `PROJECT_STATE.md`, `ROADMAP.md`, `CHANGELOG.md` (Phase 1 status entries only)
+
+## Explicitly Out of Review Scope
+- No application code, migrations, database roles, RLS policies, or infrastructure exist in this phase.
+- No executable test has been run. All TI-* entries are specifications, not passing tests.
+- No runtime security is claimed. Tenant isolation remains unverified until executable tests pass in a later phase.
+- Phase 2 is not started and not authorized.
+
+## Questions for the Supervisor
+1. Is the tenant isolation design (shared PostgreSQL, `tenant_id`, RLS as defense in depth, composite keys) consistent with D-009 and Master Prompt §3 and §48?
+2. Are the three database roles and the rule that `app_runtime` must not own or bypass tenant tables sufficient?
+3. Is the platform-admin access design (§6) acceptable as a proposal, pending Q-015?
+4. Are the 57 test contracts adequate for the mandatory TEST_PLAN groups, and is the R/A/I mode split sound?
+5. Are Q-014 to Q-018 correctly framed, with recommendations that do not decide them prematurely?
+
+## Open Items Blocking Final Approval
+- Q-014 to Q-018 remain open. Their recommendations are not decisions.
+- D-001 to D-006 remain Proposed (from Phase 0; unchanged here).
+- Shared-document changes (`PROJECT_STATE.md`, `CHANGELOG.md`, `OPEN_QUESTIONS.md`) must be reviewed in the PR diff, not only in this summary.
+
+## Supervisor Verdict
+**[PENDING — to be entered only by the Supervisor]**
+
+Allowed values: `NOT READY` / `CONDITIONAL PASS` / `APPROVED`
+
+## Product Owner Acceptance
+**[PENDING]**
+
+## Final Gate Status (after review)
+**PENDING.** No approval is recorded. Phase 2 is not authorized.
+
+## Finalization Procedure (applies after the verdict is recorded)
+1. Supervisor records the verdict in the "Supervisor Verdict" field above, in a commit by the reviewer or as an explicit reviewer-authored comment referenced here.
+2. If the verdict is `CONDITIONAL PASS` or `NOT READY`, the required fixes are listed and implemented before this section is updated again. This section does not become final.
+3. If the verdict is `APPROVED`, the Product Owner records acceptance, then a separate commit replaces this temporary section with a dated final entry and removes the `PENDING` markers.
+4. Phase 1 is never marked approved by the assistant. Only the recorded verdict and Product Owner acceptance can change the status.

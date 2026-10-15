@@ -79,6 +79,47 @@
 
 ---
 
+## Phase 1 Design Questions (opened 2026-10-15)
+
+Raised by `docs/phase1/TENANT_ISOLATION_DESIGN.md` §11. Each lists a recommended option; none is decided. Affected implementation must not start until answered.
+
+## Q-014 — Response for cross-tenant object access (404 vs 403)
+**Why it matters:** determines whether a probing client can learn that an ID exists in another tenant.
+**Recommended option:** 404 (not found) for any object not visible within the caller's tenant, with identical bodies for "other tenant" and "nonexistent" (`AUTHORIZATION_CONTRACT.md` §4, §6).
+**Alternatives:** 403 for all cross-tenant access (leaks existence).
+**Impact:** API contract, TI-API-01/15 expectations, client error handling.
+**Priority:** High before Phase 4 (Auth/RBAC endpoints).
+
+## Q-015 — Platform-admin cross-tenant access mechanism
+**Why it matters:** the only legitimate path for cross-tenant reads (support, billing reconciliation) and a high-risk one.
+**Recommended option:** no bypass role in MVP; cross-tenant reads only through a narrow, audited, read-only application path requiring a named grant, a reason, and an audit write before the response (`TENANT_ISOLATION_DESIGN.md` §6).
+**Alternatives:** a `platform_ops` role with `BYPASSRLS` plus the same audit requirement (simpler queries, larger blast radius).
+**Impact:** whether `platform_ops` exists; TI-PLAT group; Phase 4 and Phase 21 planning.
+**Priority:** High before Phase 4.
+
+## Q-016 — PostgreSQL connection pooling mode
+**Why it matters:** transaction-local tenant context is safe only if the pooler and the application never carry session state between requests.
+**Recommended option:** transaction pooling is acceptable only with transaction-local `set_config(..., true)` and the TI-CTX-07 test passing; otherwise use direct connections for the pilot.
+**Alternatives:** session pooling (simpler, more connections); no pooler in pilot (fewest moving parts, lower concurrency ceiling).
+**Impact:** Infrastructure phase (Phase 3) configuration and TI-CTX tests.
+**Priority:** Medium, needed before Phase 3.
+
+## Q-017 — Background-job execution model
+**Why it matters:** jobs are a common cross-tenant leak path and retries can cross contexts.
+**Recommended option:** one tenant per job run (payload-bound `tenant_id`), plus explicitly marked platform jobs restricted to aggregates (`TENANT_ISOLATION_DESIGN.md` §8, §6.3).
+**Alternatives:** a single global job processing all tenants with per-row checks (higher risk, harder to audit).
+**Impact:** Phase 3 queue design; notification and report scheduling (Phase 17-18).
+**Priority:** Medium, needed before Phase 3.
+
+## Q-018 — Tenant-scoped file storage for the pilot
+**Why it matters:** file access must be tenant-namespaced and use expiring signed URLs; the storage provider determines how this is enforced.
+**Recommended option:** object storage on the pilot VPS (S3-compatible, self-hosted or local) with `tenants/{tenant_id}/` namespacing, server-side authorization before URL signing, and TTL-limited URLs.
+**Alternatives:** database BLOB storage (simpler RLS coverage, poor scaling); a third-party object store (requires a provider decision and Iran-reachability check per D-011).
+**Impact:** Files section of Phase 3 and Phase 17 exports.
+**Priority:** Medium, needed before the first file feature.
+
+---
+
 ## بخش Resolved / Closed
 
 ## Q-013 — مالکیت و Authorization برای ProgramTemplate و ProgramVersion سطح‌پلتفرم
