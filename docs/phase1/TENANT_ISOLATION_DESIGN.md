@@ -50,7 +50,7 @@ Each sub-threat has different attacker assumptions and a different trust boundar
 |---|---|---|---|---|
 | T4a SQL injection on tenant connection | Attacker controls SQL text on one request path; no application code change | Query text → database session | Parameterized queries; static ban on string-built SQL; per-tenant database principal (Option C); signed context function (Option D) | TI-ADV-01 run against the chosen mechanism; TI-CONN or TI-CTX-15..18 |
 | T4b Application process compromise | Attacker executes code inside the application process | Process → everything the process holds | Process isolation, dependency control, minimal secret exposure, no all-tenant credentials in the request process (Option C reduces, does not remove) | TI-ADV-03 (process isolation evidence, Phase 26); not a database test |
-| T4c Credential theft | Attacker obtains database credentials outside the application | Network → database login | Per-tenant credentials (Option C); short-lived or rotated credentials; network restriction to the application host (D-011 pilot host) | TI-ADV-02 run against the chosen mechanism; secret-management evidence |
+| T4c Credential theft (classes K-L login, K-T token, K-S signing key, K-O owner or migrator; see Q019_MECHANISM_EVALUATION.md §4.4) | Attacker obtains one stolen secret of a named class outside the application | Network → database login; token → verification function; key store → token minting; owner login → schema and policy changes | Per-tenant credentials (Option C); short-lived or rotated credentials; network restriction to the application host (D-011 pilot host) | TI-ADV-02 run against the chosen mechanism; secret-management evidence |
 
 Consequence: "Option C closes T4a for one tenant connection" is a claim about T4a only. It does not close T4b and does not close multi-tenant credential theft under T4c.
 
@@ -126,7 +126,8 @@ Status vocabulary (each claim has exactly one current status):
 | RLS alone isolates tenants | NOT CLAIMABLE. RLS is a defense against application defects, not a boundary against arbitrary SQL |
 | T4a: SQL injection on a tenant connection cannot cross tenants | NOT CLAIMABLE under Option A. Option C would address it for one tenant connection only, if TI-CONN and TI-ADV-01 pass. Mechanism not selected (Q-019). Evaluation: Q019_MECHANISM_EVALUATION.md |
 | T4b: code execution in the application process cannot cross tenants | NOT CLAIMABLE under any option in this design. Requires process isolation (Phase 3/26) |
-| T4c: stolen database credentials cannot cross tenants | NOT CLAIMABLE. Option C limits scope to one tenant per credential; multi-tenant theft remains possible |
+| T4c-K-L: a stolen tenant login cannot read other tenants | NOT CLAIMABLE under Option A (login reaches all). Option C: limited to one tenant. Option D: login alone returns no rows. Claim allowed only after TI-ADV-02 passes for the chosen option |
+| T4c-K-T / K-S / K-O: tokens, signing key, owner role | NOT CLAIMABLE under any option. Residuals recorded as KNOWN-RESIDUAL (TI-ADV-04, TI-ADV-05) |
 | Credential-scope limits of Option C are as stated in §2.4 | DESIGNED (§2.4). REVIEWED (document-level) only if the independent reviewer confirms. Not implemented |
 
 ## 3. Principal and Tenant Context (Application Level)

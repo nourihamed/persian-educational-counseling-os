@@ -70,10 +70,10 @@ Rules:
 | TI-AUD | Audit logs | 3 |
 | TI-PLAT | Platform admin cross-tenant access | 10 |
 | TI-CONN | Per-tenant connection principals (Option C only) | 3 |
-| TI-ADV | Adversarial threat-based contracts (T4a, T4b, T4c) | 3 |
-| **Total** | | **118** |
+| TI-ADV | Adversarial threat-based contracts (T4a, T4b, T4c; credential classes K-L, K-T, K-S, K-O) | 5 |
+| **Total** | | **120** |
 
-The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Q-019 mechanism sets: TI-CTX-15 to 18 apply only if Option D is chosen; TI-CONN-01 to 03 apply only if Option C is chosen; TI-ADV-01 and 02 apply to whichever mechanism is chosen; under Option A their result is KNOWN-RESIDUAL (never PASS); TI-ADV-03 is evidence, not a database test. TI-CFG-14 (PUBLIC privileges) applies to every option. Exactly one set applies after the mechanism decision. Both are BLOCKED until then.
+The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Q-019 mechanism sets: TI-CTX-15 to 18 apply only if Option D is chosen; TI-CONN-01 to 03 apply only if Option C is chosen; TI-ADV-01 and 02 apply to whichever mechanism is chosen; under Option A their result is KNOWN-RESIDUAL (never PASS); TI-ADV-03 and TI-ADV-05 are evidence, not database tests; TI-ADV-04 applies only to Option D. TI-CFG-14 (PUBLIC privileges) applies to every option. Exactly one set applies after the mechanism decision. Both are BLOCKED until then.
 
 ---
 
@@ -276,8 +276,10 @@ The total is recomputed from the contract rows below; the verification command i
 | ID | Modes | Operation | Expected | Failure consequence | CI |
 |---|---|---|---|---|---|
 | TI-ADV-01 | I | T4a: attacker-controlled SQL on tenant A's runtime connection sets context to B and reads B rows | Option C: PASS if denied at the role boundary. Option D: PASS if denied without a valid token. Option A: KNOWN-RESIDUAL (attack succeeds; recorded, never PASS). Expected results for the unselected options are SPEC-ONLY | Silent acceptance of cross-tenant read | BLOCKED:Q-019 (mechanism) |
-| TI-ADV-02 | I | T4c: runtime credentials of tenant A used from outside the application to read B rows | Option C: PASS for single-tenant scope (no B login reachable with A's credentials). Multi-tenant credential theft: KNOWN-RESIDUAL under every option, recorded, never PASS. Option A: KNOWN-RESIDUAL | Undetected credential-scope failure | BLOCKED:Q-019 (mechanism) |
+| TI-ADV-02 | I | Credential class K-L (review H-02): a stolen runtime login of tenant A, used from outside the application, attempts to read rows of B | Option A: KNOWN-RESIDUAL (the login reaches B). Option C: PASS (login is bound to tenant A; B denied). Option D: PASS (login alone returns no rows; no valid token). Same attacker assumption and same object (B rows) for every option | Undetected credential-scope failure | BLOCKED:Q-019 (mechanism) |
 | TI-ADV-03 | — | T4b: process-isolation evidence (no single process holds routing to all tenant credentials; secret scope review) | Evidence document reviewed, not a database test | Unrecognized process-level exposure | ENV:security-review (Phase 26) |
+| TI-ADV-04 | I | Credential class K-T (Option D only): a valid token of tenant A is captured and replayed against the verification function after its expiry, and within its TTL | After expiry: PASS (refused). Within TTL: KNOWN-RESIDUAL for the holder of tenant A's token (reads of A only; reads of B denied). Option A and C: SPEC-ONLY (no tokens) | Replay beyond TTL or cross-tenant token use | BLOCKED:Q-019 (only if Option D) |
+| TI-ADV-05 | — | Credential classes K-S and K-O: signing key and owner or migration role compromise | Not a database contract. Evidence required: key storage review (Option D), owner-role separation and access review (all options), recorded as KNOWN-RESIDUAL in every option until process controls exist | Undetected key or owner exposure | ENV:security-review (Phase 3 and 26) |
 
 ## 3. Coverage and Gate Rules
 - The path inventory `docs/phase1/TENANT_PATH_INVENTORY.md` maps each data path to contracts. Any path marked UNMAPPED blocks Phase 1 review.

@@ -125,6 +125,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Technical candidates for independent review (not decisions):** Option C (per-tenant database principals; proposed candidate for pilot scale, design §2.4 with explicit limits); Option D (signed context token through a SECURITY DEFINER function, design §2.3.1). Option A alone is not a boundary against T4a.
 **Required to resolve the mechanism:** independent security review of the selected option; evidence for the matching sub-threat claims (TI-ADV-01, TI-ADV-02; TI-CONN-01..03 for C; TI-CTX-15..18 for D); owner selection recorded in DECISION_LOG.
 **Technical evaluation (Revision 6):** `docs/phase1/Q019_MECHANISM_EVALUATION.md` compares A, C and D against attacker models AM1 to AM5 with forging paths, residual risks, cost, testability and evidence required. It recommends Option C as a technical candidate for pilot scale (Option D as alternative; Option A not a boundary). This is a recommendation for review, not a decision.
+**Revision 7:** credential classes K-L, K-T, K-S and K-O analysed separately (§4.4); design-selection criteria separated from pilot-validation criteria (§6.1); capacity fallback rule (§6.2). Proposed; reviewer and owner to accept or reject.
 **Owner decision still required** after independent review; to be recorded in DECISION_LOG.md.
 **Must be resolved before:** any Pilot with real student data; Phase 26.
 **Blocks Phase 1 approval:** Yes (reviewer-stated NOT READY depends on it).

@@ -515,6 +515,12 @@ PHASE 1 — Architecture & Multi-Tenancy (design and documentation only)
 ## Current Gate
 NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 
+## Revision 7 Response to the Re-Review (NOT READY, commit cc4b576)
+- C-01 (deadlock): design-selection criteria separated from pilot-validation criteria (Q019 evaluation §6.1). Proposed; reviewer and owner to accept or reject.
+- H-01 (credential classes): analysed separately for login, token, signing key and owner role (Q019 evaluation §4.4).
+- H-02 (TI-ADV-02): same attacker assumption and object for every option; TI-ADV-04 and 05 added.
+- M-01 (capacity fallback): rule defined in Q019 evaluation §6.2; measurement is a pilot criterion.
+
 ## Revision 6 Response to the Latest Review Instructions
 - Q-019: technical evaluation of A, C and D against AM1 to AM5 provided (`Q019_MECHANISM_EVALUATION.md`). The mechanism is NOT selected; the recommendation is for independent review and owner decision.
 - Test contracts: result vocabulary added (PASS, FAIL, KNOWN-RESIDUAL, BLOCKED, NOT-RUN, SPEC-ONLY). TI-ADV-01 and 02 state expected results per option. Under Option A the result is KNOWN-RESIDUAL, never PASS.
@@ -540,7 +546,7 @@ NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 ## Scope Under Review
 - `docs/phase1/TENANT_ISOLATION_DESIGN.md`
 - `docs/phase1/AUTHORIZATION_CONTRACT.md`
-- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (118 contracts: 103 PR; 3 ENV:pooler; 1 ENV:worker; 1 ENV:security-review; 1 BLOCKED:Q-007; 9 BLOCKED:Q-019 mechanism-dependent). Every contract is NOT-RUN.
+- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (120 contracts: 103 PR; 3 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 10 BLOCKED:Q-019 mechanism-dependent). Every contract is NOT-RUN.
 - `docs/phase1/Q019_MECHANISM_EVALUATION.md` (new; technical evaluation, not a decision)
 - `docs/phase1/TENANT_PATH_INVENTORY.md` (33 paths: 30 mapped, 3 blocked, 0 unmapped)
 - `docs/phase1/PHASE1_REPORT.md`

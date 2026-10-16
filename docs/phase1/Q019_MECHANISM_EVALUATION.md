@@ -92,6 +92,22 @@ Specific requirements that come with Option D: see TENANT_ISOLATION_DESIGN.md §
 
 ---
 
+## 4.4 Credential Classes (independent review H-01)
+
+Database-login theft, tenant-token theft, signing-key theft and owner-role theft are different threats with different outcomes. They are analysed separately. The same attacker assumption is used for every option: the attacker holds one stolen secret of the named class and reaches the database from outside the application.
+
+| Class | Secret | Attacker starting point | Option A | Option C | Option D |
+|---|---|---|---|---|---|
+| K-L: runtime login of one tenant | Database login credential | Stolen login of tenant A's runtime identity | Login reaches every tenant: reads of B succeed. **KNOWN-RESIDUAL** | Login is limited to tenant A's role: reads of B denied. **PASS for single-tenant scope** | Login alone returns no rows: the policy helper needs a context row, which needs a valid token. **PASS for login-only theft** (provided the login holds no other table privilege, see TI-CFG-06) |
+| K-T: tenant token | Signed short-lived token of tenant A (Option D only) | Token captured from logs, cache or client | Not applicable | Not applicable | Reads of A succeed until expiry; reads of B denied. **KNOWN-RESIDUAL for token holder within TTL** |
+| K-S: signing key | HMAC key or private key used to sign tokens (Option D only) | Key read from the key table | Not applicable | Not applicable | Attacker mints a token for any tenant: reads of B succeed. The runtime role cannot read the key table (no grant). Key reachable only with owner-role access. **KNOWN-RESIDUAL if key is obtained; not reachable from runtime SQL** |
+| K-O: owner or migration role | Owner or migrator login | Obtained by compromise of the migration pipeline | Owner bypasses policies unless FORCE; with FORCE, owner can still rewrite policies: **KNOWN-RESIDUAL** | Owner can change the mapping table and memberships: **KNOWN-RESIDUAL** | Owner can read the key and rewrite the function: **KNOWN-RESIDUAL** |
+
+Consequences:
+- Option C and Option D differ on login theft. Option D resists login-only theft because the database login is not, by itself, a tenant identity. Option C resists it by limiting the login to one tenant. In both cases, a stolen login of tenant A does not read tenant B. Only Option A allows it.
+- Option D moves the residual risk from the login to the token and the key. Option C keeps it on the login scope.
+- Every option has K-O as a residual. No option in the database protects against owner-role theft; that is a process control (Phase 3 and Phase 26).
+
 ## 5. Comparison Summary
 
 | Criterion | Option A | Option C | Option D |
@@ -123,13 +139,40 @@ This recommendation is for the independent reviewer. The Product Owner decides, 
 
 ---
 
+### 6.1 Separation of design selection and pilot validation (independent review C-01)
+
+The review found a circular dependency: selection depends on adversarial tests and capacity measurements that are scheduled after Phase 1, while Phase 2 depends on Phase 1 approval. This revision separates the two kinds of criteria.
+
+**Design-selection criteria (needed for Phase 1 approval and for the owner's choice):**
+1. The mechanism is defined precisely enough to be implemented (for C: mapping table, membership rules, routing; for D: token format, function contract, key location).
+2. Each attacker model (AM1 to AM5, and credential classes K-L, K-T, K-S, K-O) has a stated outcome with a stated reason.
+3. Every residual risk is listed with its owner and the control that would reduce it.
+4. Test contracts exist for the mechanism, with per-option expected results (TI-ADV-01, 02, 04 and TI-CONN or TI-CTX), in status NOT-RUN.
+
+These criteria are met by documentation and can be reviewed without running any test.
+
+**Pilot-validation criteria (required before any real student data, D-014; not prerequisites for Phase 1 design approval):**
+1. Adversarial contracts run against the implemented mechanism, with results recorded.
+2. Capacity of roles and connection pools measured on the D-011 host (see 6.2).
+3. Independent review of the implementation.
+4. Written owner approval of the Pilot gate.
+
+Phase 2 may start after Phase 1 design approval, because Phase 2 implements the chosen mechanism and produces the evidence for the pilot criteria. Phase 2 does not itself authorize pilot use of real data.
+
+### 6.2 Capacity measurement fallback (independent review M-01)
+
+If the D-011 host is not available for measurement, the design uses this decision rule:
+- Option C is selected only with a stated **estimate** of role and pool capacity, derived from documented PostgreSQL limits (max_connections, role count, memory per backend) and the planned number of tenants. The estimate is marked ESTIMATE in every document that cites it.
+- The estimate becomes a pilot-validation criterion. If the measured capacity is below the planned number of tenants times connections per tenant, Option C is not used for the pilot; Option D (or a new decision) is re-reviewed before any further work.
+- No document claims the capacity is measured until a measurement exists.
+
 ## 7. What Each Option Can Honestly Claim After Verification
 
 | Option | Claim allowed after its tests pass | Claim NOT allowed |
 |---|---|---|
 | A | Application defects and missing filters are contained by RLS when context is correct (T2 class) | Any protection against AM1 to AM5 |
-| C | Cross-tenant SQL from one tenant connection is denied at the role and mapping layer (AM1, AM3 limited) | Protection against AM2, AM4, AM5; general "tenant isolation in production" |
-| D | Cross-tenant SQL without a valid token is denied at the function layer (AM1); token-bound context | Protection against token leakage, AM2, AM4, AM5, or any function defect not covered by tests |
+| C | Cross-tenant SQL from one tenant connection is denied at the role and mapping layer (AM1); a stolen login of one tenant reads only that tenant (K-L) | Protection against AM2, AM4, AM5, K-O, or theft of logins of many tenants; general "tenant isolation in production" |
+| D | Cross-tenant SQL without a valid token is denied at the function layer (AM1); a stolen login alone returns no rows (K-L) | Protection against token leakage (K-T), key theft (K-S), owner compromise (K-O), AM2, AM4, or any function defect not covered by tests |
 
 ---
 
