@@ -99,6 +99,8 @@ Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written,
 **Must be resolved before:** Phase 4 (roles and permissions) and any support tooling.
 **Blocks Phase 1 approval:** Yes, unless the owner accepts the recommended default in writing for the Phase 1 review. Without that acceptance, the design may be reviewed but not approved.
 
+**Independent review (Revision 2) recommendation, recorded, not a decision:** Option A (audited, read-only application path, no bypass role in MVP). The reviewer also asks whether write access for platform admin is needed in MVP at all (P-26 scope). Owner decision still required.
+
 ## Q-016 — PostgreSQL connection pooling mode and transaction-local context
 **Status:** OPEN (recommended: transaction pooling only if TI-CTX-11, TI-CTX-12 and TI-PLAT-05 pass in the chosen configuration; otherwise direct connections for the pilot).
 **Decision needed from owner:** pooler mode for the pilot. Owner may also choose to defer pooling altogether.
@@ -132,7 +134,15 @@ Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written,
 **Must be resolved before:** any pilot with real student data; Phase 26 (Security Hardening).
 **Blocks Phase 1 approval:** Yes, unless the owner explicitly accepts residual risk T4 for MVP in writing during the Phase 1 review.
 
+**Independent review (Revision 2) recommendation, recorded, not a decision:** do not treat residual risk T4 as accepted until the owner decides explicitly, and do not allow any pilot with real student data before that decision. The reviewer states that accepting Option A means documented residual risk only; it does not mean protection against arbitrary SQL. Option B-type stronger boundary requires the Option D design points in TENANT_ISOLATION_DESIGN.md §2.3.1 before it can be evaluated.
+
 ---
+
+
+## Q-007 — Gate impact (Phase 1 review, Revision 2)
+**Status:** OPEN (unchanged). Question for the owner and reviewer: does the blocked parent-access contract TI-API-09 block Phase 1 architectural approval, or only the phase that delivers parent access?
+**Proposal (not accepted):** TI-API-09 blocks the closure of the phase that implements parent access (Phase 23, per ROADMAP), not Phase 1 architectural approval, because Phase 1 contracts are specifications only. The reviewer must confirm or reject this proposal and it must be recorded in SUPERVISOR_REVIEW.md.
+**Blocks Phase 1 approval:** Pending the reviewer's confirmation of the proposal above.
 
 ## بخش Resolved / Closed
 

@@ -13,7 +13,7 @@ Status: **PENDING INDEPENDENT REVIEW. NOT APPROVED.** This report does not appro
 |---|---|
 | docs/phase1/TENANT_ISOLATION_DESIGN.md | Rewritten: explicit threat model (§1), trust boundary and what RLS does not prove (§2), options A–E, claims ledger, testable runtime-role requirements, FORCE RLS decision, context behavior for invalid/changed/pooled cases, platform admin conditions revised, Q-019 added |
 | docs/phase1/AUTHORIZATION_CONTRACT.md | Aligned with Q-014 (exact status pending), object-level authorization identified as primary control against authenticated users, checklist updated |
-| docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md | Rewritten: explicit modes per contract (C, S, R, A, I), CI column (PR / ENV / BLOCKED), failure consequence per contract, groups aligned with TEST_PLAN, 103 contracts |
+| docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md | Rewritten: explicit modes per contract (C, S, R, A, I), CI column (PR / ENV / BLOCKED), failure consequence per contract, groups aligned with TEST_PLAN, 109 contracts |
 | docs/phase1/PHASE1_REPORT.md | This report |
 | OPEN_QUESTIONS.md | Phase 1 block rewritten: Q-014 to Q-018 status and blocking flags; Q-019 added |
 | SUPERVISOR_REVIEW.md | Temporary PENDING section replaced by the revision-2 block in APPEND_TO_SUPERVISOR_REVIEW_REV2.md. Verdict field left empty for the reviewer |
@@ -39,12 +39,12 @@ Reviewed for consistency (not all changed): DECISION_LOG.md (D-008, D-009, D-010
 
 ## 3. Test Contract Count (recounted from the file)
 
-Total: **103** contracts.
+Total: **109** contracts (99 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 1 BLOCKED:Q-015, 4 BLOCKED:Q-019 which apply only if Option D is chosen).
 
 | Group | Count |
 |---|---|
-| TI-CFG | 11 |
-| TI-CTX | 14 |
+| TI-CFG | 13 |
+| TI-CTX | 18 |
 | TI-FK | 8 |
 | TI-BYP | 6 |
 | TI-API | 17 |
@@ -64,7 +64,7 @@ Verification command (run from repository root; counts TI row identifiers in the
 grep -cE "^\| TI-[A-Z]+-[0-9]+ " docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md
 ```
 
-Expected output: `103`.
+Expected output: `109`.
 
 Note: this count is of specifications. No contract has been implemented or executed.
 
@@ -118,7 +118,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 | Context behavior (invalid, unset, changed, pooled) | Yes | Yes | No | No |
 | Platform admin access | Yes (proposal) | Yes | No | No |
 | Authorization procedure and error mapping | Yes | Yes | No | No |
-| Test contracts (103) | Yes (specification) | Yes | n/a | **No. None has been executed.** |
+| Test contracts (109) | Yes (specification) | Yes | n/a | **No. None has been executed.** |
 
 **Nothing in this report is test-verified.** Isolation is not claimed to work at runtime.
 
@@ -189,3 +189,28 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 ## 12. Recommendation on Readiness for Independent Review
 
 The documents are ready to be reviewed. They are not ready to be approved: two items (Q-015 and Q-019) need an owner decision or explicit acceptance, and no test has been executed. The reviewer should check the threat model (design §1–§2) and the claims ledger (design §2.5) first, because the rest of the design depends on them.
+
+---
+
+## 13. Resolution of Independent Review Items (Revision 2)
+
+Review verdict as received: CONDITIONAL PASS. Verdict is recorded in SUPERVISOR_REVIEW.md as reviewer-stated; final gate remains PENDING.
+
+| # | Review item | Status after this pass |
+|---|---|---|
+| 1 | Option D underspecified (SECURITY DEFINER alone does not stop GUC forgery) | Addressed in design: §2.3.1 lists the six required points (issuance, verification location, context-row design with no GUC in policies, policy predicate, key management, negative tests). Option D remains a CANDIDATE, not proven. Open points listed. |
+| 2 | Claims ledger: policy evaluation must cover all effective policies | Addressed: TI-CFG-04 requires exact policy-name set; TI-CFG-12 evaluates effective predicate with permissive OR and restrictive AND; TI-CFG-13 forbids GUC references in policies. Ledger row added. |
+| 3 | Path inventory (coverage 100% not measurable) | Partly addressed: `TENANT_PATH_INVENTORY.md` created with 32 paths, all traced to contracts or marked BLOCKED. Endpoint-level inventory still missing; 100% NOT claimed. |
+| 4 | Q-015 decision | OPEN. Reviewer recommends Option A (read-only, audited, no bypass). Owner decision required. |
+| 5 | Q-019 decision | OPEN. Reviewer recommends not accepting T4 without explicit owner decision and no real-data pilot before then. Owner decision required. |
+| 6 | Gate impact of Q-007 (TI-API-09) | Proposal recorded in OPEN_QUESTIONS (Q-007 gate section): block phase 23 closure, not Phase 1 approval. Reviewer must confirm. |
+| 7 | Re-review after changes; no automatic APPROVED | Not done by the assistant. Requires reviewer re-review. Status unchanged. |
+
+### 13.1 Items not resolved by the assistant (require decisions)
+- Q-015, Q-019 (owner)
+- Q-007 gate proposal (reviewer confirmation)
+- Endpoint-level path inventory (Phase 2 and Phase 4)
+- Actual execution of any contract (not in Phase 1 scope)
+
+### 13.2 Claim status after this pass
+Designed, reviewed by the assistant, reviewed by the independent reviewer (CONDITIONAL PASS, as received). Not implemented. Not test-verified. Not proven secure.

@@ -58,8 +58,21 @@ The tenant value lives in a session variable (`app.current_tenant_id`) that the 
 | A (current D-009 design) | `set_config` transaction-local; RLS reads it | No | Simple; works with a shared pool; standard Postgres | Injection can choose any tenant |
 | B | Per-tenant database roles; RLS on `current_user`; app switches with `SET ROLE` | Partly. Runtime role needs membership in tenant roles, so injected SQL can also `SET ROLE` to any of them | Familiar model | Role explosion; membership is itself an escalation path; does not solve T4 by itself |
 | C | Per-tenant database credentials or per-tenant connection pools | Yes for the connection's tenant. Injection can only reach that tenant's role, provided no other role is reachable | Strongest DB-side separation without separate databases | Pool per tenant; credential management per tenant; operational cost; scales poorly |
-| D | Tenant context set only by a `SECURITY DEFINER` function that verifies a signed, short-lived token (HMAC with a secret not stored in the database); the runtime role cannot set the context directly | Yes, if the function is correct and the signing secret is outside the database | Injected SQL cannot forge a tenant without a valid token for that tenant | Complex; needs a dedicated security review; the function is itself a bypass surface (TI-BYP-03); token issuance and revocation design required |
+| D (candidate, NOT proven) | Tenant context is written only by a `SECURITY DEFINER` function that verifies a signed, short-lived token; policies read a context row that only that function can write (§2.3.1). Policies never read a GUC | Yes, if §2.3.1 requirements are met and reviewed. Not yet proven | Injected SQL cannot forge a tenant without a valid token for that tenant | Complex; dedicated security review required; the function is a bypass surface (TI-BYP-03); key management and token design open |
 | E | Separate database or schema per tenant (D-009 rejected this for MVP) | Yes | Strongest isolation | Operationally heavy; contradicts accepted D-009 for MVP |
+
+### 2.3.1 Option D — required design points (candidate; each must be answered before Option D can be evaluated as a boundary)
+
+A `SECURITY DEFINER` function alone does not make Option D work. If a policy still reads `app.current_tenant_id`, `app_runtime` can set that GUC itself and the function adds nothing. Option D therefore requires all of the following:
+
+1. **Token issuance and format.** The application issues the token at authentication. It contains tenant_id, principal_id, issued-at, expiry (short, minutes), audience, and a key identifier. Token issuance and any revocation list are outside application SQL.
+2. **Where the signature is verified.** Inside the SECURITY DEFINER function, because a verifier outside the database cannot stop injected SQL from calling a context-writing function with arbitrary values. Consequence: the verification key must be stored in the database, in a table readable only by the function owner role.
+3. **What prevents app_runtime from setting context.** Policies do NOT read any GUC. They read a context row. The context row table (`request_tenant_context`) has no INSERT, UPDATE or DELETE grant for `app_runtime`. Only the function owner role can write it, and the function writes it only after successful verification. Rows are keyed by transaction and backend, and are removed at transaction end. A SECURITY DEFINER helper returning the current tenant from that table is a bypass surface and goes on the TI-BYP-03 allowlist.
+4. **How the context is validated by policy.** Policy predicate: `tenant_id = current_request_tenant()`, where the helper returns NULL when no valid row exists for the current transaction (fail closed). A static check forbids any policy referencing `current_setting` or any custom GUC.
+5. **Key management.** The verification key is generated outside the repository, stored only in the database table readable by the owner role, never logged, never returned by any function, and rotatable with a key identifier in the token. The owner role is not a login role. Residual risk: compromise of the owner role or of a superuser exposes the key; this is recorded, not hidden.
+6. **Negative tests (new, only if Option D is chosen):** TI-CTX-15 (runtime cannot write the context table), TI-CTX-16 (runtime cannot obtain a context row for a tenant without a valid token), TI-CTX-17 (valid token for A, then reads of B return zero rows), TI-CTX-18 (setting the GUC changes nothing). Also TI-CFG-13 (no policy references a GUC).
+
+Open points not decided here: token format (HMAC versus asymmetric signature), key storage location within the database, interaction with connection pooling (TI-CTX-11/12 must still pass), and whether a Phase 2 migration is needed to restructure policies.
 
 ### 2.4 Recommended approach (proposal, not decision)
 - Keep D-009 as the accepted MVP mechanism (Option A) for defense against defects (T1, T2, T5, T7, T8).
@@ -76,6 +89,7 @@ The tenant value lives in a session variable (`app.current_tenant_id`) that the 
 | Composite keys prevent cross-tenant parent/child links | Designed. Requires TI-DB-FK tests to pass. |
 | Runtime role cannot bypass RLS through privileges | Designed. Requires TI-CFG tests to pass. |
 | Arbitrary-SQL attacker cannot cross tenants | **NOT claimable.** Residual risk T4 (§2.3, Q-019). |
+| Tenant context forgery by arbitrary SQL is prevented by policy | **Not claimable.** Option D (§2.3.1) is a candidate pending review; it is not proven |
 | Platform Admin access is limited and audited | Designed as proposal (§8, Q-015). Not decided. |
 | Tenant isolation holds in production | **NOT claimable in Phase 1.** |
 
@@ -288,4 +302,4 @@ Recorded in `OPEN_QUESTIONS.md` with status, options, and dependency:
 - Q-016: pooler mode and transaction-local context
 - Q-017: background job model
 - Q-018: tenant file storage and signed URLs
-- Q-019: stronger tenant-context boundary against arbitrary SQL (§2.3); owner decision required before real-data pilot
+- Q-019: stronger tenant-context boundary against arbitrary SQL (§2.3, §2.3.1); owner decision required before real-data pilot

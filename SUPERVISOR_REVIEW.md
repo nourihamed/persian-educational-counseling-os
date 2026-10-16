@@ -501,59 +501,66 @@ No executable tests were run in this documentation-only reconciliation. No workf
 
 ---
 
-# TEMPORARY SECTION — Phase 1 Pending Supervisor Review (revision 2)
+# TEMPORARY SECTION — Phase 1 Pending Supervisor Review (revision 2, after independent review)
 
-> **Temporary status marker.** This section records that revision 2 of the Phase 1 design artifacts is waiting for independent review. It is **not** a verdict. The Supervisor enters the verdict. Until the Supervisor records a verdict and the Product Owner accepts it, this section must read `PENDING`. It is replaced by a dated final entry only after approval, in a separate commit.
+> **Temporary status marker.** Revision 2 of the Phase 1 design artifacts has been reviewed independently and received CONDITIONAL PASS. That verdict is not final approval. The reviewer must confirm the verdict, the Product Owner must decide Q-015 and Q-019, and a re-review is required before any final status. This section stays until a final dated entry replaces it in a separate commit.
 
 ## Phase
 PHASE 1 — Architecture & Multi-Tenancy (design only)
 
-## Current State
-PENDING INDEPENDENT REVIEW — revision 2 (corrective pass, 2026-10-15). NOT APPROVED.
+## Reviewer Verdict (as received)
+**CONDITIONAL PASS.** Received 2026-10-15 from the independent review of Revision 2. The reviewer's written report is the source of this entry. The reviewer should confirm this record in a reviewer-authored entry or PR review.
 
-## Scope Under Review
-- `docs/phase1/TENANT_ISOLATION_DESIGN.md` (revision 2: threat model, trust boundary, role requirements, context behavior, platform admin conditions)
-- `docs/phase1/AUTHORIZATION_CONTRACT.md` (revision 2: alignment with Q-014 and trust boundary)
-- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (revision 2: 103 contracts with explicit modes, CI column, BLOCKED items)
-- `docs/phase1/PHASE1_REPORT.md` (revision 2)
-- `OPEN_QUESTIONS.md` (Phase 1 block: Q-014 to Q-018 with status and blocking flags; Q-019 added)
+## Current State
+CONDITIONAL PASS — revision 2 fixes applied by the developer; re-review PENDING. NOT APPROVED.
+
+## Review Items and Status
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Option D precise design (§2.3.1) | Specified with six required points; still a candidate, not proven |
+| 2 | Claims ledger; all effective policies (TI-CFG-04, 12, 13) | Addressed in specification |
+| 3 | Traceable path inventory (TENANT_PATH_INVENTORY.md) | Partly addressed; endpoint-level inventory missing; 100% NOT claimed |
+| 4 | Q-015 owner decision | OPEN. Reviewer recommends Option A. Owner decision required |
+| 5 | Q-019 owner decision (residual risk T4, real-data pilot) | OPEN. Owner decision required |
+| 6 | Gate impact of Q-007 (TI-API-09) | Proposal recorded; reviewer must confirm |
+| 7 | Re-review after changes | PENDING reviewer |
+
+## Scope Under Review (revision 2 + review fixes)
+- `docs/phase1/TENANT_ISOLATION_DESIGN.md`
+- `docs/phase1/AUTHORIZATION_CONTRACT.md`
+- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (109 contracts: 99 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 1 BLOCKED:Q-015, 4 BLOCKED:Q-019 for Option D only)
+- `docs/phase1/TENANT_PATH_INVENTORY.md` (32 paths: 30 mapped, 2 blocked, 0 unmapped)
+- `docs/phase1/PHASE1_REPORT.md`
+- `OPEN_QUESTIONS.md` (Q-014 to Q-019; Q-007 gate proposal)
 
 ## Explicitly Out of Review Scope
-- No application code, migrations, database roles, RLS policies, grants, or infrastructure exist in this phase.
-- No test has been executed. The 103 TI-* contracts are specifications.
-- No runtime security is claimed. Tenant isolation is not verified at runtime.
-- D-009 has not been changed. Its residual risk (arbitrary SQL as the runtime role) is documented, not resolved.
-- Phase 2 is not started and not authorized.
-
-## Questions for the Supervisor
-1. Does the threat model (design §1) correctly identify what the session-variable mechanism of D-009 does and does not protect against (T4)?
-2. Is the residual-risk treatment of T4 for MVP (Q-019, recommended Option A plus injection prevention, decision before real-data pilot) acceptable as a proposal, or should a stronger option be required now?
-3. Are the runtime-role requirements R-DB-01 to R-DB-08 complete, including TRUNCATE (not subject to RLS) and recursive memberships?
-4. Is the decision to require FORCE ROW LEVEL SECURITY on all tenant-owned tables (design §5.3) acceptable, with its migration consequences?
-5. Are the 103 contracts adequate for the TEST_PLAN groups, and are the BLOCKED items (TI-API-09 on Q-007; TI-PLAT-06 on Q-015) correctly treated as preventing phase closure?
-6. Is the platform-admin design (design §8) acceptable as a proposal pending Q-015?
-7. Are Q-014 to Q-019 correctly framed, with no decision taken on the owner's behalf?
+- No code, migration, role, policy, grant, or infrastructure exists.
+- No test has been executed. All contracts are specifications.
+- No runtime or production security is claimed.
+- D-009 unchanged. Residual risk T4 documented, not accepted.
+- Phase 2 not started and not authorized.
 
 ## Items Blocking Final Approval
-- Q-015 (platform admin mechanism) unless the owner accepts the recommended default in writing.
-- Q-019 (residual risk T4) unless the owner accepts the residual risk in writing or selects a stronger option.
-- Q-007 (parent access), which blocks TI-API-09.
-- Q-014, Q-016, Q-017, Q-018: do not block Phase 1 approval; must be resolved in their owning phases.
-- D-001 to D-006 remain Proposed (from Phase 0; unchanged here).
+- Q-015 and Q-019 owner decisions (or explicit written acceptance of the recommended defaults).
+- Reviewer confirmation of the Q-007 gate proposal.
+- Endpoint-level path inventory (Phase 2/4); until then 100% coverage is not claimable.
+- Option D, if chosen, requires its own security design review before implementation.
+- D-001 to D-006 remain Proposed (unchanged).
 
 ## Supervisor Verdict
-**[PENDING — to be entered only by the Supervisor]**
+**Reviewer-stated: CONDITIONAL PASS** (see above). Final verdict: **[PENDING — reviewer re-review]**
 
 Allowed values: `NOT READY` / `CONDITIONAL PASS` / `APPROVED`
 
 ## Product Owner Acceptance
-**[PENDING]**
+**[PENDING — Q-015 and Q-019 decisions]**
 
 ## Final Gate Status
 **PENDING.** No approval is recorded. Phase 2 is not authorized.
 
 ## Finalization Procedure
-1. The reviewer records the verdict in the "Supervisor Verdict" field, in a reviewer-authored commit or PR review referenced here.
-2. If the verdict is `CONDITIONAL PASS` or `NOT READY`, the listed fixes are made and this section is updated again. It does not become final.
-3. If the verdict is `APPROVED`, the Product Owner records acceptance, including explicit decisions or acceptances for Q-015 and Q-019. Then a separate commit replaces this section with a dated final entry.
-4. The assistant never marks Phase 1 approved. Only the recorded verdict and Product Owner acceptance change the status.
+1. Reviewer re-reviews after the fixes above and records a verdict.
+2. If the verdict is `CONDITIONAL PASS` or `NOT READY`, listed fixes are made and this section is updated again.
+3. If the verdict is `APPROVED`, the Product Owner records acceptance including Q-015 and Q-019, then a separate commit replaces this section with a dated final entry.
+4. The assistant never marks Phase 1 APPROVED.

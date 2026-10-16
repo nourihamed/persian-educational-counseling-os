@@ -41,8 +41,8 @@ Every contract states the consequence if it fails. Any failure of a PR-column co
 
 | Group | Scope | Count |
 |---|---|---|
-| TI-CFG | Runtime role and catalog configuration | 11 |
-| TI-CTX | Tenant context behavior and pooling | 14 |
+| TI-CFG | Runtime role and catalog configuration | 13 |
+| TI-CTX | Tenant context behavior and pooling | 18 |
 | TI-FK | Composite constraints and immutability | 8 |
 | TI-BYP | Bypass surfaces: views, functions, TRUNCATE, materialized views, rules | 6 |
 | TI-API | API and object-level authorization | 17 |
@@ -55,9 +55,9 @@ Every contract states the consequence if it fails. Any failure of a PR-column co
 | TI-VER | Program and Plan version history | 7 |
 | TI-AUD | Audit logs | 3 |
 | TI-PLAT | Platform admin cross-tenant access | 8 |
-| **Total** | | **103** |
+| **Total** | | **109** |
 
-The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3.
+The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. TI-CTX-15 to 18 apply only if Option D (Q-019) is chosen; they are BLOCKED until then and are not required under Option A.
 
 ---
 
@@ -70,7 +70,7 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-CFG-01 | C | Read `pg_roles` for app_runtime | Not superuser; no BYPASSRLS, CREATEROLE, CREATEDB, REPLICATION | Runtime can bypass RLS | PR |
 | TI-CFG-02 | C | Check `pg_tables.tableowner` and view owners for all tenant tables | app_runtime owns none | Owner bypass path | PR |
 | TI-CFG-03 | C | Check `pg_class.relrowsecurity` and `relforcerowsecurity` for every tenant table in the allowlist | Both true for every tenant table; exceptions only if listed in a reviewed allowlist | Policies not enforced | PR |
-| TI-CFG-04 | C | Check `pg_policies` for each tenant table | A policy with both USING and WITH CHECK on tenant_id, applying to app_runtime or PUBLIC | Missing policy means unprotected table | PR |
+| TI-CFG-04 | C | Check `pg_policies` for each tenant table | Exact expected policy-name set per table; the tenant policy has both USING and WITH CHECK on tenant_id and applies to app_runtime or PUBLIC; no extra policy with a different role scope | Missing policy means unprotected table; an extra permissive policy widens access | PR |
 | TI-CFG-05 | C | Recursive `pg_auth_members` from app_runtime | No reachable role with BYPASSRLS, superuser, or ownership of tenant tables | Bypass through membership | PR |
 | TI-CFG-06 | C | `has_table_privilege` for app_runtime on each tenant table for each privilege type | Only the DML set in the allowlist (SELECT, INSERT, UPDATE, DELETE as specified per table); nothing else | Excess privileges | PR |
 | TI-CFG-07 | C | `has_table_privilege(..., 'TRUNCATE')` for app_runtime on tenant tables | False for all tenant tables | TRUNCATE is not subject to RLS | PR |
@@ -78,6 +78,8 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-CFG-09 | C | List EXECUTE grants of app_runtime on functions; check SECURITY DEFINER flag | No SECURITY DEFINER function touching tenant tables is executable, except allowlisted and reviewed ones | Privilege escalation through function owner | PR |
 | TI-CFG-10 | S | Scan runtime configuration templates and environment examples for app_migrator credentials | None present | Runtime can run migrations and bypass policy | PR |
 | TI-CFG-11 | C | Compare default privileges (`pg_default_acl`) for schemas holding tenant tables | No default privilege grants new tables to app_runtime unless listed | New tables silently exposed | PR |
+| TI-CFG-12 | C | Evaluate effective policy set for app_runtime per tenant table, combining permissive policies with OR and restrictive policies with AND | Effective predicate equals tenant_id = context on every table; no permissive policy outside the expected set; each restrictive policy listed and reviewed | Effective access wider than the single policy reviewed | PR |
+| TI-CFG-13 | S + C | Scan all policy expressions (`pg_policies.qual`, `with_check`) for references to `current_setting` or custom GUCs | No policy references a GUC (required by §2.3.1 if Option D is chosen; enforced now as a guard) | Policy trusts a forgeable value | PR |
 
 ### 2.2 TI-CTX — Tenant context behavior and pooling
 
@@ -97,6 +99,10 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-CTX-12 | I | Request for A raises an exception mid-transaction; next request for B on same connection | No A rows visible; connection state clean | Pool leakage after failure | ENV:pooler (Q-016) |
 | TI-CTX-13 | S | Static scan: no `set_config(..., false)` and no session-level `SET` for app.current_tenant_id in application code | None present | Context outlives transaction | PR |
 | TI-CTX-14 | A | Repository call outside a transaction attempts a tenant query | Repository refuses (no implicit context); no query executed | Query run without context | PR |
+| TI-CTX-15 | R | (Option D only) app_runtime INSERT into `request_tenant_context` | Denied | Context forged directly | BLOCKED:Q-019 (only if Option D) |
+| TI-CTX-16 | R | (Option D only) app_runtime calls the context function with a forged or foreign token | Refused; no context row; zero rows | Forged tenant context | BLOCKED:Q-019 (only if Option D) |
+| TI-CTX-17 | I | (Option D only) valid token for A, then read rows of B in same session | Zero B rows | Context switch by reuse | BLOCKED:Q-019 (only if Option D) |
+| TI-CTX-18 | R | (Option D only) set_config of a custom GUC to B while context is A | Policy outcome unchanged; zero B rows | GUC trusted by policy | BLOCKED:Q-019 (only if Option D) |
 
 ### 2.3 TI-FK — Composite constraints and immutability
 
@@ -239,6 +245,7 @@ The total is recomputed from the contract rows below; the verification command i
 ---
 
 ## 3. Coverage and Gate Rules
+- The path inventory `docs/phase1/TENANT_PATH_INVENTORY.md` maps each data path to contracts. Any path marked UNMAPPED blocks Phase 1 review.
 - Tenant isolation paths: 100% of documented paths must have at least one contract; measured by a path inventory (`docs/phase1/` future file), not by line coverage alone.
 - Every endpoint contract (`AUTHORIZATION_CONTRACT.md` §7) links at least one TI-API or TI-REPO contract.
 - A contract marked BLOCKED prevents closing the phase that owns it. BLOCKED contracts are not counted as passing.
