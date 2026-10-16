@@ -501,68 +501,76 @@ No executable tests were run in this documentation-only reconciliation. No workf
 
 ---
 
-# TEMPORARY SECTION — Phase 1 Pending Supervisor Review (revision 4, owner decisions applied)
+# TEMPORARY SECTION — Phase 1 Pending Supervisor Review (revision 5)
 
-> **Temporary status marker.** Revision 2 received a reviewer-stated CONDITIONAL PASS. Owner decisions have since been applied: Q-015 resolved (D-013, Option A); Q-019 direction decided with a pilot data prohibition (D-014), mechanism still OPEN. This section is NOT a verdict and NOT an approval. Re-review by the reviewer is required. This section stays until a final dated entry replaces it in a separate commit.
+> **Temporary status marker.** Phase 1 is under independent review. The latest reviewer-stated gate is **NOT READY** (PR #3 review). This section is NOT a verdict and NOT an approval. It stays until a final dated entry replaces it in a separate commit after reviewer approval and owner acceptance.
 
 ## Phase
-PHASE 1 — Architecture & Multi-Tenancy (design only)
+PHASE 1 — Architecture & Multi-Tenancy (design and documentation only)
 
-## Reviewer Verdict (as received for revision 2)
-**CONDITIONAL PASS.** The reviewer must confirm any update to this record in a reviewer-authored entry or PR review.
+## Reviewer-Stated Gate History
+- Revision 2: CONDITIONAL PASS (reviewer-stated).
+- Revision 5 (PR #3): **NOT READY** (reviewer-stated). The reviewer reported PR #3 at commit `10cb7a5`. The developer's current revision is commit `4ea224e`. The next review must state the commit it reviews.
 
-## Current State
-CONDITIONAL PASS (revision 2), with owner decisions applied in revision 4 — re-review PENDING. NOT APPROVED.
+## Current Gate
+NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 
-## Review Items and Status
+## Owner Decisions Applied
+- Q-015: RESOLVED — Option A (D-013): read-only, audited platform-admin access; no BYPASSRLS role; no platform writes in MVP.
+- Q-019: direction DECIDED (D-014): strengthen the boundary before any real-data pilot. Mechanism OPEN.
+- Pilot rule (D-014): no real student data until independent security review, required security tests passing, blocking findings fixed, and written owner approval.
 
-| # | Item | Status |
+## Reviewer Findings and Response
+
+| ID | Finding | Response |
 |---|---|---|
-| 1 | Option D precise design (§2.3.1) | Specified; still a candidate, not proven |
-| 2 | Claims ledger; effective policies (TI-CFG-04, 12, 13) | Addressed in specification |
-| 3 | Traceable path inventory | Partly addressed (33 paths, 30 mapped, 3 blocked, 0 unmapped); endpoint-level inventory missing; 100% NOT claimed |
-| 4 | Q-015 owner decision | RESOLVED by owner: Option A (D-013). Implementation not done |
-| 5 | Q-019 owner decision | Direction DECIDED (D-014): strengthen before real-data pilot; pilot rule adopted. Mechanism OPEN (Option C or D candidate) |
-| 6 | Gate impact of Q-007 (TI-API-09) | Proposal recorded; reviewer must confirm |
-| 7 | Re-review after changes | PENDING reviewer |
+| C-01 | T4 combined three threats; Option C claim overstated | Decomposed into T4a, T4b, T4c (design §1.2, §1.4); Option C limits stated (§2.4); claims ledger split (§2.5); TI-ADV-01 to 03 added. Mechanism still OPEN, so C-01 is addressed in documentation but NOT closed as a decision |
+| H-01 | Endpoint inventory contradiction | Clarified: endpoint inventory is a Phase 2 and Phase 4 deliverable; not a Phase 1 approval criterion; no endpoint coverage claimed |
+| H-02 | Option C claim must match its limits | Addressed in design §1.4 and §2.4 |
+| M-01 | Q-007 gate | Reviewer confirmed: TI-API-09 blocks Phase 23 closure, not Phase 1 approval, provided parent access is not implemented in Phase 1. Recorded here. Q-007 product question remains OPEN |
+| M-02 | D-001 to D-006 status | Corrected: D-004 Accepted (2026-10-12); D-001, D-002, D-003, D-005 Proposed; D-006 Proposed, requires Phase 2 confirmation |
+| M-03 | PROJECT_STATE vs PR status | PROJECT_STATE updated: design submitted for review; not authorized or approved |
 
 ## Scope Under Review
 - `docs/phase1/TENANT_ISOLATION_DESIGN.md`
 - `docs/phase1/AUTHORIZATION_CONTRACT.md`
-- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (114 contracts: 102 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 7 BLOCKED:Q-019 mechanism-dependent)
-- `docs/phase1/TENANT_PATH_INVENTORY.md` (33 paths)
+- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (117 contracts: 102 PR; 3 ENV:pooler; 1 ENV:worker; 1 ENV:security-review; 1 BLOCKED:Q-007; 9 BLOCKED:Q-019 mechanism-dependent)
+- `docs/phase1/TENANT_PATH_INVENTORY.md` (33 paths: 30 mapped, 3 blocked, 0 unmapped)
 - `docs/phase1/PHASE1_REPORT.md`
-- `OPEN_QUESTIONS.md` (Q-015 Resolved; Q-019 mechanism open; Q-007 gate proposal)
-- `DECISION_LOG.md` (D-013, D-014 appended)
+- `OPEN_QUESTIONS.md`, `DECISION_LOG.md` (D-013, D-014), `PROJECT_STATE.md`
 
 ## Explicitly Out of Review Scope
 - No code, migration, role, policy, grant, or infrastructure exists or was created.
 - No test has been executed. All contracts are specifications.
+- No CI status is claimed. The reviewer found no CI status in the information reviewed; absence of status is not success.
 - No runtime, production, or T4 security is claimed.
 - D-009 unchanged.
-- No real student data may enter any Pilot (D-014).
 - Phase 2 not started and not authorized.
 
-## Items Blocking Final Approval
-- Q-019 mechanism selection (owner, after independent security review of Option C or D). Without it, Phase 1 cannot be approved as having a boundary against T4.
-- Reviewer confirmation of the Q-007 gate proposal.
-- Endpoint-level path inventory (Phase 2 and Phase 4); until then 100% coverage is not claimable.
-- Q-014, Q-016, Q-017, Q-018: do not block Phase 1 approval; resolved in their owning phases.
-- D-001 to D-006 remain Proposed (unchanged).
+## Items Blocking Approval
+- Q-019 mechanism selection (owner decision after independent security review of Option C or D), with evidence for the matching sub-threat claims.
+- Reviewer re-review of the commit that is actually pushed.
+
+## Items Not Blocking Phase 1 Design Approval
+- Endpoint-level inventory (Phase 2 and Phase 4).
+- Q-007 product decision (gate already confirmed by the reviewer).
+- Q-014, Q-016, Q-017, Q-018 (owning phases).
+- Process isolation for T4b (Phase 3 and Phase 26).
 
 ## Supervisor Verdict
-**Reviewer-stated (revision 2): CONDITIONAL PASS.** Final verdict: **[PENDING — reviewer re-review]**
+**Reviewer-stated (PR #3): NOT READY.** Final verdict: **[PENDING — reviewer re-review of the pushed commit]**
 
 Allowed values: `NOT READY` / `CONDITIONAL PASS` / `APPROVED`
 
 ## Product Owner Acceptance
-**Q-015: DECIDED (D-013). Q-019 direction: DECIDED (D-014). Phase 1 acceptance: [PENDING]**
+**Q-015: DECIDED (D-013). Q-019 direction: DECIDED (D-014). Q-019 mechanism: OPEN. Phase 1 acceptance: [PENDING].**
 
 ## Final Gate Status
 **PENDING.** No approval is recorded. Phase 2 is not authorized.
 
 ## Finalization Procedure
-1. Reviewer re-reviews the revision-4 documents and records a verdict.
-2. If the verdict is `CONDITIONAL PASS` or `NOT READY`, listed fixes are made and this section is updated again.
-3. If the verdict is `APPROVED`, the Product Owner records acceptance, including the Q-019 mechanism selection, then a separate commit replaces this section with a dated final entry.
-4. The assistant never marks Phase 1 APPROVED.
+1. The developer pushes the revision and states its commit hash.
+2. The reviewer re-reviews that commit and records a verdict.
+3. If the verdict is not `APPROVED`, the listed fixes are made and this section is updated again.
+4. If `APPROVED`, the owner records acceptance, including the Q-019 mechanism selection; then a separate commit replaces this section with a dated final entry.
+5. The assistant never marks Phase 1 APPROVED.

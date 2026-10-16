@@ -117,18 +117,18 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Must be resolved before:** the first file feature.
 **Blocks Phase 1 approval:** No.
 
-## Q-019 — Tenant-context boundary against arbitrary SQL (threat T4)
+## Q-019 — Tenant-context boundary against threat T4 (decomposed)
 **Owner direction (decided, D-014, 2026-10-15):** strengthen the boundary before any pilot containing real student data. Pilot rule: no real student data before independent security review, required security tests passing, blocking findings fixed, and written owner approval of the Pilot gate.
-**Status of this question:** OPEN for the MECHANISM only. Direction is decided; mechanism is not.
-**Technical candidates for independent review (not decisions):** Option C, per-tenant database principals with no cross-tenant or platform membership (proposed technical candidate for pilot scale, `TENANT_ISOLATION_DESIGN.md` §2.4); Option D, signed context token through a SECURITY DEFINER function with context row and no GUC in policies (alternative, §2.3.1). Option A alone (D-009 as is) is not recommended as the boundary.
-**What is required to resolve the mechanism:** independent security review of the selected option; security test contracts for that option (TI-CONN-01..03 for C, TI-CTX-15..18 for D) specified and then run; owner selection recorded in DECISION_LOG.
+**Status:** OPEN for the MECHANISM. Direction is decided; mechanism is not.
+**Decomposition (added Revision 4, design §1.4):** T4a (SQL injection on a tenant connection), T4b (application process compromise), T4c (database credential theft). Option C addresses T4a for one tenant connection and partly T4c. No option addresses T4b in the database; T4b requires process isolation (Phase 3/26). Claims must be made per sub-threat.
+**Technical candidates for independent review (not decisions):** Option C (per-tenant database principals; proposed candidate for pilot scale, design §2.4 with explicit limits); Option D (signed context token through a SECURITY DEFINER function, design §2.3.1). Option A alone is not a boundary against T4a.
+**Required to resolve the mechanism:** independent security review of the selected option; evidence for the matching sub-threat claims (TI-ADV-01, TI-ADV-02; TI-CONN-01..03 for C; TI-CTX-15..18 for D); owner selection recorded in DECISION_LOG.
 **Must be resolved before:** any Pilot with real student data; Phase 26.
-**Blocks Phase 1 approval:** Yes, for the mechanism. Phase 1 may be reviewed with the mechanism OPEN, but must not be approved as having a boundary against T4 until the mechanism is selected and reviewed.
+**Blocks Phase 1 approval:** Yes (reviewer-stated NOT READY depends on it).
 
-## Q-007 — Gate impact (Phase 1 review, Revision 2)
-**Status:** OPEN (unchanged). Question for the owner and reviewer: does the blocked parent-access contract TI-API-09 block Phase 1 architectural approval, or only the phase that delivers parent access?
-**Proposal (not accepted):** TI-API-09 blocks the closure of the phase that implements parent access (Phase 23, per ROADMAP), not Phase 1 architectural approval, because Phase 1 contracts are specifications only. The reviewer must confirm or reject this proposal and it must be recorded in SUPERVISOR_REVIEW.md.
-**Blocks Phase 1 approval:** Pending the reviewer's confirmation of the proposal above.
+## Q-007 — Gate impact (Phase 1 review)
+**Status:** Product question OPEN (default parent access level). Gate impact: **CONFIRMED by the independent reviewer** (PR #3 review): TI-API-09 blocks closure of the phase that implements parent access (Phase 23), not Phase 1 architectural approval, provided parent access is not implemented in Phase 1 and TI-API-09 stays BLOCKED.
+**Owner acceptance of the gate wording:** pending.
 
 ## بخش Resolved / Closed
 

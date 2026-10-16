@@ -43,6 +43,8 @@ Purpose: make every data access path traceable to at least one test contract (su
 | P-33 | Option C tenant connection routing and role membership (only if Option C chosen) | Connection | Principal tenant | TI-CONN-01, 02, 03 | BLOCKED (Q-019 mechanism) |
 
 ## Notes
+- Endpoint-level inventory (one row per endpoint and record type) is a REQUIRED deliverable of Phase 2 (data model) and Phase 4 (API and RBAC). It is NOT a Phase 1 approval criterion, and Phase 1 must not claim endpoint coverage. (Independent review H-01.)
+- Adversarial contracts TI-ADV-01 to 03 apply across runtime paths P-01 to P-24 as threat-based tests; they do not add path rows.
 - P-09 is listed with representative contracts, not one per record type. Endpoint-level inventory in Phase 4 must add one row per record type. Until then, P-09 counts as mapped only in the representative sense.
 - P-26 is listed so that the prohibition in D-013 cannot be silently reversed: a static guard (TI-PLAT-08) must fail if a platform write route appears.
 - P-27 and P-32 are BLOCKED; a BLOCKED path cannot be counted as covered.

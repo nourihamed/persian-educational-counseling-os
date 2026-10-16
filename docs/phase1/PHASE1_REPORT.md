@@ -39,7 +39,7 @@ Reviewed for consistency (not all changed): DECISION_LOG.md (D-008, D-009, D-010
 
 ## 3. Test Contract Count (recounted from the file)
 
-Total: **114** contracts (102 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 7 BLOCKED:Q-019 mechanism-dependent: TI-CTX-15 to 18 only if Option D, TI-CONN-01 to 03 only if Option C). No contract is blocked by Q-015 (resolved, D-013).
+Total: **117** contracts (102 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 9 BLOCKED:Q-019 mechanism-dependent: TI-CTX-15 to 18 only if Option D, TI-CONN-01 to 03 only if Option C, TI-ADV-01 and 02 for the chosen mechanism, 1 ENV:security-review TI-ADV-03). No contract is blocked by Q-015 (resolved, D-013).
 
 | Group | Count |
 |---|---|
@@ -65,7 +65,7 @@ Verification command (run from repository root; counts TI row identifiers in the
 grep -cE "^\| TI-[A-Z]+-[0-9]+ " docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md
 ```
 
-Expected output: `114`.
+Expected output: `117`.
 
 Note: this count is of specifications. No contract has been implemented or executed.
 
@@ -101,6 +101,9 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 | D-009 (tenant isolation mechanism) | Accepted; applied; not changed. Residual risk T4 documented (Q-019) |
 | D-010 (MVP scope) | Accepted; applied |
 | D-011 (pilot hosting) | Accepted; referenced by Q-018 for reachability check |
+| D-004 (Tenant Isolation strategy) | Accepted (2026-10-12) |
+| D-001, D-002, D-003, D-005 | Proposed (status as recorded in DECISION_LOG) |
+| D-006 (Plan naming) | Proposed; requires confirmation in Phase 2 |
 | D-012 (tenant-only templates) | Accepted; applied in composite key requirements |
 | D-013 (Q-015: Option A for platform admin) | ACCEPTED 2026-10-15; applied; product decision only, not implemented |
 | D-014 (Q-019: direction and pilot data rule) | Direction ACCEPTED 2026-10-15; mechanism OPEN; pilot data prohibited until conditions met |
@@ -123,7 +126,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 | Context behavior (invalid, unset, changed, pooled) | Yes | Yes | No | No |
 | Platform admin access | Yes (proposal) | Yes | No | No |
 | Authorization procedure and error mapping | Yes | Yes | No | No |
-| Test contracts (114) | Yes (specification) | Yes | n/a | **No. None has been executed.** |
+| Test contracts (117) | Yes (specification) | Yes | n/a | **No. None has been executed.** |
 
 **Nothing in this report is test-verified.** Isolation is not claimed to work at runtime.
 
@@ -228,7 +231,7 @@ Designed, reviewed by the assistant, reviewed by the independent reviewer (CONDI
 - **Q-015 (Option A, D-013):** applied to design §5.1 and §8, test contracts TI-PLAT-06 (now PR, no longer blocked), TI-PLAT-08 (static guard), TI-PLAT-09 and TI-PLAT-10 (new), path inventory P-25 and P-26, authorization contract, OPEN_QUESTIONS (moved to Resolved).
 - **Q-019 (direction, D-014):** applied to OPEN_QUESTIONS, design §2.4 (Option C as proposed technical candidate, Option D as alternative, both pending review), test contracts TI-CONN-01 to 03 (new, mechanism-dependent), path inventory P-33 (new), DECISION_LOG.
 - **Pilot rule (D-014):** no real student data until four conditions are met and the owner approves the gate in writing. Recorded in DECISION_LOG and this report.
-- **Counts after this revision:** 114 contracts; 102 PR; 3 ENV:pooler; 1 ENV:worker; 1 BLOCKED:Q-007; 7 BLOCKED:Q-019 (mechanism-dependent). Path inventory: 33 paths, 30 mapped, 3 blocked, 0 unmapped.
+- **Counts after this revision:** 117 contracts; 102 PR; 3 ENV:pooler; 1 ENV:worker; 1 ENV:security-review; 1 BLOCKED:Q-007; 9 BLOCKED:Q-019 (mechanism-dependent). Path inventory: 33 paths, 30 mapped, 3 blocked, 0 unmapped.
 
 ### 14.1 Status by category (not merged, not run)
 | Item | Status |
@@ -246,3 +249,31 @@ Designed, reviewed by the assistant, reviewed by the independent reviewer (CONDI
 - No runtime isolation, no defense against T4, and no production security is claimed.
 - Option C and Option D are candidates, not selected and not proven.
 - Phase 2 is not started.
+
+
+---
+
+## 15. Independent Review of Revision 4 (reviewer-stated, PR #3) and Response
+
+Reviewer-stated gate: **NOT READY.** Reviewer reported PR #3 at commit `10cb7a5`. Note: the developer's local branch at revision 4 is commit `4ea224e` (based on `9655db0`). The reviewed commit and this revision must be reconciled before the next review; see the Process note below.
+
+| Finding | Response in this revision |
+|---|---|
+| C-01 T4 combined three threats; Option C claim overstated | Decomposed into T4a, T4b, T4c (design §1.2, §1.4). Option C limits stated explicitly (§2.4). Claims ledger split (§2.5). Adversarial contracts TI-ADV-01 to 03 added. Mechanism still OPEN |
+| H-01 endpoint inventory contradiction | Clarified: endpoint inventory is a Phase 2 and Phase 4 deliverable, not a Phase 1 approval criterion (path inventory notes). Phase 1 claims no endpoint coverage |
+| H-02 Option C claim must match its limits | Addressed in §2.4 and §1.4; TI-CONN contracts unchanged in scope |
+| M-01 Q-007 gate | Reviewer confirmed the gate proposal (block Phase 23, not Phase 1). Recorded in OPEN_QUESTIONS and SUPERVISOR_REVIEW. Q-007 product question still OPEN |
+| M-02 D-001 to D-006 status | Corrected: D-004 Accepted; D-001, D-002, D-003, D-005 Proposed; D-006 Proposed pending Phase 2 |
+| M-03 PROJECT_STATE vs PR status | PROJECT_STATE updated to state "design submitted for review, not authorized or approved" |
+| Required change 5: Q-019 stays OPEN | Kept OPEN |
+| Required change 6: Pilot ban, no unexecuted success claims | Kept (D-014). No test is claimed as run |
+
+### Process note
+The reviewer's PR head (`10cb7a5`) is not the same commit as the developer's current revision (`4ea224e`). The next review must use the commit that is actually pushed to the Phase 1 branch, and the report must state its hash.
+
+### Status
+- Phase 1: NOT APPROVED. Reviewer-stated NOT READY.
+- Q-015: resolved by owner decision (D-013); implementation not done.
+- Q-019: direction decided (D-014); mechanism OPEN.
+- Pilot with real data: prohibited.
+- Phase 2: not authorized.

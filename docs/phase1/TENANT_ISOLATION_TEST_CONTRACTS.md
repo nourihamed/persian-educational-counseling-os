@@ -56,9 +56,10 @@ Every contract states the consequence if it fails. Any failure of a PR-column co
 | TI-AUD | Audit logs | 3 |
 | TI-PLAT | Platform admin cross-tenant access | 10 |
 | TI-CONN | Per-tenant connection principals (Option C only) | 3 |
-| **Total** | | **114** |
+| TI-ADV | Adversarial threat-based contracts (T4a, T4b, T4c) | 3 |
+| **Total** | | **117** |
 
-The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Q-019 mechanism sets: TI-CTX-15 to 18 apply only if Option D is chosen; TI-CONN-01 to 03 apply only if Option C is chosen. Exactly one set applies after the mechanism decision. Both are BLOCKED until then.
+The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Q-019 mechanism sets: TI-CTX-15 to 18 apply only if Option D is chosen; TI-CONN-01 to 03 apply only if Option C is chosen; TI-ADV-01 and 02 apply to whichever mechanism is chosen and to Option A as a recorded residual; TI-ADV-03 is evidence, not a database test. Exactly one set applies after the mechanism decision. Both are BLOCKED until then.
 
 ---
 
@@ -254,6 +255,14 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-CONN-01 | I | Connection bound to tenant A's role issues SET ROLE to tenant B's role, or reads B rows | Denied; zero B rows | Role switch across tenants | BLOCKED:Q-019 (only if Option C) |
 | TI-CONN-02 | C | Check membership graph: no tenant role is a member of, or has membership in, another tenant role or any platform role | Empty set of cross-role memberships | Role lattice escape | BLOCKED:Q-019 (only if Option C) |
 | TI-CONN-03 | I | Request for tenant A is routed by application code to a connection bound to tenant B (fixed fixture) | Routing mismatch refused before SQL is sent | Wrong connection used | BLOCKED:Q-019 (only if Option C) |
+
+### 2.16 TI-ADV — Adversarial threat-based contracts (added Revision 4 per T4 decomposition)
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-ADV-01 | I | T4a: attacker-controlled SQL executed on tenant A's runtime connection sets context to B and reads B rows, for each mechanism option | Under Option C: denied at role boundary. Under Option D: denied without valid token. Under Option A: the result is RECORDED as residual risk, not as a pass | Silent acceptance of cross-tenant read | BLOCKED:Q-019 (mechanism) |
+| TI-ADV-02 | I | T4c: runtime credentials of tenant A used from outside the application to read B rows | Under Option C: denied (no B credentials exist for this login). Multi-tenant credential theft is out of scope and recorded as residual | Undetected credential-scope failure | BLOCKED:Q-019 (mechanism) |
+| TI-ADV-03 | — | T4b: process-isolation evidence (no single process holds routing to all tenant credentials; secret scope review) | Evidence document reviewed, not a database test | Unrecognized process-level exposure | ENV:security-review (Phase 26) |
 
 ## 3. Coverage and Gate Rules
 - The path inventory `docs/phase1/TENANT_PATH_INVENTORY.md` maps each data path to contracts. Any path marked UNMAPPED blocks Phase 1 review.
