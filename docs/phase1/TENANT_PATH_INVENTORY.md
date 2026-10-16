@@ -32,25 +32,26 @@ Purpose: make every data access path traceable to at least one test contract (su
 | P-22 | Telegram and SMS adapter calls (outbound) | Outbound | Notification row | TI-NOTIF-02, 04 | Mapped |
 | P-23 | Background jobs (tenant-bound) | Read/Write | Job payload tenant_id | TI-JOB-01, 02, 03, 05 | Mapped |
 | P-24 | Platform aggregate jobs | Read (aggregate) | None (platform) | TI-JOB-04 | Mapped |
-| P-25 | Platform admin read | Read | Explicit target tenant | TI-PLAT-01 to 04, 07 | Mapped (design proposal; Q-015) |
-| P-26 | Platform admin write | Write | Explicit target tenant | TI-PLAT-08 | Mapped (MVP scope to be confirmed under Q-015) |
+| P-25 | Platform admin read | Read | Explicit target tenant | TI-PLAT-01 to 04, 07, 09, 10 | Mapped (decided, D-013) |
+| P-26 | Platform admin write | Write | Explicit target tenant | TI-PLAT-08 (static scan + refusal) | PROHIBITED in MVP (D-013); mapped as guard |
 | P-27 | Parent read | Read | Parent link | TI-API-09 | BLOCKED (Q-007) |
 | P-28 | Authentication and tenant derivation | Read | Principal membership | TI-API-06, 07 | Mapped |
 | P-29 | Database migrations | Privileged write | Schema-level, not tenant data | TI-CFG-02, 10 | Mapped |
 | P-30 | Operational scripts under `scripts/` | Privileged | Must be explicit | TI-REPO-05 (static scan), TI-CFG-10 | Mapped (scan; no script exists yet) |
 | P-31 | Raw SQL outside Infrastructure | Read/Write | Unknown | TI-REPO-05 | Mapped (static guard) |
-| P-32 | Option D context function (only if Option D chosen) | Privileged | Token | TI-CTX-15, 16, 17, 18; TI-BYP-03 | BLOCKED (Q-019) |
+| P-32 | Option D context function (only if Option D chosen) | Privileged | Token | TI-CTX-15, 16, 17, 18; TI-BYP-03 | BLOCKED (Q-019 mechanism) |
+| P-33 | Option C tenant connection routing and role membership (only if Option C chosen) | Connection | Principal tenant | TI-CONN-01, 02, 03 | BLOCKED (Q-019 mechanism) |
 
 ## Notes
 - P-09 is listed with representative contracts, not one per record type. Endpoint-level inventory in Phase 4 must add one row per record type. Until then, P-09 counts as mapped only in the representative sense.
-- P-26 is listed so that the MVP decision under Q-015 cannot silently add write access without a contract.
+- P-26 is listed so that the prohibition in D-013 cannot be silently reversed: a static guard (TI-PLAT-08) must fail if a platform write route appears.
 - P-27 and P-32 are BLOCKED; a BLOCKED path cannot be counted as covered.
 
 ## Summary (at this revision)
-- Total paths listed: 32
-- Mapped to at least one contract: 30 (P-09 is representative only; P-25 and P-26 depend on the Q-015 design proposal; P-30 is a static guard with no script yet)
-- BLOCKED: 2 (P-27 by Q-007; P-32 by Q-019)
+- Total paths listed: 33
+- Mapped to at least one contract: 30 (P-09 is representative only; P-30 is a static guard with no script yet; P-26 is a prohibition guard)
+- BLOCKED: 3 (P-27 by Q-007; P-32 and P-33 by the Q-019 mechanism decision, exactly one of the two applies)
 - UNMAPPED: 0
 - Endpoint-level coverage: NOT MEASURABLE YET. The 100% claim is not made.
 
-Recount command (run from repository root): `grep -cE "^\| P-[0-9]+ " docs/phase1/TENANT_PATH_INVENTORY.md` should print 32.
+Recount command (run from repository root): `grep -cE "^\| P-[0-9]+ " docs/phase1/TENANT_PATH_INVENTORY.md` should print 33.

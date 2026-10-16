@@ -54,10 +54,11 @@ Every contract states the consequence if it fails. Any failure of a PR-column co
 | TI-JOB | Background jobs | 5 |
 | TI-VER | Program and Plan version history | 7 |
 | TI-AUD | Audit logs | 3 |
-| TI-PLAT | Platform admin cross-tenant access | 8 |
-| **Total** | | **109** |
+| TI-PLAT | Platform admin cross-tenant access | 10 |
+| TI-CONN | Per-tenant connection principals (Option C only) | 3 |
+| **Total** | | **114** |
 
-The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. TI-CTX-15 to 18 apply only if Option D (Q-019) is chosen; they are BLOCKED until then and are not required under Option A.
+The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Q-019 mechanism sets: TI-CTX-15 to 18 apply only if Option D is chosen; TI-CONN-01 to 03 apply only if Option C is chosen. Exactly one set applies after the mechanism decision. Both are BLOCKED until then.
 
 ---
 
@@ -238,11 +239,21 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-PLAT-03 | I | P with grant for tenant A reads SA1 | Succeeds for A only; audit record committed before response | Access without evidence | PR |
 | TI-PLAT-04 | I | Audit write fails during P's read | Access refused; no data returned | Unaudited access | PR |
 | TI-PLAT-05 | I | P's request followed by a counselor B request on same connection | B request sees no A data | Context leak after platform access | ENV:pooler (Q-016) |
-| TI-PLAT-06 | C | Check that no application role (including the platform path's role) has BYPASSRLS unless Q-015 chose it; if chosen, verify its only use is the audited path | Holds for the decided mechanism | Silent bypass | BLOCKED:Q-015 |
+| TI-PLAT-06 | C | Check that no application or platform role has BYPASSRLS, and that no role named `platform_ops` exists | None has BYPASSRLS; no `platform_ops` role (D-013) | Silent bypass path created | PR |
 | TI-PLAT-07 | I | P's grant expires; P attempts read | Refused after expiry | Standing access | PR |
-| TI-PLAT-08 | I | P attempts a write under a read-only grant | Refused; no change | Write by read-only operator | PR |
+| TI-PLAT-08 | I + S | Platform admin attempts any write through any platform path; static scan for platform write routes | Refused; no change; no platform write route exists (D-013, MVP read-only) | Operator write path | PR |
+| TI-PLAT-09 | I | Denied requests: no grant; expired grant; invalid reason or unknown target tenant | Each refused with generic error; no tenant data; denial audited with result = denied | Silent denial, no evidence | PR |
+| TI-PLAT-10 | I | Audit path unavailable during an otherwise valid platform read | Request denied; no data returned (D-013 point 6) | Unaudited access on audit failure | PR |
 
 ---
+
+### 2.15 TI-CONN — Per-tenant connection principals (contracts apply only if Option C is selected for Q-019)
+
+| ID | Modes | Operation | Expected | Failure consequence | CI |
+|---|---|---|---|---|---|
+| TI-CONN-01 | I | Connection bound to tenant A's role issues SET ROLE to tenant B's role, or reads B rows | Denied; zero B rows | Role switch across tenants | BLOCKED:Q-019 (only if Option C) |
+| TI-CONN-02 | C | Check membership graph: no tenant role is a member of, or has membership in, another tenant role or any platform role | Empty set of cross-role memberships | Role lattice escape | BLOCKED:Q-019 (only if Option C) |
+| TI-CONN-03 | I | Request for tenant A is routed by application code to a connection bound to tenant B (fixed fixture) | Routing mismatch refused before SQL is sent | Wrong connection used | BLOCKED:Q-019 (only if Option C) |
 
 ## 3. Coverage and Gate Rules
 - The path inventory `docs/phase1/TENANT_PATH_INVENTORY.md` maps each data path to contracts. Any path marked UNMAPPED blocks Phase 1 review.
@@ -254,5 +265,5 @@ The total is recomputed from the contract rows below; the verification command i
 ## 4. Remaining Work Before Any Contract Can Count as Passing
 1. Implement fixtures and the isolated Postgres harness (Phase 2/3).
 2. Implement TI-CFG and TI-CTX first; they validate the foundation for all other groups.
-3. Resolve BLOCKED items (Q-007, Q-015, Q-016, Q-017) for their owning phases.
+3. Resolve BLOCKED items (Q-007 for Phase 23; Q-019 mechanism before any real-data pilot) and open items Q-016, Q-017 for their owning phases. Q-015 is resolved (D-013).
 4. Run the PR-column contracts in CI on a real PR.

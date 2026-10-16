@@ -39,7 +39,7 @@ Reviewed for consistency (not all changed): DECISION_LOG.md (D-008, D-009, D-010
 
 ## 3. Test Contract Count (recounted from the file)
 
-Total: **109** contracts (99 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 1 BLOCKED:Q-015, 4 BLOCKED:Q-019 which apply only if Option D is chosen).
+Total: **114** contracts (102 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 7 BLOCKED:Q-019 mechanism-dependent: TI-CTX-15 to 18 only if Option D, TI-CONN-01 to 03 only if Option C). No contract is blocked by Q-015 (resolved, D-013).
 
 | Group | Count |
 |---|---|
@@ -56,7 +56,8 @@ Total: **109** contracts (99 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 1 
 | TI-JOB | 5 |
 | TI-VER | 7 |
 | TI-AUD | 3 |
-| TI-PLAT | 8 |
+| TI-PLAT | 10 |
+| TI-CONN (Option C only) | 3 |
 
 Verification command (run from repository root; counts TI row identifiers in the contracts file):
 
@@ -64,7 +65,7 @@ Verification command (run from repository root; counts TI row identifiers in the
 grep -cE "^\| TI-[A-Z]+-[0-9]+ " docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md
 ```
 
-Expected output: `109`.
+Expected output: `114`.
 
 Note: this count is of specifications. No contract has been implemented or executed.
 
@@ -86,7 +87,7 @@ Note: this count is of specifications. No contract has been implemented or execu
 | Notifications | TI-NOTIF-01 to 05 |
 | Background jobs | TI-JOB-01 to 05 |
 | Version history | TI-VER-01 to 07 |
-| Platform admin access | TI-PLAT-01 to 08 |
+| Platform admin access | TI-PLAT-01 to 10 |
 
 Coverage of "100% of Tenant isolation paths" is a future measurement. It requires a path inventory that does not exist yet. It is therefore NOT claimed.
 
@@ -101,7 +102,11 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 | D-010 (MVP scope) | Accepted; applied |
 | D-011 (pilot hosting) | Accepted; referenced by Q-018 for reachability check |
 | D-012 (tenant-only templates) | Accepted; applied in composite key requirements |
-| Q-014 to Q-019 | OPEN. No decision recorded. Recommendations only |
+| D-013 (Q-015: Option A for platform admin) | ACCEPTED 2026-10-15; applied; product decision only, not implemented |
+| D-014 (Q-019: direction and pilot data rule) | Direction ACCEPTED 2026-10-15; mechanism OPEN; pilot data prohibited until conditions met |
+| Q-014, Q-016, Q-017, Q-018 | OPEN. Recommendations only |
+| Q-019 | Direction decided (D-014); mechanism OPEN (Option C or D candidate, pending independent review) |
+| Q-015 | RESOLVED (D-013) |
 | Q-007 (parent access) | OPEN. Blocks TI-API-09 |
 
 ---
@@ -118,7 +123,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 | Context behavior (invalid, unset, changed, pooled) | Yes | Yes | No | No |
 | Platform admin access | Yes (proposal) | Yes | No | No |
 | Authorization procedure and error mapping | Yes | Yes | No | No |
-| Test contracts (109) | Yes (specification) | Yes | n/a | **No. None has been executed.** |
+| Test contracts (114) | Yes (specification) | Yes | n/a | **No. None has been executed.** |
 
 **Nothing in this report is test-verified.** Isolation is not claimed to work at runtime.
 
@@ -129,7 +134,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 1. **T4 — arbitrary SQL as runtime role.** The session-variable mechanism does not stop it. Mitigation depends on SQL injection prevention and privilege minimization, not on RLS. Decision Q-019.
 2. **Owner-role misconfiguration** in the real environment, including managed hosting that may grant superuser-like roles. Mitigated by TI-CFG tests on the actual target; not yet executed.
 3. **Pooler leakage** if transaction-local discipline is broken. Q-016.
-4. **Platform-admin misuse** if Q-015 chooses a bypass role. Default is no bypass role.
+4. **Platform-admin misuse.** Mitigated by D-013 (read-only, audited, no bypass role, denials audited). Implementation not yet verified.
 5. **Jobs and retries crossing tenants.** Q-017.
 6. **Files reachable through guessable or long-lived links.** Q-018.
 7. **Parent over-exposure** until Q-007 is decided. TI-API-09 is BLOCKED.
@@ -143,8 +148,8 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 - Pooler mode and infrastructure (Phase 3, Q-016).
 - Job execution model (Phase 3, Q-017).
 - File storage provider (Q-018, before first file feature).
-- Platform admin implementation (Phase 4 and later, Q-015).
-- Option D or C for stronger context boundary (Q-019; owner decision before real-data pilot).
+- Platform admin implementation (Phase 4 and later, per D-013).
+- Selection of Option C or D for the stronger context boundary (Q-019 mechanism; requires independent security review before any real-data pilot, D-014).
 - All executable tests and CI wiring.
 - Migrations, roles, policies, and grants.
 
@@ -152,11 +157,11 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 
 ## 9. Items Requiring Product Owner Decision
 
-1. Q-015: platform admin mechanism, or explicit acceptance of the recommended default.
-2. Q-019: accept residual risk T4 for MVP in writing, or require Option D or C.
+1. Q-015: DONE (D-013, Option A).
+2. Q-019: direction DONE (D-014). Owner must still choose the mechanism (C or D) after independent review, or explicitly decide otherwise in writing.
 3. Q-014: exact not-found status (can be deferred to Phase 4).
 4. Q-016, Q-017, Q-018: can be deferred to their owning phases, but must be resolved there.
-5. Whether real student data may enter any pilot before Q-019 is resolved.
+5. Pilot gate: real student data is prohibited until the four conditions in D-014 are met and the owner approves the gate in writing.
 
 ---
 
@@ -164,7 +169,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 
 - Documents are internally consistent on: role names, tenant vocabulary, error policy (identical not-found responses), test counts, Q-status.
 - Documents are NOT evidence of security. No claim of runtime isolation is made.
-- Q-015 and Q-019 are blocking unless the owner explicitly accepts the recommended defaults for the Phase 1 review.
+- Q-015 is resolved (D-013). Q-019 mechanism is OPEN; Phase 1 cannot be approved as having a T4 boundary until it is selected and reviewed.
 - Matching against the Master Prompt: the Master Prompt is not present in this repository as a file. The matching against it was therefore done only through the references recorded in the accepted decisions (D-008 to D-012) and in TEST_PLAN.md. A direct match to the Master Prompt text could not be confirmed and is not claimed.
 
 ---
@@ -174,21 +179,21 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 - [x] Shared PostgreSQL database; direct indexed NOT NULL tenant_id (design §4, §7)
 - [x] Authorization in Application/API layer; RLS as defense in depth, not sufficient alone (design §1, §2)
 - [x] Composite constraints or equivalent for parent/child consistency (design §7)
-- [x] Platform Admin cross-tenant access limited, audited, explicit (design §8, Q-015)
+- [x] Platform Admin cross-tenant access limited, read-only, audited, explicit (design §8, D-013)
 - [x] Runtime role not owner and not bypass-capable (design §5, TI-CFG-01 to 07)
 - [x] Negative cross-tenant tests for API, repository, jobs, reports/exports, files, notifications (test contracts)
 - [x] R, A, I modes defined and applied per contract (test contracts §0)
 - [x] Isolated Postgres per run; no SQLite (TEST_PLAN) — recorded as a requirement, not yet implemented
 - [x] No test claimed as executed
-- [ ] Owner decision on T4 / Q-019 — open
-- [ ] Owner decision on platform admin / Q-015 — open
+- [~] Q-019: direction decided (D-014); mechanism selection open
+- [x] Q-015 decided (D-013, Option A)
 - [ ] Parent access / Q-007 — open
 
 ---
 
 ## 12. Recommendation on Readiness for Independent Review
 
-The documents are ready to be reviewed. They are not ready to be approved: two items (Q-015 and Q-019) need an owner decision or explicit acceptance, and no test has been executed. The reviewer should check the threat model (design §1–§2) and the claims ledger (design §2.5) first, because the rest of the design depends on them.
+The documents are ready to be reviewed. They are not ready to be approved: the Q-019 mechanism is open, and no test has been executed. The reviewer should check the threat model (design §1–§2) and the claims ledger (design §2.5) first, because the rest of the design depends on them.
 
 ---
 
@@ -201,16 +206,43 @@ Review verdict as received: CONDITIONAL PASS. Verdict is recorded in SUPERVISOR_
 | 1 | Option D underspecified (SECURITY DEFINER alone does not stop GUC forgery) | Addressed in design: §2.3.1 lists the six required points (issuance, verification location, context-row design with no GUC in policies, policy predicate, key management, negative tests). Option D remains a CANDIDATE, not proven. Open points listed. |
 | 2 | Claims ledger: policy evaluation must cover all effective policies | Addressed: TI-CFG-04 requires exact policy-name set; TI-CFG-12 evaluates effective predicate with permissive OR and restrictive AND; TI-CFG-13 forbids GUC references in policies. Ledger row added. |
 | 3 | Path inventory (coverage 100% not measurable) | Partly addressed: `TENANT_PATH_INVENTORY.md` created with 32 paths, all traced to contracts or marked BLOCKED. Endpoint-level inventory still missing; 100% NOT claimed. |
-| 4 | Q-015 decision | OPEN. Reviewer recommends Option A (read-only, audited, no bypass). Owner decision required. |
-| 5 | Q-019 decision | OPEN. Reviewer recommends not accepting T4 without explicit owner decision and no real-data pilot before then. Owner decision required. |
+| 4 | Q-015 decision | RESOLVED by owner: Option A (D-013), matching the reviewer's recommendation. Implementation not done. |
+| 5 | Q-019 decision | Direction DECIDED by owner (D-014): strengthen before real-data pilot; pilot rule adopted. Mechanism OPEN. |
 | 6 | Gate impact of Q-007 (TI-API-09) | Proposal recorded in OPEN_QUESTIONS (Q-007 gate section): block phase 23 closure, not Phase 1 approval. Reviewer must confirm. |
 | 7 | Re-review after changes; no automatic APPROVED | Not done by the assistant. Requires reviewer re-review. Status unchanged. |
 
 ### 13.1 Items not resolved by the assistant (require decisions)
-- Q-015, Q-019 (owner)
+- Q-019 mechanism selection (owner, after independent review)
 - Q-007 gate proposal (reviewer confirmation)
 - Endpoint-level path inventory (Phase 2 and Phase 4)
 - Actual execution of any contract (not in Phase 1 scope)
 
 ### 13.2 Claim status after this pass
 Designed, reviewed by the assistant, reviewed by the independent reviewer (CONDITIONAL PASS, as received). Not implemented. Not test-verified. Not proven secure.
+
+
+---
+
+## 14. Implementation of Owner Decisions (Revision 4)
+
+- **Q-015 (Option A, D-013):** applied to design §5.1 and §8, test contracts TI-PLAT-06 (now PR, no longer blocked), TI-PLAT-08 (static guard), TI-PLAT-09 and TI-PLAT-10 (new), path inventory P-25 and P-26, authorization contract, OPEN_QUESTIONS (moved to Resolved).
+- **Q-019 (direction, D-014):** applied to OPEN_QUESTIONS, design §2.4 (Option C as proposed technical candidate, Option D as alternative, both pending review), test contracts TI-CONN-01 to 03 (new, mechanism-dependent), path inventory P-33 (new), DECISION_LOG.
+- **Pilot rule (D-014):** no real student data until four conditions are met and the owner approves the gate in writing. Recorded in DECISION_LOG and this report.
+- **Counts after this revision:** 114 contracts; 102 PR; 3 ENV:pooler; 1 ENV:worker; 1 BLOCKED:Q-007; 7 BLOCKED:Q-019 (mechanism-dependent). Path inventory: 33 paths, 30 mapped, 3 blocked, 0 unmapped.
+
+### 14.1 Status by category (not merged, not run)
+| Item | Status |
+|---|---|
+| Q-015 product decision | Recorded (D-013) |
+| Q-015 implementation | Not done |
+| Q-019 direction | Recorded (D-014) |
+| Q-019 mechanism | OPEN; candidates under review |
+| Q-019 security tests | Specified only (mechanism-dependent); NOT run |
+| Pilot with real data | PROHIBITED until D-014 conditions met |
+| Phase 1 approval | NOT granted; reviewer re-review required |
+
+### 14.2 Explicit non-claims
+- No test has been executed or passed.
+- No runtime isolation, no defense against T4, and no production security is claimed.
+- Option C and Option D are candidates, not selected and not proven.
+- Phase 2 is not started.

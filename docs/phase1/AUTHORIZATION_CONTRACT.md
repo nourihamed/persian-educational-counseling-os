@@ -34,7 +34,7 @@ Steps 3 and 5 must not be skipped even when RLS would also deny the operation. R
 | Student | Tenant of its active relationship | Read/execute own plan and records; cannot read other students |
 | Parent | Linked students only, if linked | Limited read; detailed rules open (Q-007) |
 | Teacher | Not in MVP | Role reserved (Master Prompt §4); no permissions granted in MVP |
-| Platform Admin | Cross-tenant only via audited path | Per Q-015; never implicit |
+| Platform Admin | Cross-tenant only via audited, read-only path (D-013) | Read only; no write in MVP; no BYPASSRLS |
 
 ---
 
@@ -65,7 +65,7 @@ Any request that references another object by ID (for example, `student_id` when
 
 - Every list endpoint applies the tenant and relationship filter **in the query** (SQL `WHERE`), never by fetching then filtering in memory.
 - Pagination is cursor- or keyset-based on tenant-scoped indexes, so counts and page boundaries cannot reveal other tenants' data.
-- Aggregates (dashboards, counts) are computed per tenant within the tenant context. Platform-wide aggregates are only for the platform-admin path (Q-015).
+- Aggregates (dashboards, counts) are computed per tenant within the tenant context. Platform-wide aggregates are only for the platform-admin path (D-013).
 - Search endpoints must restrict the search index or query to the tenant; a shared full-text index without a tenant filter is forbidden.
 
 ---

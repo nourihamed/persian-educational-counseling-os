@@ -51,7 +51,7 @@ The tenant value lives in a session variable (`app.current_tenant_id`) that the 
 - Claims that are TRUE, once the tests pass: RLS prevents accidental cross-tenant access by application code that does not set the right tenant, and prevents cross-tenant access from ordinary queries issued under a correctly set context.
 - Preventing T4 is a separate control set (§2.4) and must be reviewed in Phase 3 and Phase 26 (Security Hardening).
 
-### 2.3 Options for a stronger tenant-context boundary (for owner decision, Q-019)
+### 2.3 Options for a stronger tenant-context boundary (Q-019 mechanism open; direction decided in D-014; see §2.4)
 
 | Option | Mechanism | Resists T4? | Advantages | Costs and risks |
 |---|---|---|---|---|
@@ -74,11 +74,20 @@ A `SECURITY DEFINER` function alone does not make Option D work. If a policy sti
 
 Open points not decided here: token format (HMAC versus asymmetric signature), key storage location within the database, interaction with connection pooling (TI-CTX-11/12 must still pass), and whether a Phase 2 migration is needed to restructure policies.
 
-### 2.4 Recommended approach (proposal, not decision)
-- Keep D-009 as the accepted MVP mechanism (Option A) for defense against defects (T1, T2, T5, T7, T8).
-- Treat T4 as a named residual risk for MVP. Mitigate it through: parameterized queries only; banning string-built SQL in the codebase with a static check; least-privilege runtime role; no runtime access to migration credentials; secrets outside the repository; network restriction of the database to the application host.
-- Before any pilot with real student data, the owner decides whether Option D (or C) is required. This decision is recorded as Q-019 and must be resolved before Phase 26 (Security Hardening) and before any real-data pilot. It is NOT resolved by this document.
-- This recommendation does not change D-009.
+### 2.4 Decided direction and technical candidates (D-014)
+
+**Owner decision (D-014, 2026-10-15):** the tenant-context boundary must be strengthened before any pilot that contains real student data. The mechanism is NOT selected by this decision. Option A (D-009 as is) is not accepted as a sufficient boundary against T4 on its own.
+
+**Pilot rule (accepted policy):** no real student data may enter any Pilot until (a) independent security review is complete, (b) the required security tests are run and pass, (c) blocking findings are fixed, and (d) the owner explicitly approves the Pilot gate in writing.
+
+**Technical candidates for independent review (not decisions):**
+
+- **Option C (per-tenant database principals, candidate for pilot scale).** Each tenant has its own database login role with no membership in any other tenant role and no membership in any platform role. The application selects the connection (pool) from the authenticated principal's tenant, in application code, before any SQL is sent. Injected SQL on a tenant connection can reach only that tenant's role, and it cannot change its own role because it has no membership path (TI-CONN-01 to 03). Costs: one pool per tenant or per-user pool routing; credential lifecycle per tenant; more operational work. Limitation: this does not stop an attacker who obtains credentials for many tenant roles, or who achieves code execution in the application process. Platform jobs need a separate principal with aggregate-only grants, reviewed separately.
+- **Option D (signed context token through a SECURITY DEFINER function, candidate, §2.3.1).** Stronger in principle for a single shared pool, but more complex, depends on a key stored in the database, and makes the verification function a high-impact bypass surface requiring dedicated review.
+
+**Recommendation for review (not a decision):** Option C is the proposed technical candidate for the pilot because its boundary is enforced by database authentication and role membership rather than by a value the application sets, and its test surface is smaller. Option D remains an alternative if pool-per-tenant proves unworkable. Both require the security review in D-014 before selection. Option A alone is not recommended as the boundary.
+
+**Documents that must not change without a new decision:** D-009 (shared database and schema, RLS as defense in depth). Option C changes how the runtime authenticates per tenant but keeps the shared database and schema; any formal change to D-009 requires its own decision record.
 
 ### 2.5 Claims ledger
 
@@ -88,9 +97,9 @@ Open points not decided here: token format (HMAC versus asymmetric signature), k
 | RLS denies cross-tenant rows for a correctly configured runtime role with context set | Designed. Requires TI-CTX and TI-CFG tests to pass. |
 | Composite keys prevent cross-tenant parent/child links | Designed. Requires TI-DB-FK tests to pass. |
 | Runtime role cannot bypass RLS through privileges | Designed. Requires TI-CFG tests to pass. |
-| Arbitrary-SQL attacker cannot cross tenants | **NOT claimable.** Residual risk T4 (§2.3, Q-019). |
+| Arbitrary-SQL attacker cannot cross tenants | **NOT claimable.** Residual risk T4. Direction decided (D-014); mechanism not yet selected (Q-019). |
 | Tenant context forgery by arbitrary SQL is prevented by policy | **Not claimable.** Option D (§2.3.1) is a candidate pending review; it is not proven |
-| Platform Admin access is limited and audited | Designed as proposal (§8, Q-015). Not decided. |
+| Platform Admin access is limited, read-only and audited | Decided (D-013). Designed (§8). Not implemented. Not test-verified. |
 | Tenant isolation holds in production | **NOT claimable in Phase 1.** |
 
 ---
@@ -140,7 +149,7 @@ Rule: no tenant-owned repository method exists without a required TenantContext 
 |---|---|---|---|
 | `app_migrator` | Schema migrations only | Yes (owner) | Migration job only; credentials never present in application runtime configuration |
 | `app_runtime` | API and workers | **No** | Application runtime |
-| `platform_ops` | Audited platform-admin operations (§8); existence decided in Q-015 | No | Platform admin tooling only; not used by normal application requests |
+| `platform_ops` | **Not created in MVP** (D-013 prohibits a `BYPASSRLS` role for platform-admin access) | — | — |
 
 Role names are illustrative; final names are a Phase 2/3 detail.
 
@@ -230,26 +239,30 @@ Composite keys guarantee tenant consistency at the database level for the listed
 
 ---
 
-## 8. Platform Admin Cross-Tenant Access (revision 2)
+## 8. Platform Admin Cross-Tenant Access (decided: Q-015 = Option A, D-013)
+
+**Decision (owner, 2026-10-15, D-013):** platform-admin access to tenant data is read-only, limited to explicit Application paths, audited, and does not use a `BYPASSRLS` role. Creating `platform_ops` with `BYPASSRLS` is prohibited for this capability. Write operations by platform admin are prohibited in MVP. This section records the decided design; it is not an implementation and it is not test-verified.
 
 ### 8.1 Difference between roles
 - Counselor: acts only within its own tenant, via relationships and role permissions.
 - Student and Parent: act only on their own objects or explicitly linked objects.
 - Platform Admin: operates across tenants for support and operations. This is the only role allowed to see data across tenants, and only under §8.2 rules. A Platform Admin is not a counselor with extra permissions.
 
-### 8.2 Required conditions for any cross-tenant read (proposal, Q-015)
+### 8.2 Required conditions for any cross-tenant read (decided, D-013)
 1. Named platform-admin principal with a dedicated platform permission.
 2. Stated reason from a controlled list, plus free text.
 3. Target `tenant_id` and resource scope explicitly stated.
 4. Time-bounded grant (expiry enforced at each request, not only at grant time).
-5. Read-only by default. Any write requires a separate permission and its own audit record.
+5. Read-only. Platform-admin write operations are prohibited in MVP (D-013). No write route for platform admin exists; a static check enforces this (TI-PLAT-08).
 6. Audit record written and committed BEFORE data is returned. If the audit write fails, access is refused. The response is not streamed before the audit commit.
-7. Audit record contains: actor, grant id, target tenant, resource ids, reason, request_id, timestamp, result (allowed/denied).
+7. Audit record contains: actor, grant id, target tenant, resource ids, reason, request_id, timestamp, result. Both successful AND denied attempts (no grant, expired grant, invalid request, failed control) are audited, so that denied attempts are visible as evidence.
+8. Denied requests fail safely: generic error, no tenant data, no partial result, and the denial is audited when the audit path is available. If the audit path is unavailable, the request is denied.
 
-### 8.3 Technical path and trust boundary
-- Preferred proposal: a narrow set of audited, read-only application query paths that set the transaction context to the explicit target tenant for each query. Platform admin code paths are separate modules, reviewed separately.
-- Alternative: a `platform_ops` role with `BYPASSRLS`. This is NOT the default. It is allowed only if Q-015 owner decision chooses it, and then only with §8.2 applied and a separate configuration test (TI-PLAT-06).
-- Under T4 (§2), a platform-admin context does not add a new weakness to the context boundary, but it does increase the impact of an arbitrary SQL attacker if a bypass role exists. This is an explicit reason the default is no bypass role.
+### 8.3 Technical path and trust boundary (decided)
+- Cross-tenant reads only through a narrow set of named, read-only Application query paths. Each path takes an explicit target tenant, sets the transaction context to that tenant, and runs under the grant checks in §8.2.
+- The runtime role `app_runtime` is unchanged: no ownership of tenant tables, no `BYPASSRLS`, no membership in any role with those properties (TI-CFG-01 to 05).
+- `platform_ops` with `BYPASSRLS` is NOT created in MVP. TI-PLAT-06 verifies that no role with `BYPASSRLS` exists for application or platform use.
+- Trust boundary: a platform-admin path inherits the same residual risk T4 as all application paths (§2). It does not add a bypass role, so an arbitrary-SQL attacker gains no new cross-tenant capability through this design, beyond what the runtime role already has under D-009.
 
 ### 8.4 Platform jobs
 Platform aggregate jobs operate on aggregates or on a per-tenant loop with per-iteration context. They never read unscoped tenant rows.
@@ -298,8 +311,8 @@ Platform aggregate jobs operate on aggregates or on a per-tenant loop with per-i
 ## 12. Open Decisions Raised by This Design
 Recorded in `OPEN_QUESTIONS.md` with status, options, and dependency:
 - Q-014: response policy for cross-tenant object access (exact status code)
-- Q-015: platform-admin mechanism (audited path vs bypass role)
+- Q-015: DECIDED (Option A, D-013). Read-only, audited, no bypass role.
 - Q-016: pooler mode and transaction-local context
 - Q-017: background job model
 - Q-018: tenant file storage and signed URLs
-- Q-019: stronger tenant-context boundary against arbitrary SQL (§2.3, §2.3.1); owner decision required before real-data pilot
+- Q-019: direction DECIDED (D-014: strengthen before real-data pilot). Mechanism OPEN: Option C (candidate) or Option D (candidate) pending independent security review (§2.3, §2.3.1, §2.4)

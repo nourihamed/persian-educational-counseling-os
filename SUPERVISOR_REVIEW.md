@@ -501,66 +501,68 @@ No executable tests were run in this documentation-only reconciliation. No workf
 
 ---
 
-# TEMPORARY SECTION — Phase 1 Pending Supervisor Review (revision 2, after independent review)
+# TEMPORARY SECTION — Phase 1 Pending Supervisor Review (revision 4, owner decisions applied)
 
-> **Temporary status marker.** Revision 2 of the Phase 1 design artifacts has been reviewed independently and received CONDITIONAL PASS. That verdict is not final approval. The reviewer must confirm the verdict, the Product Owner must decide Q-015 and Q-019, and a re-review is required before any final status. This section stays until a final dated entry replaces it in a separate commit.
+> **Temporary status marker.** Revision 2 received a reviewer-stated CONDITIONAL PASS. Owner decisions have since been applied: Q-015 resolved (D-013, Option A); Q-019 direction decided with a pilot data prohibition (D-014), mechanism still OPEN. This section is NOT a verdict and NOT an approval. Re-review by the reviewer is required. This section stays until a final dated entry replaces it in a separate commit.
 
 ## Phase
 PHASE 1 — Architecture & Multi-Tenancy (design only)
 
-## Reviewer Verdict (as received)
-**CONDITIONAL PASS.** Received 2026-10-15 from the independent review of Revision 2. The reviewer's written report is the source of this entry. The reviewer should confirm this record in a reviewer-authored entry or PR review.
+## Reviewer Verdict (as received for revision 2)
+**CONDITIONAL PASS.** The reviewer must confirm any update to this record in a reviewer-authored entry or PR review.
 
 ## Current State
-CONDITIONAL PASS — revision 2 fixes applied by the developer; re-review PENDING. NOT APPROVED.
+CONDITIONAL PASS (revision 2), with owner decisions applied in revision 4 — re-review PENDING. NOT APPROVED.
 
 ## Review Items and Status
 
 | # | Item | Status |
 |---|---|---|
-| 1 | Option D precise design (§2.3.1) | Specified with six required points; still a candidate, not proven |
-| 2 | Claims ledger; all effective policies (TI-CFG-04, 12, 13) | Addressed in specification |
-| 3 | Traceable path inventory (TENANT_PATH_INVENTORY.md) | Partly addressed; endpoint-level inventory missing; 100% NOT claimed |
-| 4 | Q-015 owner decision | OPEN. Reviewer recommends Option A. Owner decision required |
-| 5 | Q-019 owner decision (residual risk T4, real-data pilot) | OPEN. Owner decision required |
+| 1 | Option D precise design (§2.3.1) | Specified; still a candidate, not proven |
+| 2 | Claims ledger; effective policies (TI-CFG-04, 12, 13) | Addressed in specification |
+| 3 | Traceable path inventory | Partly addressed (33 paths, 30 mapped, 3 blocked, 0 unmapped); endpoint-level inventory missing; 100% NOT claimed |
+| 4 | Q-015 owner decision | RESOLVED by owner: Option A (D-013). Implementation not done |
+| 5 | Q-019 owner decision | Direction DECIDED (D-014): strengthen before real-data pilot; pilot rule adopted. Mechanism OPEN (Option C or D candidate) |
 | 6 | Gate impact of Q-007 (TI-API-09) | Proposal recorded; reviewer must confirm |
 | 7 | Re-review after changes | PENDING reviewer |
 
-## Scope Under Review (revision 2 + review fixes)
+## Scope Under Review
 - `docs/phase1/TENANT_ISOLATION_DESIGN.md`
 - `docs/phase1/AUTHORIZATION_CONTRACT.md`
-- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (109 contracts: 99 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 1 BLOCKED:Q-015, 4 BLOCKED:Q-019 for Option D only)
-- `docs/phase1/TENANT_PATH_INVENTORY.md` (32 paths: 30 mapped, 2 blocked, 0 unmapped)
+- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (114 contracts: 102 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 7 BLOCKED:Q-019 mechanism-dependent)
+- `docs/phase1/TENANT_PATH_INVENTORY.md` (33 paths)
 - `docs/phase1/PHASE1_REPORT.md`
-- `OPEN_QUESTIONS.md` (Q-014 to Q-019; Q-007 gate proposal)
+- `OPEN_QUESTIONS.md` (Q-015 Resolved; Q-019 mechanism open; Q-007 gate proposal)
+- `DECISION_LOG.md` (D-013, D-014 appended)
 
 ## Explicitly Out of Review Scope
-- No code, migration, role, policy, grant, or infrastructure exists.
+- No code, migration, role, policy, grant, or infrastructure exists or was created.
 - No test has been executed. All contracts are specifications.
-- No runtime or production security is claimed.
-- D-009 unchanged. Residual risk T4 documented, not accepted.
+- No runtime, production, or T4 security is claimed.
+- D-009 unchanged.
+- No real student data may enter any Pilot (D-014).
 - Phase 2 not started and not authorized.
 
 ## Items Blocking Final Approval
-- Q-015 and Q-019 owner decisions (or explicit written acceptance of the recommended defaults).
+- Q-019 mechanism selection (owner, after independent security review of Option C or D). Without it, Phase 1 cannot be approved as having a boundary against T4.
 - Reviewer confirmation of the Q-007 gate proposal.
-- Endpoint-level path inventory (Phase 2/4); until then 100% coverage is not claimable.
-- Option D, if chosen, requires its own security design review before implementation.
+- Endpoint-level path inventory (Phase 2 and Phase 4); until then 100% coverage is not claimable.
+- Q-014, Q-016, Q-017, Q-018: do not block Phase 1 approval; resolved in their owning phases.
 - D-001 to D-006 remain Proposed (unchanged).
 
 ## Supervisor Verdict
-**Reviewer-stated: CONDITIONAL PASS** (see above). Final verdict: **[PENDING — reviewer re-review]**
+**Reviewer-stated (revision 2): CONDITIONAL PASS.** Final verdict: **[PENDING — reviewer re-review]**
 
 Allowed values: `NOT READY` / `CONDITIONAL PASS` / `APPROVED`
 
 ## Product Owner Acceptance
-**[PENDING — Q-015 and Q-019 decisions]**
+**Q-015: DECIDED (D-013). Q-019 direction: DECIDED (D-014). Phase 1 acceptance: [PENDING]**
 
 ## Final Gate Status
 **PENDING.** No approval is recorded. Phase 2 is not authorized.
 
 ## Finalization Procedure
-1. Reviewer re-reviews after the fixes above and records a verdict.
+1. Reviewer re-reviews the revision-4 documents and records a verdict.
 2. If the verdict is `CONDITIONAL PASS` or `NOT READY`, listed fixes are made and this section is updated again.
-3. If the verdict is `APPROVED`, the Product Owner records acceptance including Q-015 and Q-019, then a separate commit replaces this section with a dated final entry.
+3. If the verdict is `APPROVED`, the Product Owner records acceptance, including the Q-019 mechanism selection, then a separate commit replaces this section with a dated final entry.
 4. The assistant never marks Phase 1 APPROVED.

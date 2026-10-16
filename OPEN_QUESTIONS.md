@@ -91,15 +91,7 @@ Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written,
 **Must be resolved before:** Phase 4 endpoint implementation.
 **Blocks Phase 1 approval:** No.
 
-## Q-015 — Platform-admin cross-tenant access mechanism
-**Status:** OPEN (recommended: no bypass role by default; narrow audited read-only path with per-request grant expiry, reason, and audit committed before data is returned; `TENANT_ISOLATION_DESIGN.md` §8).
-**Decision needed from owner:** (a) audited application path only, or (b) a `platform_ops` role with BYPASSRLS plus the same audit rules; (c) whether write access is in MVP at all.
-**Why it matters:** the only legitimate cross-tenant path, and the largest impact if an operator or an attacker misuses it.
-**Dependency:** TI-PLAT-01 to TI-PLAT-08; TI-PLAT-06 is BLOCKED until this is decided.
-**Must be resolved before:** Phase 4 (roles and permissions) and any support tooling.
-**Blocks Phase 1 approval:** Yes, unless the owner accepts the recommended default in writing for the Phase 1 review. Without that acceptance, the design may be reviewed but not approved.
-
-**Independent review (Revision 2) recommendation, recorded, not a decision:** Option A (audited, read-only application path, no bypass role in MVP). The reviewer also asks whether write access for platform admin is needed in MVP at all (P-26 scope). Owner decision still required.
+_Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 
 ## Q-016 — PostgreSQL connection pooling mode and transaction-local context
 **Status:** OPEN (recommended: transaction pooling only if TI-CTX-11, TI-CTX-12 and TI-PLAT-05 pass in the chosen configuration; otherwise direct connections for the pilot).
@@ -125,19 +117,13 @@ Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written,
 **Must be resolved before:** the first file feature.
 **Blocks Phase 1 approval:** No.
 
-## Q-019 — Stronger tenant-context boundary against arbitrary SQL (threat T4)
-**Status:** OPEN. Residual risk is documented; no option is selected.
-**Background:** under D-009's session-variable mechanism, an attacker who can run arbitrary SQL as the runtime role can set any tenant value and bypass RLS. Options A to E are compared in `TENANT_ISOLATION_DESIGN.md` §2.3. Recommended for MVP: Option A (accepted D-009) plus strict SQL injection prevention and privilege minimization, with the residual risk accepted in writing, and a decision on Option D or C before any real-data pilot.
-**Decision needed from owner:** (1) accept the residual risk T4 for MVP in writing, or (2) require Option D or C now. Also: whether real student data may enter the pilot before Q-019 is decided.
-**Why it matters:** this is the difference between "RLS prevents accidental leaks" and "a compromised application cannot read another tenant". The current documents state only the first.
-**Dependency:** a dedicated security review of any SECURITY DEFINER design (TI-BYP-03); a test that the runtime role cannot set the context to a tenant without a valid token if Option D is chosen (new contract required, not yet written).
-**Must be resolved before:** any pilot with real student data; Phase 26 (Security Hardening).
-**Blocks Phase 1 approval:** Yes, unless the owner explicitly accepts residual risk T4 for MVP in writing during the Phase 1 review.
-
-**Independent review (Revision 2) recommendation, recorded, not a decision:** do not treat residual risk T4 as accepted until the owner decides explicitly, and do not allow any pilot with real student data before that decision. The reviewer states that accepting Option A means documented residual risk only; it does not mean protection against arbitrary SQL. Option B-type stronger boundary requires the Option D design points in TENANT_ISOLATION_DESIGN.md §2.3.1 before it can be evaluated.
-
----
-
+## Q-019 — Tenant-context boundary against arbitrary SQL (threat T4)
+**Owner direction (decided, D-014, 2026-10-15):** strengthen the boundary before any pilot containing real student data. Pilot rule: no real student data before independent security review, required security tests passing, blocking findings fixed, and written owner approval of the Pilot gate.
+**Status of this question:** OPEN for the MECHANISM only. Direction is decided; mechanism is not.
+**Technical candidates for independent review (not decisions):** Option C, per-tenant database principals with no cross-tenant or platform membership (proposed technical candidate for pilot scale, `TENANT_ISOLATION_DESIGN.md` §2.4); Option D, signed context token through a SECURITY DEFINER function with context row and no GUC in policies (alternative, §2.3.1). Option A alone (D-009 as is) is not recommended as the boundary.
+**What is required to resolve the mechanism:** independent security review of the selected option; security test contracts for that option (TI-CONN-01..03 for C, TI-CTX-15..18 for D) specified and then run; owner selection recorded in DECISION_LOG.
+**Must be resolved before:** any Pilot with real student data; Phase 26.
+**Blocks Phase 1 approval:** Yes, for the mechanism. Phase 1 may be reviewed with the mechanism OPEN, but must not be approved as having a boundary against T4 until the mechanism is selected and reviewed.
 
 ## Q-007 — Gate impact (Phase 1 review, Revision 2)
 **Status:** OPEN (unchanged). Question for the owner and reviewer: does the blocked parent-access contract TI-API-09 block Phase 1 architectural approval, or only the phase that delivers parent access?
@@ -145,6 +131,14 @@ Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written,
 **Blocks Phase 1 approval:** Pending the reviewer's confirmation of the proposal above.
 
 ## بخش Resolved / Closed
+
+## Q-015 — Platform-admin cross-tenant access mechanism (RESOLVED 2026-10-15)
+**Decision (owner):** Option A — read-only, audited access through explicit Application paths, no `BYPASSRLS` role, no platform write operations in MVP.
+**Record:** DECISION_LOG D-013.
+**Effect on documents:** `TENANT_ISOLATION_DESIGN.md` §8 and §5.1; `TENANT_ISOLATION_TEST_CONTRACTS.md` TI-PLAT-06, 08, 09, 10 (TI-PLAT-06 no longer blocked); `TENANT_PATH_INVENTORY.md` P-25, P-26.
+**Note:** this resolves the product decision only. Implementation, and the test runs that prove it, are not done.
+
+
 
 ## Q-013 — مالکیت و Authorization برای ProgramTemplate و ProgramVersion سطح‌پلتفرم
 **وضعیت: RESOLVED — تصمیم صریح مالک محصول در 2026-10-13؛ ثبت‌شده در `DECISION_LOG.md` D-012.**
