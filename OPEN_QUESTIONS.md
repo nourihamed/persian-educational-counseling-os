@@ -84,6 +84,7 @@
 Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written, not accepted. Nothing in this block is decided by the assistant. "Blocks Phase 1 approval" means the owner or reviewer cannot approve Phase 1 until the item is resolved or explicitly accepted.
 
 ## Q-014 — Response for cross-tenant object access (exact status)
+**Deferral condition (Revision 6):** may stay OPEN until Phase 4, provided the Phase 4 entry records this dependency and the contracts remain status-neutral (identical not-found responses).
 **Status:** OPEN (recommended: 404 with body identical to a nonexistent object).
 **Decision needed from owner:** the exact status code for cross-tenant and nonexistent objects, and whether 403 is ever used for objects the caller can see but may not act on.
 **Why it matters:** existence of records in other tenants must not be revealed.
@@ -123,6 +124,8 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Decomposition (added Revision 4, design §1.4):** T4a (SQL injection on a tenant connection), T4b (application process compromise), T4c (database credential theft). Option C addresses T4a for one tenant connection and partly T4c. No option addresses T4b in the database; T4b requires process isolation (Phase 3/26). Claims must be made per sub-threat.
 **Technical candidates for independent review (not decisions):** Option C (per-tenant database principals; proposed candidate for pilot scale, design §2.4 with explicit limits); Option D (signed context token through a SECURITY DEFINER function, design §2.3.1). Option A alone is not a boundary against T4a.
 **Required to resolve the mechanism:** independent security review of the selected option; evidence for the matching sub-threat claims (TI-ADV-01, TI-ADV-02; TI-CONN-01..03 for C; TI-CTX-15..18 for D); owner selection recorded in DECISION_LOG.
+**Technical evaluation (Revision 6):** `docs/phase1/Q019_MECHANISM_EVALUATION.md` compares A, C and D against attacker models AM1 to AM5 with forging paths, residual risks, cost, testability and evidence required. It recommends Option C as a technical candidate for pilot scale (Option D as alternative; Option A not a boundary). This is a recommendation for review, not a decision.
+**Owner decision still required** after independent review; to be recorded in DECISION_LOG.md.
 **Must be resolved before:** any Pilot with real student data; Phase 26.
 **Blocks Phase 1 approval:** Yes (reviewer-stated NOT READY depends on it).
 

@@ -37,11 +37,25 @@ Every contract states the consequence if it fails. Any failure of a PR-column co
 
 ---
 
+### 0.6 Result Vocabulary (required by independent review)
+Every contract has exactly one status at any time:
+- **PASS:** executed in its stated CI column or environment; the expected protective result was observed; evidence is stored with the run.
+- **FAIL:** executed; protection absent or broken. Blocks the phase that owns the contract.
+- **KNOWN-RESIDUAL:** executed or analysed; the attack succeeds because the chosen mechanism does not cover it. Recorded as a documented limitation only after an owner decision in DECISION_LOG.md. **Never PASS.** Reports must count it as a residual risk, not as a security success.
+- **BLOCKED:** cannot run; the named open question must be decided first.
+- **NOT-RUN:** specified, not executed. **This is the status of every contract in this revision.**
+- **SPEC-ONLY:** applies only to the mechanism not selected. Not required, and not PASS.
+
+Rules:
+1. A contract that is NOT-RUN or SPEC-ONLY must not be reported as passing, in any document.
+2. A known vulnerability must not be recorded as a security PASS.
+3. Contracts whose expected result depends on the mechanism state the expected result per option (see TI-ADV-01 and 02).
+
 ## 1. Group Index and Counts
 
 | Group | Scope | Count |
 |---|---|---|
-| TI-CFG | Runtime role and catalog configuration | 13 |
+| TI-CFG | Runtime role and catalog configuration | 14 |
 | TI-CTX | Tenant context behavior and pooling | 18 |
 | TI-FK | Composite constraints and immutability | 8 |
 | TI-BYP | Bypass surfaces: views, functions, TRUNCATE, materialized views, rules | 6 |
@@ -57,9 +71,9 @@ Every contract states the consequence if it fails. Any failure of a PR-column co
 | TI-PLAT | Platform admin cross-tenant access | 10 |
 | TI-CONN | Per-tenant connection principals (Option C only) | 3 |
 | TI-ADV | Adversarial threat-based contracts (T4a, T4b, T4c) | 3 |
-| **Total** | | **117** |
+| **Total** | | **118** |
 
-The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Q-019 mechanism sets: TI-CTX-15 to 18 apply only if Option D is chosen; TI-CONN-01 to 03 apply only if Option C is chosen; TI-ADV-01 and 02 apply to whichever mechanism is chosen and to Option A as a recorded residual; TI-ADV-03 is evidence, not a database test. Exactly one set applies after the mechanism decision. Both are BLOCKED until then.
+The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Q-019 mechanism sets: TI-CTX-15 to 18 apply only if Option D is chosen; TI-CONN-01 to 03 apply only if Option C is chosen; TI-ADV-01 and 02 apply to whichever mechanism is chosen; under Option A their result is KNOWN-RESIDUAL (never PASS); TI-ADV-03 is evidence, not a database test. TI-CFG-14 (PUBLIC privileges) applies to every option. Exactly one set applies after the mechanism decision. Both are BLOCKED until then.
 
 ---
 
@@ -82,6 +96,7 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-CFG-11 | C | Compare default privileges (`pg_default_acl`) for schemas holding tenant tables | No default privilege grants new tables to app_runtime unless listed | New tables silently exposed | PR |
 | TI-CFG-12 | C | Evaluate effective policy set for app_runtime per tenant table, combining permissive policies with OR and restrictive policies with AND | Effective predicate equals tenant_id = context on every table; no permissive policy outside the expected set; each restrictive policy listed and reviewed | Effective access wider than the single policy reviewed | PR |
 | TI-CFG-13 | S + C | Scan all policy expressions (`pg_policies.qual`, `with_check`) for references to `current_setting` or custom GUCs | No policy references a GUC (required by §2.3.1 if Option D is chosen; enforced now as a guard) | Policy trusts a forgeable value | PR |
+| TI-CFG-14 | C | Check PUBLIC privileges on the database schemas and on all tenant-owned tables and sequences | No PUBLIC privilege on tenant objects; PUBLIC CREATE on schemas revoked | Any role reaches objects through PUBLIC, bypassing role mapping | PR |
 
 ### 2.2 TI-CTX — Tenant context behavior and pooling
 
@@ -260,8 +275,8 @@ The total is recomputed from the contract rows below; the verification command i
 
 | ID | Modes | Operation | Expected | Failure consequence | CI |
 |---|---|---|---|---|---|
-| TI-ADV-01 | I | T4a: attacker-controlled SQL executed on tenant A's runtime connection sets context to B and reads B rows, for each mechanism option | Under Option C: denied at role boundary. Under Option D: denied without valid token. Under Option A: the result is RECORDED as residual risk, not as a pass | Silent acceptance of cross-tenant read | BLOCKED:Q-019 (mechanism) |
-| TI-ADV-02 | I | T4c: runtime credentials of tenant A used from outside the application to read B rows | Under Option C: denied (no B credentials exist for this login). Multi-tenant credential theft is out of scope and recorded as residual | Undetected credential-scope failure | BLOCKED:Q-019 (mechanism) |
+| TI-ADV-01 | I | T4a: attacker-controlled SQL on tenant A's runtime connection sets context to B and reads B rows | Option C: PASS if denied at the role boundary. Option D: PASS if denied without a valid token. Option A: KNOWN-RESIDUAL (attack succeeds; recorded, never PASS). Expected results for the unselected options are SPEC-ONLY | Silent acceptance of cross-tenant read | BLOCKED:Q-019 (mechanism) |
+| TI-ADV-02 | I | T4c: runtime credentials of tenant A used from outside the application to read B rows | Option C: PASS for single-tenant scope (no B login reachable with A's credentials). Multi-tenant credential theft: KNOWN-RESIDUAL under every option, recorded, never PASS. Option A: KNOWN-RESIDUAL | Undetected credential-scope failure | BLOCKED:Q-019 (mechanism) |
 | TI-ADV-03 | — | T4b: process-isolation evidence (no single process holds routing to all tenant credentials; secret scope review) | Evidence document reviewed, not a database test | Unrecognized process-level exposure | ENV:security-review (Phase 26) |
 
 ## 3. Coverage and Gate Rules

@@ -36,6 +36,13 @@ Student personal and educational data (potentially minors), counselor business d
 | T7 | Background job / notification / file pipeline crosses tenants | Job loads tenant B rows while processing A | Job payload tenant binding, per-job context (§9) | Partially |
 | T8 | Connection-pool context leakage | Request for B reuses a connection still holding A's setting | Transaction-local context, pooling tests (§6.4) | Yes, if transaction-local settings are used correctly |
 
+### 1.3 What this document asserts
+- It mitigates T1, T2, T5 (when configuration tests pass), T7, and T8 (when tests pass).
+- It does not mitigate T4 by itself. Mitigation of T4 relies on SQL injection prevention and privilege minimization, and is not a property the session variable provides.
+- T3 and T6 are addressed by API/repository design and audited access, not by RLS.
+
+---
+
 ### 1.4 T4 decomposition (required by independent review, Revision 4)
 Each sub-threat has different attacker assumptions and a different trust boundary. No single claim covers T4 as a whole.
 
@@ -47,11 +54,6 @@ Each sub-threat has different attacker assumptions and a different trust boundar
 
 Consequence: "Option C closes T4a for one tenant connection" is a claim about T4a only. It does not close T4b and does not close multi-tenant credential theft under T4c.
 
-### 1.3 What this document asserts
-- It mitigates T1, T2, T5 (when configuration tests pass), T7, and T8 (when tests pass).
-- It does not mitigate T4 by itself. Mitigation of T4 relies on SQL injection prevention and privilege minimization, and is not a property the session variable provides.
-- T3 and T6 are addressed by API/repository design and audited access, not by RLS.
-
 ---
 
 ## 2. Trust Boundary: What RLS Does and Does Not Prove
@@ -60,7 +62,7 @@ Consequence: "Option C closes T4a for one tenant connection" is a claim about T4
 The tenant value lives in a session variable (`app.current_tenant_id`) that the runtime role can set with `set_config`. Any code path that can run arbitrary SQL as `app_runtime` can therefore set any tenant value before querying. RLS then faithfully enforces the wrong tenant. The policy is correct; the input it trusts is not authenticated by the database.
 
 ### 2.2 Consequences
-- Claims of the form "RLS guarantees tenant isolation" are FALSE for this design and must not appear in any document.
+- Claims of the form "RLS guarantees tenant isolation" are FALSE for this design and must not appear in any document (see §2.5, NOT CLAIMABLE).
 - Claims that are TRUE, once the tests pass: RLS prevents accidental cross-tenant access by application code that does not set the right tenant, and prevents cross-tenant access from ordinary queries issued under a correctly set context.
 - Preventing T4 is a separate control set (§2.4) and must be reviewed in Phase 3 and Phase 26 (Security Hardening).
 
@@ -89,6 +91,8 @@ Open points not decided here: token format (HMAC versus asymmetric signature), k
 
 ### 2.4 Decided direction and technical candidates (D-014)
 
+The full technical evaluation of Options A, C and D against attacker models AM1 to AM5 is in `Q019_MECHANISM_EVALUATION.md`. The summary below is consistent with it.
+
 **Owner decision (D-014, 2026-10-15):** the tenant-context boundary must be strengthened before any pilot that contains real student data. The mechanism is NOT selected by this decision. Option A (D-009 as is) is not accepted as a sufficient boundary against T4 on its own.
 
 **Pilot rule (accepted policy):** no real student data may enter any Pilot until (a) independent security review is complete, (b) the required security tests are run and pass, (c) blocking findings are fixed, and (d) the owner explicitly approves the Pilot gate in writing.
@@ -104,20 +108,26 @@ Open points not decided here: token format (HMAC versus asymmetric signature), k
 
 ### 2.5 Claims ledger
 
-| Claim | Status |
-|---|---|
-| Repository and API design enforce tenant scoping on every tenant-owned query | Designed (this document). Not implemented. |
-| RLS denies cross-tenant rows for a correctly configured runtime role with context set | Designed. Requires TI-CTX and TI-CFG tests to pass. |
-| Composite keys prevent cross-tenant parent/child links | Designed. Requires TI-DB-FK tests to pass. |
-| Runtime role cannot bypass RLS through privileges | Designed. Requires TI-CFG tests to pass. |
-| T4a: SQL injection on a tenant connection cannot cross tenants | **NOT claimable under Option A.** Option C would address it for one tenant connection only, if TI-CONN and TI-ADV-01 pass. Mechanism not selected (Q-019). |
-| T4b: code execution in the application process cannot cross tenants | **NOT claimable under any option in this design.** Requires process isolation (Phase 3/26). |
-| T4c: stolen database credentials cannot cross tenants | **NOT claimable.** Option C limits scope to one tenant per credential; multi-tenant theft remains possible. |
-| Tenant context forgery by arbitrary SQL is prevented by policy | **Not claimable.** Option D (§2.3.1) is a candidate pending review; it is not proven |
-| Platform Admin access is limited, read-only and audited | Decided (D-013). Designed (§8). Not implemented. Not test-verified. |
-| Tenant isolation holds in production | **NOT claimable in Phase 1.** |
+Status vocabulary (each claim has exactly one current status):
+- **DESIGNED:** a requirement or mechanism is written down in this repository.
+- **REVIEWED (document-level):** an independent reviewer has examined the written statement. This is not a security test.
+- **IMPLEMENTED:** code, roles, policies or constraints exist in an environment. None exists yet.
+- **TEST-VERIFIED:** a contract was executed and passed, with evidence. None has been executed.
+- **NOT CLAIMABLE:** must not be stated as true under the current design.
 
----
+| Claim | Current status |
+|---|---|
+| Tenant-owned queries are required to be tenant-scoped (repository and API design) | DESIGNED. REVIEWED (document-level). Not implemented. Not test-verified |
+| RLS with correct context restricts rows of the runtime role | DESIGNED. Not implemented. Not test-verified (TI-CTX-01..08 pending) |
+| Composite keys prevent cross-tenant parent/child links for the listed relations | DESIGNED. Not implemented. Not test-verified (TI-FK-01..08 pending) |
+| Runtime role cannot bypass RLS through privileges | DESIGNED (R-DB-01..08). Not implemented. Not test-verified (TI-CFG-01..14 pending) |
+| Platform admin access is read-only, limited and audited | DESIGNED (D-013 decision; §8). Not implemented. Not test-verified (TI-PLAT pending) |
+| Tenant isolation holds in production | NOT CLAIMABLE in Phase 1 |
+| RLS alone isolates tenants | NOT CLAIMABLE. RLS is a defense against application defects, not a boundary against arbitrary SQL |
+| T4a: SQL injection on a tenant connection cannot cross tenants | NOT CLAIMABLE under Option A. Option C would address it for one tenant connection only, if TI-CONN and TI-ADV-01 pass. Mechanism not selected (Q-019). Evaluation: Q019_MECHANISM_EVALUATION.md |
+| T4b: code execution in the application process cannot cross tenants | NOT CLAIMABLE under any option in this design. Requires process isolation (Phase 3/26) |
+| T4c: stolen database credentials cannot cross tenants | NOT CLAIMABLE. Option C limits scope to one tenant per credential; multi-tenant theft remains possible |
+| Credential-scope limits of Option C are as stated in §2.4 | DESIGNED (§2.4). REVIEWED (document-level) only if the independent reviewer confirms. Not implemented |
 
 ## 3. Principal and Tenant Context (Application Level)
 
@@ -250,7 +260,7 @@ Required pairs (minimum):
 
 Additional requirement: `tenant_id` on a tenant-owned row is immutable after insert (trigger or equivalent; TI-DB-FK-08). Without this, a row could be moved between tenants with a valid key shape.
 
-Composite keys guarantee tenant consistency at the database level for the listed relations, independent of RLS and of the session context. This is a real database-enforced property, not an application convention.
+Composite keys are designed to guarantee tenant consistency at the database level for the listed relations, independent of RLS and of the session context. This becomes a verified property only when the constraints exist in a migration and TI-FK-01 to 08 pass. Until then it is DESIGNED, not IMPLEMENTED.
 
 ---
 
