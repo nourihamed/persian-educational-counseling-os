@@ -39,7 +39,7 @@ Reviewed for consistency (not all changed): DECISION_LOG.md (D-008, D-009, D-010
 
 ## 3. Test Contract Count (recounted from the file)
 
-Total: **120** contracts (103 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 10 BLOCKED:Q-019 mechanism-dependent: TI-CTX-15 to 18 only if Option D, TI-CONN-01 to 03 only if Option C, TI-ADV-01 and 02 for the chosen mechanism, 1 ENV:security-review TI-ADV-03). No contract is blocked by Q-015 (resolved, D-013).
+Total: **120** contracts (103 PR, 3 ENV:pooler, 1 ENV:worker, 2 ENV:security-review TI-ADV-03 and TI-ADV-05, 1 BLOCKED:Q-007, 10 BLOCKED:Q-019 mechanism-dependent: TI-CTX-15 to 18 only if Option D, TI-CONN-01 to 03 only if Option C, TI-ADV-01, 02 and 04 for the chosen mechanism). No contract is blocked by Q-015 (resolved, D-013).
 
 | Group | Count |
 |---|---|
@@ -58,6 +58,8 @@ Total: **120** contracts (103 PR, 3 ENV:pooler, 1 ENV:worker, 1 BLOCKED:Q-007, 1
 | TI-AUD | 3 |
 | TI-PLAT | 10 |
 | TI-CONN (Option C only) | 3 |
+| TI-ADV (threat-based) | 5 |
+| **Sum** | **120** |
 
 Verification command (run from repository root; counts TI row identifiers in the contracts file):
 
@@ -67,7 +69,16 @@ grep -cE "^\| TI-[A-Z]+-[0-9]+ " docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md
 
 Expected output: `120`.
 
-Note: this count is of specifications. No contract has been implemented or executed.
+Count vocabulary (revision 8). These four figures must not be confused:
+
+| Measure | Value | Basis |
+|---|---|---|
+| Specified contracts | 120 | Unique contract rows in TENANT_ISOLATION_TEST_CONTRACTS.md |
+| Implemented test code | 0 | No test code exists in the repository |
+| Executed tests | 0 | No test has been run |
+| Passing tests | 0 | No passing result exists |
+
+Note: the count is of specifications only. It is not evidence of coverage. Coverage of all tenant-isolation paths is not claimed (see TENANT_PATH_INVENTORY.md).
 
 ---
 
@@ -335,7 +346,7 @@ Results of these checks are reported in the final message of this revision, not 
 |---|---|---|
 | C-01 deadlock: selection depends on tests and capacity measurement scheduled later; Phase 2 depends on Phase 1 | Design-selection criteria separated from pilot-validation criteria. Phase 1 approval may rely on design criteria, all documentary and reviewable without running tests. Pilot validation remains a precondition for real data (D-014). Proposed for reviewer and owner decision | Q019 evaluation §6.1 |
 | H-01 theft analysis for option D conflated classes | Credential classes analysed separately: K-L login, K-T token, K-S signing key, K-O owner or migrator; each option has an outcome per class | Q019 evaluation §4.4; design §1.4 |
-| H-02 TI-ADV-02 outcomes incomplete for option D | Same attacker assumption and object for every option (stolen tenant login reading B rows). Option D result stated: PASS for login-only theft | TI-ADV-02 |
+| H-02 TI-ADV-02 outcomes incomplete for option D | Same attacker assumption and object for every option (stolen tenant login reading B rows). Option D pass criterion stated for login-only theft (NOT-RUN): zero rows | TI-ADV-02 |
 | M-01 capacity measurement fallback unclear | Rule defined: estimate marked ESTIMATE; measured capacity becomes a pilot criterion; if below requirement, Option C is not used for the pilot and Option D or a new decision is re-reviewed | Q019 evaluation §6.2 |
 | Add-on: token and owner classes need contracts | TI-ADV-04 (token replay, Option D only) and TI-ADV-05 (key and owner compromise, evidence) added | TI-ADV-04, 05 |
 
@@ -354,3 +365,54 @@ Results of these checks are reported in the final message of this revision, not 
 1. Accept or reject the separation in §6.1 (design selection versus pilot validation) as the basis for Phase 1 approval.
 2. Choose C, D or a documented residual acceptance for Q-019, using the per-class outcomes in §4.4.
 3. Confirm the capacity fallback rule in §6.2.
+
+---
+
+## 18. Owner Acceptance of the Gate Separation (D-015, 2026-10-17)
+
+- The Product Owner accepted the separation in `Q019_MECHANISM_EVALUATION.md` §6.1: design-selection criteria versus pilot-validation criteria. This resolves the process deadlock C-01 (`OPEN_QUESTIONS.md`, Resolved section).
+- Test execution that belongs to later phases is not a precondition for design decisions or for starting those phases.
+- Not changed by this acceptance: Phase 1 approval (requires reviewer verdict on the new commit and owner gate decision); the Q-019 mechanism (OPEN); the capacity rule §6.2 (awaiting owner acceptance); D-014 (no real student data until pilot-validation criteria are met).
+- Status: Phase 1 NOT APPROVED. Q-019 OPEN. All 120 contracts NOT-RUN. No CI status claimed. Phase 2 not authorized.
+
+---
+
+## 19. Revision 8 — Corrective Pass After Independent Review (commit before this revision: 1c36dc5)
+
+Reviewer finding IDs are as stated in the review. Review ID 5573172802 (PR #3). Gate: NOT READY (reviewer-stated). This revision does not change the gate.
+
+| Finding | What changed | Exact location | Validation evidence | Remaining limitation |
+|---|---|---|---|---|
+| H-01 credential-theft comparison not equivalent | Common scenarios K-L-1 and K-L-N defined; per-option table of credential, identity, capability, reach to B, conditions, status; Option D no-token case assessed explicitly; K-T, K-S, K-O separated | Q019 §4.4.1 to §4.4.8 | Reviewed by the developer. Static consistency checks (§19.2). No test executed | Option D conclusions depend on verifying conditions (TI-CFG-05, 06, 14; TI-CTX-15, 16; TI-BYP-03). Not verified |
+| H-02 Option D selection-readiness | Option D classified NOT SELECTION-READY; seven design-critical points listed with owners and recommendations; PO decisions listed; §6.1 readiness table shows criterion 1 not met for D | Q019 §6.1 readiness table, §6.3; design §2.3.1; OPEN_QUESTIONS Q-019 | Consistency check: §6.1 criterion 1 status matches §6.3 | All seven points are OPEN. Asymmetric versus HMAC is a Product Owner decision |
+| M-01 Option C capacity estimate | Assumptions A1 to A8; direct and pooled calculations; drivers; fallback restated; labelled ESTIMATE — NOT MEASURED | Q019 §6.2 | Arithmetic reproduced in §19.3 | Assumptions are not measured. Pilot tenant count, pool strategy, pooler, memory and max_connections are unknown |
+| M-02 contract count reconciliation | Group table in §3 now includes TI-ADV (5) and sums to 120; CI breakdown corrected (2 security-review, 10 Q-019); count vocabulary added | PHASE1_REPORT §3; TENANT_ISOLATION_TEST_CONTRACTS.md index | Recount: 120 unique IDs; groups sum to 120; CI categories sum to 120 (§19.2) | None for the count itself |
+| TI-ADV-02, 04, 05 alignment | Same objects and attacker assumptions across options; K-S and K-O separated; no PASS for conditions not verified | TENANT_ISOLATION_TEST_CONTRACTS.md | Static check of row shape (§19.2) | All NOT-RUN |
+
+### 19.1 Option C capacity — final estimate (ESTIMATE — NOT MEASURED)
+- Direct connections, worst case (1 to 2 per tenant per process, 50 tenants, 6 processes, reserve 10): **610** (or **310** with pool size 1). Against default `max_connections` 100: not feasible under these assumptions without a large increase whose memory cost is unknown.
+- Per-user pooler (server pool 1 or 2 per tenant role, 50 tenants, reserve 10): **60** or **110** server connections. Feasible in count only under these assumptions, and only with a pooler in front of PostgreSQL (Q-016).
+- C remains unselectable for the pilot until the pilot tenant count, pool strategy and pooler are decided and capacity is measured on the D-011 host.
+
+### 19.2 Validation performed in this revision (static only; no test executed)
+- Contract rows: 120; unique IDs: 120; group totals sum to 120; CI categories sum to 120.
+- Every TI, Q and D identifier referenced in the Phase 1 documents is defined.
+- Every contract row has six table cells.
+- Q019 §4.4 and §6.2 tables have consistent cell counts.
+Results of these checks are reported in the commit message and in the final message to the owner. They are not test results.
+
+### 19.3 Arithmetic check
+- 6 × 50 × 2 + 10 = 610; 6 × 50 × 1 + 10 = 310; 50 × 2 + 10 = 110; 50 × 1 + 10 = 60.
+
+### 19.4 Counts (vocabulary)
+- Specified: 120. Implemented: 0. Executed: 0. Passing: 0.
+
+### 19.5 CI status
+No CI status or workflow run for this revision is available to the developer. Absence of CI results is not success.
+
+### 19.6 Confirmations
+- D-014 unchanged: no real student data in any pilot.
+- Q-019 remains OPEN. No mechanism selected.
+- Phase 2 not started.
+- Phase 1 not approved. Gate remains NOT READY until the supervisor re-reviews the new commit.
+

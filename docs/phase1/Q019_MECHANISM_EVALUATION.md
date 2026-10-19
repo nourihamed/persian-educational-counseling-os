@@ -92,21 +92,61 @@ Specific requirements that come with Option D: see TENANT_ISOLATION_DESIGN.md §
 
 ---
 
-## 4.4 Credential Classes (independent review H-01)
+## 4.4 Credential Classes (revision 8; independent review H-01)
 
-Database-login theft, tenant-token theft, signing-key theft and owner-role theft are different threats with different outcomes. They are analysed separately. The same attacker assumption is used for every option: the attacker holds one stolen secret of the named class and reaches the database from outside the application.
+### 4.4.1 Common scenario definitions
+- **K-L-1:** one database login credential used by the application is stolen and used from outside the application.
+- **K-L-N:** all database login credentials used by the application are stolen.
+- **K-T:** a tenant-context token (Option D only) is stolen or replayed.
+- **K-S:** the token signing key (Option D only) is compromised.
+- **K-O:** an owner, migrator or equivalent privileged role credential is compromised.
 
-| Class | Secret | Attacker starting point | Option A | Option C | Option D |
-|---|---|---|---|---|---|
-| K-L: runtime login of one tenant | Database login credential | Stolen login of tenant A's runtime identity | Login reaches every tenant: reads of B succeed. **KNOWN-RESIDUAL** | Login is limited to tenant A's role: reads of B denied. **PASS for single-tenant scope** | Login alone returns no rows: the policy helper needs a context row, which needs a valid token. **PASS for login-only theft** (provided the login holds no other table privilege, see TI-CFG-06) |
-| K-T: tenant token | Signed short-lived token of tenant A (Option D only) | Token captured from logs, cache or client | Not applicable | Not applicable | Reads of A succeed until expiry; reads of B denied. **KNOWN-RESIDUAL for token holder within TTL** |
-| K-S: signing key | HMAC key or private key used to sign tokens (Option D only) | Key read from the key table | Not applicable | Not applicable | Attacker mints a token for any tenant: reads of B succeed. The runtime role cannot read the key table (no grant). Key reachable only with owner-role access. **KNOWN-RESIDUAL if key is obtained; not reachable from runtime SQL** |
-| K-O: owner or migration role | Owner or migrator login | Obtained by compromise of the migration pipeline | Owner bypasses policies unless FORCE; with FORCE, owner can still rewrite policies: **KNOWN-RESIDUAL** | Owner can change the mapping table and memberships: **KNOWN-RESIDUAL** | Owner can read the key and rewrite the function: **KNOWN-RESIDUAL** |
+The stolen secret differs by design, and this is stated explicitly:
+- Option A: one shared runtime login. K-L-1 and K-L-N both mean that login.
+- Option C: one login per tenant. K-L-1 means one tenant's login; K-L-N means all tenant logins.
+- Option D: one shared runtime login (as in A) plus tokens. K-L-1 and K-L-N mean the same login, and no tokens are included in the theft.
 
-Consequences:
-- Option C and Option D differ on login theft. Option D resists login-only theft because the database login is not, by itself, a tenant identity. Option C resists it by limiting the login to one tenant. In both cases, a stolen login of tenant A does not read tenant B. Only Option A allows it.
-- Option D moves the residual risk from the login to the token and the key. Option C keeps it on the login scope.
-- Every option has K-O as a residual. No option in the database protects against owner-role theft; that is a process control (Phase 3 and Phase 26).
+### 4.4.2 K-L: what a stolen login grants, per option
+
+| Option | Stolen credential | Identity the credential grants | What the attacker can do | Reaches tenant B data? | Conditions the conclusion depends on | Status |
+|---|---|---|---|---|---|---|
+| A | Runtime login (K-L-1 = K-L-N) | Runtime role | Arbitrary SQL; sets `app.current_tenant_id` to any tenant; reads any tenant | **Yes** | None beyond the mechanism itself | **KNOWN-RESIDUAL** |
+| C | Login of tenant A (K-L-1) | Tenant A role | Reads and writes tenant A rows only; cannot change its own role | **No** (for tenant B) | No membership to any other tenant or platform role (TI-CONN-02); no PUBLIC privileges on tenant objects (TI-CFG-14); mapping table not writable by tenant roles (TI-CFG-06, TI-CONN-02); no BYPASSRLS (TI-CFG-01) | Pass criterion (NOT-RUN): denied |
+| C | Login of tenant A, attacker targets tenant B (K-L-1) | Tenant A role | Same as above; cannot reach B | **No** | Same | Pass criterion (NOT-RUN): denied |
+| C | All tenant logins (K-L-N) | Every tenant role | Reads every tenant | **Yes** | Not preventable by this mechanism | **KNOWN-RESIDUAL** |
+| D | Shared runtime login, **without a valid token** (K-L-1 = K-L-N) | Runtime role | See 4.4.3 | **No** (zero rows) | Runtime role has no table privilege that bypasses the helper (TI-CFG-05, 06, 14); helper and verification function are correct (TI-BYP-03, function review); runtime role cannot read the key table; no tokens are stored in the database | Pass criterion (NOT-RUN): zero rows |
+
+### 4.4.3 Option D: stolen shared login without a valid token (explicit assessment)
+The attacker holds the runtime login and no tenant token. The assessment considers each route to tenant data:
+- **Mint or obtain a valid token:** requires the signing key (K-S) or a token issued to a tenant (K-T). Neither is available from the runtime login, provided the key is not readable by the runtime role and tokens are not stored in the database. **Not reachable by K-L alone.**
+- **Write a context row directly:** requires INSERT, UPDATE or DELETE on the context table. The runtime role has none (TI-CTX-15). **Denied.**
+- **Read the signing key:** requires SELECT on the key table. The runtime role has none (TI-CFG-06). **Denied, conditional on that grant.**
+- **Impersonate another tenant:** requires a context row for that tenant, which requires a valid token for it. **Denied.**
+- **Call the verification function with forged input:** the function must reject it (TI-CTX-16). **Denied, conditional on the function being correct.** A function defect is a separate threat, not K-L.
+- **Read policy-protected tables without a context row:** the helper returns NULL, so policies return zero rows (TI-CTX-01). **Zero rows.**
+
+Conclusion: a stolen shared login under Option D does not reach tenant data by itself. The conclusion depends on the conditions listed in 4.4.2 and on the correctness of the verification function, which is not yet verified.
+
+### 4.4.4 Comparison that must not be misread
+- Under **C**, a stolen login is tenant-scoped. It reaches one tenant, and all tenants if every login is stolen (K-L-N).
+- Under **D**, a stolen login reaches no tenant without a token, including under K-L-N. Its protection therefore depends on the token and key classes below.
+- Under **D**, the token and key classes (K-T, K-S) replace the login class as the residual risk. Under **C**, no tokens exist, so K-T and K-S do not apply, and the residual risk stays with the login scope.
+Neither option is stronger in all classes. This is a trade-off to be decided, not a ranking.
+
+### 4.4.5 K-T (Option D only)
+A stolen token grants the tenant named in the token, until expiry. It does not grant other tenants, because the token is bound to one tenant. Result: **KNOWN-RESIDUAL** for that tenant within the TTL. Replay control (jti store, see §6.3) is not yet designed. Not applicable to Options A and C.
+
+### 4.4.6 K-S (Option D only)
+A compromised signing key allows minting a token for any tenant, and therefore reads of any tenant. It is not reachable from runtime SQL, but is reachable by anyone who can read the key store. Result: **KNOWN-RESIDUAL** under HMAC with a database-resident key. With an asymmetric signature (§6.3, point 1), the database holds only the public key, so K-S inside the database yields no minting capability; the private key then sits outside the database, with the application-process exposure already recorded as T4b. Not applicable to Options A and C.
+
+### 4.4.7 K-O (all options)
+Compromise of the owner or migrator role can change policies, grants, mapping tables and functions, and can read any key stored in the database. Result: **KNOWN-RESIDUAL under all options.** This is a process control, not a database mechanism (Phase 3 and Phase 26).
+
+### 4.4.8 Consistency with the adversarial contracts
+- TI-ADV-02 covers K-L-1 and K-L-N with the same object (rows of tenant B) for every option (see its row in the contracts file).
+- TI-ADV-04 covers K-T (Option D only).
+- TI-ADV-05 covers K-S (Option D) and K-O (all options) as evidence contracts.
+Each class is tested or reviewed separately. No result for one class is used to claim another.
 
 ## 5. Comparison Summary
 
@@ -130,7 +170,7 @@ Consequences:
 
 1. **Option A alone is not a boundary against AM1 and must not be described as one.**
 2. **For the pilot, Option C is the technical candidate** because its boundary is database authentication and catalog membership, which can be checked by configuration tests, and because it removes the attacker-controlled value that Option A and Option D both depend on. Option C's cost is operational and its residual risks (AM2, AM4, AM5) are stated.
-3. **Option D is an alternative** if the pool-per-tenant cost is found unacceptable at measured scale. Its residual risk is concentrated in one database function and one key; for MVP this is a larger and less testable surface than Option C.
+3. **Option D is an alternative, but it is NOT SELECTION-READY** (§6.3). It cannot be selected until the design-critical points in §6.3 are decided and written. Its residual risk is concentrated in one database function and one key; for MVP this is a larger and less testable surface than Option C.
 4. **A combination is not recommended for MVP**, because two boundaries double the review cost without closing AM2, AM4 or AM5.
 5. **Required before any selection is final:** measured pool and role limits on the pilot host (D-011); independent review of the chosen option; the adversarial contracts for that option run and their results recorded (see TI-ADV rules).
 6. **Required regardless of option:** PUBLIC privileges revoked on tenant objects; migration role separated from runtime; secrets kept out of the application process where possible (T4b controls, Phase 3 and 26).
@@ -159,12 +199,89 @@ These criteria are met by documentation and can be reviewed without running any 
 
 Phase 2 may start after Phase 1 design approval, because Phase 2 implements the chosen mechanism and produces the evidence for the pilot criteria. Phase 2 does not itself authorize pilot use of real data.
 
-### 6.2 Capacity measurement fallback (independent review M-01)
+**Readiness of each option against these criteria (revision 8):**
 
-If the D-011 host is not available for measurement, the design uses this decision rule:
-- Option C is selected only with a stated **estimate** of role and pool capacity, derived from documented PostgreSQL limits (max_connections, role count, memory per backend) and the planned number of tenants. The estimate is marked ESTIMATE in every document that cites it.
-- The estimate becomes a pilot-validation criterion. If the measured capacity is below the planned number of tenants times connections per tenant, Option C is not used for the pilot; Option D (or a new decision) is re-reviewed before any further work.
-- No document claims the capacity is measured until a measurement exists.
+| Criterion | Option C | Option D |
+|---|---|---|
+| 1. Mechanism defined precisely enough to implement | **Met at design level.** Mapping table, membership rules, routing, PUBLIC revocation, provisioning lifecycle defined in §4.2 and §6.2 | **Not met.** Seven design-critical points open (§6.3) |
+| 2. Attacker outcomes stated for each model and credential class | **Met** (§4.2, §4.4) | **Met**, but dependent on the open points (§4.3, §4.4.3) |
+| 3. Residual risks listed with owner and reducing control | **Met** (§4.2, §5) | **Met** (§4.4.5 to 4.4.7) |
+| 4. Contracts written with per-option expected results, status NOT-RUN | **Met** (TI-CONN-01 to 03, TI-ADV-01, 02) | **Met** (TI-CTX-15 to 18, TI-ADV-01, 02, 04) |
+| Capacity | **ESTIMATE only, not measured** (§6.2). Pilot criterion, not design criterion | Not assessed (depends on token and function design) |
+
+Result: Option C satisfies the design-selection criteria at design level and may be decided by the Product Owner on that basis, with the capacity estimate labelled as an estimate. Option D does not satisfy criterion 1 and is therefore not selection-ready.
+
+### 6.2 Option C capacity — ESTIMATE — NOT MEASURED (independent review M-01)
+
+**Status of this section:** `ESTIMATE — NOT MEASURED`. Every figure below is a calculation from the assumptions listed. None is a measurement. The estimate shows the order of magnitude and the drivers. It does not establish that Option C is feasible on the D-011 host.
+
+**Assumptions (each to be confirmed or replaced by the owner or by measurement):**
+
+| ID | Assumption | Value used | Source |
+|---|---|---|---|
+| A1 | Pilot tenants (counselors) | 50 | ASSUMPTION. Product Owner to confirm |
+| A2 | Application worker processes | 4 | ASSUMPTION |
+| A3 | Background worker processes | 2 | ASSUMPTION |
+| A4 | Direct pool size per tenant per process | 2 | ASSUMPTION |
+| A5 | Reserved administrative and operational connections | 10 | ASSUMPTION |
+| A6 | PostgreSQL `max_connections` | 100 | PostgreSQL documented default. Pilot host value: UNKNOWN, not measured |
+| A7 | Pooler server pool size per tenant role (per-user pooling) | 2 | ASSUMPTION. Pooler not yet selected (Q-016) |
+| A8 | Memory per backend | not used in this estimate | UNKNOWN, must be measured |
+
+**Calculation 1 — direct connections (no pooler), worst case, all pools fully allocated:**
+- Application pool connections = (A2 + A3) × A1 × A4 = (4 + 2) × 50 × 2 = 600
+- Plus A5 = 600 + 10 = **610 connections**
+- Against A6 = 100: exceeds by a factor of about six under these assumptions. Reducing A4 to 1 still gives 300 + 10 = 310, which exceeds 100 by about three times.
+- Result (ESTIMATE): **direct mode is not feasible under these assumptions** unless `max_connections` is raised substantially, which has memory consequences that are not estimated here.
+
+**Calculation 2 — per-user pooler (transaction pooling is compatible with Option C because identity comes from `current_user` and no per-request context setting is used; this must be verified by TI-CONN tests and is linked to Q-016):**
+- Server connections = A1 × A7 = 50 × 2 = 100, plus A5 = **110 server connections**
+- With A7 = 1: 50 + 10 = **60 server connections**
+- Against A6 = 100: about at the default limit at A7 = 2, within it at A7 = 1. Result (ESTIMATE): **feasible in count only under these assumptions**, and only with a pooler in front of PostgreSQL.
+
+**Other capacity drivers (not quantified):**
+- Roles and credentials: 50 tenant roles, one credential each (A1). Grant entries multiply by tables and privileges; the count is an estimate that must be measured on the actual schema.
+- Pooler configuration: one entry per tenant role, reloaded at tenant creation and suspension.
+- Burst concurrency: peak simultaneous requests across tenants; not modelled.
+- Background jobs and administrative access: consume connections outside A2 to A5 if not reserved.
+- Memory: per-backend and per-pooler memory are UNKNOWN and must be measured.
+
+**Provisioning lifecycle (design point for C, not capacity):** a role is created when a tenant is created, set to disabled when a tenant is suspended, and removed only under a retention rule. The retention rule is an OPEN owner decision, not blocking design selection.
+
+**Uncertainties and risks:**
+- A1 to A5 are assumptions. The estimate changes linearly with A1 and A4.
+- Per-user pooling changes the connection-to-identity mapping and must be tested before use.
+- A pooler is a new component. Its failure modes are not assessed here.
+
+**Fallback rule (unchanged in intent, made explicit):**
+- If measured capacity is below (tenants × per-tenant server connections + reserved), Option C is not used for the pilot.
+- Reduce A7 to 1 and reclaim idle tenant pools first.
+- Grouping tenants into shared roles is **not** an acceptable fallback without a new Product Owner decision, because a shared role reaches every tenant in the group and weakens the K-L-1 result in §4.4.2.
+- The remaining fallback is to re-review Option D, which is currently not selection-ready (§6.3), or to defer Q-019.
+
+**Requirement:** actual measurement on the D-011 host (parameters, pooler, role count, memory) is a mandatory pilot-validation criterion (D-015). No document may claim that Option C is capacity-feasible until the measurement exists.
+
+### 6.3 Option D selection-readiness (revision 8)
+
+**Classification: NOT SELECTION-READY.** The mechanism cannot be selected until the points below are decided and written. None of them is decided by this document.
+
+| # | Design-critical point | Current state | Decision owner | Recommendation for review |
+|---|---|---|---|---|
+| 1 | Token signature: HMAC or asymmetric | OPEN | Product Owner, with architecture reviewer input | Asymmetric: the database holds only the public key; K-S inside the database then yields no minting capability. Cost: the private key sits in the issuing component, which is the application process (T4b exposure) |
+| 2 | Signing-key storage and access model | OPEN; depends on point 1 | Product Owner and reviewer | Under HMAC, the key must be in the database and unreadable by the runtime role; under asymmetric, the public key only |
+| 3 | Token format and replay control (claims, audience, expiry, jti) | OPEN. A jti store needs database state | Product Owner | Short TTL in minutes; a jti store makes replay control stronger but adds database state and must be decided |
+| 4 | Context row lifecycle with pooling and transactions | OPEN. Interaction with transaction pooling (Q-016) not designed | Architecture reviewer | Row keyed to transaction and backend; removed at commit and rollback; must be tested under pooling |
+| 5 | Policy helper and policy migration | OPEN | Architecture reviewer | Helper reads the context row and returns NULL when absent (fail closed); migration and performance to be written |
+| 6 | SECURITY DEFINER function contract (inputs, `search_path`, no dynamic SQL, owner role, EXECUTE grants, error messages) | OPEN; to be written as a contract | Security reviewer | Fixed `search_path`; no dynamic SQL; generic errors; owner is a non-login role |
+| 7 | Failure behavior for invalid, expired or unverifiable tokens | Partly defined (refuse, generic error); not contracted | Security reviewer | Refuse; no tenant data; denial audited where the audit path exists |
+
+**Product Owner decisions needed before D can be selection-ready:**
+1. Whether Option D is pursued at all, compared with Option C.
+2. The signature algorithm (point 1), with the trade-off stated above.
+3. Whether a jti store (database state) is acceptable for replay control (point 3).
+4. Acceptance of the token replay window within TTL as a KNOWN-RESIDUAL, if no jti store is used.
+
+**Consequence for §6.1:** Option D fails criterion 1. Phase 1 design selection must not treat Option D as selection-ready.
 
 ## 7. What Each Option Can Honestly Claim After Verification
 

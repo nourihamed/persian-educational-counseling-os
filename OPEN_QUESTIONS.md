@@ -125,7 +125,12 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Technical candidates for independent review (not decisions):** Option C (per-tenant database principals; proposed candidate for pilot scale, design §2.4 with explicit limits); Option D (signed context token through a SECURITY DEFINER function, design §2.3.1). Option A alone is not a boundary against T4a.
 **Required to resolve the mechanism:** independent security review of the selected option; evidence for the matching sub-threat claims (TI-ADV-01, TI-ADV-02; TI-CONN-01..03 for C; TI-CTX-15..18 for D); owner selection recorded in DECISION_LOG.
 **Technical evaluation (Revision 6):** `docs/phase1/Q019_MECHANISM_EVALUATION.md` compares A, C and D against attacker models AM1 to AM5 with forging paths, residual risks, cost, testability and evidence required. It recommends Option C as a technical candidate for pilot scale (Option D as alternative; Option A not a boundary). This is a recommendation for review, not a decision.
-**Revision 7:** credential classes K-L, K-T, K-S and K-O analysed separately (§4.4); design-selection criteria separated from pilot-validation criteria (§6.1); capacity fallback rule (§6.2). Proposed; reviewer and owner to accept or reject.
+**Revision 8 (independent review H-01, H-02, M-01):**
+- Credential classes K-L-1, K-L-N, K-T, K-S, K-O defined and analysed per option (Q019 §4.4). Option D's no-token case assessed explicitly (§4.4.3).
+- Option C capacity: ESTIMATE — NOT MEASURED (Q019 §6.2). Direct connections not feasible under the stated assumptions; per-user pooler feasible in count only under the assumptions. Measurement is a pilot criterion.
+- Option D: NOT SELECTION-READY (Q019 §6.3, seven open points).
+- **Product Owner decisions needed for Q-019:** (1) choose C, or D after readiness, or residual acceptance; (2) if D: signature algorithm (HMAC or asymmetric) and whether a jti store is acceptable; (3) if C: confirm the pilot tenant count assumption (A1), the pool strategy, the tenant-role retention rule, and that grouping tenants into shared roles is not an allowed fallback without a new decision; (4) capacity rule (§6.2) acceptance.
+- Design-selection criteria (D-015) are met for C at design level and not met for D.
 **Owner decision still required** after independent review; to be recorded in DECISION_LOG.md.
 **Must be resolved before:** any Pilot with real student data; Phase 26.
 **Blocks Phase 1 approval:** Yes (reviewer-stated NOT READY depends on it).
@@ -135,6 +140,11 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Owner acceptance of the gate wording:** pending.
 
 ## بخش Resolved / Closed
+
+## C-01 — Gate deadlock between design selection and later test execution (RESOLVED 2026-10-17)
+**Decision (owner):** D-015. Design-selection criteria and pilot-validation criteria are separate. Test execution belonging to later phases is not a precondition for design decisions or for starting those phases.
+**Effect:** Q-019 can now be decided on design criteria. Pilot real-data rule (D-014) is unchanged.
+**Note:** this resolves the process deadlock only. It does not select a Q-019 mechanism and does not approve Phase 1.
 
 ## Q-015 — Platform-admin cross-tenant access mechanism (RESOLVED 2026-10-15)
 **Decision (owner):** Option A — read-only, audited access through explicit Application paths, no `BYPASSRLS` role, no platform write operations in MVP.

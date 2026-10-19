@@ -76,7 +76,7 @@ The tenant value lives in a session variable (`app.current_tenant_id`) that the 
 | D (candidate, NOT proven) | Tenant context is written only by a `SECURITY DEFINER` function that verifies a signed, short-lived token; policies read a context row that only that function can write (§2.3.1). Policies never read a GUC | Yes, if §2.3.1 requirements are met and reviewed. Not yet proven | Injected SQL cannot forge a tenant without a valid token for that tenant | Complex; dedicated security review required; the function is a bypass surface (TI-BYP-03); key management and token design open |
 | E | Separate database or schema per tenant (D-009 rejected this for MVP) | Yes | Strongest isolation | Operationally heavy; contradicts accepted D-009 for MVP |
 
-### 2.3.1 Option D — required design points (candidate; each must be answered before Option D can be evaluated as a boundary)
+### 2.3.1 Option D — required design points (NOT SELECTION-READY; see Q019 §6.3 for the seven open points and their decision owners)
 
 A `SECURITY DEFINER` function alone does not make Option D work. If a policy still reads `app.current_tenant_id`, `app_runtime` can set that GUC itself and the function adds nothing. Option D therefore requires all of the following:
 
@@ -87,7 +87,7 @@ A `SECURITY DEFINER` function alone does not make Option D work. If a policy sti
 5. **Key management.** The verification key is generated outside the repository, stored only in the database table readable by the owner role, never logged, never returned by any function, and rotatable with a key identifier in the token. The owner role is not a login role. Residual risk: compromise of the owner role or of a superuser exposes the key; this is recorded, not hidden.
 6. **Negative tests (new, only if Option D is chosen):** TI-CTX-15 (runtime cannot write the context table), TI-CTX-16 (runtime cannot obtain a context row for a tenant without a valid token), TI-CTX-17 (valid token for A, then reads of B return zero rows), TI-CTX-18 (setting the GUC changes nothing). Also TI-CFG-13 (no policy references a GUC).
 
-Open points not decided here: token format (HMAC versus asymmetric signature), key storage location within the database, interaction with connection pooling (TI-CTX-11/12 must still pass), and whether a Phase 2 migration is needed to restructure policies.
+Open points not decided here (classification: NOT SELECTION-READY): token signature (HMAC versus asymmetric; asymmetric keeps no minting key inside the database), key storage and access model, token format and replay control (jti store is database state), context-row lifecycle under pooling, policy helper and migration, the SECURITY DEFINER function contract, and failure behavior. Each is listed in Q019 §6.3 with its decision owner.
 
 ### 2.4 Decided direction and technical candidates (D-014)
 
@@ -101,6 +101,8 @@ The full technical evaluation of Options A, C and D against attacker models AM1 
 
 - **Option C (per-tenant database principals, candidate for pilot scale).** Each tenant has its own database login role with no membership in any other tenant role and no membership in any platform role. The application selects the connection (pool) from the authenticated principal's tenant, in application code, before any SQL is sent. Injected SQL on a tenant connection can reach only that tenant's role, and it cannot change its own role because it has no membership path (TI-CONN-01 to 03). Costs: one pool per tenant or per-user pool routing; credential lifecycle per tenant; more operational work. Limitation (explicit, Revision 4): Option C addresses only T4a for a single tenant connection, and partly T4c. It does NOT address T4b (code execution in the application process, which holds routing to many tenant connections) and does NOT address theft of credentials for many tenants. Any claim beyond T4a for a single tenant requires the process-isolation and credential-scope controls of §1.4 and their evidence. Platform jobs need a separate principal with aggregate-only grants, reviewed separately.
 - **Option D (signed context token through a SECURITY DEFINER function, candidate, §2.3.1).** Stronger in principle for a single shared pool, but more complex, depends on a key stored in the database, and makes the verification function a high-impact bypass surface requiring dedicated review.
+
+**Readiness (revision 8):** Option C meets the design-selection criteria at design level, with its capacity figure labelled ESTIMATE only (Q019 §6.2). Option D is NOT SELECTION-READY (Q019 §6.3).
 
 **Recommendation for review (not a decision):** Option C is the proposed technical candidate for the pilot because its boundary is enforced by database authentication and role membership rather than by a value the application sets, and its test surface is smaller. Option D remains an alternative if pool-per-tenant proves unworkable. Both require the security review in D-014 before selection. Option A alone is not recommended as the boundary.
 
