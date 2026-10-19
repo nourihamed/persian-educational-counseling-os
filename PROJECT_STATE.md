@@ -8,8 +8,8 @@ Last Updated: 2026-10-15
 ### Phase 1 Status (updated 2026-10-15)
 **PHASE 1 — Architecture & Multi-Tenancy — design and documentation submitted for independent review. NOT APPROVED. NOT AUTHORIZED as a completed phase.**
 
-- Documents: `docs/phase1/` (design, authorization contract, 120 test specifications, path inventory, report), `OPEN_QUESTIONS.md`, `DECISION_LOG.md` (D-013, D-014), `SUPERVISOR_REVIEW.md`. Submitted on a pull request from `docs/phase1-tenant-isolation-design` (PR #3 per reviewer report).
-- Decisions: Q-015 resolved (D-013, Option A). Q-019 direction decided (D-014); mechanism OPEN.
+- Documents: `docs/phase1/` (design, authorization contract, 123 test specifications, path inventory, report), `OPEN_QUESTIONS.md`, `DECISION_LOG.md` (D-013, D-014), `SUPERVISOR_REVIEW.md`. Submitted on a pull request from `docs/phase1-tenant-isolation-design` (PR #3 per reviewer report).
+- Decisions: Q-015 resolved (D-013, Option A). Q-019 direction decided (D-014); Option C selected as preferred design direction (D-016), subject to design review; Option D not selected.
 - Pilot: real student data PROHIBITED until D-014 conditions are met.
 - Reviewer-stated gate (PR #3): NOT READY. Re-review required on the pushed commit.
 - No code, migration, role, policy, or infrastructure exists. No test has been executed. No CI status is claimed.

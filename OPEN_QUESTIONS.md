@@ -95,6 +95,7 @@ Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written,
 _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 
 ## Q-016 — PostgreSQL connection pooling mode and transaction-local context
+**Revision 9 note (D-016):** the Product Owner did not select the pooler mode. Option C requires a documented mode. Recommendation for review: per-tenant-user pools in transaction mode, validated by TI-CONN-01 to 04 and TI-CTX-11 to 12. Mode choice remains OPEN.
 **Status:** OPEN (recommended: transaction pooling only if TI-CTX-11, TI-CTX-12 and TI-PLAT-05 pass in the chosen configuration; otherwise direct connections for the pilot).
 **Decision needed from owner:** pooler mode for the pilot. Owner may also choose to defer pooling altogether.
 **Why it matters:** a pooled connection carrying one tenant's context into another tenant's request is a direct cross-tenant leak.
@@ -120,11 +121,13 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 
 ## Q-019 — Tenant-context boundary against threat T4 (decomposed)
 **Owner direction (decided, D-014, 2026-10-15):** strengthen the boundary before any pilot containing real student data. Pilot rule: no real student data before independent security review, required security tests passing, blocking findings fixed, and written owner approval of the Pilot gate.
-**Status:** OPEN for the MECHANISM. Direction is decided; mechanism is not.
+**Status (updated 2026-10-17, D-016):** mechanism DIRECTION decided — Option C as preferred design direction, subject to design review. Option D not selected (NOT SELECTION-READY). Not runtime security; not authorization for real-data pilot. Pilot prerequisites (D-014) unchanged. Remaining: design review (supervisor), implementation, test execution, capacity measurement, pool and pooler validation.
 **Decomposition (added Revision 4, design §1.4):** T4a (SQL injection on a tenant connection), T4b (application process compromise), T4c (database credential theft). Option C addresses T4a for one tenant connection and partly T4c. No option addresses T4b in the database; T4b requires process isolation (Phase 3/26). Claims must be made per sub-threat.
 **Technical candidates for independent review (not decisions):** Option C (per-tenant database principals; proposed candidate for pilot scale, design §2.4 with explicit limits); Option D (signed context token through a SECURITY DEFINER function, design §2.3.1). Option A alone is not a boundary against T4a.
 **Required to resolve the mechanism:** independent security review of the selected option; evidence for the matching sub-threat claims (TI-ADV-01, TI-ADV-02; TI-CONN-01..03 for C; TI-CTX-15..18 for D); owner selection recorded in DECISION_LOG.
 **Technical evaluation (Revision 6):** `docs/phase1/Q019_MECHANISM_EVALUATION.md` compares A, C and D against attacker models AM1 to AM5 with forging paths, residual risks, cost, testability and evidence required. It recommends Option C as a technical candidate for pilot scale (Option D as alternative; Option A not a boundary). This is a recommendation for review, not a decision.
+**Revision 9 (owner decision D-016):** Option C selected as preferred design direction. A1 provisional cap 10 tenants. Bounded lazy per-tenant pools. Tenant role lifecycle as specified in design §5.5. Shared-role fallback prohibited. Capacity rule accepted as a constraint.
+
 **Revision 8 (independent review H-01, H-02, M-01):**
 - Credential classes K-L-1, K-L-N, K-T, K-S, K-O defined and analysed per option (Q019 §4.4). Option D's no-token case assessed explicitly (§4.4.3).
 - Option C capacity: ESTIMATE — NOT MEASURED (Q019 §6.2). Direct connections not feasible under the stated assumptions; per-user pooler feasible in count only under the assumptions. Measurement is a pilot criterion.
@@ -138,6 +141,12 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 ## Q-007 — Gate impact (Phase 1 review)
 **Status:** Product question OPEN (default parent access level). Gate impact: **CONFIRMED by the independent reviewer** (PR #3 review): TI-API-09 blocks closure of the phase that implements parent access (Phase 23), not Phase 1 architectural approval, provided parent access is not implemented in Phase 1 and TI-API-09 stays BLOCKED.
 **Owner acceptance of the gate wording:** pending.
+
+## Q-020 — Tenant data-retention period and criteria for dropping tenant roles (OPEN, added 2026-10-17)
+**Why it matters:** D-016 point 6 drops tenant roles only after data-retention requirements are checked. No retention period has been decided.
+**Decision needed from owner:** retention period for tenant data and audit evidence; criteria for dropping a tenant role after suspension.
+**Must be resolved before:** the first tenant offboarding feature (Phase 4 or later).
+**Blocks Phase 1 approval:** No.
 
 ## بخش Resolved / Closed
 

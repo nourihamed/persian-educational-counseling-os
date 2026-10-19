@@ -69,11 +69,11 @@ Rules:
 | TI-VER | Program and Plan version history | 7 |
 | TI-AUD | Audit logs | 3 |
 | TI-PLAT | Platform admin cross-tenant access | 10 |
-| TI-CONN | Per-tenant connection principals (Option C only) | 3 |
+| TI-CONN | Per-tenant connection principals (Option C, selected D-016) | 6 |
 | TI-ADV | Adversarial threat-based contracts (T4a, T4b, T4c; credential classes K-L, K-T, K-S, K-O) | 5 |
-| **Total** | | **120** |
+| **Total** | | **123** |
 
-The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Q-019 mechanism sets: TI-CTX-15 to 18 apply only if Option D is chosen; TI-CONN-01 to 03 apply only if Option C is chosen; TI-ADV-01 and 02 apply to whichever mechanism is chosen; under Option A their result is KNOWN-RESIDUAL (never PASS); TI-ADV-03 and TI-ADV-05 are evidence, not database tests; TI-ADV-04 applies only to Option D. TI-CFG-14 (PUBLIC privileges) applies to every option. Exactly one set applies after the mechanism decision. Both are BLOCKED until then.
+The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Mechanism status after D-016: Option C is the preferred design direction, subject to design review. TI-CONN-01 to 06 and TI-CFG-14 apply to Option C; TI-CONN-01 to 03 and TI-ADV-01 and 02 are BLOCKED until implementation exists (Phase 2-3). Option D is not selected: TI-CTX-15 to 18 and TI-ADV-04 are SPEC-ONLY. TI-ADV-03 and TI-ADV-05 are evidence, not database tests. No contract is PASS.
 
 ---
 
@@ -116,10 +116,10 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-CTX-12 | I | Request for A raises an exception mid-transaction; next request for B on same connection | No A rows visible; connection state clean | Pool leakage after failure | ENV:pooler (Q-016) |
 | TI-CTX-13 | S | Static scan: no `set_config(..., false)` and no session-level `SET` for app.current_tenant_id in application code | None present | Context outlives transaction | PR |
 | TI-CTX-14 | A | Repository call outside a transaction attempts a tenant query | Repository refuses (no implicit context); no query executed | Query run without context | PR |
-| TI-CTX-15 | R | (Option D only) app_runtime INSERT into `request_tenant_context` | Denied | Context forged directly | BLOCKED:Q-019 (only if Option D) |
-| TI-CTX-16 | R | (Option D only) app_runtime calls the context function with a forged or foreign token | Refused; no context row; zero rows | Forged tenant context | BLOCKED:Q-019 (only if Option D) |
-| TI-CTX-17 | I | (Option D only) valid token for A, then read rows of B in same session | Zero B rows | Context switch by reuse | BLOCKED:Q-019 (only if Option D) |
-| TI-CTX-18 | R | (Option D only) set_config of a custom GUC to B while context is A | Policy outcome unchanged; zero B rows | GUC trusted by policy | BLOCKED:Q-019 (only if Option D) |
+| TI-CTX-15 | R | (Option D only) app_runtime INSERT into `request_tenant_context` | Denied | Context forged directly | SPEC-ONLY (Option D not selected, D-016) |
+| TI-CTX-16 | R | (Option D only) app_runtime calls the context function with a forged or foreign token | Refused; no context row; zero rows | Forged tenant context | SPEC-ONLY (Option D not selected, D-016) |
+| TI-CTX-17 | I | (Option D only) valid token for A, then read rows of B in same session | Zero B rows | Context switch by reuse | SPEC-ONLY (Option D not selected, D-016) |
+| TI-CTX-18 | R | (Option D only) set_config of a custom GUC to B while context is A | Policy outcome unchanged; zero B rows | GUC trusted by policy | SPEC-ONLY (Option D not selected, D-016) |
 
 ### 2.3 TI-FK — Composite constraints and immutability
 
@@ -267,18 +267,21 @@ The total is recomputed from the contract rows below; the verification command i
 
 | ID | Modes | Operation | Expected | Failure consequence | CI |
 |---|---|---|---|---|---|
-| TI-CONN-01 | I | Connection bound to tenant A's role issues SET ROLE to tenant B's role, or reads B rows | Denied; zero B rows | Role switch across tenants | BLOCKED:Q-019 (only if Option C) |
-| TI-CONN-02 | C | Check membership graph: no tenant role is a member of, or has membership in, another tenant role or any platform role | Empty set of cross-role memberships | Role lattice escape | BLOCKED:Q-019 (only if Option C) |
-| TI-CONN-03 | I | Request for tenant A is routed by application code to a connection bound to tenant B (fixed fixture) | Routing mismatch refused before SQL is sent | Wrong connection used | BLOCKED:Q-019 (only if Option C) |
+| TI-CONN-01 | I | Connection bound to tenant A's role issues SET ROLE to tenant B's role, or reads B rows | Denied; zero B rows | Role switch across tenants | BLOCKED:implementation (Option C, D-016) |
+| TI-CONN-02 | C | Check membership graph: no tenant role is a member of, or has membership in, another tenant role or any platform role | Empty set of cross-role memberships | Role lattice escape | BLOCKED:implementation (Option C, D-016) |
+| TI-CONN-03 | I | Request for tenant A is routed by application code to a connection bound to tenant B (fixed fixture) | Routing mismatch refused before SQL is sent | Wrong connection used | BLOCKED:implementation (Option C, D-016) |
+| TI-CONN-04 | I | Offboarding of tenant A (D-016 point 6): login disabled; active sessions and pooled connections of the role terminated; no request routed to them afterwards; audit records remain | No successful login or query after disable; sessions terminated; audit intact | Access after offboarding | ENV:pooler (Phase 3) |
+| TI-CONN-05 | C | Ownership check: no tenant role owns any shared application object (tables, views, functions, sequences, schemas) | None owned by any tenant role | Tenant role controls shared objects | PR (Phase 2-3) |
+| TI-CONN-06 | S + C | Identity mapping: every tenant has a distinct login role; no code path or configuration uses one runtime identity for several tenants (D-016 point 7) | One-to-one mapping; no shared identity | Shared-identity capacity workaround | PR (Phase 2-3) |
 
 ### 2.16 TI-ADV — Adversarial threat-based contracts (added Revision 4 per T4 decomposition)
 
 | ID | Modes | Operation | Expected | Failure consequence | CI |
 |---|---|---|---|---|---|
-| TI-ADV-01 | I | T4a: attacker-controlled SQL on tenant A's runtime connection sets context to B and reads B rows | Option C pass criterion: denied at the role boundary (NOT-RUN). Option D pass criterion: denied without a valid token (NOT-RUN). Option A: KNOWN-RESIDUAL (attack succeeds; recorded, never PASS). Expected results for the unselected options are SPEC-ONLY | Silent acceptance of cross-tenant read | BLOCKED:Q-019 (mechanism) |
-| TI-ADV-02 | I | Credential classes K-L-1 (one stolen runtime login) and K-L-N (all runtime logins), used from outside the application to read rows of tenant B. Same object and same attacker assumption for every option (Q019 §4.4.2) | Option A: K-L-1 KNOWN-RESIDUAL; K-L-N KNOWN-RESIDUAL. Option C: K-L-1 pass criterion (NOT-RUN): tenant A's login denied on B rows; K-L-N KNOWN-RESIDUAL. Option D: K-L-1 and K-L-N pass criterion (NOT-RUN): zero rows with no token, conditional on the §4.4.3 conditions being verified. No result is PASS unless executed and observed | Undetected credential-scope failure | BLOCKED:Q-019 (mechanism) |
+| TI-ADV-01 | I | T4a: attacker-controlled SQL on tenant A's runtime connection sets context to B and reads B rows | Option C pass criterion: denied at the role boundary (NOT-RUN). Option D pass criterion: denied without a valid token (NOT-RUN). Option A: KNOWN-RESIDUAL (attack succeeds; recorded, never PASS). Expected results for the unselected options are SPEC-ONLY | Silent acceptance of cross-tenant read | BLOCKED:implementation (Option C, D-016); Option D part SPEC-ONLY |
+| TI-ADV-02 | I | Credential classes K-L-1 (one stolen runtime login) and K-L-N (all runtime logins), used from outside the application to read rows of tenant B. Same object and same attacker assumption for every option (Q019 §4.4.2) | Option A: K-L-1 KNOWN-RESIDUAL; K-L-N KNOWN-RESIDUAL. Option C: K-L-1 pass criterion (NOT-RUN): tenant A's login denied on B rows; K-L-N KNOWN-RESIDUAL. Option D: K-L-1 and K-L-N pass criterion (NOT-RUN): zero rows with no token, conditional on the §4.4.3 conditions being verified. No result is PASS unless executed and observed | Undetected credential-scope failure | BLOCKED:implementation (Option C, D-016) |
 | TI-ADV-03 | — | T4b: process-isolation evidence (no single process holds routing to all tenant credentials; secret scope review) | Evidence document reviewed, not a database test | Unrecognized process-level exposure | ENV:security-review (Phase 26) |
-| TI-ADV-04 | I | Credential class K-T (Option D only): a valid token of tenant A is captured and replayed against the verification function after expiry, and within TTL (Q019 §4.4.5) | After expiry: pass criterion (NOT-RUN): refused. Within TTL: KNOWN-RESIDUAL for the holder of tenant A's token (reads of A only; B denied). Options A and C: not applicable (no tokens) | Replay beyond TTL or cross-tenant token use | BLOCKED:Q-019 (only if Option D) |
+| TI-ADV-04 | I | Credential class K-T (Option D only): a valid token of tenant A is captured and replayed against the verification function after expiry, and within TTL (Q019 §4.4.5) | After expiry: pass criterion (NOT-RUN): refused. Within TTL: KNOWN-RESIDUAL for the holder of tenant A's token (reads of A only; B denied). Options A and C: not applicable (no tokens) | Replay beyond TTL or cross-tenant token use | SPEC-ONLY (Option D not selected, D-016) |
 | TI-ADV-05 | — | Credential classes K-S (signing key; Option D only, Q019 §4.4.6) and K-O (owner or migrator role; all options, §4.4.7) | Not a database contract. Evidence required: key-storage review for Option D (HMAC versus asymmetric), owner-role separation and access review for all options. Recorded as KNOWN-RESIDUAL until process controls exist | Undetected key or owner exposure | ENV:security-review (Phase 3 and 26) |
 
 ## 3. Coverage and Gate Rules

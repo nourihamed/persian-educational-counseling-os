@@ -1,6 +1,6 @@
 # Q-019 — Technical Evaluation of Tenant-Context Mechanisms (Options A, C, D)
 
-Phase: 1 (design). Status: TECHNICAL EVALUATION FOR INDEPENDENT REVIEW. This document does NOT select a mechanism. Selection is the Product Owner's decision, to be recorded in DECISION_LOG.md after independent review (D-014). Nothing here is tested; every statement about PostgreSQL behavior must be verified on the target PostgreSQL version (15 or later) in a later phase.
+Phase: 1 (design). Status: TECHNICAL EVALUATION FOR INDEPENDENT REVIEW. Owner decision D-016 (2026-10-17) selects Option C as preferred design direction, subject to design review, and records Option D as NOT selected. This document does not itself make that decision. Selection is the Product Owner's decision, to be recorded in DECISION_LOG.md after independent review (D-014). Nothing here is tested; every statement about PostgreSQL behavior must be verified on the target PostgreSQL version (15 or later) in a later phase.
 
 ---
 
@@ -219,7 +219,7 @@ Result: Option C satisfies the design-selection criteria at design level and may
 
 | ID | Assumption | Value used | Source |
 |---|---|---|---|
-| A1 | Pilot tenants (counselors) | 50 | ASSUMPTION. Product Owner to confirm |
+| A1 | Pilot tenants (counselors) | 10 | PROVISIONAL CAP set by Product Owner (D-016 point 4), subject to capacity analysis and owner confirmation before pilot |
 | A2 | Application worker processes | 4 | ASSUMPTION |
 | A3 | Background worker processes | 2 | ASSUMPTION |
 | A4 | Direct pool size per tenant per process | 2 | ASSUMPTION |
@@ -229,15 +229,15 @@ Result: Option C satisfies the design-selection criteria at design level and may
 | A8 | Memory per backend | not used in this estimate | UNKNOWN, must be measured |
 
 **Calculation 1 — direct connections (no pooler), worst case, all pools fully allocated:**
-- Application pool connections = (A2 + A3) × A1 × A4 = (4 + 2) × 50 × 2 = 600
-- Plus A5 = 600 + 10 = **610 connections**
-- Against A6 = 100: exceeds by a factor of about six under these assumptions. Reducing A4 to 1 still gives 300 + 10 = 310, which exceeds 100 by about three times.
-- Result (ESTIMATE): **direct mode is not feasible under these assumptions** unless `max_connections` is raised substantially, which has memory consequences that are not estimated here.
+- Application pool connections = (A2 + A3) × A1 × A4 = (4 + 2) × 10 × 2 = 120
+- Plus A5 = 120 + 10 = **130 connections**
+- Against A6 = 100: exceeds by 30 under these assumptions. With A4 = 1: 6 × 10 × 1 + 10 = **70**, which is within 100.
+- Result (ESTIMATE): **direct mode at pool size 2 is not feasible under these assumptions**; pool size 1 is within the default limit. Memory per backend is not estimated.
 
-**Calculation 2 — per-user pooler (transaction pooling is compatible with Option C because identity comes from `current_user` and no per-request context setting is used; this must be verified by TI-CONN tests and is linked to Q-016):**
-- Server connections = A1 × A7 = 50 × 2 = 100, plus A5 = **110 server connections**
-- With A7 = 1: 50 + 10 = **60 server connections**
-- Against A6 = 100: about at the default limit at A7 = 2, within it at A7 = 1. Result (ESTIMATE): **feasible in count only under these assumptions**, and only with a pooler in front of PostgreSQL.
+**Calculation 2 — per-user pooler (transaction pooling is compatible with Option C in principle because identity comes from `current_user` and no per-request context setting is used; this must be verified by TI-CONN and TI-CTX tests and is linked to Q-016):**
+- Server connections = A1 × A7 = 10 × 2 = 20, plus A5 = **30 server connections**
+- With A7 = 1: 10 + 10 = **20 server connections**
+- Against A6 = 100: well within the default limit. Result (ESTIMATE): **feasible in count under these assumptions**, with a pooler in front of PostgreSQL; the pooler itself is not yet selected or measured.
 
 **Other capacity drivers (not quantified):**
 - Roles and credentials: 50 tenant roles, one credential each (A1). Grant entries multiply by tables and privileges; the count is an estimate that must be measured on the actual schema.
@@ -263,7 +263,7 @@ Result: Option C satisfies the design-selection criteria at design level and may
 
 ### 6.3 Option D selection-readiness (revision 8)
 
-**Classification: NOT SELECTION-READY.** The mechanism cannot be selected until the points below are decided and written. None of them is decided by this document.
+**Classification: NOT SELECTION-READY, and NOT SELECTED (D-016).** The mechanism cannot be reconsidered until the points below are decided, written and independently reviewed. Per D-016 point 3, if reconsidered, asymmetric signatures are evaluated first, and the one-time versus reusable token decision and the `jti` policy must be explicitly decided.
 
 | # | Design-critical point | Current state | Decision owner | Recommendation for review |
 |---|---|---|---|---|

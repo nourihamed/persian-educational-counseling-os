@@ -13,7 +13,7 @@ Status: **PENDING INDEPENDENT REVIEW. NOT APPROVED.** This report does not appro
 |---|---|
 | docs/phase1/TENANT_ISOLATION_DESIGN.md | Rewritten: explicit threat model (§1), trust boundary and what RLS does not prove (§2), options A–E, claims ledger, testable runtime-role requirements, FORCE RLS decision, context behavior for invalid/changed/pooled cases, platform admin conditions revised, Q-019 added |
 | docs/phase1/AUTHORIZATION_CONTRACT.md | Aligned with Q-014 (exact status pending), object-level authorization identified as primary control against authenticated users, checklist updated |
-| docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md | Rewritten: explicit modes per contract (C, S, R, A, I), CI column (PR / ENV / BLOCKED), failure consequence per contract, groups aligned with TEST_PLAN, 120 contracts (see §17) |
+| docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md | Rewritten: explicit modes per contract (C, S, R, A, I), CI column (PR / ENV / BLOCKED), failure consequence per contract, groups aligned with TEST_PLAN, 120 contracts at revision 5 (see §17; current count in §3 and §20) |
 | docs/phase1/PHASE1_REPORT.md | This report |
 | OPEN_QUESTIONS.md | Phase 1 block rewritten: Q-014 to Q-018 status and blocking flags; Q-019 added |
 | SUPERVISOR_REVIEW.md | Temporary PENDING section replaced by the revision-2 block in APPEND_TO_SUPERVISOR_REVIEW_REV2.md. Verdict field left empty for the reviewer |
@@ -39,7 +39,7 @@ Reviewed for consistency (not all changed): DECISION_LOG.md (D-008, D-009, D-010
 
 ## 3. Test Contract Count (recounted from the file)
 
-Total: **120** contracts (103 PR, 3 ENV:pooler, 1 ENV:worker, 2 ENV:security-review TI-ADV-03 and TI-ADV-05, 1 BLOCKED:Q-007, 10 BLOCKED:Q-019 mechanism-dependent: TI-CTX-15 to 18 only if Option D, TI-CONN-01 to 03 only if Option C, TI-ADV-01, 02 and 04 for the chosen mechanism). No contract is blocked by Q-015 (resolved, D-013).
+Total: **123** contracts (105 PR, 4 ENV:pooler, 1 ENV:worker, 2 ENV:security-review, 1 BLOCKED:Q-007, 5 BLOCKED:implementation (Option C, D-016), 5 SPEC-ONLY (Option D not selected, D-016)). No contract is blocked by Q-015 (resolved, D-013), and none is blocked by Q-019, which now has its direction decided (D-016).
 
 | Group | Count |
 |---|---|
@@ -57,9 +57,9 @@ Total: **120** contracts (103 PR, 3 ENV:pooler, 1 ENV:worker, 2 ENV:security-rev
 | TI-VER | 7 |
 | TI-AUD | 3 |
 | TI-PLAT | 10 |
-| TI-CONN (Option C only) | 3 |
+| TI-CONN (Option C, selected D-016) | 6 |
 | TI-ADV (threat-based) | 5 |
-| **Sum** | **120** |
+| **Sum** | **123** |
 
 Verification command (run from repository root; counts TI row identifiers in the contracts file):
 
@@ -67,13 +67,13 @@ Verification command (run from repository root; counts TI row identifiers in the
 grep -cE "^\| TI-[A-Z]+-[0-9]+ " docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md
 ```
 
-Expected output: `120`.
+Expected output: `123`.
 
 Count vocabulary (revision 8). These four figures must not be confused:
 
 | Measure | Value | Basis |
 |---|---|---|
-| Specified contracts | 120 | Unique contract rows in TENANT_ISOLATION_TEST_CONTRACTS.md |
+| Specified contracts | 123 | Unique contract rows in TENANT_ISOLATION_TEST_CONTRACTS.md |
 | Implemented test code | 0 | No test code exists in the repository |
 | Executed tests | 0 | No test has been run |
 | Passing tests | 0 | No passing result exists |
@@ -242,7 +242,7 @@ Designed, reviewed by the assistant, reviewed by the independent reviewer (CONDI
 - **Q-015 (Option A, D-013):** applied to design §5.1 and §8, test contracts TI-PLAT-06 (now PR, no longer blocked), TI-PLAT-08 (static guard), TI-PLAT-09 and TI-PLAT-10 (new), path inventory P-25 and P-26, authorization contract, OPEN_QUESTIONS (moved to Resolved).
 - **Q-019 (direction, D-014):** applied to OPEN_QUESTIONS, design §2.4 (Option C as proposed technical candidate, Option D as alternative, both pending review), test contracts TI-CONN-01 to 03 (new, mechanism-dependent), path inventory P-33 (new), DECISION_LOG.
 - **Pilot rule (D-014):** no real student data until four conditions are met and the owner approves the gate in writing. Recorded in DECISION_LOG and this report.
-- **Counts after this revision:** 120 contracts; 103 PR; 3 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 10 BLOCKED:Q-019 (mechanism-dependent). Path inventory: 33 paths, 30 mapped, 3 blocked, 0 unmapped.
+- **Counts at that revision (historical):** 120 contracts; 103 PR; 3 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 10 BLOCKED:Q-019 (mechanism-dependent). Path inventory: 33 paths, 30 mapped, 3 blocked, 0 unmapped.
 
 ### 14.1 Status by category (not merged, not run)
 | Item | Status |
@@ -310,7 +310,7 @@ The reviewer's PR head (`10cb7a5`) is not the same commit as the developer's cur
 | PROJECT_STATE count | `PROJECT_STATE.md` | 120 |
 
 ### 16.2 Counts (recounted from files)
-- Contracts: **120** (103 PR; 3 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 10 BLOCKED:Q-019).
+- Contracts at that revision (historical): **120** (103 PR; 3 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 10 BLOCKED:Q-019).
 - Path inventory: 33 paths (30 mapped; 3 blocked; 0 unmapped).
 
 ### 16.3 Self-review checks performed
@@ -351,13 +351,13 @@ Results of these checks are reported in the final message of this revision, not 
 | Add-on: token and owner classes need contracts | TI-ADV-04 (token replay, Option D only) and TI-ADV-05 (key and owner compromise, evidence) added | TI-ADV-04, 05 |
 
 ### 17.1 Counts
-- Contracts: **120** (103 PR; 3 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 10 BLOCKED:Q-019).
+- Contracts at that revision (historical): **120** (103 PR; 3 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 10 BLOCKED:Q-019).
 - Paths: 33 (30 mapped; 3 blocked; 0 unmapped).
 
 ### 17.2 Status (unchanged)
 - Phase 1: NOT APPROVED. Reviewer-stated gate NOT READY (commit cc4b576).
 - Q-019: mechanism OPEN. Owner decision required after independent review.
-- All 120 contracts NOT-RUN. No CI status is claimed.
+- All contracts (123 at revision 9) NOT-RUN. No CI status is claimed.
 - Pilot with real data: prohibited (D-014).
 - Phase 2: not authorized.
 
@@ -373,7 +373,7 @@ Results of these checks are reported in the final message of this revision, not 
 - The Product Owner accepted the separation in `Q019_MECHANISM_EVALUATION.md` §6.1: design-selection criteria versus pilot-validation criteria. This resolves the process deadlock C-01 (`OPEN_QUESTIONS.md`, Resolved section).
 - Test execution that belongs to later phases is not a precondition for design decisions or for starting those phases.
 - Not changed by this acceptance: Phase 1 approval (requires reviewer verdict on the new commit and owner gate decision); the Q-019 mechanism (OPEN); the capacity rule §6.2 (awaiting owner acceptance); D-014 (no real student data until pilot-validation criteria are met).
-- Status: Phase 1 NOT APPROVED. Q-019 OPEN. All 120 contracts NOT-RUN. No CI status claimed. Phase 2 not authorized.
+- Status: Phase 1 NOT APPROVED. Q-019 OPEN. All contracts (123 at revision 9) NOT-RUN. No CI status claimed. Phase 2 not authorized.
 
 ---
 
@@ -390,7 +390,7 @@ Reviewer finding IDs are as stated in the review. Review ID 5573172802 (PR #3). 
 | TI-ADV-02, 04, 05 alignment | Same objects and attacker assumptions across options; K-S and K-O separated; no PASS for conditions not verified | TENANT_ISOLATION_TEST_CONTRACTS.md | Static check of row shape (§19.2) | All NOT-RUN |
 
 ### 19.1 Option C capacity — final estimate (ESTIMATE — NOT MEASURED)
-- Direct connections, worst case (1 to 2 per tenant per process, 50 tenants, 6 processes, reserve 10): **610** (or **310** with pool size 1). Against default `max_connections` 100: not feasible under these assumptions without a large increase whose memory cost is unknown.
+- (Superseded by §20 for A1 = 10.) Direct connections, worst case at 50 tenants: 610 (or 310 with pool size 1). Against default `max_connections` 100: not feasible under these assumptions without a large increase whose memory cost is unknown.
 - Per-user pooler (server pool 1 or 2 per tenant role, 50 tenants, reserve 10): **60** or **110** server connections. Feasible in count only under these assumptions, and only with a pooler in front of PostgreSQL (Q-016).
 - C remains unselectable for the pilot until the pilot tenant count, pool strategy and pooler are decided and capacity is measured on the D-011 host.
 
@@ -415,4 +415,37 @@ No CI status or workflow run for this revision is available to the developer. Ab
 - Q-019 remains OPEN. No mechanism selected.
 - Phase 2 not started.
 - Phase 1 not approved. Gate remains NOT READY until the supervisor re-reviews the new commit.
+
+---
+
+## 20. Revision 9 — Owner Decisions Applied (D-016, 2026-10-17)
+
+### 20.1 Decisions recorded (DECISION_LOG D-016)
+1. Q-019 direction: **Option C is the preferred design direction**, subject to design review. Not runtime security; not pilot authorization.
+2. **Option D not selected**; NOT SELECTION-READY until seven points are resolved and reviewed.
+3. Option D reconsideration: asymmetric signatures first; one-time versus reusable token decision and `jti` policy must be explicit.
+4. **A1 provisional cap: 10 tenants**, subject to capacity analysis and owner confirmation before pilot.
+5. Pool strategy: **bounded, lazy, per-tenant**. Pooler mode not selected by the owner; OPEN under Q-016 with a recommendation for review.
+6. Role lifecycle: specified in design §5.5 (immediate login disable, revocation, session termination, audit retention, guarded drop).
+7. **Shared-role fallback prohibited.**
+8. Capacity rule accepted as a constraint: estimate is not measurement; measurement required before real-data pilot.
+9. D-014 unchanged.
+10. Phase 1 remains unapproved until the supervisor gate is satisfied.
+
+### 20.2 Changes to documents
+- `Q019_MECHANISM_EVALUATION.md`: A1 = 10 (provisional); capacity recalculated: direct at pool size 2 = **130** (not feasible at default 100); direct at pool size 1 = **70**; per-user pooler = **30** (pool 2) or **20** (pool 1); Option D classification NOT SELECTED.
+- `TENANT_ISOLATION_DESIGN.md`: §2.4 records the decision and limitations; §5.5 specifies pool strategy and lifecycle.
+- `TENANT_ISOLATION_TEST_CONTRACTS.md`: TI-CONN-04 (offboarding, ENV:pooler), TI-CONN-05 (ownership, PR), TI-CONN-06 (identity mapping, PR) added. TI-CONN-01 to 03, TI-ADV-01 and 02 are BLOCKED until implementation; TI-CTX-15 to 18 and TI-ADV-04 are SPEC-ONLY.
+- `OPEN_QUESTIONS.md`: Q-019 updated (direction decided); Q-016 note (pooler mode open); Q-020 added (retention period and role-drop criteria).
+
+### 20.3 Counts (recounted)
+- Specified: **123** (105 PR; 4 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 5 BLOCKED:implementation; 5 SPEC-ONLY).
+- Implemented: 0. Executed: 0. Passing: 0.
+- Paths: 33 (30 mapped; 3 blocked; 0 unmapped).
+
+### 20.4 Status
+- Phase 1: NOT APPROVED. Gate NOT READY until the supervisor re-reviews the corrected commit.
+- Q-019: direction decided (D-016); design review pending; no implementation.
+- D-014: unchanged; real student data prohibited.
+- Phase 2: not started.
 

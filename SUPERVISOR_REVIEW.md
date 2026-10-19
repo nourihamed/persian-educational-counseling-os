@@ -515,6 +515,16 @@ PHASE 1 — Architecture & Multi-Tenancy (design and documentation only)
 ## Current Gate
 NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 
+## Owner Decisions Recorded (D-016, 2026-10-17) — for supervisor review
+- Option C selected as the preferred design direction, subject to design review. Not runtime security. Not pilot authorization.
+- Option D not selected; NOT SELECTION-READY until seven points are resolved and independently reviewed.
+- Provisional cap of 10 tenants (A1), subject to capacity analysis and owner confirmation.
+- Bounded, lazy, per-tenant pools; pooler mode not yet selected (Q-016).
+- Tenant role lifecycle specified (design §5.5); contracts TI-CONN-04, 05, 06 added.
+- Shared-role fallback prohibited.
+- Capacity rule accepted as a constraint; measurement required before any real-data pilot.
+- D-014 unchanged. Phase 1 unapproved. Gate NOT READY until the supervisor re-reviews the corrected commit.
+
 ## Revision 8 Response to Review ID 5573172802 (NOT READY)
 - H-01: credential-class analysis made equivalent (common scenarios K-L-1 and K-L-N; Option D no-token case explicit) — Q019 §4.4.
 - H-02: Option D classified NOT SELECTION-READY with seven open points and owners — Q019 §6.3; criterion 1 of §6.1 not met for D.
@@ -558,7 +568,7 @@ NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 ## Scope Under Review
 - `docs/phase1/TENANT_ISOLATION_DESIGN.md`
 - `docs/phase1/AUTHORIZATION_CONTRACT.md`
-- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (120 contracts: 103 PR; 3 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 10 BLOCKED:Q-019 mechanism-dependent). Specified 120; implemented 0; executed 0; passing 0.
+- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (123 contracts: 105 PR; 4 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 5 BLOCKED:implementation; 5 SPEC-ONLY). Specified 123; implemented 0; executed 0; passing 0.
 - `docs/phase1/Q019_MECHANISM_EVALUATION.md` (new; technical evaluation, not a decision)
 - `docs/phase1/TENANT_PATH_INVENTORY.md` (33 paths: 30 mapped, 3 blocked, 0 unmapped)
 - `docs/phase1/PHASE1_REPORT.md`

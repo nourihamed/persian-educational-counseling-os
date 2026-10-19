@@ -89,24 +89,27 @@ A `SECURITY DEFINER` function alone does not make Option D work. If a policy sti
 
 Open points not decided here (classification: NOT SELECTION-READY): token signature (HMAC versus asymmetric; asymmetric keeps no minting key inside the database), key storage and access model, token format and replay control (jti store is database state), context-row lifecycle under pooling, policy helper and migration, the SECURITY DEFINER function contract, and failure behavior. Each is listed in Q019 §6.3 with its decision owner.
 
-### 2.4 Decided direction and technical candidates (D-014)
+### 2.4 Decided direction and technical candidates (D-014, D-016)
 
-The full technical evaluation of Options A, C and D against attacker models AM1 to AM5 is in `Q019_MECHANISM_EVALUATION.md`. The summary below is consistent with it.
+**Owner decisions:**
+- D-014 (2026-10-15): strengthen the tenant-context boundary before any pilot with real student data. The pilot rule is unchanged.
+- D-016 (2026-10-17): **Option C is the preferred design direction**, subject to completing the design review. **Option D is not selected** and remains NOT SELECTION-READY (Q019 §6.3).
 
-**Owner decision (D-014, 2026-10-15):** the tenant-context boundary must be strengthened before any pilot that contains real student data. The mechanism is NOT selected by this decision. Option A (D-009 as is) is not accepted as a sufficient boundary against T4 on its own.
+**Status of Option C:** design direction only. Not implemented, not test-verified, not proven. It is NOT a runtime security claim.
 
-**Pilot rule (accepted policy):** no real student data may enter any Pilot until (a) independent security review is complete, (b) the required security tests are run and pass, (c) blocking findings are fixed, and (d) the owner explicitly approves the Pilot gate in writing.
+**Option C design summary:**
+- Each tenant has its own database login role with no membership in any other tenant role and no membership in any platform role.
+- The application selects the connection (pool) from the authenticated principal's tenant before any SQL is sent (TI-CONN-03).
+- Policies identify the tenant from `current_user` through a mapping table written only by the owner role. No policy reads a GUC.
+- PUBLIC privileges on tenant objects are revoked (TI-CFG-14).
+- Pools are bounded, lazily created per tenant, and closed when idle (§5.5).
+- Tenant role lifecycle, including suspension and offboarding, is specified in §5.5.
 
-**Technical candidates for independent review (not decisions):**
+**Limitations (explicit, unchanged):** Option C addresses only T4a for a single tenant connection, and partly T4c. It does NOT address T4b (code execution in the application process, which holds routing to many tenant connections). It does NOT address theft of credentials for many tenants (K-L-N). It does NOT address owner-role compromise (K-O). Any claim beyond T4a for a single tenant requires the controls of §1.4 and their evidence.
 
-- **Option C (per-tenant database principals, candidate for pilot scale).** Each tenant has its own database login role with no membership in any other tenant role and no membership in any platform role. The application selects the connection (pool) from the authenticated principal's tenant, in application code, before any SQL is sent. Injected SQL on a tenant connection can reach only that tenant's role, and it cannot change its own role because it has no membership path (TI-CONN-01 to 03). Costs: one pool per tenant or per-user pool routing; credential lifecycle per tenant; more operational work. Limitation (explicit, Revision 4): Option C addresses only T4a for a single tenant connection, and partly T4c. It does NOT address T4b (code execution in the application process, which holds routing to many tenant connections) and does NOT address theft of credentials for many tenants. Any claim beyond T4a for a single tenant requires the process-isolation and credential-scope controls of §1.4 and their evidence. Platform jobs need a separate principal with aggregate-only grants, reviewed separately.
-- **Option D (signed context token through a SECURITY DEFINER function, candidate, §2.3.1).** Stronger in principle for a single shared pool, but more complex, depends on a key stored in the database, and makes the verification function a high-impact bypass surface requiring dedicated review.
+**Option D:** not selected. NOT SELECTION-READY (Q019 §6.3). Re-consideration requires that its seven design-critical points be resolved and independently reviewed; if reconsidered, asymmetric signatures are evaluated first, and the one-time versus reusable token decision and the `jti` replay policy must be explicitly decided (D-016 point 3).
 
-**Readiness (revision 8):** Option C meets the design-selection criteria at design level, with its capacity figure labelled ESTIMATE only (Q019 §6.2). Option D is NOT SELECTION-READY (Q019 §6.3).
-
-**Recommendation for review (not a decision):** Option C is the proposed technical candidate for the pilot because its boundary is enforced by database authentication and role membership rather than by a value the application sets, and its test surface is smaller. Option D remains an alternative if pool-per-tenant proves unworkable. Both require the security review in D-014 before selection. Option A alone is not recommended as the boundary.
-
-**Documents that must not change without a new decision:** D-009 (shared database and schema, RLS as defense in depth). Option C changes how the runtime authenticates per tenant but keeps the shared database and schema; any formal change to D-009 requires its own decision record.
+**Documents that must not change without a new decision:** D-009 (shared database and schema; RLS as defense in depth). Option C changes how the runtime authenticates per tenant but keeps the shared database and schema.
 
 ### 2.5 Claims ledger
 
@@ -200,6 +203,21 @@ Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason
 - Migration pipeline is a privileged surface and is listed in Phase 3 review.
 
 ---
+
+### 5.5 Option C tenant role lifecycle and pool strategy (recorded direction, D-016; applies if Option C is implemented)
+
+**Pool strategy (D-016 point 5):** bounded, lazy, per-tenant connections or pools. A pool for a tenant is created on first request for that tenant, is bounded in size per process, and is closed after an idle timeout. The pooler mode is not yet selected (Q-016); validation is required by TI-CONN-04 and TI-CTX-11/12.
+
+**Suspension and offboarding (D-016 point 6), in order:**
+1. Disable the tenant login immediately (no new sessions).
+2. Revoke the relevant access of the tenant role on tenant objects.
+3. Terminate active sessions of the role and clear its pooled server connections; no new request may be routed to the tenant's connections.
+4. Retain audit evidence. Audit records must not depend on the tenant role remaining present.
+5. Drop the role only after: ownership check (no owned objects), dependency check (grants, policies and mapping rows referencing it), and the data-retention requirement is met. The retention period is OPEN (Q-020).
+
+**Ownership rule (D-016 point 6):** tenant roles must not own any shared application object. Verified by TI-CONN-05.
+
+**Shared-identity prohibition (D-016 point 7):** no tenant may share a runtime identity with another tenant. Verified by TI-CONN-06. No capacity workaround may group tenants under one identity.
 
 ## 6. Tenant Context Propagation into PostgreSQL
 

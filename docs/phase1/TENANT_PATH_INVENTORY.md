@@ -39,8 +39,8 @@ Purpose: make every data access path traceable to at least one test contract (su
 | P-29 | Database migrations | Privileged write | Schema-level, not tenant data | TI-CFG-02, 10 | Mapped |
 | P-30 | Operational scripts under `scripts/` | Privileged | Must be explicit | TI-REPO-05 (static scan), TI-CFG-10 | Mapped (scan; no script exists yet) |
 | P-31 | Raw SQL outside Infrastructure | Read/Write | Unknown | TI-REPO-05 | Mapped (static guard) |
-| P-32 | Option D context function (only if Option D chosen) | Privileged | Token | TI-CTX-15, 16, 17, 18; TI-BYP-03 | BLOCKED (Q-019 mechanism) |
-| P-33 | Option C tenant connection routing and role membership (only if Option C chosen) | Connection | Principal tenant | TI-CONN-01, 02, 03 | BLOCKED (Q-019 mechanism) |
+| P-32 | Option D context function | Privileged | Token | TI-CTX-15, 16, 17, 18; TI-BYP-03 | SPEC-ONLY (Option D not selected, D-016) |
+| P-33 | Option C tenant connection routing, role membership, and lifecycle (Option C selected as preferred direction, D-016) | Connection | Principal tenant | TI-CONN-01 to 06 | BLOCKED (implementation; Phase 2-3) |
 
 ## Notes
 - Endpoint-level inventory (one row per endpoint and record type) is a REQUIRED deliverable of Phase 2 (data model) and Phase 4 (API and RBAC). It is NOT a Phase 1 approval criterion, and Phase 1 must not claim endpoint coverage. (Independent review H-01.)
@@ -48,12 +48,12 @@ Purpose: make every data access path traceable to at least one test contract (su
 - TI-CFG-14 (PUBLIC privileges) applies to every tenant-owned object on every path.
 - P-09 is listed with representative contracts, not one per record type. Endpoint-level inventory in Phase 4 must add one row per record type. Until then, P-09 counts as mapped only in the representative sense.
 - P-26 is listed so that the prohibition in D-013 cannot be silently reversed: a static guard (TI-PLAT-08) must fail if a platform write route appears.
-- P-27 and P-32 are BLOCKED; a BLOCKED path cannot be counted as covered.
+- P-27 (Q-007) and P-33 (implementation) are BLOCKED; a BLOCKED path cannot be counted as covered. P-32 (Option D) is SPEC-ONLY because Option D is not selected.
 
 ## Summary (at this revision)
 - Total paths listed: 33
-- Mapped to at least one contract: 30 (P-09 is representative only; P-30 is a static guard with no script yet; P-26 is a prohibition guard)
-- BLOCKED: 3 (P-27 by Q-007; P-32 and P-33 by the Q-019 mechanism decision, exactly one of the two applies)
+- Mapped to at least one contract: 30 (P-09 representative only; P-30 static guard; P-26 prohibition guard)
+- Mapped to contracts: 30. SPEC-ONLY: 1 (P-32). BLOCKED: 2 (P-27 by Q-007; P-33 pending implementation of Option C).
 - UNMAPPED: 0
 - Endpoint-level coverage: NOT MEASURABLE YET. The 100% claim is not made.
 
