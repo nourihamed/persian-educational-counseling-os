@@ -148,15 +148,24 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Owner acceptance of the gate wording:** pending.
 
 ## Q-021 — Product Owner disposition of Option C credential-compromise residuals
-**Status: OPEN — Product Owner decision required.** D-016 records Option C as the preferred design direction, but does not explicitly accept the residual consequences of (a) theft of many/all tenant login credentials (K-L-N), or (b) compromise of the owner/migrator security boundary (K-O). The current test contract must not label these as owner-accepted KNOWN-RESIDUAL outcomes until this decision is recorded.
+**Status: RESOLVED — Product Owner selected option B, 2026-10-23; see DECISION_LOG.md D-019.**
 
-**Decision required:**
-- **A — Accept as explicit residual risks:** acknowledge that compromise of all tenant login credentials can expose multiple tenants, and compromise of the owner/migrator boundary can defeat tenant isolation. Keep the shared-database Option C design, require separate controls and evidence for credential storage/rotation, owner-role separation, privileged access audit, incident response, and D-014 pilot approval. This does not authorize real data by itself.
-- **B — Require stronger architecture before approval:** do not accept these residuals for the intended risk level; request a revised design (for example, stronger process/credential isolation and a separately reviewed privileged-role boundary). Any database-per-tenant or other scope change must be evaluated against D-009 and explicitly decided before implementation.
+**Decision:** Require stronger architecture before Phase 1 approval. The Product Owner does not accept the current Option C residual risks for theft of many/all tenant login credentials (K-L-N) or compromise of the owner/migrator boundary (K-O) as an acceptable basis for approval.
 
-**Recommendation:** Option A only if the Product Owner explicitly accepts the stated limits and the controls above are made enforceable and testable. If the product's risk tolerance does not permit multi-tenant exposure after broad credential or owner-role compromise, choose B and reopen the architecture before implementation.
-**Must be resolved before:** Phase 1 design approval; in all cases before any real-data pilot.
-**Why it matters:** the contract vocabulary permits KNOWN-RESIDUAL only after an owner decision. A preferred mechanism is not itself acceptance of its residual risks.
+**Important boundary:** This decision selects the requirement to redesign, not a final topology. It does not accept the residual risks, approve Option C, or select database-per-tenant/shared cluster, separate clusters, or a hybrid. See Q-022 and `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md`.
+
+**Consequences:** Phase 1 remains NOT READY; Phase 2 is NOT STARTED and NOT AUTHORIZED; no implementation or real-data pilot is authorized. D-014 remains in force.
+
+**Resolution evidence:** explicit Product Owner instruction in conversation on 2026-10-23; recorded in D-019.
+
+## Q-022 — Select a revised tenant-isolation architecture after independent comparison
+**Status: OPEN — design alternatives documented; no topology selected.** D-019 records the Product Owner's decision to require stronger architecture before Phase 1 approval. The alternatives and preliminary assessment are in `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md`.
+
+**Decision required:** approve one revised architecture (or request another option) after independent review. The review must cover database-per-tenant versus separate PostgreSQL clusters/instances versus hybrid tenant groups; runtime process and secret isolation; owner/migrator and deployment boundaries; backup/restore/support access; migration safety; connection/capacity estimates; operating burden; and measurable threat-specific test criteria.
+
+**Recommendation for evaluation, not selection:** investigate database-per-tenant with enforceably tenant-scoped credentials (Option C in the new comparison) and hybrid isolated tenant groups (Option E), using separately operated clusters (Option D) as the stronger-isolation reference. A separate database on a shared cluster alone does not resolve broad credential theft or cluster-admin compromise.
+
+**Must be resolved before:** Phase 1 design approval and any implementation of tenant isolation. Phase 2 remains unauthorized. Real student data remains prohibited under D-014.
 
 ## Q-020 — Tenant data-retention period and criteria for dropping tenant roles (OPEN; principle decided D-017)
 **Draft (2026-10-17):** `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md`. **Approach accepted (D-018):** data minimisation, per-category rule, short explicit periods, extensions only by recorded decision, legal/tax/privacy reviewers engaged. **Still OPEN:** all durations (NEEDS-DECISION or LEGAL-REVIEW; none set), the named reviewers, and the approver of role deletion (Product Owner, per D-018).
