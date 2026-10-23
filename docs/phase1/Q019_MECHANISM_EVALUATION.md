@@ -1,3 +1,7 @@
+> **Status notice 2026-10-23:** D-019 and Q-022 supersede this document's former recommendation that Option C be the preferred design direction. This is historical comparison material only, not the current approved architecture. Do not implement or use its Option C/Option D selection language as current acceptance criteria until Q-022 is decided and the document is reconciled.
+
+---
+
 # Q-019 — Technical Evaluation of Tenant-Context Mechanisms (Options A, C, D)
 
 Phase: 1 (design). Status: TECHNICAL EVALUATION FOR INDEPENDENT REVIEW. Owner decision D-016 (2026-10-17) records Option C as the preferred design direction, subject to independent design review, and records Option D as NOT selected. This document does not itself approve the design or the runtime mechanism. Q-021 separately tracks the Product Owner's explicit disposition of the K-L-N and K-O residual risks. Nothing here is tested; every statement about PostgreSQL behavior must be verified on the target PostgreSQL version (15 or later) in a later phase.
