@@ -27,7 +27,7 @@ The documentation-level corrections requested by the current decisions are recor
 
 ### HIGH
 - **Q-023 remains a Phase 1 gate blocker under D-023.** D-023 requires compatibility of a real hosting candidate with the selected Level 3/Level 4 target plus independent review. The Product Owner has deferred provider comparison/selection until hosted deployment planning. The design requirements are now much clearer, but the existing decision/gate cannot be marked satisfied without either candidate evidence or an explicit Product Owner amendment to the gate.
-- **PR #3 is still open/unmerged and GitHub reports mergeable: false.** The current compare reports the branch ahead of main, 0 commits behind and 27 changed files; no combined status checks or PR workflow runs are returned for the current head. Do not merge until the mergeability discrepancy is reconciled.
+- **PR #3 remains open/unmerged.** The connector summary reported mergeable: false, while a fresh direct GitHub API read for the current head reported mergeable: true and state clean. The branch is 0 commits behind main with 27 changed files; no combined status checks or PR workflow runs are returned. No merge was performed because the Phase 1 gate remains NOT READY.
 
 ### MEDIUM
 - Capacity, resource sizing, per-cell connection budgets, restore timing and cost remain NOT MEASURED. These are correctly marked as future hosted-deployment/pre-pilot evidence, not invented as facts.
