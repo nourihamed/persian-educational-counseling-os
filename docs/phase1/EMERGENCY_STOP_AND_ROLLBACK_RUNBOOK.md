@@ -38,12 +38,13 @@ Severity: S1 = cross-tenant exposure suspected; S2 = integrity or availability f
 3. Classify the incident and record it.
 
 ## 6. Steps — rollback / restore (only after assessment)
-1. Choose the restore point: the last snapshot taken before the first known bad event, verified by checksum.
-2. Restore to an isolated environment first; verify row counts and checksums against the evidence copy.
-3. Re-apply every tenant suspension and deletion decided after the restore point (a restore must never reactivate a suspended tenant). This is a requirement; the mechanism must be built and tested before pilot.
-4. Rotate all tenant and runtime credentials that were in scope of the incident.
-5. Re-run the tenant isolation tests (TI contracts that apply to the implemented mechanism) on the restored environment. Results must be recorded. A failing test blocks reopening.
-6. Reopen to one tenant first, then to the full pilot cap, only after the Product Owner approves in writing.
+1. Select a recovery copy from the approved D-023 Level 4 backup boundary. Verify the backup identity, administrative boundary, key custody, retention/deletion controls and audit evidence; production credentials must not be able to destroy all recovery copies or control all keys.
+2. Choose the restore point: the last verified snapshot before the first known bad event; validate integrity/checksums before use.
+3. Restore to an isolated environment first; verify row counts and checksums against the evidence copy.
+4. Re-apply every tenant suspension and deletion decided after the restore point (a restore must never reactivate a suspended tenant). This is a requirement; the mechanism must be built and tested before pilot.
+5. Rotate all tenant and runtime credentials that were in scope of the incident.
+6. Re-run the tenant isolation tests (TI contracts that apply to the implemented mechanism) on the restored environment. Results must be recorded. A failing test blocks reopening.
+7. Reopen to one tenant first, then to the full pilot cap, only after the Product Owner approves in writing.
 
 ## 7. Reopen criteria (all required)
 - Root cause identified and fixed, or explicitly accepted by the Product Owner as a residual risk with a record.
@@ -55,6 +56,7 @@ Severity: S1 = cross-tenant exposure suspected; S2 = integrity or availability f
 ## 8. Known gaps (must be closed before pilot)
 - Data-incident notification procedure (legal and privacy input required).
 - Mechanism that re-applies suspensions after restore (not yet built).
+- D-023 Level 4 backup provider/account/admin boundary, key custody, deletion/retention controls and restore evidence are not yet verified; provider selection is deferred.
 - Named incident lead and delegate, in writing.
 - Exercise of this runbook on the test environment (L-11), with recorded timing.
 
