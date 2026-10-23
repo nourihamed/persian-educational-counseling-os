@@ -1,3 +1,60 @@
+# CURRENT INDEPENDENT REVIEW — Q-023 HOSTING / ALT-5 COMPATIBILITY (2026-10-23)
+
+**Repository:** nourihamed/persian-educational-counseling-os  
+**Reviewed branch:** docs/phase1-tenant-isolation-design  
+**Reviewed pre-review-record head:** 656d80c854a2483f7844a87b448f6ff63a463c04  
+**Scope:** D-011/D-017 compatibility with D-020 Alt-5, hosting options, decision documentation and roadmap alignment. Documentation-only review; not a runtime security assessment.
+
+## Summary
+
+The original D-011 product goals (hosting in Iran, portability, low initial complexity and Docker Compose as a starting deployment tool) can be retained, but the prior single-VPS assumption cannot be represented as satisfying Alt-5 cell-host isolation. The new Q-023 review compares four topology patterns and records a recommendation without making the Product Owner's decision.
+
+**Gate remains NOT READY / NOT APPROVED.** Q-023 remains OPEN. No implementation, infrastructure, executable tests, Phase 2 work or real-data pilot is authorized.
+
+## Passed in this review
+
+- D-011 now distinguishes the accepted hosting objective from the unresolved physical/administrative topology; it explicitly states that multiple containers/databases on one shared host do not isolate against host/root compromise.
+- Added docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md with four options, threat-boundary comparison, recommendation, capacity evidence requirements and explicit non-claims.
+- Q-023 records the Product Owner decision required: separate host/VM per cell, separate cloud accounts/projects per cell, Alt-4, or another constraint.
+- D-017's previous connection arithmetic is treated as a historical estimate, not Alt-5 capacity evidence; the new review requires per-cell recalculation from actual worker/pool topology.
+- PROJECT_STATE.md, ROADMAP.md, CHANGELOG.md and PHASE1_REPORT.md now surface the unresolved hosting topology and the continuing gate.
+- No provider, price, measured capacity or runtime security is claimed.
+
+## Findings
+
+### CRITICAL
+- None newly identified in the documentation changes reviewed. This is not a statement that the design is runtime-secure.
+
+### HIGH
+1. **Hosting topology is still unselected:** Q-023 blocks Phase 1 approval. The recommended separate host/VM per cell has not been accepted by the Product Owner.
+2. **Cost and capacity remain unmeasured:** no vendor, instance profile, workload profile, price, load result or restore measurement exists in the reviewed evidence.
+3. **Global compromise residual remains:** a global cloud/organization/root administrator or shared control-plane credential could still affect all cells unless permissions and trust boundaries are independently constrained.
+4. **Runtime controls remain unimplemented/unverified:** architecture documents and contracts do not prove isolation.
+
+### MEDIUM
+1. D-017's pool-size-1-per-tenant-per-process constraint must be recalculated per cell once the worker/process topology is defined; do not reuse the former global 70-connection estimate as a measured result.
+2. Cell provisioning, tenant moves, monitoring, secret rotation, backup/restore, failure containment and incident recovery runbooks remain to be specified and tested in their authorized phases.
+3. Phase 3's infrastructure implementation must follow the topology chosen under Q-023; Docker Compose must not be treated as the cell security boundary.
+
+### LOW
+- None newly identified.
+
+## Required next actions
+
+1. Product Owner decides Q-023 (A/B/C/D in OPEN_QUESTIONS.md).
+2. After the decision, update D-011/roadmap/design consistently; do not change D-020 or the two-tenant limit silently.
+3. Select a real target provider/profile and produce an itemized cost and per-cell capacity plan; label estimates versus measurements.
+4. Recalculate PostgreSQL connections/memory per cell from actual worker/pool counts and admin/monitoring/recovery reserves.
+5. Independently review the final topology and maintain D-014's pre-pilot gates.
+
+## Recommendation and gate
+
+**Recommendation:** evaluate Option B (separate host/VM and network boundary per cell, with a narrowly privileged shared control plane); retain Option C as the stronger account/project-boundary alternative if shared administrative compromise cannot be acceptably bounded. This is a recommendation, not an owner decision.
+
+**Gate: NOT READY / NOT APPROVED.** Keep PR #3 open and unmerged. Do not start Phase 2 or use real student data.
+
+---
+
 # FINAL INDEPENDENT DOCUMENT REVIEW — D-020 / Q-022 ALT-5 (2026-10-23)
 
 **Reviewed live PR head:** `8027bd1c6d4002fd7f81a3452b52b48ea6a345d4`  
