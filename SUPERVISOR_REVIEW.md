@@ -26,7 +26,9 @@ Q-022 option A was explicitly selected. D-020 records Alt-5 hybrid isolation cel
  
 ---
 
-# CURRENT INDEPENDENT ARCHITECTURE REVIEW — Q-022 (2026-10-23)
+> **HISTORICAL PRE-DECISION SNAPSHOT:** The following Q-022 recommendation was written before the Product Owner selected option A. It is superseded by D-020 and the current review at the top of this file. Do not interpret the historical 'Q-022 OPEN' statements below as current status.
+
+# HISTORICAL INDEPENDENT ARCHITECTURE REVIEW — Q-022 (pre-D-020, 2026-10-23)
 
 ## Result
 **Recommendation only — no owner decision and no Phase 1 approval.** The independent review is documented in `docs/phase1/Q022_INDEPENDENT_ARCHITECTURE_REVIEW.md`.
