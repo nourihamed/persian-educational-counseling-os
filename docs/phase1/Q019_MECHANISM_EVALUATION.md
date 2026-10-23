@@ -214,55 +214,55 @@ Phase 2 may start after Phase 1 design approval, because Phase 2 implements the 
 
 Result: Option C satisfies the design-selection criteria at design level and may be decided by the Product Owner on that basis, with the capacity estimate labelled as an estimate. Option D does not satisfy criterion 1 and is therefore not selection-ready.
 
-### 6.2 Option C capacity — ESTIMATE — NOT MEASURED (independent review M-01)
+### 6.2 Option C capacity — ESTIMATE — NOT MEASURED (independent review M-01; aligned with D-017, H-05)
 
-**Status of this section:** `ESTIMATE — NOT MEASURED`. Every figure below is a calculation from the assumptions listed. None is a measurement. The estimate shows the order of magnitude and the drivers. It does not establish that Option C is feasible on the D-011 host.
+**Status of this section:** `ESTIMATE — NOT MEASURED`. Every figure is a calculation from the assumptions listed. None is a measurement, and none establishes feasibility on the D-011 host.
 
-**Assumptions (each to be confirmed or replaced by the owner or by measurement):**
+**Adopted pilot configuration (D-017, primary assumptions):** direct PostgreSQL connections; bounded per-tenant pool of size 1 per tenant per application process; no pooler for the pilot.
 
-| ID | Assumption | Value used | Source |
+**Assumptions:**
+
+| ID | Assumption | Value used (primary) | Source |
 |---|---|---|---|
-| A1 | Pilot tenants (counselors) | 10 | PROVISIONAL CAP set by Product Owner (D-016 point 4), subject to capacity analysis and owner confirmation before pilot |
+| A1 | Pilot tenants (counselors) | 10 | Provisional cap (D-017), subject to capacity analysis and owner confirmation |
 | A2 | Application worker processes | 4 | ASSUMPTION |
 | A3 | Background worker processes | 2 | ASSUMPTION |
-| A4 | Direct pool size per tenant per process | 2 | ASSUMPTION |
+| A4 | Pool size per tenant per process (direct mode) | **1** | D-017 (primary). Size 2 is a sensitivity case only |
 | A5 | Reserved administrative and operational connections | 10 | ASSUMPTION |
-| A6 | PostgreSQL `max_connections` | 100 | PostgreSQL documented default. Pilot host value: UNKNOWN, not measured |
-| A7 | Pooler server pool size per tenant role (per-user pooling) | 2 | ASSUMPTION. Pooler not yet selected (Q-016) |
-| A8 | Memory per backend | not used in this estimate | UNKNOWN, must be measured |
+| A6 | PostgreSQL `max_connections` | 100 | PostgreSQL documented default. Pilot host value UNKNOWN, not measured |
+| A7 | Transaction pooler server pool per tenant role | not used for pilot | Sensitivity only; transaction pooling deferred (D-017) |
+| A8 | Memory per backend | not estimated | UNKNOWN, must be measured |
 
-**Calculation 1 — direct connections (no pooler), worst case, all pools fully allocated:**
-- Application pool connections = (A2 + A3) × A1 × A4 = (4 + 2) × 10 × 2 = 120
-- Plus A5 = 120 + 10 = **130 connections**
-- Against A6 = 100: exceeds by 30 under these assumptions. With A4 = 1: 6 × 10 × 1 + 10 = **70**, which is within 100.
-- Result (ESTIMATE): **direct mode at pool size 2 is not feasible under these assumptions**; pool size 1 is within the default limit. Memory per backend is not estimated.
+**Primary calculation (D-017 configuration):**
+- Application pool connections = (A2 + A3) × A1 × A4 = (4 + 2) × 10 × 1 = 60
+- Plus A5 = 60 + 10 = **70 connections**
+- Against A6 = 100: within the default limit under these assumptions. Result (ESTIMATE — NOT MEASURED): **70 of 100 under these assumptions.** Memory per backend, CPU, and latency are not estimated.
 
-**Calculation 2 — per-user pooler (transaction pooling is compatible with Option C in principle because identity comes from `current_user` and no per-request context setting is used; this must be verified by TI-CONN and TI-CTX tests and is linked to Q-016):**
-- Server connections = A1 × A7 = 10 × 2 = 20, plus A5 = **30 server connections**
-- With A7 = 1: 10 + 10 = **20 server connections**
-- Against A6 = 100: well within the default limit. Result (ESTIMATE): **feasible in count under these assumptions**, with a pooler in front of PostgreSQL; the pooler itself is not yet selected or measured.
+**Sensitivity — pool size 2 (not adopted):**
+- (4 + 2) × 10 × 2 + 10 = **130 connections**, which exceeds 100 under these assumptions. Pool size 2 is therefore NOT permitted for the pilot unless a measured limit on the target host shows it is feasible and the owner approves the change (D-017).
+
+**Sensitivity — transaction pooler (not adopted for pilot):**
+- A1 × A7 + A5 with A7 = 2: 10 × 2 + 10 = 30 server connections; with A7 = 1: 20. This is an analysis of an option deferred by D-017. It is not a pilot assumption and requires its own compatibility tests (TI-CONN and TI-CTX) before any use.
 
 **Other capacity drivers (not quantified):**
-- Roles and credentials: 50 tenant roles, one credential each (A1). Grant entries multiply by tables and privileges; the count is an estimate that must be measured on the actual schema.
-- Pooler configuration: one entry per tenant role, reloaded at tenant creation and suspension.
-- Burst concurrency: peak simultaneous requests across tenants; not modelled.
-- Background jobs and administrative access: consume connections outside A2 to A5 if not reserved.
-- Memory: per-backend and per-pooler memory are UNKNOWN and must be measured.
+- Roles and credentials: one login per tenant (A1 logins); grant entries scale with tables and privileges; must be measured on the actual schema.
+- Background jobs and administrative access consume connections outside A2 to A5 unless reserved.
+- Burst concurrency across tenants is not modelled.
+- Memory per backend and per process is UNKNOWN and must be measured.
 
-**Provisioning lifecycle (design point for C, not capacity):** a role is created when a tenant is created, set to disabled when a tenant is suspended, and removed only under a retention rule. The retention rule is an OPEN owner decision, not blocking design selection.
+**Provisioning lifecycle (design point, not capacity):** a role is created with the tenant, disabled at suspension, and removed only under the retention checklist (design §5.5; DATA_RETENTION_SCHEDULE_DRAFT.md §4). Retention durations are not set (Q-020).
 
 **Uncertainties and risks:**
-- A1 to A5 are assumptions. The estimate changes linearly with A1 and A4.
-- Per-user pooling changes the connection-to-identity mapping and must be tested before use.
-- A pooler is a new component. Its failure modes are not assessed here.
+- A1 to A5 are assumptions; the connection count scales linearly with A1, A2, A3 and A4.
+- The estimate is not evidence that the host can carry the pilot.
 
-**Fallback rule (unchanged in intent, made explicit):**
-- If measured capacity is below (tenants × per-tenant server connections + reserved), Option C is not used for the pilot.
-- Reduce A7 to 1 and reclaim idle tenant pools first.
-- Grouping tenants into shared roles is **not** an acceptable fallback without a new Product Owner decision, because a shared role reaches every tenant in the group and weakens the K-L-1 result in §4.4.2.
-- The remaining fallback is to re-review Option D, which is currently not selection-ready (§6.3), or to defer Q-019.
+**Fallback rule (D-016 point 8, D-017):**
+- If measured capacity is below the requirement at the approved tenant cap, reduce the cap first. Do not use shared runtime roles as a workaround (D-016 point 7, prohibited).
+- Pool size stays 1 unless a measured increase is approved.
+- Transaction pooling requires its own compatibility evidence and a separate decision.
+- Otherwise re-review the design (Option D remains NOT SELECTION-READY, §6.3).
 
-**Requirement:** actual measurement on the D-011 host (parameters, pooler, role count, memory) is a mandatory pilot-validation criterion (D-015). No document may claim that Option C is capacity-feasible until the measurement exists.
+**Requirement:** measurement on the target host (see TARGET_ENV_LOAD_TEST_PLAN.md) is a pilot-validation criterion (D-015, D-014 condition 3). No document may claim capacity is measured until a measurement exists.
 
 ### 6.3 Option D selection-readiness (revision 8)
 

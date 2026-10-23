@@ -525,6 +525,11 @@ NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 - Capacity rule accepted as a constraint; measurement required before any real-data pilot.
 - D-014 unchanged. Phase 1 unapproved. Gate NOT READY until the supervisor re-reviews the corrected commit.
 
+## Current Review Entry (for commit 61aed53adfde65504c97177667a425f02e717ab2)
+- Reviewer-stated gate: **NOT READY** (reviewer comment 5625838668 on PR #3; recorded as a COMMENT, not a formal REQUEST_CHANGES review).
+- Open reviewer findings for this commit: H-05 (capacity assumption alignment with D-017), H-06 (stale Q-016 and Q-019 text, now labelled historical), M-06 (load-scenario order and L-10 dependency), M-07 (named responsibilities, now a readiness checklist with NOT ASSIGNED placeholders), M-08 (operational status, now updated with this entry).
+- This entry does NOT approve Phase 1. Phase 2 has not started.
+
 ## Revision 8 Response to Review ID 5573172802 (NOT READY)
 - H-01: credential-class analysis made equivalent (common scenarios K-L-1 and K-L-N; Option D no-token case explicit) — Q019 §4.4.
 - H-02: Option D classified NOT SELECTION-READY with seven open points and owners — Q019 §6.3; criterion 1 of §6.1 not met for D.
@@ -551,7 +556,7 @@ NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 
 ## Owner Decisions Applied
 - Q-015: RESOLVED — Option A (D-013): read-only, audited platform-admin access; no BYPASSRLS role; no platform writes in MVP.
-- Q-019: direction DECIDED (D-014): strengthen the boundary before any real-data pilot. Mechanism OPEN.
+- Q-019 (historical, 2026-10-15 state): D-014 recorded the strengthening direction and the real-data pilot gate. Mechanism direction was later decided by D-016 (Option C preferred, subject to design review); D-014 does not select a mechanism.
 - Pilot rule (D-014): no real student data until independent security review, required security tests passing, blocking findings fixed, and written owner approval.
 
 ## Reviewer Findings and Response
@@ -598,7 +603,7 @@ NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 Allowed values: `NOT READY` / `CONDITIONAL PASS` / `APPROVED`
 
 ## Product Owner Acceptance
-**Q-015: DECIDED (D-013). Q-019 direction: DECIDED (D-014). Q-019 mechanism: OPEN. Phase 1 acceptance: [PENDING].**
+**Q-015: DECIDED (D-013). Q-019: strengthening direction (D-014) and mechanism direction (D-016, Option C preferred, subject to design review); Option D not selected. Phase 1 acceptance: [PENDING].**
 
 ## Final Gate Status
 **PENDING.** No approval is recorded. Phase 2 is not authorized.

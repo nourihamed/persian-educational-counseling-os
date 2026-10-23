@@ -76,3 +76,28 @@ Recommended procedure is in `EMERGENCY_STOP_AND_ROLLBACK_RUNBOOK.md` (same folde
 | Target host | Dedicated VM, PostgreSQL 15+, explicit limits, measured before sizing | Host provisioning |
 | Security review | Independent reviewer, written, blocking findings fixed | Owner engagement |
 | Emergency stop | Runbook drafted; to be exercised | Test environment |
+
+---
+
+## 7. Pre-pilot readiness checklist (M-07)
+
+Every row must be completed before any real student data is considered. "NOT ASSIGNED" means no person has been named by the Product Owner. No name, date, or approval is entered by the technical lead.
+
+| Responsibility | Named person | Status | Evidence required | Approval date |
+|---|---|---|---|---|
+| Incident lead (runbook §2) | NOT ASSIGNED | NEEDS-DECISION (Product Owner) | Written appointment | — |
+| Incident delegate | NOT ASSIGNED | NEEDS-DECISION (Product Owner) | Written appointment | — |
+| Personal-data incident notifications (who decides, who sends) | NOT ASSIGNED | NEEDS-DECISION (Product Owner, with legal review) | Written procedure reviewed by counsel | — |
+| Legal and privacy reviewer (retention) | NOT ASSIGNED | NEEDS-DECISION (Product Owner) | Signed scope and memo | — |
+| Tax reviewer (R4 only) | NOT ASSIGNED | NEEDS-DECISION (Product Owner) | Signed memo | — |
+| Approver of tenant role deletion | NOT ASSIGNED | NEEDS-DECISION (Product Owner) | Completed checklist, DATA_RETENTION_SCHEDULE_DRAFT.md §4 | — |
+| Independent implementation security reviewer | NOT ASSIGNED | NEEDS-DECISION (Product Owner) | Written review with blocking findings classified | — |
+| Target host confirmed (D-011) | NOT ASSIGNED | BLOCKED (host not confirmed) | Host description, versions, max_connections recorded | — |
+| Load and connection tests run (L-01 to L-11) | — | NOT-RUN | Results per scenario with criteria | — |
+| Retention schedule durations approved | — | NEEDS-DECISION (Q-020) | Legal and tax review memos; approved schedule | — |
+| Emergency stop drill (L-11) | — | NOT-RUN | Timed drill record | — |
+| Written approval of pilot cap A1 | — | NEEDS-DECISION (Product Owner) | Evidence from load tests | — |
+| Written approval of pilot gate (D-014) | — | NEEDS-DECISION (Product Owner) | All D-014 conditions evidenced | — |
+
+**Rule:** if any row is not complete, real student data remains prohibited.
+

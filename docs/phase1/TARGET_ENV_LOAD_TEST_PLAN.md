@@ -31,8 +31,8 @@ Gate: pilot-validation criteria (D-015, D-014 condition 3). Not a prerequisite f
 | L-07 | Failure injection: database restart | DB restart | Recovery within documented time; no stale context | NOT-RUN |
 | L-08 | Tenant suspension during load | suspension | Login refused immediately; sessions terminated (TI-CONN-04) | NOT-RUN |
 | L-09 | Isolation under load: tenant A requests never return tenant B rows | parallel tenants | Zero cross-tenant rows in all responses | NOT-RUN |
+| L-10 | Restore-from-backup test (R7) on SYNTHETIC data: restored environment must re-apply tenant suspensions and deletions decided after the restore point | backup restore | Suspended tenant stays suspended after restore; no cross-tenant data; checksums match the evidence copy | BLOCKED: restore re-application mechanism not implemented (Phase 2 or later). Does NOT depend on Q-020 duration decisions; the retention policy is a separate pre-pilot gate |
 | L-11 | Exercise the emergency stop and rollback runbook (EMERGENCY_STOP_AND_ROLLBACK_RUNBOOK.md) with recorded timing | incident drill | All steps executed in order; timings recorded; no tenant re-enabled before reopen criteria are met | NOT-RUN |
-| L-10 | Restore from backup test (R7) | backup restore | Deleted and suspended tenants remain suspended after restore | BLOCKED: retention decision (Q-020) |
 
 ## 4. Measurements to record
 - Connections: total, per tenant role, per process, peak, reserved; PostgreSQL max_connections.
