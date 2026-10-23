@@ -195,7 +195,7 @@ Role names are illustrative; final names are a Phase 2/3 detail.
 - R-DB-08: no RULE objects or row-security-bypassing triggers on tenant tables (`pg_rules`, `pg_trigger`), reviewed.
 
 ### 5.3 `FORCE ROW LEVEL SECURITY`
-Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason: the owner role must not silently bypass policies if it ever connects through a path other than the migration job. Migration jobs use a separately controlled owner/migrator identity and reviewed migration steps; they do not rely on a tenant GUC. This is a Phase 2 design rule. If the owner later rejects FORCE, that is a change to this rule and must be recorded as a decision, not a silent exception.
+Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason: the owner role must not silently bypass policies if it ever connects through a path other than the migration job. `app_migrator` is limited to controlled schema/DDL migrations and is never configured in the application runtime. **Data migrations must run tenant-by-tenant through the corresponding tenant login/pool**, so RLS and composite constraints remain active. Any exceptional cross-tenant data repair requiring broader privilege is a separate break-glass operation: it needs a written, time-limited owner decision, isolated credentials, explicit audit evidence, and post-operation verification; it must not become a standing runtime role or a tenant GUC bypass. This is a Phase 2 design rule. If the owner later rejects FORCE, that is a change to this rule and must be recorded as a decision, not a silent exception.
 
 ### 5.4 `app_migrator` and application-process identity
 - Owns schema objects; runs only in the migration pipeline.
