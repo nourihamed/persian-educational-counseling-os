@@ -325,3 +325,25 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 4. Phase 1 remains NOT READY until the revised design is independently reviewed and the gate is explicitly changed.
 
 **Reason:** The Product Owner prefers not to accept a design whose stated compromise paths can expose multiple tenants. Stronger isolation must be assessed honestly against process, credential, privileged-role, operational, and cost boundaries; merely splitting databases without addressing shared credentials/administrators is not sufficient.
+
+
+## D-020 — Q-022 architecture selection: Alt-5 hybrid isolation cells
+**Status: ACCEPTED — explicit Product Owner decision, 2026-10-23.** This records the Product Owner's explicit selection of Q-022 option A.
+
+**Decision:** Select **Alt-5 hybrid isolation cells** as the target architecture for the revised Phase 1 design. Use Alt-4 (dedicated operational isolation per tenant) as the security comparison/reference architecture. For the initial pilot proposal capped at 10 tenants, set a **maximum of two tenants per cell** (up to five cells) as a provisional blast-radius limit, subject to documented cost and capacity evaluation. This is not a measured capacity result and does not authorize a pilot.
+
+**Minimum design requirements:**
+1. Each cell has its own PostgreSQL cluster/instance and network boundary. A different database/schema or container on one shared host is not equivalent to this boundary.
+2. Runtime workers, credentials, and secret access are cell-scoped; an ordinary worker or secret policy cannot enumerate credentials for other cells.
+3. Each cell has cell-scoped migration identities. No routine standing global owner/migrator may read or write all tenant data.
+4. Backup access and encryption keys are scoped by cell; restore controls must preserve tenant suspension/offboarding state.
+5. Deployment authority is separated from routine data-read authority. Global host/cloud/root compromise remains an explicit high-trust residual and must be mitigated, monitored, and disclosed.
+6. Cross-cell break-glass requires dual approval, a ticket/reason, short-lived access, immutable audit evidence, session termination, and post-incident review.
+7. The two-tenant cell limit and provisional ten-tenant pilot cap may not be raised without measured capacity/cost evidence and a separate explicit Product Owner decision.
+8. The revised design, authorization contract, test catalog, hosting assumption D-011, and pool/capacity assumptions D-017 must be reconciled and independently reviewed before Phase 1 approval.
+
+**Residual-risk statement:** If all valid tenant credentials are independently stolen and usable from an attacker-controlled network, or a global host/cloud administrator controlling every cell and key is compromised, the architecture cannot guarantee zero broad exposure. Controls must prevent a single routine worker, secret-distribution policy, or migration identity from becoming a universal access path. Global-root risk remains subject to explicit pre-pilot risk review; this decision does not silently accept it.
+
+**Consequences:** Q-022 is resolved as an architecture direction, not as proof of implementation or capacity. Phase 1 remains NOT READY pending independent review. No code, migration, infrastructure, Phase 2 work, or real-data pilot is authorized. D-014 remains in force.
+
+**Affected artifacts:** `OPEN_QUESTIONS.md`, `docs/phase1/TENANT_ISOLATION_DESIGN.md`, `docs/phase1/AUTHORIZATION_CONTRACT.md`, `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`, `PROJECT_STATE.md`, `ROADMAP.md`, `docs/phase1/PHASE1_REPORT.md`.
