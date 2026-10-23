@@ -1,3 +1,16 @@
+# CURRENT STATUS ADDENDUM — 2026-10-23 (Revision 10)
+
+This addendum is authoritative for the current state. The revision history below is retained for traceability; statements in earlier revision sections that conflict with this addendum are historical, not current operational guidance.
+
+- The latest independently reviewed pre-correction head was `4715e3d168d3f680ab98b682688980f845a24d45`; this corrective revision is being committed to PR #3 on `docs/phase1-tenant-isolation-design`. Re-verify the final head after all edits.
+- The review found that §6 still prescribed Option A's `set_config/current_setting` mechanism despite D-016's Option C direction. The design now makes Option C the normative PostgreSQL contract and labels the old GUC mechanism as historical.
+- The test-contract catalog remains 123 specifications. The 12 Option A-only TI-CTX contracts (01–10, 13–14) are now SPEC-ONLY; TI-CTX-11/12 are redefined as future direct per-tenant connection-pool lifecycle checks. No contract is represented as implemented, executed, or passed.
+- Current contract status counts must be recounted from the final file; any older count breakdown below is historical and must not be reused as current evidence.
+- D-017: pilot connection mode is direct PostgreSQL connections, pool size 1 per tenant per application process. Transaction pooling is deferred. The A1 cap of 10 is provisional; capacity remains ESTIMATE — NOT MEASURED.
+- Q-020 retention duration and responsible people remain unresolved. This does not silently authorize real data.
+- Gate remains **NOT READY pending independent review of the final corrected commit**. Phase 2 is not authorized. No real student data is permitted under D-014.
+
+---
 # PHASE 1 REPORT — Architecture & Multi-Tenancy (design only, revision 2)
 
 Date: 2026-10-15
