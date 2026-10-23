@@ -165,8 +165,8 @@ TenantContext {
 |---|---|---|
 | API (routers) | Resolve TenantContext from principal; validate shape; map outcomes to HTTP | Trust path/body tenant IDs; query data directly |
 | Application services | Take TenantContext explicitly; enforce object-level authorization and business rules; own transaction boundaries | Use an ambient/global tenant; build raw SQL |
-| Repositories (Infrastructure) | Require TenantContext in every method signature; inject tenant filter; set transaction-local DB context once per transaction | Expose unscoped methods for tenant-owned tables; accept tenant IDs from callers without a context object |
-| Database | RLS policies on tenant-owned tables; composite constraints; immutable `tenant_id` on tenant-owned rows | Be the only control (see §2) |
+| Repositories (Infrastructure) | Require TenantContext in every method signature; inject tenant filter; select the matching tenant-specific database pool before SQL | Expose unscoped methods for tenant-owned tables; use a shared tenant-data login; accept tenant IDs from callers without a context object |
+| Database | Option C: RLS policies resolve tenant from the authenticated per-tenant login via a reviewed helper; composite constraints; immutable `tenant_id` | Be the only control (see §2) |
 
 Rule: no tenant-owned repository method exists without a required TenantContext parameter. There is no `get_all()` on a tenant-owned repository.
 
@@ -179,27 +179,27 @@ Rule: no tenant-owned repository method exists without a required TenantContext 
 | Role | Purpose | Owns tenant tables? | Used by |
 |---|---|---|---|
 | `app_migrator` | Schema migrations only | Yes (owner) | Migration job only; credentials never present in application runtime configuration |
-| `app_runtime` | API and workers | **No** | Application runtime |
+| `tenant_login_<tenant>` | Tenant-specific database login used by the API/worker only for that tenant's SQL | **No** | Tenant-specific pool selected from authenticated TenantContext |
 | `platform_ops` | **Not created in MVP** (D-013 prohibits a `BYPASSRLS` role for platform-admin access) | — | — |
 
 Role names are illustrative; final names are a Phase 2/3 detail.
 
-### 5.2 Required properties of `app_runtime` (each becomes a TI-CFG test)
-- R-DB-01: not superuser; no `BYPASSRLS`; no `CREATEROLE`; no `CREATEDB`; no `REPLICATION`.
-- R-DB-02: owns no tenant-owned table, view, sequence used for tenant data, or schema containing them.
-- R-DB-03: is not a member, directly or through any chain of memberships, of any role with the above privileges or ownership of tenant tables. Checked recursively through `pg_auth_members`.
-- R-DB-04: has no `TRUNCATE` privilege on tenant-owned tables. TRUNCATE is not subject to RLS in PostgreSQL, so it is a bypass.
-- R-DB-05: has no `CREATE` on schemas containing tenant tables and no DDL privilege.
-- R-DB-06: has no `EXECUTE` privilege on any `SECURITY DEFINER` function that touches tenant tables, unless the function is on a reviewed allowlist (TI-BYP-03).
-- R-DB-07: effective privileges on each tenant table are checked with `has_table_privilege` and `pg_class` ACLs, not only with configuration files. Only the DML privileges needed by the application are granted.
-- R-DB-08: no RULE objects and no row-security-bypassing triggers on tenant tables (`pg_rules`, `pg_trigger`), reviewed.
+### 5.2 Required properties of each tenant login role (each becomes a TI-CFG test)
+- R-DB-01: each tenant login is not superuser and has no `BYPASSRLS`, `CREATEROLE`, `CREATEDB`, or `REPLICATION`.
+- R-DB-02: tenant login roles own no tenant-owned table, view, sequence used for tenant data, or schema containing them.
+- R-DB-03: tenant login roles have no direct or transitive membership in another tenant role, platform role, or role with elevated privileges/ownership. Check recursively through `pg_auth_members`.
+- R-DB-04: tenant login roles have no `TRUNCATE` privilege on tenant-owned tables. TRUNCATE is not subject to RLS in PostgreSQL, so it is a bypass.
+- R-DB-05: tenant login roles have no `CREATE` on schemas containing tenant tables and no DDL privilege.
+- R-DB-06: tenant login roles have no `EXECUTE` privilege on any `SECURITY DEFINER` function that touches tenant tables, except the narrowly scoped, reviewed tenant-mapping helper and any separately approved allowlist entry (TI-BYP-03).
+- R-DB-07: effective privileges of every tenant login on each tenant table are checked with `has_table_privilege` and `pg_class` ACLs. Only the required DML privileges are granted.
+- R-DB-08: no RULE objects or row-security-bypassing triggers on tenant tables (`pg_rules`, `pg_trigger`), reviewed.
 
 ### 5.3 `FORCE ROW LEVEL SECURITY`
 Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason: the owner role must not silently bypass policies if it ever connects through a path other than the migration job. Impact: migrations that move tenant data must either run with context set explicitly or be written as reviewed migration steps; this is a Phase 2 design rule, recorded here. If the owner later rejects FORCE, that is a change to this rule and must be recorded as a decision, not a silent exception.
 
-### 5.4 `app_migrator`
+### 5.4 `app_migrator` and application-process identity
 - Owns schema objects; runs only in the migration pipeline.
-- Its credentials must not appear in application runtime configuration (static check TI-CFG-10).
+- `app_migrator` credentials must not appear in application runtime configuration (static check TI-CFG-10). The application process must not possess a shared database login with tenant-table access; it receives/uses only the tenant-specific credentials needed by its pool router, under the secret-management controls defined for implementation review.
 - Migration pipeline is a privileged surface and is listed in Phase 3 review.
 
 ---
@@ -273,7 +273,7 @@ Tests TI-CONN-04..06 and the applicable pool lifecycle checks must prove these p
 ### 6.5 Views, functions, rules
 - Views over tenant tables must use `security_invoker = true` (PostgreSQL 15+) or must not exist in MVP (TI-BYP-01).
 - `SECURITY DEFINER` functions are forbidden on tenant tables in MVP unless individually reviewed and allowlisted (TI-BYP-03). Note: Option D in §2.3 would require such a function and therefore a dedicated review.
-- Materialized views over tenant data must not be readable by `app_runtime`, because RLS does not apply to them (TI-BYP-04).
+- Materialized views over tenant data must not be readable by tenant login roles, because RLS does not apply to them (TI-BYP-04).
 
 ---
 
@@ -324,7 +324,7 @@ Composite keys are designed to guarantee tenant consistency at the database leve
 
 ### 8.3 Technical path and trust boundary (decided)
 - Cross-tenant reads only through a narrow set of named, read-only Application query paths. Each path takes an explicit target tenant, sets the transaction context to that tenant, and runs under the grant checks in §8.2.
-- The runtime role `app_runtime` is unchanged: no ownership of tenant tables, no `BYPASSRLS`, no membership in any role with those properties (TI-CFG-01 to 05).
+- Option C has no shared tenant-data runtime login. Every tenant login must satisfy TI-CFG-01 to 08; any application-process role without tenant-table access is outside this tenant-data authorization path.
 - `platform_ops` with `BYPASSRLS` is NOT created in MVP. TI-PLAT-06 verifies that no role with `BYPASSRLS` exists for application or platform use.
 - Trust boundary: a platform-admin path inherits the same residual risk T4 as all application paths (§2). It does not add a bypass role, so an arbitrary-SQL attacker gains no new cross-tenant capability through this design, beyond what the runtime role already has under D-009.
 
@@ -344,7 +344,7 @@ Platform aggregate jobs operate on aggregates or on a per-tenant loop with per-i
 | Files | Storage key `tenants/{tenant_id}/…` derived from the stored record; access via short-lived signed URLs issued only after authorization; file metadata is tenant-owned with RLS; direct unsigned URLs are denied | Guessable or shared URLs |
 | Notifications | Delivery rows carry tenant_id and recipient; adapters receive one recipient and one tenant's content; status updates tenant-scoped | Message to wrong recipient |
 | Background jobs | Payload carries exactly one tenant_id (or the explicit platform marker with aggregate-only access); worker selects only that tenant's connection identity for tenant-owned queries; failure cannot route a connection to another tenant (see Q-017) | Cross-tenant processing and retries |
-| Audit logs | Append-only for `app_runtime` (no UPDATE/DELETE); tenant-scoped reads; platform events carry actor and target | Missing evidence |
+| Audit logs | Append-only for tenant login roles (no UPDATE/DELETE); tenant-scoped reads; platform events carry actor and target | Missing evidence |
 | Version history | `ProgramVersion` and `PlanVersion` are tenant- and student-scoped; published versions immutable (D-008); activation atomic | Cross-tenant version read or write; silent mutation |
 
 ---
@@ -376,7 +376,7 @@ Platform aggregate jobs operate on aggregates or on a per-tenant loop with per-i
 Recorded in `OPEN_QUESTIONS.md` with status, options, and dependency:
 - Q-014: response policy for cross-tenant object access (exact status code)
 - Q-015: DECIDED (Option A, D-013). Read-only, audited, no bypass role.
-- Q-016: pooler mode and transaction-local context
+- Q-016: direct per-tenant connections for the pilot (D-017); transaction pooling deferred; no GUC-based tenant context in the selected Option C design
 - Q-017: background job model
 - Q-018: tenant file storage and signed URLs
 - Q-019: direction DECIDED (D-014: strengthen before real-data pilot). Mechanism direction DECIDED (D-016): Option C preferred, subject to design review; Option D not selected (NOT SELECTION-READY). Not implemented; not a runtime security claim
