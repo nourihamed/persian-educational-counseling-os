@@ -1,4 +1,4 @@
-> **Status notice 2026-10-23:** D-019 and Q-022 supersede this document's former recommendation that Option C be the preferred design direction. This is historical comparison material only, not the current approved architecture. Do not implement or use its Option C/Option D selection language as current acceptance criteria until Q-022 is decided and the document is reconciled.
+> **Status notice 2026-10-23:** D-020 resolved Q-022 by selecting Alt-5 hybrid isolation cells. This Q-019 mechanism evaluation is historical comparison material only; Option C/Option D language below is not normative and must not be used as current acceptance criteria. The active design is `TENANT_ISOLATION_DESIGN.md`; the active test catalog is `TENANT_ISOLATION_TEST_CONTRACTS.md`.
 
 ---
 
