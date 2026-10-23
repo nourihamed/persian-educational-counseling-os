@@ -1,7 +1,7 @@
 # TENANT_ISOLATION_DESIGN.md
 
 Phase: 1 — Architecture & Multi-Tenancy (design only)
-Status: DRAFT (revision 2, corrective pass). Design artifact only. No code, migration, role, policy, grant, or infrastructure exists or was created. No test was run. Nothing here is a security proof. Phase 1 is NOT approved by this document.
+Status: DRAFT — corrective revision following independent review of commit 4715e3d. Design artifact only. No code, migration, role, policy, grant, or infrastructure exists or was created. No test was run. Nothing here is a security proof. Phase 1 is NOT approved by this document.
 
 Binding inputs (accepted decisions, not re-decided here):
 - D-009 (ACCEPTED 2026-10-12, answer to Q-001): shared PostgreSQL database/schema; direct `tenant_id NOT NULL` indexed on tenant-scoped rows; authorization in the Application/API layer with PostgreSQL RLS as defense in depth; composite constraints or equivalent for parent/child tenant consistency; Platform Admin cross-tenant access only with explicit, limited, audited permission; "RLS به‌تنهایی کافی نیست".
@@ -66,7 +66,7 @@ The tenant value lives in a session variable (`app.current_tenant_id`) that the 
 - Claims that are TRUE, once the tests pass: RLS prevents accidental cross-tenant access by application code that does not set the right tenant, and prevents cross-tenant access from ordinary queries issued under a correctly set context.
 - Preventing T4 is a separate control set (§2.4) and must be reviewed in Phase 3 and Phase 26 (Security Hardening).
 
-### 2.3 Options for a stronger tenant-context boundary (Q-019 mechanism open; direction decided in D-014; see §2.4)
+### 2.3 Options for a stronger tenant-context boundary (historical comparison; current direction in §2.4)
 
 | Option | Mechanism | Resists T4? | Advantages | Costs and risks |
 |---|---|---|---|---|
@@ -129,7 +129,7 @@ Status vocabulary (each claim has exactly one current status):
 | Platform admin access is read-only, limited and audited | DESIGNED (D-013 decision; §8). Not implemented. Not test-verified (TI-PLAT pending) |
 | Tenant isolation holds in production | NOT CLAIMABLE in Phase 1 |
 | RLS alone isolates tenants | NOT CLAIMABLE. RLS is a defense against application defects, not a boundary against arbitrary SQL |
-| T4a: SQL injection on a tenant connection cannot cross tenants | NOT CLAIMABLE under Option A. Option C would address it for one tenant connection only, if TI-CONN and TI-ADV-01 pass. Mechanism not selected (Q-019). Evaluation: Q019_MECHANISM_EVALUATION.md |
+| T4a: SQL injection on a tenant connection cannot cross tenants | NOT CLAIMABLE as a verified property. Option C is the preferred design direction and is designed to limit a single tenant connection to that tenant; this remains unimplemented and untested. Claim only after TI-CONN and TI-ADV-01 pass. Evaluation: Q019_MECHANISM_EVALUATION.md |
 | T4b: code execution in the application process cannot cross tenants | NOT CLAIMABLE under any option in this design. Requires process isolation (Phase 3/26) |
 | T4c-K-L: a stolen tenant login cannot read other tenants | NOT CLAIMABLE under Option A (login reaches all). Option C: limited to one tenant. Option D: login alone returns no rows. Claim allowed only after TI-ADV-02 passes for the chosen option |
 | T4c-K-T / K-S / K-O: tokens, signing key, owner role | NOT CLAIMABLE under any option. Residuals recorded as KNOWN-RESIDUAL (TI-ADV-04, TI-ADV-05) |
@@ -219,38 +219,67 @@ Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason
 
 **Shared-identity prohibition (D-016 point 7):** no tenant may share a runtime identity with another tenant. Verified by TI-CONN-06. No capacity workaround may group tenants under one identity.
 
-## 6. Tenant Context Propagation into PostgreSQL
+## 6. Tenant Connection Routing and PostgreSQL Row Security — Normative Option C
 
-### 6.1 Mechanism
-Inside each transaction, the repository layer sets the context once, before any tenant-owned statement:
+**This section is the implementation contract for the preferred direction recorded in D-016.** Option C is a design direction only; no database objects or application code exist yet. The Option A GUC mechanism shown in older revisions is historical and MUST NOT be implemented for the selected Option C design.
 
-```sql
-SELECT set_config('app.current_tenant_id', $1, true);  -- transaction-local
-```
+### 6.1 Tenant connection selection
+
+The authenticated principal is resolved to an immutable server-side `TenantContext`. Before any tenant SQL executes, the connection router selects the database pool associated with that tenant. The selected connection authenticates as that tenant's dedicated login role. The client must not choose a tenant database role, pool key, or connection string.
+
+Normative rules:
+- Each tenant login is distinct and has no membership in another tenant role or platform role.
+- The tenant role cannot create roles/databases, alter schema, own tenant/shared objects, or access another tenant's credential.
+- There is no shared runtime-role fallback and no request-time `SET ROLE` escalation.
+- Routing failure, missing tenant mapping, inactive tenant, or pool/credential mismatch fails closed before tenant SQL.
+- Connection routing is an authorization-sensitive component and must be covered by unit, integration, negative, and adversarial tests (TI-CONN-01..06; TI-ADV-01..02).
 
 ### 6.2 Policy template (illustrative only; not a migration)
 
-```sql
-ALTER TABLE plan ENABLE ROW LEVEL SECURITY;
-ALTER TABLE plan FORCE ROW LEVEL SECURITY;
+Option C policies derive the tenant from the authenticated PostgreSQL identity through a protected mapping table. They do **not** read a session variable, custom GUC, request parameter, or client-supplied tenant ID.
 
+Illustrative shape only; exact schema, function and grants must be finalized in implementation review:
+
+```sql
+-- Illustrative only. tenant_login_map is owner-managed and not writable by tenant logins.
 CREATE POLICY tenant_isolation ON plan
-  USING      (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
-  WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+  USING (
+    tenant_id = (
+      SELECT m.tenant_id
+      FROM tenant_login_map AS m
+      WHERE m.login_role = current_user
+        AND m.active = true
+    )
+  )
+  WITH CHECK (
+    tenant_id = (
+      SELECT m.tenant_id
+      FROM tenant_login_map AS m
+      WHERE m.login_role = current_user
+        AND m.active = true
+    )
+  );
 ```
 
-### 6.3 Required behavior of the context (each becomes a TI-CTX test)
-- Unset setting: no rows visible, no rows writable (fail closed).
-- Empty string: same as unset (handled by NULLIF).
-- Invalid UUID text (e.g. `'abc'`): the cast raises an error. Requirement: the error is raised, zero rows are returned or written, and the error message contains no tenant data. The application maps it to an internal error, never a data response.
-- Context changed within one transaction: the repository API must not allow it. The database would apply the last value. A static check and a repository test enforce a single set per transaction.
-- Context outside a transaction: `set_config(..., true)` outside a transaction has no effect beyond the statement; the application must never rely on it. Enforced by static check and TI-CTX-14.
-- Commit and rollback: the context does not survive the end of the transaction (TI-CTX-10).
+This is a design sketch, not verified production-ready SQL. PostgreSQL policy behavior, owner/bypass paths, mapping-table access, and any helper-function choice must be proven with migrations and catalog tests. The map must have a unique constraint on login role and tenant role lifecycle must disable access promptly.
 
-### 6.4 Connection pooling and transaction boundaries
-- Transaction-local settings are the only permitted form. Session-level `set_config(..., false)` and `SET` are forbidden in application code (static check).
-- Pooler mode (session, transaction, or none) is open question Q-016. The design requires that TI-CTX-11 and TI-CTX-12 pass for the chosen mode.
-- A failed transaction must not leave the connection in a state where the next request sees a previous context (TI-CTX-12).
+### 6.3 Required behavior for Option C
+
+- A tenant login maps to exactly one active tenant, or no tenant. Missing, duplicate, or inactive mapping fails closed.
+- Tenant A's login can read/write only A rows, including when application filters are deliberately omitted (RLS-only positive and negative controls).
+- Tenant A's login cannot change its effective tenant by setting a custom GUC, calling `set_config`, supplying a tenant ID, or issuing `SET ROLE`.
+- Tenant A cannot assume another tenant role; catalog tests prove no cross-tenant membership path.
+- Cross-tenant parent/child references are rejected by composite foreign keys, independent of RLS.
+- Platform-admin access follows D-013's separate audited read-only path; it is not granted by tenant-role membership.
+- All denial tests include a positive control and verify that no foreign-tenant data appears in response, logs, or errors.
+
+### 6.4 Connection lifecycle and pooling (D-017)
+
+For the pilot, use **direct PostgreSQL connections**, with a bounded per-tenant pool of size **1 per tenant per application process**. No external pooler is used for the pilot. Transaction pooling is deferred and requires a separate decision plus compatibility tests before adoption.
+
+The application must bind each pool to exactly one tenant identity and must not return a connection to a different tenant's pool. On suspension/offboarding, disable login, revoke relevant access, terminate existing sessions and close/remove the tenant pool, preserve required audit evidence, and only drop the role after ownership, dependency and retention review.
+
+Tests TI-CONN-04..06 and the applicable pool lifecycle checks must prove these properties. The capacity arithmetic in Q019 evaluation is an estimate, not measured evidence. The provisional cap of 10 tenants is not a capacity guarantee.
 
 ### 6.5 Views, functions, rules
 - Views over tenant tables must use `security_invoker = true` (PostgreSQL 15+) or must not exist in MVP (TI-BYP-01).
