@@ -17,7 +17,7 @@ Last Updated: 2026-10-23
 - **D-017 / Q-016:** pilot uses direct PostgreSQL connections, bounded pool size 1 per tenant per application process; transaction pooling deferred pending a separate decision and compatibility validation.
 - **A1 cap:** 10 tenants is provisional, not capacity evidence. Capacity remains ESTIMATE — NOT MEASURED.
 - **Q-020:** retention duration and named responsible persons remain unresolved; no automatic tenant-role deletion.
-- **Q-021:** Product Owner disposition of Option C residual risk for theft of all tenant logins (K-L-N) and owner/migrator compromise (K-O) is OPEN; no risk acceptance is implied.
+- **Q-021 / D-019:** Product Owner selected option B on 2026-10-23: require stronger architecture; no acceptance of K-L-N/K-O residual risks. Q-022 is open for final topology selection after independent comparison. D-009's shared-database mechanism is reopened for evaluation, while the tenant-isolation requirement remains mandatory.
 - **Test contracts:** 123 specifications; 0 implemented; 0 executed; 0 passing. The 12 Option A-only TI-CTX contracts are SPEC-ONLY. TI-CTX-11/12 are future direct-pool lifecycle checks. Full current CI-column breakdown is in the current addendum at the top of `docs/phase1/PHASE1_REPORT.md` and must be rechecked from the file.
 - **CI:** no successful run has been established as evidence for the current corrected head. Absence of a run is not success.
 - **D-014 real-data gate:** real student data remains PROHIBITED until required implementation security tests pass, blocking findings are fixed, capacity and pool limits are measured on the target host, independent implementation review is complete, and the Product Owner gives written approval.
@@ -34,7 +34,7 @@ Last Updated: 2026-10-23
 
 ### Required next action
 
-Re-fetch PR #3 and the latest branch commit from GitHub, inspect the complete diff, check for remaining Option A/Option C contradictions and stale current-status claims, verify all 123 contract IDs and status counts, and then issue an independent gate verdict. Do not start Phase 2 or use real student data before approval.
+Complete the stronger-architecture comparison in `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md`, resolve Q-022 with an explicit Product Owner architecture decision, revise the Phase 1 design and test contracts accordingly, then conduct an independent gate review. Do not start Phase 2 or use real student data before approval.
 
 ---
 ### Current Phase
