@@ -2,7 +2,7 @@
 
 **Repository:** nourihamed/persian-educational-counseling-os  
 **Reviewed branch:** docs/phase1-tenant-isolation-design  
-**Reviewed pre-review-record head:** 656d80c854a2483f7844a87b448f6ff63a463c04  
+**Reviewed pre-review-record head:** f03eb0f894fea69cd59965ced43dbc1a95bf0acc  
 **Scope:** D-011/D-017 compatibility with D-020 Alt-5, hosting options, decision documentation and roadmap alignment. Documentation-only review; not a runtime security assessment.
 
 ## Summary
@@ -17,6 +17,7 @@ The original D-011 product goals (hosting in Iran, portability, low initial comp
 - Added docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md with four options, threat-boundary comparison, recommendation, capacity evidence requirements and explicit non-claims.
 - Q-023 records the Product Owner decision required: separate host/VM per cell, separate cloud accounts/projects per cell, Alt-4, or another constraint.
 - D-017's previous connection arithmetic is treated as a historical estimate, not Alt-5 capacity evidence; the new review requires per-cell recalculation from actual worker/pool topology.
+- Final consistency pass at the recorded review head: corrected the PROJECT_STATE update marker and explicitly marked D-017's prior 70/130 connection arithmetic as historical, not Alt-5 capacity.
 - PROJECT_STATE.md, ROADMAP.md, CHANGELOG.md and PHASE1_REPORT.md now surface the unresolved hosting topology and the continuing gate.
 - No provider, price, measured capacity or runtime security is claimed.
 
