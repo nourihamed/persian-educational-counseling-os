@@ -347,3 +347,8 @@ D-017's prior connection estimate is explicitly treated as historical estimate, 
 
 ### 2026-10-23 — Local-first development direction (D-021)
 Product Owner selected local laptop development now, with server deployment to be evaluated when the product reaches an agreed demonstrable stage. Added `docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md`; recorded D-021; clarified Q-023 remains open for the eventual hosted topology. Local development is to use synthetic data and local-only services, and does not prove Alt-5 isolation or waive phase gates. Phase 1 remains NOT READY, Phase 2 remains unauthorized pending Phase 1 approval, and real student data remains prohibited. No code, infrastructure or executable tests were created by this documentation update.
+
+## 2026-10-23 — Q-023 deferral (D-022)
+- Recorded the Product Owner's decision to defer the final hosted topology/provider until hosted deployment planning while retaining local-first development under D-021.
+- Independent gate impact recorded: Q-023 remains a Phase 1 blocker for the unresolved architecture-level host/network/admin trust boundary. No security condition was removed; D-020 and D-014 remain unchanged.
+- Documentation-only update. No code, infrastructure, migrations or executable tests added or run.
