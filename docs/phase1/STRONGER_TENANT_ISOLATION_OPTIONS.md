@@ -1,6 +1,6 @@
 # Stronger Tenant-Isolation Architecture — Alternatives and Decision Record
 
-**Status:** Design study only. No implementation or architecture alternative is selected by this document.
+**Status:** Historical design study. Alt-5 is selected by Product Owner decision D-020/Q-022; current normative requirements are in `TENANT_ISOLATION_DESIGN.md`. No implementation is authorized.
 **Trigger:** Product Owner selected Q-021 option B on 2026-10-23: the project must not accept the current Option C residual risks for broad tenant-credential compromise (K-L-N) and owner/migrator compromise (K-O).
 **Scope:** Phase 1 design/documentation. This document does not authorize code, migrations, infrastructure changes, Phase 2, or real student data.
 
@@ -88,7 +88,7 @@ Do not silently choose a final topology. The Product Owner must approve a specif
 ## 6. Hard gates
 
 - Phase 1 remains **NOT READY / NOT APPROVED** until the revised design is completed and independently reviewed.
-- Q-021 option B is a decision to require stronger architecture, not acceptance of any residual risk and not selection of B/C/D/E above.
+- Q-021 option B required stronger architecture. Q-022/D-020 subsequently selected Alt-5; the alternatives here remain comparative history, not the active normative design.
 - Phase 2 remains NOT STARTED and NOT AUTHORIZED until the Phase 1 gate is separately approved.
 - No real student data until every D-014 pilot condition is met and written Product Owner approval is recorded.
 - No code, migration, infrastructure, or runtime test is authorized by this design study.
