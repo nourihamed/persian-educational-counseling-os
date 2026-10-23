@@ -1,3 +1,26 @@
+# CURRENT INDEPENDENT ARCHITECTURE REVIEW — Q-022 (2026-10-23)
+
+## Result
+**Recommendation only — no owner decision and no Phase 1 approval.** The independent review is documented in `docs/phase1/Q022_INDEPENDENT_ARCHITECTURE_REVIEW.md`.
+
+- Recommended candidate: **Alt-5 hybrid isolation cells**, with Alt-4 as the stronger-isolation reference.
+- Proposed pilot blast-radius bound: at most two tenants per cell for the provisional 10-tenant pilot (up to five cells), subject to explicit cost/capacity review. This is not measured and is not accepted by the owner yet.
+- Every cell needs real separation of database/instance, network, runtime worker, secret access, migration authority, backups, and privileged operations. Different database names or containers on one shared host do not protect against host/root compromise.
+- K-L-N is clarified: if every tenant credential is actually stolen and usable against every database, topology alone cannot prevent broad exposure. Design must prevent a single worker/vault policy from collecting all credentials and explicitly document global-root residual risk.
+- Source review found stale Option C preference text in the existing 123-contract catalog and historical/normative Option C body text in the old design. These are not current acceptance criteria. After the owner selects Q-022, replace the normative design and reclassify all contracts against the chosen topology.
+- Live GitHub at review start: PR #3 open/unmerged, 68 commits ahead and 0 behind `main`; PR metadata `mergeable=true`. No workflow runs returned for the reviewed head. Mergeability is not a quality/security verdict.
+- Current gate remains **NOT READY / NOT APPROVED**. Phase 2 remains unauthorized; no code, migration, infrastructure, runtime test, or real student data authorized.
+
+## Decision requested
+The Product Owner must choose Q-022:
+- **A:** Alt-5 hybrid isolation cells, max two tenants per pilot cell subject to capacity/cost evidence, with mandatory cell-scoped workers/secrets/migrations/backups and audited break-glass.
+- **B:** Alt-4 dedicated operational isolation per tenant, higher expected cost/complexity, still with secret/process/global-admin controls.
+- **C:** Request another design and specify a different cost or blast-radius target.
+
+Do not treat this recommendation as accepted until the Product Owner explicitly chooses. See `OPEN_QUESTIONS.md` Q-022.
+
+---
+
 # CURRENT SUPERVISOR UPDATE — 2026-10-23 (after Product Owner decision D-019)
 
 ## Decision recorded
