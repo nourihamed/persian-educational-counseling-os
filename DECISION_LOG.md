@@ -309,3 +309,19 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 
 **اثر بر اسناد:** `OPEN_QUESTIONS.md` (Q-020)، `PROJECT_STATE.md` (جدول موارد پیش از پایلوت)، `docs/phase1/PHASE1_REPORT.md` (§۲۱).
 
+
+
+## D-019 — Require stronger tenant-isolation architecture before Phase 1 approval
+**Status: ACCEPTED — explicit Product Owner decision, 2026-10-23.**
+
+**Decision:** The Product Owner selected option B under Q-021. The project will not accept the current Option C residual risks for broad compromise of tenant login credentials (K-L-N) and the owner/migrator boundary (K-O) as the basis for Phase 1 approval. A stronger architecture must be designed and independently reviewed before Phase 1 can be approved.
+
+**Scope of this decision:** This selects the requirement to redesign, not a specific database topology. It does not select database-per-tenant, separate clusters, a hybrid, or any other final mechanism. The alternatives must be compared in `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md`, then the Product Owner must explicitly approve the resulting architecture before implementation.
+
+**Consequences:**
+1. Existing Option C remains a historical/preferred prior direction only; it is not approved as sufficient for the newly stated risk tolerance.
+2. D-009's shared-database MVP mechanism is reopened for architecture evaluation. Its underlying non-negotiable requirement—no counselor may access another tenant's data—remains unchanged.
+3. No implementation, migration, infrastructure change, Phase 2 work, or real-data pilot is authorized by D-019.
+4. Phase 1 remains NOT READY until the revised design is independently reviewed and the gate is explicitly changed.
+
+**Reason:** The Product Owner prefers not to accept a design whose stated compromise paths can expose multiple tenants. Stronger isolation must be assessed honestly against process, credential, privileged-role, operational, and cost boundaries; merely splitting databases without addressing shared credentials/administrators is not sufficient.
