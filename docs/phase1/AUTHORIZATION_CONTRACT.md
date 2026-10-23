@@ -1,99 +1,111 @@
-# AUTHORIZATION_CONTRACT.md
+# AUTHORIZATION_CONTRACT.md — Alt-5 Hybrid Isolation Cells
 
-Phase: 1 — Architecture & Multi-Tenancy (design only)
-Status: DRAFT (revision 2, corrective pass) for Product Owner review. Contract only; no endpoint exists yet. Endpoint shapes remain in `API.md`. Nothing here is verified by tests.
+**Phase:** 1 — Architecture & Multi-Tenancy (design only)  
+**Status:** DRAFT aligned to D-020/Q-022; pending independent review. No endpoint exists and no behavior is test-verified.  
+**Normative architecture:** `docs/phase1/TENANT_ISOLATION_DESIGN.md`. Historical pre-Q-022 contract versions are not normative.
 
-Scope note: object-level authorization in this contract is the PRIMARY control against authenticated users (threats T1, T3 in `TENANT_ISOLATION_DESIGN.md` §1). It is not a control against arbitrary SQL execution (T4); see `TENANT_ISOLATION_DESIGN.md` §2.
+## 1. Purpose and mandatory rule
 
-Purpose: define, before any endpoint is built, how every resource and action is authorized. Every future endpoint must declare its entries in this contract. An endpoint without a declared entry is not reviewable and must not be merged.
+Every endpoint, job, report, export, file operation, notification, search, cache operation, and support action must declare its authorization behavior before implementation. An undeclared path is not reviewable and must not be merged.
 
----
+Authorization has two independent boundaries:
+1. **Application/object authorization:** who may perform which action on which object.
+2. **Cell isolation:** the worker, credentials, and network route used for the request are limited to the tenant's trusted cell. Application filters are not a substitute for cell isolation; cell isolation is not a substitute for object-level authorization.
 
-## 1. Authorization Decision Procedure
+## 2. Request decision procedure
 
-For every request, in order:
+1. Authenticate the actor; otherwise return 401.
+2. Resolve tenant membership from trusted identity/session state. Never trust tenant_id, cell_id, database name, connection string, or routing hint supplied by the request.
+3. Resolve the tenant's active cell through the trusted control-plane mapping. Missing, duplicate, suspended, draining, or inconsistent mapping fails closed and raises an operational alert.
+4. Dispatch only to a worker/pool assigned to that cell. The worker's workload identity and secret policy must not permit access to other cells.
+5. Check RBAC action permission; denied action returns 403.
+6. Load the target object inside the authorized tenant and cell. Invisible cross-tenant/cell and nonexistent objects must produce indistinguishable responses (exact status pending Q-014; 404 recommended).
+7. Check object-level relationship/status and referenced object IDs. IDs never grant authority. Every referenced object must belong to the same tenant; cross-cell references are rejected.
+8. Execute mutations transactionally with appropriate concurrency and idempotency controls.
+9. Emit audit events for sensitive/state-changing operations, including actor, tenant, cell, action, target type/ID, request/correlation ID, outcome, and reason where appropriate. Never log credentials or student-content payloads.
+10. Ensure retries/background jobs preserve a server-signed or otherwise trusted tenant/cell context and revalidate lifecycle status at execution time.
 
-1. **Authenticate.** Resolve the principal. Unauthenticated → 401.
-2. **Resolve tenant context** from the principal (`TENANT_ISOLATION_DESIGN.md` §1). Never from path/body.
-3. **Check the action permission** against RBAC (table-driven, D-005): does the principal's role grant this action type? Failing → forbidden (403).
-4. **Load the target object within the tenant** (tenant-scoped query). Not found within tenant → not-found response. The exact status (404 recommended) is pending Q-014; cross-tenant and nonexistent objects must produce identical responses whichever status is chosen.
-5. **Check object-level rules**: relationship and status (§3). Failing → forbidden (403) for an object the principal can see but may not act on.
-6. **Check referenced objects in the body** belong to the same tenant (§4). Failing → validation error without disclosing the other tenant's existence.
-7. **Execute** in one transaction with tenant context set (`TENANT_ISOLATION_DESIGN.md` §4).
-8. **Audit** state-changing actions with actor, action, target, and request_id.
+## 3. Principal scope
 
-Steps 3 and 5 must not be skipped even when RLS would also deny the operation. RLS is the backstop for application defects, not the check and not a boundary against arbitrary SQL.
-
----
-
-## 2. Roles and Scope (MVP)
-
-| Principal | Tenant scope | Default capability (Phase 1 design; detailed permission matrix in Phase 4) |
+| Principal | Permitted scope | Prohibited by default |
 |---|---|---|
-| Counselor | Own tenant | Manage own students, programs, plans, activities, notes, credits |
-| Student | Tenant of its active relationship | Read/execute own plan and records; cannot read other students |
-| Parent | Linked students only, if linked | Limited read; detailed rules open (Q-007) |
-| Teacher | Not in MVP | Role reserved (Master Prompt §4); no permissions granted in MVP |
-| Platform Admin | Cross-tenant only via audited, read-only path (D-013) | Read only; no write in MVP; no BYPASSRLS |
+| Counselor | Own tenant, own authorized students and plans, routed only to its cell | Other counselor's tenant or any arbitrary cell |
+| Student | Own records within the active tenant relationship | Other students, even within the same tenant |
+| Parent | Only explicitly linked students under Q-007 policy | Unlinked students, counselor-private notes |
+| Teacher | Not in MVP | Any permission until explicitly designed |
+| Platform Admin | Metadata and the D-013 limited audited read-only path | Default cross-cell content access, writes, or bypass of cell controls |
+| Cell runtime worker | One assigned cell and least-privilege data operations | Other cell endpoints/secrets; DDL/role administration/global secret enumeration |
+| Cell migration runner | Approved migration for one named cell | Routine global data access or all-cell owner/migrator authority |
+| Break-glass operator | Only approved incident scope, dual-authorized, time-limited | Standing cross-cell access or unlogged actions |
 
----
+## 4. Cell routing and lifecycle authorization
 
-## 3. Object-Level Rules (examples that RLS cannot express)
+- Tenant-to-cell mapping comes only from the protected control-plane registry; mapping changes require a privileged, audited operation.
+- The tenant's cell must be revalidated for sensitive jobs and on lifecycle transitions; do not rely only on a stale queue payload or cached mapping.
+- Suspended/draining/retired cells reject new writes and ordinary reads according to a documented maintenance policy; fail closed if routing cannot be verified.
+- A move between cells is not a CRUD update. It requires an approved migration workflow, access freeze, integrity checks, explicit cutover, revocation of old credentials/sessions, and rollback plan.
+- Cell occupancy must not exceed two tenants in the proposed pilot. Attempting to assign a third tenant is rejected unless a separate Product Owner decision changes the limit after measured capacity/cost evidence.
+- No cross-cell foreign keys or student-content references are allowed. Shared reference data must be explicitly classified and read-only.
 
-| Action | Required relationship / status | Notes |
-|---|---|---|
-| Counselor reads a student | Active `CounselorStudent` (`status = Active`) for this counselor and tenant | Archived/Ended relationships: read-only history, no writes |
-| Counselor edits a student's plan | Active relationship; plan not superseded | Edits create a new `PlanVersion` (D-008), never overwrite a published one |
-| Student executes plan item | Student is the plan's student; item belongs to the active plan version | Cannot alter the plan itself |
-| Student reads another student's plan | Forbidden | Even in the same tenant |
-| Any actor writes a published `ProgramVersion` | Forbidden | Publication is immutable; a new version must be created |
-| Create a `PlanVersion` from a `ProgramVersion` | Program version in same tenant; student enrolled in that program; actor is the owning counselor | D-008 point 7 governs later template updates; no silent effect on existing plans |
-| Activate a student | Available credit ≥ 1, verified against the ledger inside the same transaction | Prevents negative balance; ledger writes are append-only |
+## 5. Object-level rules
 
----
-
-## 4. Referenced-Object Rule (Body IDs)
-
-Any request that references another object by ID (for example, `student_id` when creating a plan, or `program_version_id` when enrolling) must:
-- Verify that the referenced object exists **within the same tenant**;
-- Use the composite FK as a second guarantee (`TENANT_ISOLATION_DESIGN.md` §5);
-- Return a validation error that does not confirm or deny the existence of the object in another tenant. A single generic message is used for "not found in your tenant" and "does not exist," so responses cannot be used to enumerate other tenants' IDs.
-
----
-
-## 5. Listing and Search
-
-- Every list endpoint applies the tenant and relationship filter **in the query** (SQL `WHERE`), never by fetching then filtering in memory.
-- Pagination is cursor- or keyset-based on tenant-scoped indexes, so counts and page boundaries cannot reveal other tenants' data.
-- Aggregates (dashboards, counts) are computed per tenant within the tenant context. Platform-wide aggregates are only for the platform-admin path (D-013).
-- Search endpoints must restrict the search index or query to the tenant; a shared full-text index without a tenant filter is forbidden.
-
----
-
-## 6. Error Mapping (Uniform)
-
-| Situation | Response |
+| Action | Required rule |
 |---|---|
-| Not authenticated | 401 |
-| Authenticated, action not granted by role | 403 |
-| Object not visible in tenant (includes other tenant's objects) | Not-found response; status 404 recommended, pending Q-014; identical to a nonexistent object |
-| Object visible, relationship/status forbids action | 403 |
-| Validation or referenced-object failure | 422 with generic message (§4) |
-| Conflict (version race, duplicate review) | 409 |
-| Internal tenant-context error | 500 with no tenant detail |
+| Counselor reads/updates student | Active CounselorStudent relationship and matching tenant; route to that tenant's cell |
+| Counselor edits plan | Active relationship; edits create a new PlanVersion; no silent overwrite |
+| Student executes plan item | Student owns plan and item belongs to active plan version |
+| Student reads another student's plan | Forbidden, including within the same tenant |
+| Writes to published ProgramVersion | Forbidden; create a new version |
+| Create PlanVersion from ProgramVersion | Same tenant and cell; student belongs to the owning counselor/program relationship |
+| Activate student | Credit availability checked transactionally against the auditable credit ledger |
+| Report/export | Query and output limited to authorized tenant; pagination/counts do not leak other tenants |
+| File download/upload | Object authorization plus tenant/cell-scoped object-storage prefix/key and short-lived signed URL if used |
+| Notification delivery | Recipient, tenant, and cell are revalidated at delivery; no recipient supplied by untrusted job payload alone |
+| Background job | Signed/trusted tenant+cell context; re-resolve mapping and lifecycle before processing |
+| Support access | D-013 limits: read-only, audited, explicitly scoped; no default content access or write capability |
 
-Error bodies must never include another tenant's identifiers, names, or counts.
+## 6. Derived data and indirect access
 
----
+The same tenant/cell restrictions apply to:
+- reports, dashboards, aggregate counts and exports;
+- files, attachments, generated PDFs, and signed URLs;
+- search indexes and autocomplete;
+- caches and cache keys;
+- queues, retries, scheduled jobs, dead-letter queues;
+- notifications and delivery logs;
+- audit events, application logs, traces and metrics labels;
+- backup/restore and data-repair workflows.
 
-## 7. Mandatory Checklist for Every Future Endpoint
+No endpoint may fetch broad results then filter by tenant in memory. Tenant/cell constraints must be applied at the query/selection boundary, and the cell network/credential boundary remains independent defense in depth.
 
-A reviewer rejects an endpoint that cannot answer all of these from its contract entry:
-- [ ] Authenticated? Which principal types?
-- [ ] Action permission (role) declared?
-- [ ] Target object type and how it is loaded tenant-scoped?
-- [ ] Object-level relationship/status rule declared?
-- [ ] Every body/path ID checked for tenant membership?
-- [ ] List query filter applied in SQL?
-- [ ] Audit event declared for state changes?
-- [ ] Negative cross-tenant test IDs (from `TENANT_ISOLATION_TEST_CONTRACTS.md`) linked, with expected response identical to the nonexistent-object response?
+## 7. Error handling
+
+| Situation | Response policy |
+|---|---|
+| Unauthenticated | 401 |
+| Authenticated but action not allowed | 403 |
+| Cross-tenant/cell object invisible | Same status/body as nonexistent object; 404 recommended, pending Q-014 |
+| Visible object but relationship/status forbids action | 403 |
+| Invalid or cross-tenant referenced ID | Generic 422 without confirming existence elsewhere |
+| Conflict/idempotency/version race | 409 |
+| Missing/inconsistent tenant-to-cell mapping | Fail closed; generic server error and internal alert, no tenant data disclosed |
+| Cross-cell routing/network denial | Fail closed; security event and alert; no fallback to a global connection |
+
+Error messages must not disclose another tenant's identifiers, names, counts, cell assignment, or existence.
+
+## 8. Required endpoint review checklist
+
+- [ ] Actor and authentication mechanism identified.
+- [ ] Tenant membership resolved from trusted identity, never request-supplied tenant/cell IDs.
+- [ ] Active tenant-to-cell mapping checked.
+- [ ] Worker/credential/network scope bound to one cell.
+- [ ] RBAC action permission and object-level relationship declared.
+- [ ] All body/path IDs verified within same tenant/cell.
+- [ ] List filters applied in query, not after fetching.
+- [ ] Derived data and async paths listed and tested.
+- [ ] Sensitive mutations and privileged actions audited.
+- [ ] Error response does not reveal cross-tenant existence.
+- [ ] At least one applicable test contract from the active catalog linked.
+- [ ] Revocation/suspension and idempotency behavior defined where relevant.
+
+No authorization contract in this document constitutes runtime evidence. All behavior requires implementation and executed tests after the relevant phase is authorized.
