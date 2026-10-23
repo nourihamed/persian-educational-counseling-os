@@ -368,3 +368,10 @@ Product Owner selected local laptop development now, with server deployment to b
 - Provider comparison/selection remains deferred until hosted deployment planning per Product Owner direction. Q-023 remains OPEN and Phase 1 gate-blocking under D-023; no provider, price, capacity or runtime security result is claimed.
 - Active Alt-5 test catalog remains 46 specifications, 0 implemented, 0 executed, 0 passing. No application code, migration, infrastructure or executable test was created/run. PR #3 remains open/unmerged; Phase 1 NOT READY; Phase 2 unauthorized; real student data prohibited.
 
+## 2026-10-23 — Second Phase 1 consistency sweep
+
+- Reconciled ARCHITECTURE.md, DATABASE.md, PRODUCT_REQUIREMENTS.md and PROJECT_SCOPE.md so the historical D-009/Q-001 shared-database mechanism is not misrepresented as the active Alt-5 topology.
+- Replaced the pre-pilot single-VM recommendation with provider-neutral D-020/D-023 acceptance requirements; aligned the target-environment test plan, emergency-stop restore steps and retention draft with independent critical-backup administration and lifecycle preservation.
+- Recounted the active catalog: 46 unique IDs, 0 implemented, 0 executed, 0 passing. A consistency scan passed for the active D-020/D-023 references and restore step ordering.
+- Provider comparison remains deferred by the Product Owner; Q-023 remains OPEN and Phase 1 NOT READY under the current D-023 gate. PR #3 remains open/unmerged and GitHub reports mergeable: false; no merge, code, migration, infrastructure or executable test was performed.
+
