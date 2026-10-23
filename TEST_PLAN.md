@@ -85,3 +85,9 @@ Counselor B → Student B
 - Backend: Pytest + pytest-asyncio + httpx AsyncClient + factory fixtures
 - DB تست: دیتابیس Postgres ایزوله per test-run (نه SQLite، به دلیل RLS و قابلیت‌های خاص Postgres)
 - CI: GitHub Actions
+
+---
+
+## Target-environment load and connection tests (pre-pilot, added 2026-10-17)
+
+Plan: `docs/phase1/TARGET_ENV_LOAD_TEST_PLAN.md`. Status: PLAN ONLY; all scenarios NOT-RUN or BLOCKED. No measurement exists. These tests are pilot-validation criteria (D-015, D-014), not prerequisites for Phase 1 design approval.

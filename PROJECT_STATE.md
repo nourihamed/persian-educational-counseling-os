@@ -1,19 +1,64 @@
 # PROJECT_STATE.md
 ## Operational Memory — Single Source of Truth for "Where are we now"
 
-Last Updated: 2026-10-15
+Last Updated: 2026-10-17
 
 ---
 
-### Phase 1 Status (updated 2026-10-15)
-**PHASE 1 — Architecture & Multi-Tenancy — design and documentation submitted for independent review. NOT APPROVED. NOT AUTHORIZED as a completed phase.**
+### Operational Status (updated 2026-10-17)
 
-- Documents: `docs/phase1/` (design, authorization contract, 123 test specifications, path inventory, report), `OPEN_QUESTIONS.md`, `DECISION_LOG.md` (D-013, D-014), `SUPERVISOR_REVIEW.md`. Submitted on a pull request from `docs/phase1-tenant-isolation-design` (PR #3 per reviewer report).
-- Decisions: Q-015 resolved (D-013, Option A). Q-019 direction decided (D-014); Option C selected as preferred design direction (D-016), subject to design review; Option D not selected.
-- Pilot: real student data PROHIBITED until D-014 conditions are met.
-- Reviewer-stated gate (PR #3): NOT READY. Re-review required on the pushed commit.
-- No code, migration, role, policy, or infrastructure exists. No test has been executed. No CI status is claimed.
-- Phase 2: NOT started and NOT authorized.
+**Phase 0 — Product & Business Model Foundation:** APPROVED by the Product Owner on 2026-10-14 and CLOSED. Its documentation was merged to `main` via PR #1 on 2026-10-14. Verified from GitHub history at the time of the Phase 0 closure record. Historical record; not re-verified in this update.
+
+**Phase 1 — Architecture & Multi-Tenancy:** DOCUMENTATION AND DESIGN PREPARED FOR INDEPENDENT REVIEW. **NOT APPROVED.** No independent review has approved any revision. Phase 2 is NOT started and NOT authorized.
+
+- **Phase 1 branch:** `docs/phase1-tenant-isolation-design`. Live HEAD as reported by the developer's own `git fetch` on 2026-10-17: `7ca3db538087b973bd425b510eda20c8aef1b44f` (contains the D-016 decision commit on top of `d8c8c28`). The Revision 9 reconciliation commit (`4e2be3a` locally) is NOT yet on GitHub at the time of this entry and must be pushed and re-verified. The agent could not reach GitHub live from its environment; the SHA above is developer-reported, not agent-verified.
+- **PR #3:** state and head SHA must be verified live on GitHub before any review request. Last reviewer-reviewed commit: `1c36dc5`.
+- **`main` HEAD:** `e656c66e8f8b67082d8973c483e0be3bf29cf965` (developer-reported via `git rev-parse origin/main` on 2026-10-17).
+- **Reviewer-stated gate:** NOT READY (review ID 5573172802 on PR #3, against commit `1c36dc5`). The gate remains NOT READY until a new independent review of the corrected commit says otherwise.
+
+**Decisions affecting Phase 1:**
+- **D-013 (2026-10-15):** platform-admin access is read-only and audited in MVP; no `BYPASSRLS` role; no platform write operations. Documented; not implemented.
+- **D-014 (2026-10-15):** tenant-context boundary to be strengthened before any pilot with real student data. Real-data pilot prohibited until every D-014 condition is met. Unchanged.
+- **D-015 (2026-10-17):** design-selection criteria and pilot-validation criteria are separate. Test execution belonging to later phases is not a precondition for design decisions or for starting those phases.
+- **D-018 (2026-10-17):** pre-pilot approach accepted (retention approach, reviewer engagement, host profile to test, independent security review, runbook as draft). Durations, named people and phase-1 approval are NOT decided by D-018.
+- **D-017 (2026-10-17):** Q-016 direct connections for pilot; Q-020 no automatic role deletion, retention duration not set; A1 cap 10 accepted with conditions. Does not satisfy D-014.
+- **D-016 (2026-10-17):** Option C is the preferred design direction, subject to design review. Option D is not selected and is NOT SELECTION-READY. Pool strategy: bounded, lazy, per-tenant. Shared-role fallback prohibited. Provisional cap of 10 tenants. Capacity rule accepted as a constraint. Role lifecycle specified.
+
+**Open questions:**
+- **Q-019:** direction decided (D-016). Design review pending. Implementation not started. Not runtime security. Not pilot authorization.
+- **Q-016:** DECIDED (D-017): direct PostgreSQL connections with bounded per-tenant pool (size 1 per tenant per process) for the pilot. Transaction pooling deferred; requires compatibility tests and a separate decision.
+- **Q-020:** principle DECIDED (D-017): no automatic role deletion; five-step lifecycle. Retention duration NOT set; retention policy table is a pre-pilot deliverable; responsible person not yet assigned by the owner.
+- **A1 (pilot cap 10):** DECIDED as initial cap (D-017); not proven capacity. Pilot entry requires measured load tests, isolation tests, emergency stop, and written owner approval after the evidence.
+- **Q-007:** parent-access product question open. Gate impact confirmed by reviewer only for Phase 23 closure.
+- **Q-014, Q-017, Q-018:** open, owned by later phases.
+
+**Tests and evidence (no test has been run):**
+- Test contracts specified: 123 (105 PR; 4 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 5 BLOCKED:implementation; 5 SPEC-ONLY).
+- Implemented test code: 0. Executed tests: 0. Passing tests: 0.
+- CI status for the current commit: none available to the agent. Absence of CI status is not success.
+- Path inventory: 33 paths; 30 mapped to contracts; 2 blocked; 1 spec-only; 0 unmapped. Endpoint-level coverage is not measured and is not claimed.
+
+**Pre-pilot work items (status as of 2026-10-17):**
+| Item | Status | Evidence |
+|---|---|---|
+| Data Retention approach | DECIDED (D-018): approach accepted; durations still NEEDS-DECISION after legal/tax review | `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md` |
+| Q-020 retention durations | NEEDS-DECISION (owner) | none |
+| Target-environment load and connection test plan | PLAN ONLY — BLOCKED (target host not confirmed; implementation not started) | `docs/phase1/TARGET_ENV_LOAD_TEST_PLAN.md` |
+| Capacity measurement | NOT-RUN | none |
+| A1 cap (10 tenants) | DECIDED as initial cap (D-017); not proven | pending L-01 to L-09 |
+| Tenant isolation tests on target | NOT-RUN / BLOCKED | none |
+| Emergency stop and rollback runbook | ACCEPTED AS DRAFT (D-018); NOT-RUN; drill L-11 pending | `docs/phase1/EMERGENCY_STOP_AND_ROLLBACK_RUNBOOK.md` |
+| Incident lead, delegate, data-incident notifier | NEEDS-DECISION (owner names them) | none |
+| Security review of implementation | NOT-RUN | none |
+| Real student data in pilot | PROHIBITED (D-014) | none |
+
+**Verification log (2026-10-17):** no test, CI run, or runtime security check has been executed. Secret scan of the working tree for personal access token patterns: no matches. Contract recount from the file: 123 rows, 123 unique IDs.
+
+**GitHub verification:** the independent reviewer must verify live on GitHub the branch commit, PR state and diff against `main`, document consistency, contract counts and CI results (if any) before any gate decision. The developer's reports are not sufficient.
+
+**Real student data:** PROHIBITED. Requires every D-014 condition: security tests actually run and passed; blockers fixed; measured capacity and pool limits on the target environment; independent implementation review complete; written Product Owner approval of the pilot gate.
+
+**Not implemented in this phase:** no backend or frontend code, no migrations, no PostgreSQL roles or grants, no RLS policies, no infrastructure, no runtime security mechanism.
 
 ### Current Phase
 **PHASE 0 — Product & Business Model Foundation — FORMALLY CLOSED by Product Owner on 2026-10-14; PR #1 merged on 2026-10-14**

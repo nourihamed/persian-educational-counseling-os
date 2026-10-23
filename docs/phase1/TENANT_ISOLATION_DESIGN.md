@@ -206,7 +206,7 @@ Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason
 
 ### 5.5 Option C tenant role lifecycle and pool strategy (recorded direction, D-016; applies if Option C is implemented)
 
-**Pool strategy (D-016 point 5):** bounded, lazy, per-tenant connections or pools. A pool for a tenant is created on first request for that tenant, is bounded in size per process, and is closed after an idle timeout. The pooler mode is not yet selected (Q-016); validation is required by TI-CONN-04 and TI-CTX-11/12.
+**Pool strategy (D-016 point 5):** bounded, lazy, per-tenant connections or pools. A pool for a tenant is created on first request for that tenant, is bounded in size per process, and is closed after an idle timeout. Pilot decision (D-017): direct PostgreSQL connections with pool size 1 per tenant per process; no pooler for the pilot. Transaction pooling is deferred and requires TI-CONN-04 to 06 and TI-CTX-11 to 12 to pass and a separate decision.
 
 **Suspension and offboarding (D-016 point 6), in order:**
 1. Disable the tenant login immediately (no new sessions).
@@ -361,4 +361,4 @@ Recorded in `OPEN_QUESTIONS.md` with status, options, and dependency:
 - Q-016: pooler mode and transaction-local context
 - Q-017: background job model
 - Q-018: tenant file storage and signed URLs
-- Q-019: direction DECIDED (D-014: strengthen before real-data pilot). Mechanism OPEN: Option C (candidate) or Option D (candidate) pending independent security review (§2.3, §2.3.1, §2.4)
+- Q-019: direction DECIDED (D-014: strengthen before real-data pilot). Mechanism direction DECIDED (D-016): Option C preferred, subject to design review; Option D not selected (NOT SELECTION-READY). Not implemented; not a runtime security claim

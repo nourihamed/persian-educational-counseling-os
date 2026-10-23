@@ -583,7 +583,7 @@ NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 - Phase 2 not started and not authorized.
 
 ## Items Blocking Approval
-- Q-019 mechanism selection (owner decision after independent security review of Option C or D), with evidence for the matching sub-threat claims.
+- Q-019: direction decided (D-016, Option C preferred, subject to design review). Design review of this document is the gate (a) item. Implementation evidence is gate (b); real-data pilot is gate (c) (D-014).
 - Reviewer re-review of the commit that is actually pushed.
 
 ## Items Not Blocking Phase 1 Design Approval
@@ -607,5 +607,5 @@ Allowed values: `NOT READY` / `CONDITIONAL PASS` / `APPROVED`
 1. The developer pushes the revision and states its commit hash.
 2. The reviewer re-reviews that commit and records a verdict.
 3. If the verdict is not `APPROVED`, the listed fixes are made and this section is updated again.
-4. If `APPROVED`, the owner records acceptance, including the Q-019 mechanism selection; then a separate commit replaces this section with a dated final entry.
+4. If `APPROVED`, the owner records acceptance (Q-019 direction is already recorded in D-016); then a separate commit replaces this section with a dated final entry.
 5. The assistant never marks Phase 1 APPROVED.

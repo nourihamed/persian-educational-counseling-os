@@ -117,9 +117,9 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 | D-006 (Plan naming) | Proposed; requires confirmation in Phase 2 |
 | D-012 (tenant-only templates) | Accepted; applied in composite key requirements |
 | D-013 (Q-015: Option A for platform admin) | ACCEPTED 2026-10-15; applied; product decision only, not implemented |
-| D-014 (Q-019: direction and pilot data rule) | Direction ACCEPTED 2026-10-15; mechanism OPEN; pilot data prohibited until conditions met |
+| D-014 (Q-019: direction and pilot data rule) | Direction ACCEPTED 2026-10-15; superseded for mechanism by D-016 (Option C preferred direction, 2026-10-17); pilot data prohibited until conditions met |
 | Q-014, Q-016, Q-017, Q-018 | OPEN. Recommendations only |
-| Q-019 | Direction decided (D-014); mechanism OPEN (Option C or D candidate, pending independent review) |
+| Q-019 | Direction decided (D-014); mechanism direction decided (D-016: Option C preferred, subject to design review; Option D not selected). Not implemented |
 | Q-015 | RESOLVED (D-013) |
 | Q-007 (parent access) | OPEN. Blocks TI-API-09 |
 
@@ -137,7 +137,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 | Context behavior (invalid, unset, changed, pooled) | Yes | Yes | No | No |
 | Platform admin access | Yes (proposal) | Yes | No | No |
 | Authorization procedure and error mapping | Yes | Yes | No | No |
-| Test contracts (120) | Yes (specification) | Yes | n/a | **No. None has been executed.** |
+| Test contracts (120 at revision 6, historical) | Yes (specification) | Yes | n/a | **No. None has been executed.** |
 
 **Nothing in this report is test-verified.** Isolation is not claimed to work at runtime.
 
@@ -163,7 +163,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 - Job execution model (Phase 3, Q-017).
 - File storage provider (Q-018, before first file feature).
 - Platform admin implementation (Phase 4 and later, per D-013).
-- Selection of Option C or D for the stronger context boundary (Q-019 mechanism; requires independent security review before any real-data pilot, D-014).
+- Implementation of Option C (Phase 2 or later) and its validation before any real-data pilot (D-014).
 - All executable tests and CI wiring.
 - Migrations, roles, policies, and grants.
 
@@ -172,7 +172,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 ## 9. Items Requiring Product Owner Decision
 
 1. Q-015: DONE (D-013, Option A).
-2. Q-019: direction DONE (D-014). Owner must still choose the mechanism (C or D) after independent review, or explicitly decide otherwise in writing.
+2. Q-019: direction DONE (D-014); mechanism direction DONE (D-016, Option C preferred, subject to design review).
 3. Q-014: exact not-found status (can be deferred to Phase 4).
 4. Q-016, Q-017, Q-018: can be deferred to their owning phases, but must be resolved there.
 5. Pilot gate: real student data is prohibited until the four conditions in D-014 are met and the owner approves the gate in writing.
@@ -183,7 +183,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 
 - Documents are internally consistent on: role names, tenant vocabulary, error policy (identical not-found responses), test counts, Q-status.
 - Documents are NOT evidence of security. No claim of runtime isolation is made.
-- Q-015 is resolved (D-013). Q-019 mechanism is OPEN; Phase 1 cannot be approved as having a T4 boundary until it is selected and reviewed.
+- Q-015 is resolved (D-013). Q-019 direction is decided (D-016); Phase 1 design approval is a design-review gate; no T4 boundary is claimed as implemented or verified.
 - Matching against the Master Prompt: the Master Prompt is not present in this repository as a file. The matching against it was therefore done only through the references recorded in the accepted decisions (D-008 to D-012) and in TEST_PLAN.md. A direct match to the Master Prompt text could not be confirmed and is not claimed.
 
 ---
@@ -199,7 +199,7 @@ Coverage of "100% of Tenant isolation paths" is a future measurement. It require
 - [x] R, A, I modes defined and applied per contract (test contracts §0)
 - [x] Isolated Postgres per run; no SQLite (TEST_PLAN) — recorded as a requirement, not yet implemented
 - [x] No test claimed as executed
-- [~] Q-019: direction decided (D-014); mechanism selection open
+- [x] Q-019: direction decided (D-014); mechanism direction decided (D-016)
 - [x] Q-015 decided (D-013, Option A)
 - [ ] Parent access / Q-007 — open
 
@@ -226,7 +226,7 @@ Review verdict as received: CONDITIONAL PASS. Verdict is recorded in SUPERVISOR_
 | 7 | Re-review after changes; no automatic APPROVED | Not done by the assistant. Requires reviewer re-review. Status unchanged. |
 
 ### 13.1 Items not resolved by the assistant (require decisions)
-- Q-019 mechanism selection (owner, after independent review)
+- Q-019: none required for design approval (direction decided, D-016). Implementation and pilot validation are later gates
 - Q-007 gate proposal (reviewer confirmation)
 - Endpoint-level path inventory (Phase 2 and Phase 4)
 - Actual execution of any contract (not in Phase 1 scope)
@@ -285,7 +285,7 @@ The reviewer's PR head (`10cb7a5`) is not the same commit as the developer's cur
 ### Status
 - Phase 1: NOT APPROVED. Reviewer-stated NOT READY.
 - Q-015: resolved by owner decision (D-013); implementation not done.
-- Q-019: direction decided (D-014); mechanism OPEN.
+- Q-019: direction decided (D-014); mechanism direction decided (D-016).
 - Pilot with real data: prohibited.
 - Phase 2: not authorized.
 
@@ -307,7 +307,7 @@ The reviewer's PR head (`10cb7a5`) is not the same commit as the developer's cur
 | Q-014 | `OPEN_QUESTIONS.md` | Deferral condition to Phase 4 |
 | Q-019 | `OPEN_QUESTIONS.md` | Points to the evaluation; owner decision still required |
 | ROADMAP status line | `ROADMAP.md` | Phase 1 submitted for review; NOT approved; Phase 2 not authorized |
-| PROJECT_STATE count | `PROJECT_STATE.md` | 120 |
+| PROJECT_STATE count at revision 6 (historical) | `PROJECT_STATE.md` | 120 |
 
 ### 16.2 Counts (recounted from files)
 - Contracts at that revision (historical): **120** (103 PR; 3 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 10 BLOCKED:Q-019).
@@ -333,7 +333,7 @@ Results of these checks are reported in the final message of this revision, not 
 ### 16.5 Status (unchanged by this revision)
 - Phase 1: NOT APPROVED. Reviewer-stated gate NOT READY.
 - Q-015: resolved (D-013).
-- Q-019: direction decided (D-014); mechanism OPEN; technical evaluation provided.
+- Q-019: direction decided (D-014); mechanism direction decided (D-016); technical evaluation provided.
 - Pilot with real data: prohibited.
 - Phase 2: not authorized.
 
@@ -356,7 +356,7 @@ Results of these checks are reported in the final message of this revision, not 
 
 ### 17.2 Status (unchanged)
 - Phase 1: NOT APPROVED. Reviewer-stated gate NOT READY (commit cc4b576).
-- Q-019: mechanism OPEN. Owner decision required after independent review.
+- Q-019: mechanism direction decided (D-016); implementation not started.
 - All contracts (123 at revision 9) NOT-RUN. No CI status is claimed.
 - Pilot with real data: prohibited (D-014).
 - Phase 2: not authorized.
@@ -373,7 +373,7 @@ Results of these checks are reported in the final message of this revision, not 
 - The Product Owner accepted the separation in `Q019_MECHANISM_EVALUATION.md` §6.1: design-selection criteria versus pilot-validation criteria. This resolves the process deadlock C-01 (`OPEN_QUESTIONS.md`, Resolved section).
 - Test execution that belongs to later phases is not a precondition for design decisions or for starting those phases.
 - Not changed by this acceptance: Phase 1 approval (requires reviewer verdict on the new commit and owner gate decision); the Q-019 mechanism (OPEN); the capacity rule §6.2 (awaiting owner acceptance); D-014 (no real student data until pilot-validation criteria are met).
-- Status: Phase 1 NOT APPROVED. Q-019 OPEN. All contracts (123 at revision 9) NOT-RUN. No CI status claimed. Phase 2 not authorized.
+- Status: Phase 1 NOT APPROVED. Q-019 direction decided (D-016). All contracts (123 at revision 9) NOT-RUN. No CI status claimed. Phase 2 not authorized.
 
 ---
 
@@ -448,4 +448,33 @@ No CI status or workflow run for this revision is available to the developer. Ab
 - Q-019: direction decided (D-016); design review pending; no implementation.
 - D-014: unchanged; real student data prohibited.
 - Phase 2: not started.
+
+---
+
+## 21. Remaining Phase 1 and Pre-Pilot Work — Status (2026-10-17)
+
+| Work item | Status | Owner | Evidence |
+|---|---|---|---|
+| Design documents for independent review | Completed as documents; NOT APPROVED | Developer; reviewer | this repository |
+| Q-019 direction (Option C preferred, subject to design review; Option D not selected) | Decided (D-016); design review pending | Product Owner; reviewer | DECISION_LOG D-016 |
+| Q-016 pooler / connection mode | Decided for pilot (D-017): direct connections, pool 1 per tenant per process | Product Owner | DECISION_LOG D-017 |
+| Q-020 retention principle | Decided (D-017): no automatic role deletion | Product Owner | DECISION_LOG D-017 |
+| Q-020 retention durations and approver | NEEDS-DECISION; legal/tax/privacy review required | Product Owner; reviewers (not yet assigned) | `DATA_RETENTION_SCHEDULE_DRAFT.md` |
+| A1 pilot cap (10 tenants) | Decided as initial cap; capacity NOT measured | Product Owner | D-017; `TARGET_ENV_LOAD_TEST_PLAN.md` |
+| Target-environment load and connection tests | PLAN ONLY; BLOCKED (host not confirmed; implementation not started) | Technical lead | `TARGET_ENV_LOAD_TEST_PLAN.md` |
+| Tenant isolation contracts on implementation | NOT-RUN (123 specified contracts; 0 implemented; 0 executed) | Technical lead | TENANT_ISOLATION_TEST_CONTRACTS.md |
+| Security review of implementation | NOT-RUN | Independent reviewer | — |
+| Blocking findings | None recorded in this document set beyond the NOT READY gate | Reviewer | SUPERVISOR_REVIEW.md |
+| Real student data in pilot | PROHIBITED until every D-014 condition is met and recorded | Product Owner | D-014 |
+| Phase 2 | NOT started; NOT authorized | Product Owner | ROADMAP.md |
+| Phase 1 approval | NOT APPROVED; requires independent re-review of the pushed commit | Independent reviewer; Product Owner | SUPERVISOR_REVIEW.md |
+
+Statement: this document does not record any test as executed or passing, and does not record any capacity as measured.
+
+### 21.1 Update after D-018 (2026-10-17)
+- Retention approach, reviewer engagement, role-deletion approver (Product Owner), host profile to test, independent security review, and runbook as draft: ACCEPTED (D-018).
+- Retention durations: still NEEDS-DECISION after legal and tax review. Not set.
+- Incident lead, delegate, and data-incident notifier: still NEEDS-DECISION (owner must name them).
+- Phase 1 approval: NOT granted by D-018; requires independent re-review of the pushed commit.
+- No test, drill, measurement, or security review has been executed.
 

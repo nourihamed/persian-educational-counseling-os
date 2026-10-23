@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-Status: Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged on 2026-10-14. Phase 1: design and documentation submitted for independent review (PR #3, branch docs/phase1-tenant-isolation-design); reviewer-stated gate NOT READY; NOT approved; Phase 2 NOT authorized
+Status (updated 2026-10-17): Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged. Phase 1: design and documentation submitted for independent review (PR #3, branch docs/phase1-tenant-isolation-design). Q-015 resolved (D-013). Q-019 direction decided (D-016: Option C preferred design direction, subject to design review; Option D not selected). Phase 1 NOT approved; gate NOT READY pending re-review; Phase 2 NOT authorized; real-data pilot prohibited (D-014).
 
 قانون: هر فاز طبق `Mandatory Development Workflow` (بخش ۷۶ Master Prompt) اجرا می‌شود و بعد از اتمام، **خودکار به فاز بعد نمی‌رویم** — منتظر تأیید می‌مانیم.
 

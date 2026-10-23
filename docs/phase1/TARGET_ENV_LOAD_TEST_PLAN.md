@@ -1,0 +1,56 @@
+# Target-Environment Load and Connection Test Plan (pre-pilot)
+
+Status: PLAN ONLY. No test has been run. Target environment (D-011 host): NOT PROVISIONED / NOT CONFIRMED. All results below are NOT-RUN or BLOCKED. This document is NOT a measurement.
+Gate: pilot-validation criteria (D-015, D-014 condition 3). Not a prerequisite for Phase 1 design approval.
+
+## 1. Objectives
+- Measure, not estimate, tenant count capacity, connection usage, memory, CPU, latency and error behaviour on the target host.
+- Verify the D-017 configuration: direct PostgreSQL connections, pool size 1 per tenant per process.
+- Verify tenant isolation under load (TI-CONN-01 to 06, TI-CTX-01 to 14 where applicable, TI-ADV-01 and 02 for the selected mechanism).
+- Verify recovery after failure and the emergency stop procedure.
+
+## 2. Preconditions (each must be recorded; if not met the test is BLOCKED)
+| ID | Precondition | Status |
+|---|---|---|
+| P1 | Target host provisioned and described (CPU, RAM, disk, PostgreSQL version, max_connections, work_mem, shared_buffers) | BLOCKED: target host not confirmed |
+| P2 | Implementation of the application and migrations exists on the test branch | BLOCKED: Phase 2 or later |
+| P3 | Tenant role provisioning implemented (Option C) | BLOCKED: implementation |
+| P4 | Test data generator produces synthetic data only (no real student data) | NOT-RUN |
+| P5 | Monitoring of host metrics available | NOT-RUN |
+| P6 | Emergency stop and rollback procedure written | NOT-RUN |
+
+## 3. Scenarios
+| ID | Scenario | Variables | Pass criterion (to be finalised before run) | Status |
+|---|---|---|---|---|
+| L-01 | Ramp to 1, 5, 10 tenants, one counselor session each | tenant count | No error; p95 latency within threshold set before the run | NOT-RUN |
+| L-02 | Concurrent requests across all 10 tenants | concurrency level | Connection count stays within the calculated bound; no connection leak | NOT-RUN |
+| L-03 | Background jobs active during L-02 | job count | Job connections counted; total within host limit | NOT-RUN |
+| L-04 | Administrative access during L-02 | admin sessions | Reserve respected | NOT-RUN |
+| L-05 | Burst test: maximum allowed concurrency for 10 minutes | burst | No crash; graceful queueing or refusal | NOT-RUN |
+| L-06 | Failure injection: kill one application process | process failure | Connections released; service recovers; no cross-tenant data | NOT-RUN |
+| L-07 | Failure injection: database restart | DB restart | Recovery within documented time; no stale context | NOT-RUN |
+| L-08 | Tenant suspension during load | suspension | Login refused immediately; sessions terminated (TI-CONN-04) | NOT-RUN |
+| L-09 | Isolation under load: tenant A requests never return tenant B rows | parallel tenants | Zero cross-tenant rows in all responses | NOT-RUN |
+| L-11 | Exercise the emergency stop and rollback runbook (EMERGENCY_STOP_AND_ROLLBACK_RUNBOOK.md) with recorded timing | incident drill | All steps executed in order; timings recorded; no tenant re-enabled before reopen criteria are met | NOT-RUN |
+| L-10 | Restore from backup test (R7) | backup restore | Deleted and suspended tenants remain suspended after restore | BLOCKED: retention decision (Q-020) |
+
+## 4. Measurements to record
+- Connections: total, per tenant role, per process, peak, reserved; PostgreSQL max_connections.
+- Memory: PostgreSQL backend memory; application process memory; host free memory.
+- CPU: host and database.
+- Latency: p50, p95, p99 per endpoint class; error rates.
+- Errors: types and counts; any tenant-data leak counts (must be zero).
+- Recovery time after L-06 and L-07.
+
+## 5. Evidence to store
+- Host description and configuration, exact versions, and the test commit SHA.
+- Raw metrics export and the scripts used (to be reproducible).
+- Results table with status PASS, FAIL, BLOCKED or NOT-RUN per scenario, with the criterion stated.
+- Known limitations and anything not measured.
+
+## 6. Acceptance for pilot (D-014 condition 3 and D-017)
+- Measured connection and memory usage within the host limits with margin set by the Product Owner.
+- Zero cross-tenant rows in L-09.
+- Recovery scenarios pass.
+- Written owner approval of the cap (A1) after reviewing the evidence.
+If capacity is insufficient, the cap is reduced. No real student data is allowed until this plan is complete and approved.

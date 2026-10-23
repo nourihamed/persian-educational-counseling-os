@@ -169,10 +169,13 @@ Each class is tested or reviewed separately. No result for one class is used to 
 ## 6. Technical Recommendation (not a decision)
 
 1. **Option A alone is not a boundary against AM1 and must not be described as one.**
-2. **For the pilot, Option C is the technical candidate** because its boundary is database authentication and catalog membership, which can be checked by configuration tests, and because it removes the attacker-controlled value that Option A and Option D both depend on. Option C's cost is operational and its residual risks (AM2, AM4, AM5) are stated.
+2. **Option C is the Product Owner's preferred design direction (D-016), conditional on independent design review.** Reasons for the direction, as analysed above: its boundary is database authentication and catalog membership, which can be checked by configuration tests, and because it removes the attacker-controlled value that Option A and Option D both depend on. Option C's cost is operational and its residual risks (AM2, AM4, AM5) are stated.
 3. **Option D is an alternative, but it is NOT SELECTION-READY** (§6.3). It cannot be selected until the design-critical points in §6.3 are decided and written. Its residual risk is concentrated in one database function and one key; for MVP this is a larger and less testable surface than Option C.
 4. **A combination is not recommended for MVP**, because two boundaries double the review cost without closing AM2, AM4 or AM5.
-5. **Required before any selection is final:** measured pool and role limits on the pilot host (D-011); independent review of the chosen option; the adversarial contracts for that option run and their results recorded (see TI-ADV rules).
+5. **Three distinct gates apply, and they must not be conflated:**
+   - (a) *Design direction and Phase 1 design approval:* owner decision on the preferred direction (D-016, recorded) plus independent review of the design document. Measured capacity and executed adversarial tests are NOT prerequisites here (D-015).
+   - (b) *Implementation validation:* implementation of the chosen mechanism, execution of its contracts, and independent implementation review. Required before any pilot.
+   - (c) *Real-data pilot authorization:* every D-014 condition, including measured pool and role limits on the D-011 host and written owner approval of the pilot gate.
 6. **Required regardless of option:** PUBLIC privileges revoked on tenant objects; migration role separated from runtime; secrets kept out of the application process where possible (T4b controls, Phase 3 and 26).
 
 This recommendation is for the independent reviewer. The Product Owner decides, and the decision is recorded in DECISION_LOG.md.
@@ -293,23 +296,30 @@ Result: Option C satisfies the design-selection criteria at design level and may
 
 ---
 
-## 8. Required Evidence Before Selection Is Final
+## 8. Evidence Required at Each Gate
 
-| Item | Evidence |
-|---|---|
-| Chosen option's sub-threat claims | TI-ADV-01 and 02 run for the chosen option, result recorded |
-| Option C only | TI-CONN-01 to 03 run; PUBLIC privilege configuration test added and run |
-| Option D only | TI-CTX-15 to 18 run; function review (search_path, dynamic SQL, input handling) recorded; key storage reviewed |
-| Independent review | Reviewer's verdict on the selected option recorded in SUPERVISOR_REVIEW.md |
-| Owner decision | Entry in DECISION_LOG.md |
+The evidence below is grouped by the three gates in §6 point 5. Items in gate (a) can be satisfied by documentation and review. Items in gates (b) and (c) cannot be satisfied by this document.
 
-None of these is complete at this revision. No test has been run.
+| Gate | Item | Evidence | Status now |
+|---|---|---|---|
+| (a) Design direction and Phase 1 design approval | Owner decision on preferred direction | Entry in DECISION_LOG.md (D-016) | Recorded (Option C preferred; Option D not selected) |
+| (a) | Design precision and internal consistency | Independent design review of this document and the Phase 1 documents | Pending supervisor review |
+| (a) | Option D readiness | Seven points in §6.3 resolved and reviewed, if D is ever reconsidered | Not met (NOT SELECTION-READY) |
+| (a) | Per-class outcomes stated for each option | §4.4 reviewed | Documented; reviewer confirmation pending |
+| (b) Implementation validation | Chosen mechanism implemented and reviewed | Implementation review record | Not started (Phase 2 or later) |
+| (b) | Chosen option's contracts executed | TI-CONN-01 to 06, TI-ADV-01 and 02 (Option C); TI-CFG-14; results recorded | NOT-RUN |
+| (b) | Option D only, if reconsidered | TI-CTX-15 to 18, TI-ADV-04, function review, key storage review | SPEC-ONLY |
+| (c) Real-data pilot | D-014 conditions 1 to 5 | Test evidence, blockers fixed, measured capacity, independent implementation review, written owner approval | Not met |
+
+Statement: no test has been run, no capacity has been measured, and no implementation exists. Phase 1 design approval, if granted, does not satisfy any gate (b) or (c) item.
 
 ---
 
-## 9. Open Items for the Reviewer
+## 9. Open Items for the Reviewer (design review, gate (a))
 
 1. Is the AM1 analysis of Option C correct for the target PostgreSQL version (SET ROLE and SET SESSION AUTHORIZATION rules, PUBLIC defaults)?
-2. Is Option C's pool-per-tenant cost acceptable at pilot scale on the D-011 host? (Requires measurement, not decided here.)
-3. Is Option D's function surface acceptable for MVP, given that it is harder to test?
-4. Are AM2, AM4 and AM5 accepted as residual risks for the pilot, or does the owner require a control for them before real data (D-014)?
+2. Is the Option C design (mapping table, membership rules, routing, lifecycle in design §5.5) precise enough to implement, as required by §6.1 criterion 1?
+3. Are the residual risks AM2, AM4 and AM5 (and K-S, K-O where applicable) stated accurately and with owners?
+4. Is the classification of Option D as NOT SELECTION-READY, with its seven open points, correct?
+5. Is the capacity estimate correctly labelled ESTIMATE — NOT MEASURED, and does it avoid claiming feasibility? (Measurement belongs to gate (c), not to this review.)
+

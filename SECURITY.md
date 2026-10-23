@@ -49,3 +49,9 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 
 ## فرآیند قبل از Production (بخش ۷۵)
 چک‌لیست کامل در Master Prompt بخش ۷۵ باید قبل از هر انتشار Production تیک بخورد؛ Security Review و Tenant Isolation test جزو موارد غیرقابل‌حذف هستند.
+
+---
+
+## Pre-pilot security and data-retention items (added 2026-10-17)
+
+Retention draft: `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md` (NEEDS-DECISION / LEGAL-REVIEW; no duration set). Tenant role deletion requires the checklist in that draft (D-017). Security tests for the implemented mechanism: NOT-RUN. Real student data prohibited until D-014 conditions are met. This section does not claim any security control is implemented or verified.
