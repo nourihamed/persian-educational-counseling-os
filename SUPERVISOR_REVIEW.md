@@ -1,3 +1,26 @@
+# CURRENT INDEPENDENT REVIEW ADDENDUM — D-022 / Q-023 DEFERRAL (2026-10-23)
+
+## Decision reviewed
+The Product Owner selected Q-023 option A in the sense of deferring the final hosted topology/provider decision until hosted deployment planning, while continuing local-first development under D-021.
+
+## Independent finding
+The decision is acceptable as a scheduling decision. It does not, by itself, make the unresolved hosting security boundary safe to defer past Phase 1 approval. The exact vendor, instance sizes, pricing and target-environment capacity measurement can wait until hosted deployment planning; the architecture-level trust boundary cannot be silently waived. Under current D-020, the cell host/network separation and shared/global administrative compromise domain materially affect the Alt-5 security claim. Therefore Q-023 remains OPEN and remains a Phase 1 blocker unless a later explicit, recorded Product Owner decision changes the gate after an independent review demonstrates that no D-020/D-014 security requirement is weakened.
+
+## Findings
+- **HIGH:** Q-023's cell hosting and administrative compromise boundary remains unresolved. A shared host with multiple containers cannot be claimed as independent cell isolation against host/root compromise.
+- **HIGH:** Cost/capacity remains NOT MEASURED; the two-tenants-per-cell and ten-tenant proposal remains provisional.
+- **HIGH:** No runtime implementation or executable security test is evidenced by this documentation decision.
+
+## Required controls and next steps
+1. Continue local development only with synthetic data, local-only services and no production secrets.
+2. Keep D-020 Alt-5 requirements and D-014 real-data prohibition unchanged.
+3. Before Phase 1 approval, specify and independently accept the architecture-level host/network/admin trust boundaries and residuals; the vendor and exact capacity profile may remain deferred if clearly separated from this gate.
+4. Before hosted deployment/pilot, resolve the provider/topology, itemized cost and per-cell capacity, and test provisioning, isolation, backup/restore, credential rotation and failure containment.
+
+**Gate: NOT READY / NOT APPROVED.** Phase 2 remains unauthorized; real student data remains prohibited. No existing security condition is removed by D-022.
+
+---
+
 # CURRENT SUPERVISOR ADDENDUM — D-021 LOCAL-FIRST DEVELOPMENT (2026-10-23)
 
 **Scope:** Review of the Product Owner's direction to develop on their laptop now and consider server deployment when the product is sufficiently demonstrable.  
