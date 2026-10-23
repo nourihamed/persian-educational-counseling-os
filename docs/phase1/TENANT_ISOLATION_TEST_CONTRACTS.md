@@ -10,7 +10,7 @@ Status: SPECIFICATIONS ONLY. No test code exists. No test has been run or passed
 ### 0.1 Modes (each contract lists the modes it needs)
 - **C — Configuration:** checks catalog state of the real test database (roles, ownership, privileges, RLS flags, policies, views). Runs against an isolated test DB built from the same migrations.
 - **S — Static:** checks source code and migration files (forbidden patterns, signatures, allowlists). No database needed.
-- **R — RLS-only:** database session as the runtime role, repository/application filters deliberately absent in the test harness. Pass means RLS alone blocks the access. The harness must first prove a positive control (same query succeeds with the correct tenant), otherwise a broken harness produces a false pass.
+- **R — RLS-only:** database session as the tenant-specific login role, repository/application filters deliberately absent in the test harness. Pass means RLS alone blocks the access. The harness must first prove a positive control (same query succeeds with the correct tenant), otherwise a broken harness produces a false pass.
 - **A — Application-only:** RLS deliberately neutralized in an isolated test database only (never in any shared or real environment). Pass means application authorization and repository filters alone block the access. A dedicated test role is used for the neutralization; the runtime role is never made privileged.
 - **I — Integrated:** normal configuration, RLS and application layers both active. Each negative test also checks that a failure in one layer would be visible on its own (see R and A).
 
@@ -69,7 +69,7 @@ Rules:
 | TI-VER | Program and Plan version history | 7 |
 | TI-AUD | Audit logs | 3 |
 | TI-PLAT | Platform admin cross-tenant access | 10 |
-| TI-CONN | Per-tenant connection principals (Option C, selected D-016) | 6 |
+| TI-CONN | Per-tenant connection principals (Option C, preferred direction under D-016; pending design review) | 6 |
 | TI-ADV | Adversarial threat-based contracts (T4a, T4b, T4c; credential classes K-L, K-T, K-S, K-O) | 5 |
 | **Total** | | **123** |
 
@@ -83,19 +83,19 @@ The total is recomputed from the contract rows below; the verification command i
 
 | ID | Modes | Operation | Expected | Failure consequence | CI |
 |---|---|---|---|---|---|
-| TI-CFG-01 | C | Read `pg_roles` for app_runtime | Not superuser; no BYPASSRLS, CREATEROLE, CREATEDB, REPLICATION | Runtime can bypass RLS | PR |
-| TI-CFG-02 | C | Check `pg_tables.tableowner` and view owners for all tenant tables | app_runtime owns none | Owner bypass path | PR |
+| TI-CFG-01 | C | Read `pg_roles` for every tenant login role | No tenant login is superuser or has BYPASSRLS, CREATEROLE, CREATEDB, REPLICATION | Tenant login can bypass RLS or alter security configuration | PR |
+| TI-CFG-02 | C | Check `pg_tables.tableowner` and view owners for all tenant tables | No tenant login role owns tenant tables, views, tenant sequences, or containing schemas | Owner bypass path | PR |
 | TI-CFG-03 | C | Check `pg_class.relrowsecurity` and `relforcerowsecurity` for every tenant table in the allowlist | Both true for every tenant table; exceptions only if listed in a reviewed allowlist | Policies not enforced | PR |
-| TI-CFG-04 | C | Check `pg_policies` for each tenant table | Exact expected policy-name set per table; the tenant policy has both USING and WITH CHECK on tenant_id and applies to app_runtime or PUBLIC; no extra policy with a different role scope | Missing policy means unprotected table; an extra permissive policy widens access | PR |
-| TI-CFG-05 | C | Recursive `pg_auth_members` from app_runtime | No reachable role with BYPASSRLS, superuser, or ownership of tenant tables | Bypass through membership | PR |
-| TI-CFG-06 | C | `has_table_privilege` for app_runtime on each tenant table for each privilege type | Only the DML set in the allowlist (SELECT, INSERT, UPDATE, DELETE as specified per table); nothing else | Excess privileges | PR |
-| TI-CFG-07 | C | `has_table_privilege(..., 'TRUNCATE')` for app_runtime on tenant tables | False for all tenant tables | TRUNCATE is not subject to RLS | PR |
-| TI-CFG-08 | C | `has_schema_privilege(app_runtime, schema, 'CREATE')` and DDL attempt in test | False; DDL attempt is denied | Runtime can alter schema or policies | PR |
-| TI-CFG-09 | C | List EXECUTE grants of app_runtime on functions; check SECURITY DEFINER flag | No SECURITY DEFINER function touching tenant tables is executable, except allowlisted and reviewed ones | Privilege escalation through function owner | PR |
+| TI-CFG-04 | C | Check `pg_policies` for each tenant table | Exact expected policy-name set per table; tenant policy has USING and WITH CHECK using `tenant_id_for_login()`; policy applies to intended tenant login roles, not PUBLIC; no extra permissive policy widens access | Missing policy means unprotected table; an extra permissive policy widens access | PR |
+| TI-CFG-05 | C | Recursive `pg_auth_members` from every tenant login role | No cross-tenant role membership and no reachable role with BYPASSRLS, superuser, CREATEROLE, or tenant-table ownership | Bypass through membership or tenant identity switching | PR |
+| TI-CFG-06 | C | `has_table_privilege` for each tenant login on each tenant table for each privilege type | Only the DML set granted to that tenant role; no cross-tenant object access or unapproved privilege | Excess privileges | PR |
+| TI-CFG-07 | C | `has_table_privilege(..., 'TRUNCATE')` for every tenant login on tenant tables | False for all tenant tables | TRUNCATE is not subject to RLS | PR |
+| TI-CFG-08 | C | `has_schema_privilege(tenant_login, schema, 'CREATE')` and DDL attempt for every tenant login | False; DDL attempt is denied | Tenant login can alter schema or policies | PR |
+| TI-CFG-09 | C | List EXECUTE grants of tenant login roles on functions; check SECURITY DEFINER flag and allowlist | Only the reviewed tenant-mapping helper and explicitly approved functions are executable; helper accepts no tenant/role argument and uses fixed safe search_path | Privilege escalation through function owner | PR |
 | TI-CFG-10 | S | Scan runtime configuration templates and environment examples for app_migrator credentials | None present | Runtime can run migrations and bypass policy | PR |
-| TI-CFG-11 | C | Compare default privileges (`pg_default_acl`) for schemas holding tenant tables | No default privilege grants new tables to app_runtime unless listed | New tables silently exposed | PR |
-| TI-CFG-12 | C | Evaluate effective policy set for app_runtime per tenant table, combining permissive policies with OR and restrictive policies with AND | Effective predicate equals tenant_id = context on every table; no permissive policy outside the expected set; each restrictive policy listed and reviewed | Effective access wider than the single policy reviewed | PR |
-| TI-CFG-13 | S + C | Scan all policy expressions (`pg_policies.qual`, `with_check`) for references to `current_setting` or custom GUCs | No policy references a GUC (required by §2.3.1 if Option D is chosen; enforced now as a guard) | Policy trusts a forgeable value | PR |
+| TI-CFG-11 | C | Compare default privileges (`pg_default_acl`) for schemas holding tenant tables | No default privilege grants new tenant tables/sequences to tenant login roles or PUBLIC unless explicitly allowlisted | New tables silently exposed | PR |
+| TI-CFG-12 | C | Evaluate effective policy set for each tenant login per tenant table, combining permissive policies with OR and restrictive policies with AND | Effective predicate is `tenant_id = tenant_id_for_login()` on every tenant table; no permissive policy outside the expected set; all policies listed and reviewed | Effective access wider than the reviewed policy set | PR |
+| TI-CFG-13 | S + C | Scan all policy expressions (`pg_policies.qual`, `with_check`) and migration/source files for `current_setting`, custom GUCs, or `set_config` used for tenant authorization | No tenant policy or runtime path relies on a GUC to choose tenant; Option A patterns are forbidden for the selected Option C design | Policy trusts a forgeable value | PR |
 | TI-CFG-14 | C | Check PUBLIC privileges on the database schemas and on all tenant-owned tables and sequences | No PUBLIC privilege on tenant objects; PUBLIC CREATE on schemas revoked | Any role reaches objects through PUBLIC, bypassing role mapping | PR |
 
 ### 2.2 TI-CTX — Legacy GUC context contracts and connection-pool lifecycle
@@ -141,11 +141,11 @@ The total is recomputed from the contract rows below; the verification command i
 | ID | Modes | Operation | Expected | Failure consequence | CI |
 |---|---|---|---|---|---|
 | TI-BYP-01 | C | Check `pg_class.reloptions` for security_invoker on every view touching tenant tables | True for all such views; none without it | View executes with owner rights and bypasses RLS | PR |
-| TI-BYP-02 | R | Query each allowed view as app_runtime, context = A | Only A rows | View leaks tenant data | PR |
+| TI-BYP-02 | R | Query each allowed view as tenant login A | Only A rows | View leaks tenant data | PR |
 | TI-BYP-03 | S + C | Inventory SECURITY DEFINER functions; compare with reviewed allowlist | Inventory equals allowlist; allowlist entries have review reference | Unreviewed function bypasses RLS | PR |
-| TI-BYP-04 | C | Check grants of app_runtime on materialized views over tenant data | No such grant | Materialized views are not covered by RLS | PR |
+| TI-BYP-04 | C | Check grants of all tenant login roles on materialized views over tenant data | No tenant login has such a grant | Materialized views are not covered by RLS | PR |
 | TI-BYP-05 | C | Check `pg_rules` and tenant-table triggers that rewrite or redirect queries | None on tenant tables, or each reviewed | Query rewrite bypass | PR |
-| TI-BYP-06 | I | Application code path attempting TRUNCATE on tenant table as app_runtime | Denied | Full-table wipe that ignores RLS | PR |
+| TI-BYP-06 | I | Application code path attempting TRUNCATE on tenant table as tenant login A | Denied | Full-table wipe that ignores RLS | PR |
 
 ### 2.5 TI-API — API and object-level authorization
 
@@ -203,7 +203,7 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-FILE-01 | A | A1 requests signed URL for FB1 | Response identical to nonexistent id; no URL issued | Cross-tenant file access | PR |
 | TI-FILE-02 | A | A1 requests a storage key beginning tenants/B/ | Refused; no URL | Path traversal across tenants | PR |
 | TI-FILE-03 | I | Signed URL for FA1 used after TTL | Access denied after expiry | Indefinite link validity | PR |
-| TI-FILE-04 | R | SELECT file metadata rows as app_runtime, context A | Only A rows | Metadata leak | PR |
+| TI-FILE-04 | R | SELECT file metadata rows as tenant login A | Only A rows | Metadata leak | PR |
 | TI-FILE-05 | A | Upload request supplies a storage key that does not match the record's tenant | Rejected; nothing stored | Mis-filed tenant data | PR |
 | TI-FILE-06 | I | Direct unsigned storage URL for FA1, no token | Denied | Public file exposure | PR |
 | TI-FILE-07 | A | Path for download derived from request field instead of record | Request-supplied path ignored or rejected | Arbitrary object read | PR |
@@ -226,7 +226,7 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-JOB-02 | I | Job for A fails mid-way and retries | Retry under A only; no B writes | Retry crosses tenants | PR |
 | TI-JOB-03 | A | Job enqueued without tenant_id | Rejected before execution | Unscoped job | PR |
 | TI-JOB-04 | I | Platform aggregate job | Output contains aggregates only; no tenant row content | Aggregate job leaks rows | PR |
-| TI-JOB-05 | I | Job fails with context set; next job runs on same worker | Next job sets its own context; no leftover context | Context leak in worker | ENV:worker (Q-017) |
+| TI-JOB-05 | I | Tenant-A job fails; next tenant-B job runs on same worker process | Pool router gives the next job only a B-authenticated connection; A connection remains bound to A and is cleaned up | Cross-tenant connection reuse in worker | ENV:worker (Q-017) |
 
 ### 2.12 TI-VER — Program and Plan version history
 
@@ -246,7 +246,7 @@ The total is recomputed from the contract rows below; the verification command i
 |---|---|---|---|---|---|
 | TI-AUD-01 | I | A1 performs a state-changing action | Audit row with actor, tenant A, request_id | Missing evidence | PR |
 | TI-AUD-02 | I | A1 reads audit rows | Only A rows; AB1 not visible | Audit leak | PR |
-| TI-AUD-03 | C | app_runtime attempts UPDATE and DELETE on audit table | Denied for both | Audit tampering | PR |
+| TI-AUD-03 | C | Tenant login attempts UPDATE and DELETE on audit table | Denied for both | Audit tampering | PR |
 
 ### 2.14 TI-PLAT — Platform admin cross-tenant access
 
@@ -280,7 +280,7 @@ The total is recomputed from the contract rows below; the verification command i
 
 | ID | Modes | Operation | Expected | Failure consequence | CI |
 |---|---|---|---|---|---|
-| TI-ADV-01 | I | T4a: attacker-controlled SQL on tenant A's runtime connection sets context to B and reads B rows | Option C pass criterion: denied at the role boundary (NOT-RUN). Option D pass criterion: denied without a valid token (NOT-RUN). Option A: KNOWN-RESIDUAL (attack succeeds; recorded, never PASS). Expected results for the unselected options are SPEC-ONLY | Silent acceptance of cross-tenant read | BLOCKED:implementation (Option C, D-016); Option D part SPEC-ONLY |
+| TI-ADV-01 | I | T4a: attacker-controlled SQL on tenant A's database connection attempts to change tenant identity (GUC, SET ROLE, direct mapping read/write) and reads B rows | Option C pass criterion: denied at the database identity/role boundary (NOT-RUN). Option D: SPEC-ONLY. Option A: KNOWN-RESIDUAL (attack succeeds; never PASS) | Silent acceptance of cross-tenant read | BLOCKED:implementation (Option C, D-016); Option D part SPEC-ONLY |
 | TI-ADV-02 | I | Credential classes K-L-1 (one stolen runtime login) and K-L-N (all runtime logins), used from outside the application to read rows of tenant B. Same object and same attacker assumption for every option (Q019 §4.4.2) | Option A: K-L-1 KNOWN-RESIDUAL; K-L-N KNOWN-RESIDUAL. Option C: K-L-1 pass criterion (NOT-RUN): tenant A's login denied on B rows; K-L-N KNOWN-RESIDUAL. Option D: K-L-1 and K-L-N pass criterion (NOT-RUN): zero rows with no token, conditional on the §4.4.3 conditions being verified. No result is PASS unless executed and observed | Undetected credential-scope failure | BLOCKED:implementation (Option C, D-016) |
 | TI-ADV-03 | — | T4b: process-isolation evidence (no single process holds routing to all tenant credentials; secret scope review) | Evidence document reviewed, not a database test | Unrecognized process-level exposure | ENV:security-review (Phase 26) |
 | TI-ADV-04 | I | Credential class K-T (Option D only): a valid token of tenant A is captured and replayed against the verification function after expiry, and within TTL (Q019 §4.4.5) | After expiry: pass criterion (NOT-RUN): refused. Within TTL: KNOWN-RESIDUAL for the holder of tenant A's token (reads of A only; B denied). Options A and C: not applicable (no tokens) | Replay beyond TTL or cross-tenant token use | SPEC-ONLY (Option D not selected, D-016) |
