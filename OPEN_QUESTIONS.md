@@ -159,13 +159,19 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Resolution evidence:** explicit Product Owner instruction in conversation on 2026-10-23; recorded in D-019.
 
 ## Q-022 — Select a revised tenant-isolation architecture after independent comparison
-**Status: OPEN — design alternatives documented; no topology selected.** D-019 records the Product Owner's decision to require stronger architecture before Phase 1 approval. The alternatives and preliminary assessment are in `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md`.
+**Status: OPEN — independent review completed; awaiting explicit Product Owner decision.** D-019 requires stronger architecture before Phase 1 approval. The independent assessment and proposed decision are in `docs/phase1/Q022_INDEPENDENT_ARCHITECTURE_REVIEW.md`.
 
-**Decision required:** approve one revised architecture (or request another option) after independent review. The review must cover database-per-tenant versus separate PostgreSQL clusters/instances versus hybrid tenant groups; runtime process and secret isolation; owner/migrator and deployment boundaries; backup/restore/support access; migration safety; connection/capacity estimates; operating burden; and measurable threat-specific test criteria.
+**Supervisor recommendation (not an owner decision):** Alt-5 hybrid isolation cells, using Alt-4 as the security reference. For a 10-tenant pilot, propose a maximum of two tenants per cell (up to five cells), only if separate data-plane, network, runtime-worker, secret, migration, backup, and privileged-access boundaries can be demonstrated and capacity/cost review supports it. This cell size is a proposed blast-radius limit, not measured capacity.
 
-**Recommendation for evaluation, not selection:** investigate database-per-tenant with enforceably tenant-scoped credentials (Option C in the new comparison) and hybrid isolated tenant groups (Option E), using separately operated clusters (Option D) as the stronger-isolation reference. A separate database on a shared cluster alone does not resolve broad credential theft or cluster-admin compromise.
+**Decision required — choose one or request another design:**
+- **A — Accept the recommended Alt-5 proposal:** maximum two tenants per pilot cell, subject to capacity/cost evidence; cell-scoped runtime credentials/workers, migration identities, backup keys, separate database clusters/instances and network boundaries; no routine global data-capable migrator; dual-approved, time-limited, audited break-glass.
+- **B — Choose Alt-4 dedicated operational isolation per tenant:** stronger separation and higher expected operating cost/complexity; still requires secret/process isolation and controls for global host/cloud administrators.
+- **C — Request another architecture proposal:** state a different cost or maximum-blast-radius target; no implementation while Q-022 remains open.
 
-**Must be resolved before:** Phase 1 design approval and any implementation of tenant isolation. Phase 2 remains unauthorized. Real student data remains prohibited under D-014.
+**Important risk clarification:** actual theft of every tenant credential plus connectivity to every database, or compromise of global host/cloud root controlling all cells and keys, cannot honestly be claimed impossible through database topology alone. The design must prevent a single routine worker/vault policy/global migrator from becoming a universal access path and explicitly document remaining catastrophic scenarios. The owner must decide the residual global-root risk before real-data use.
+
+**Must be resolved before:** final Phase 1 architecture approval and any implementation. D-014 continues to prohibit real student data until separate implementation/security-test/capacity/incident-drill/written-approval gates pass.
+
 
 ## Q-020 — Tenant data-retention period and criteria for dropping tenant roles (OPEN; principle decided D-017)
 **Draft (2026-10-17):** `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md`. **Approach accepted (D-018):** data minimisation, per-category rule, short explicit periods, extensions only by recorded decision, legal/tax/privacy reviewers engaged. **Still OPEN:** all durations (NEEDS-DECISION or LEGAL-REVIEW; none set), the named reviewers, and the approver of role deletion (Product Owner, per D-018).
