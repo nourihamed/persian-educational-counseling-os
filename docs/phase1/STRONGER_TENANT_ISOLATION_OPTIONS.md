@@ -16,34 +16,34 @@ The revised design must make the blast radius of one compromised tenant credenti
 
 ## 2. Alternatives
 
-### A. Existing Option C — shared database, per-tenant PostgreSQL login roles
+### Alt-1. Existing Option C baseline — shared database, per-tenant PostgreSQL login roles
 - **Isolation boundary:** database role and RLS policy within one shared database.
 - **Strength:** an injected query on tenant A's connection should not be able to switch to tenant B absent membership/privilege; preserves one schema and simple shared migrations.
 - **Residual weakness:** a compromised application process or secret store holding many tenant credentials can reach many tenants; a privileged owner/migrator boundary can defeat isolation.
 - **Disposition:** no longer sufficient as the sole accepted design for the stated risk tolerance. Retain only as a comparison/baseline, not as approved design.
 
-### B. Separate database per tenant, shared PostgreSQL cluster and shared application process
+### Alt-2. Separate database per tenant, shared PostgreSQL cluster and shared application process
 - **Isolation boundary:** database-level CONNECT/role grants and separate tenant credentials; schema/database lifecycle per tenant.
 - **Benefits:** limits accidental SQL/RLS-policy crossovers and enables per-tenant restore/export/deletion.
 - **Limits:** cluster superusers and cluster-level backup/automation remain common blast-radius points. A shared application process or secret store holding all tenant credentials can still expose many/all tenants. This alone does not fully address K-L-N or K-O.
 - **Cost/risks:** migration orchestration, connection management, schema-version drift, backup/restore automation, monitoring, and higher operational complexity.
 - **Assessment:** potentially stronger than A/C for database-level mistakes, but insufficient by itself for broad process/credential or cluster-admin compromise.
 
-### C. Separate database per tenant plus tenant-scoped runtime identity and secret access
+### Alt-3. Separate database per tenant plus tenant-scoped runtime identity and secret access
 - **Isolation boundary:** separate database per tenant, distinct least-privilege runtime credentials, and an enforced credential-routing boundary. The application must not make every tenant credential available to every request handler by default.
 - **Benefits:** combines database-level separation with reduced credential blast radius; allows per-tenant revocation and recovery.
 - **Limits:** if one process or secret manager can freely retrieve all credentials, process compromise can still expand to all tenants. Shared cluster administrators, backups, and deployment control remain high-trust boundaries unless further separated.
 - **Cost/risks:** more infrastructure and operational work; requires careful tenant lifecycle automation, connection budgets, schema migration orchestration, and incident response.
 - **Assessment:** a credible baseline for the next design iteration, conditional on proving that credential access is genuinely tenant-scoped rather than merely stored under different names.
 
-### D. Separate PostgreSQL clusters/instances for tenant groups, with isolated runtime credentials and privileged operations
+### Alt-4. Separate PostgreSQL clusters/instances for tenant groups, with isolated runtime credentials and privileged operations
 - **Isolation boundary:** database/cluster boundary plus separate credential and operational domains; tenants can be partitioned into small blast-radius groups or dedicated instances.
 - **Benefits:** limits failures that cross a single database or cluster boundary and permits stronger separation of privileged operations and backups.
 - **Limits:** a shared cloud/account administrator, deployment pipeline, or globally privileged operator may still cross boundaries. Full per-tenant clusters can be expensive and operationally heavy.
 - **Cost/risks:** highest operating cost and complexity; more monitoring, upgrades, backups, failover, migration orchestration, and capacity management.
 - **Assessment:** strongest of these options when operational and credential boundaries are actually separated. Grouping tenants is cheaper but leaves group-level blast radius; the permitted group size must be a deliberate risk decision.
 
-### E. Hybrid tiered isolation
+### Alt-5. Hybrid tiered isolation
 - **Isolation boundary:** small tenant groups on separate clusters/instances, with a path to dedicated isolation for high-risk or larger tenants.
 - **Benefits:** balances blast radius and operating cost; allows measured growth without assuming one shared database is suitable for every tenant.
 - **Limits:** introduces multiple deployment profiles and increases test matrix and operational complexity. The default group size and upgrade path must be explicit.
@@ -51,7 +51,7 @@ The revised design must make the blast radius of one compromised tenant credenti
 
 ## 3. Comparative matrix
 
-| Criterion | A. Shared DB / per-tenant roles | B. DB per tenant / shared cluster | C. DB per tenant + scoped credentials | D. Separate clusters + isolated operations | E. Hybrid groups |
+| Criterion | Alt-1: shared DB / per-tenant roles | Alt-2: DB per tenant / shared cluster | Alt-3: DB per tenant + scoped credentials | Alt-4: separate clusters + isolated operations | Alt-5: hybrid groups |
 |---|---|---|---|---|---|
 | One tenant SQL-injection blast radius | Intended one tenant; must test | Usually one DB | Usually one DB | One tenant/cluster boundary | One tenant/group boundary |
 | All tenant credentials stolen | Broad exposure possible | Broad exposure possible | Depends on enforced secret/process isolation | Reduced if credentials and operations are truly separated | Group-dependent |
