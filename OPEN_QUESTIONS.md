@@ -172,24 +172,26 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Must be resolved before:** the first tenant offboarding feature (Phase 4 or later).
 **Blocks Phase 1 approval:** No.
 
-## Q-023 — سازگاری میزبانی با Alt-5 isolation cells
-**Status: OPEN — requires Product Owner decision after D-020 (2026-10-23). Blocks Phase 1 approval.**
+## Q-023 — سازگاری میزبانی سرور با Alt-5 isolation cells
+**Status: OPEN — server topology decision deferred until hosted deployment planning; remains a Phase 1 target-architecture gap (2026-10-23).**
 
-**Context:** D-011 previously set an initial Iran-hosted VPS and portable Docker Compose deployment as the hosting objective. D-020 now requires a separate PostgreSQL cluster/instance and network boundary per cell, with no more than two tenants per cell in the initial proposal. Containers or databases on one shared host do not protect against host/root compromise and must not be described as independent cell-host boundaries.
+**New context from D-021:** Product Owner has chosen laptop-local development first, with server deployment later when the product is sufficiently demonstrable. This allows planning and documentation of a local-only development environment, but does not itself resolve the eventual server topology or approve Phase 1.
+
+**Context:** D-011's hosting objectives (Iran-based hosting, portability, low initial complexity) remain. D-020 requires a separate PostgreSQL cluster/instance and network boundary per Alt-5 cell, with a proposed maximum of two tenants per cell subject to measured cost/capacity. Multiple containers/databases on one shared server do not protect against host/root compromise.
 
 **Review:** `docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md` compares (A) one shared VPS with multiple Compose stacks, (B) separate host/VM and network boundary per cell with a narrowly privileged shared control plane, (C) separate cloud accounts/projects per cell, and (D) Alt-4 dedicated isolation per tenant. No vendor, cost, or capacity is verified.
 
-**Decision needed from Product Owner:**
-- A — Accept Option B as the target topology for detailed design and cost/capacity evaluation, conditional on its listed controls.
-- B — Require Option C's stronger account/project separation, accepting higher expected cost and operational complexity.
+**Decision required before selecting a hosted/pilot topology:**
+- A — Evaluate Option B: separate host/VM and network boundary per cell.
+- B — Require Option C: separate cloud accounts/projects per cell.
 - C — Revisit Alt-4 dedicated isolation per tenant.
-- D — Defer selection and provide a different constraint.
+- D — Provide another hosting/security/cost constraint.
 
-**Supervisor recommendation:** A for the next design/evaluation step, with C as fallback if the shared administrative compromise domain cannot be acceptably bounded. This is not implementation authorization.
+**Supervisor recommendation:** Evaluate Option B first; retain C as the stronger account-boundary alternative if the shared administrative compromise domain cannot be acceptably bounded. This remains a recommendation, not a selected topology.
 
-**Dependencies:** D-011, D-017, D-020, D-014; target-environment load/connection test plan; cell provisioning, backup/restore, credential rotation, monitoring and incident runbooks.
+**Dependencies:** D-011, D-017, D-020, D-021, D-014; target-environment load/connection tests; cell provisioning, backup/restore, credential rotation, monitoring and incident runbooks.
 
-**Non-claims:** no capacity measured; no executable tests run; no runtime security proven. Phase 1 remains NOT READY; Phase 2 and real student data remain prohibited.
+**Non-claims:** local development does not prove Alt-5 isolation, resolve the hosted topology, or validate capacity. No capacity measured; no executable tests run; no runtime security proven. Phase 1 remains NOT READY until its required target-architecture gaps are reviewed and accepted. Phase 2 remains unauthorized under the current gate; real student data remains prohibited.
 
 ## بخش Resolved / Closed
 
