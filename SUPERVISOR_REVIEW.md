@@ -1,3 +1,26 @@
+# CURRENT SUPERVISOR UPDATE — 2026-10-23 (after Product Owner decision D-019)
+
+## Decision recorded
+- The Product Owner explicitly selected **Q-021 option B**: require stronger tenant-isolation architecture before Phase 1 approval.
+- Recorded as **D-019** in `DECISION_LOG.md`; Q-021 is resolved by that choice. **Q-022 is OPEN** because the final architecture/topology has not been selected.
+- This is not acceptance of the K-L-N or K-O residual risks. It is not approval of Option C, database-per-tenant, separate clusters, or a hybrid.
+
+## Work opened
+- Added `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md` with qualitative comparison of shared DB/per-tenant roles, per-tenant databases on a shared cluster, tenant-scoped runtime credentials, separated clusters, and hybrid groups.
+- Preliminary evaluation recommendation: investigate tenant-scoped credentials with database-per-tenant and hybrid isolation first; use separately operated clusters as the stronger-isolation reference. This is a recommendation for evaluation, not a selected architecture.
+- D-009's shared-database mechanism is reopened for evaluation; the absolute tenant-isolation requirement is not.
+
+## Gate remains
+**NOT READY / NOT APPROVED.** The current Option C design is not accepted as sufficient for the selected risk tolerance. Phase 2 remains NOT STARTED and NOT AUTHORIZED. No code, migration, infrastructure, or runtime tests are authorized by this decision. All 123 existing contracts remain specifications (0 implemented, 0 executed, 0 passing). D-014 continues to prohibit real student data until all pilot conditions are met and written Product Owner approval is recorded.
+
+## Next required steps
+1. Independently review the architecture comparison and threat coverage.
+2. Resolve Q-022 through an explicit Product Owner decision on the final topology and accepted residuals.
+3. Revise the normative Phase 1 design, authorization contract, test contracts, capacity plan, and operational controls to match that decision.
+4. Recount/map all contracts and conduct a fresh independent review of the pushed PR head. Do not merge PR #3 as a proxy for approval.
+
+---
+
 # FINAL INDEPENDENT RE-REVIEW — 2026-10-23
 
 ## Reviewed revision
