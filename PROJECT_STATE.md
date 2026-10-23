@@ -1,3 +1,12 @@
+# CURRENT SUPERVISOR ADDENDUM — D-023 PRODUCTION / BACKUP INDEPENDENCE TARGET (2026-10-23)
+
+- **Product Owner decision:** target Level 3 infrastructure and administrative independence for production cells, plus Level 4 independent administrative/control boundary for critical backups and recovery. See DECISION_LOG.md D-023.
+- **Meaning:** the levels are project-specific targets, not evidence that any provider or deployment meets them. A shared host/account with multiple VMs or Compose stacks is not by itself sufficient. Backup data, keys and deletion/retention controls must be outside ordinary production-account control.
+- **Remaining work:** Q-023 remains OPEN until a real hosting candidate is shown to meet this target and the architecture-level host/network/admin trust boundary and provider-global residual are independently reviewed. Vendor, price and capacity measurements may be deferred; the security target may not.
+- **Unchanged:** D-020 Alt-5, D-014 prohibition on real student data, Phase 1 NOT READY / NOT APPROVED, Phase 2 NOT STARTED / NOT AUTHORIZED. No code, infrastructure or tests are claimed as created or run.
+
+---
+
 # CURRENT SUPERVISOR ADDENDUM — D-022 Q-023 DEFERRAL (2026-10-23)
 
 - **Product Owner decision:** final hosted topology/provider selection is deferred until hosted deployment planning. Continue local-first development only under D-021's restrictions (synthetic data, local-only services, no production secrets).
