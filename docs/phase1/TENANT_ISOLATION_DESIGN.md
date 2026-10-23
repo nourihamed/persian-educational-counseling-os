@@ -25,7 +25,7 @@ Student personal and educational data (potentially minors), counselor business d
 
 | ID | Actor / threat | Example | Primary control in this design | Covered by RLS session context? |
 |---|---|---|---|---|
-| T1 | Authenticated user probes IDs in another tenant | Counselor B requests `/students/{A1}` | Application authorization (tenant from principal; object lookup tenant-scoped; §8) | Partially (only if the query reaches the table with context set) |
+| T1 | Authenticated user probes IDs in another tenant | Counselor B requests `/students/{A1}` | Application authorization (tenant from principal; object lookup tenant-scoped; §8) | Defense in depth if the request is routed to the correct tenant login; routing mismatch must fail closed |
 | T2 | Developer defect: query omits tenant filter | Repository method forgets `WHERE tenant_id` | Repository API requires TenantContext; RLS denies cross-tenant rows | Yes (this is the main intended use) |
 | T3 | Developer defect: wrong tenant passed to repository | Service passes B's id while processing A's request | Composite FKs, WITH CHECK on writes, tests TI-REPO | No (context is set to the wrong tenant consistently) |
 | T4a | Arbitrary SQL via SQL injection in a request path, executed as the tenant's own runtime connection | Injected SQL runs `set_config('app.current_tenant_id', '<B>', true)` then reads B | Prevent injection (parameterized queries, static checks). Option A: none beyond prevention. Option C: role boundary (TI-CONN). Option D: context token | **No under Option A.** Covered by Option C for the single-tenant-connection case, if TI-CONN passes |
@@ -195,7 +195,7 @@ Role names are illustrative; final names are a Phase 2/3 detail.
 - R-DB-08: no RULE objects or row-security-bypassing triggers on tenant tables (`pg_rules`, `pg_trigger`), reviewed.
 
 ### 5.3 `FORCE ROW LEVEL SECURITY`
-Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason: the owner role must not silently bypass policies if it ever connects through a path other than the migration job. Impact: migrations that move tenant data must either run with context set explicitly or be written as reviewed migration steps; this is a Phase 2 design rule, recorded here. If the owner later rejects FORCE, that is a change to this rule and must be recorded as a decision, not a silent exception.
+Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason: the owner role must not silently bypass policies if it ever connects through a path other than the migration job. Migration jobs use a separately controlled owner/migrator identity and reviewed migration steps; they do not rely on a tenant GUC. This is a Phase 2 design rule. If the owner later rejects FORCE, that is a change to this rule and must be recorded as a decision, not a silent exception.
 
 ### 5.4 `app_migrator` and application-process identity
 - Owns schema objects; runs only in the migration pipeline.
