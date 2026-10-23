@@ -1,6 +1,6 @@
 # TENANT_ISOLATION_TEST_CONTRACTS.md — Active Alt-5 Catalog
 
-**Architecture:** D-020 / Q-022 Alt-5 hybrid isolation cells; Alt-4 is the security reference.  
+**Architecture:** D-020 / Q-022 Alt-5 hybrid isolation cells; Alt-4 is the security reference. D-023 Level 3 production-cell and Level 4 critical-backup independence targets are mandatory.  
 **Status:** SPECIFICATIONS ONLY. **0 implemented, 0 executed, 0 passing.** No runtime test or infrastructure was created by this documentation update.  
 **Hard boundary:** every contract below is a planned acceptance criterion, not evidence that isolation works. The 123 pre-Q-022 contracts are preserved at `archive/TENANT_ISOLATION_TEST_CONTRACTS_PRE_Q022.md` and mapped below. Their former execution/status labels do not carry forward as acceptance results.
 
@@ -27,7 +27,7 @@
 | TI-CELL-08 | C | Authenticate using tenant A's runtime credential and attempt tenant B's database in the same cell and all other cell endpoints. | A's credential cannot authenticate to B's database in the same cell or any other cell. | Tenant credential reuse / cross-cell access | ENV:security-review |
 | TI-CELL-09 | C | Inspect migration identities and attempt read/write against a different cell. | Migration identity for A is denied on B; each migration action names a cell and emits audit evidence. | Global migrator compromise | ENV:security-review |
 | TI-CELL-10 | C | Inspect standing owner/admin roles and secret paths for routine migration workflow. | No routine standing global data-capable owner/migrator; exceptional global privilege is separate, time-bound and audited. | K-O global owner/migrator | ENV:security-review |
-| TI-CELL-11 | C | Attempt to decrypt/read another cell's backups using cell A backup identity/key. | Access/decryption denied for other cells. | Global backup exposure | ENV:security-review |
+| TI-CELL-11 | C | Inspect backup storage/account/organization boundary, backup-admin identities, encryption-key custody, deletion/retention controls and restore permissions; attempt access from a production/cell-admin identity and from cell A's backup identity against other cells. | Production/cell administrators cannot alone delete all critical recovery copies or control all critical backup keys; cell A cannot access B backups; independent backup administrators/keys and retention/deletion controls are evidenced; provider/global control-plane residual is documented. A separate bucket/service name alone is not accepted as evidence. | D-023 Level 4 backup independence; global backup exposure | ENV:security-review |
 | TI-CELL-12 | I | Restore a test backup for a suspended/offboarded tenant. | Authoritative lifecycle state prevents restored tenant, user, or credential from silently becoming active. | Restore resurrects revoked access | ENV:security-review |
 | TI-CELL-13 | S + C | Inspect deployment controller identity and simulate normal deployment access. | Can deploy approved artifacts but cannot read tenant DB credentials or backup decryption keys by default. | Deployment authority equals data authority | ENV:security-review |
 | TI-CELL-14 | I | Request cross-cell break-glass with no second approver, expired approval, or missing incident ticket. | All attempts denied; approved session is scoped, expires, and produces immutable audit evidence. | Uncontrolled support access | ENV:security-review |
@@ -206,7 +206,7 @@ The active contracts cover:
 - tenant-to-cell registry and trusted routing;
 - independent PostgreSQL/network boundary;
 - worker identity, secret distribution, and runtime credentials;
-- cell-scoped migration, owner, backup, restore, and deployment privileges;
+- cell-scoped migration, owner, backup, restore, and deployment privileges, including D-023 Level 3 administrative independence and Level 4 backup/key/deletion-control independence;
 - cell occupancy limit, cell migration, suspension, credential rotation, and revocation;
 - API object authorization and every derived-data path;
 - audit, break-glass, incident containment, capacity, cost, and emergency stop.
@@ -216,7 +216,7 @@ Before Phase 1 approval, every threat in `TENANT_ISOLATION_DESIGN.md` must map t
 ## 6. CI vs environment-only evidence
 
 - PR CI can cover static rules, unit/integration authorization behavior, mocked routing guards, contract completeness, and test inventory consistency.
-- Actual cross-network reach, secret-store policy, per-cell database identity, backup-key isolation, restore behavior, privileged roles, revocation of live sessions/pools, capacity, cost, and emergency-stop drills require a representative isolated environment and cannot be reported as passed from PR CI alone.
+- Actual cross-network reach, secret-store policy, per-cell database identity, backup-key and backup-admin independence, deletion/retention protection, restore behavior, privileged roles, revocation of live sessions/pools, capacity, cost, and emergency-stop drills require a representative isolated environment and cannot be reported as passed from PR CI alone.
 - The exact target host and cell placement are not yet selected. Environment-only contracts remain BLOCKED until a target exists and must be run before real-data use.
 - D-014 continues to prohibit real student data until independent implementation review, required security tests, blocking-finding remediation, capacity evidence, incident drill, and written Product Owner approval are complete.
 
