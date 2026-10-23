@@ -1,3 +1,14 @@
+# CURRENT SUPERVISOR ADDENDUM — PHASE 1 DOCUMENTATION CORRECTIONS AND LIVE STATUS (2026-10-23)
+
+- Independently re-read the current Phase 1 design, authorization contract, active test catalog, hosting review, decision log, open questions, test plan, security baseline, roadmap and state report.
+- Corrected `TENANT_ISOLATION_DESIGN.md` to explicitly encode D-023 Level 3 cell infrastructure/administrative independence and Level 4 independent control of critical backup administration, keys, deletion/retention and restore.
+- Corrected `AUTHORIZATION_CONTRACT.md` and active contract TI-CELL-11 to require evidence of independent backup administration and to reject a separate bucket/service name as sufficient proof. Corrected `SECURITY.md` and `TEST_PLAN.md` so D-009's former shared-database mechanism is historical/tactical defense-in-depth, not the active Phase 1 topology.
+- Provider comparison/selection is deferred as directed by the Product Owner; no provider, topology, cost or capacity is claimed selected/verified. This does not silently amend D-023: Q-023 remains OPEN and Phase 1 gate-blocking until the independent review and candidate-compatibility requirement recorded in D-023 are satisfied.
+- Active Alt-5 test catalog: 46 specifications; 0 implemented, 0 executed, 0 passing. The archived 123-contract catalog is historical and does not count as active acceptance evidence.
+- PR #3 remains open/unmerged. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 is NOT STARTED / NOT AUTHORIZED; real student data remains prohibited under D-014. No application code, migration, infrastructure or executable test was created/run by this correction pass.
+
+---
+
 # CURRENT SUPERVISOR ADDENDUM — D-023 PRODUCTION / BACKUP INDEPENDENCE TARGET (2026-10-23)
 
 - **Product Owner decision:** target Level 3 infrastructure and administrative independence for production cells, plus Level 4 independent administrative/control boundary for critical backups and recovery. See DECISION_LOG.md D-023.
@@ -27,7 +38,7 @@ This does **not** waive phase gates: Phase 1 remains NOT APPROVED / NOT READY, P
 
 ### Current hosting/cell compatibility finding (Q-023)
 
-D-011's original objective (Iran-hosted, portable, low-complexity deployment using Docker Compose as a starting tool) remains a product objective, but a single shared VPS must not be treated as an adequate Alt-5 cell boundary against host/root compromise. D-020 requires a separate PostgreSQL cluster/instance and network boundary per cell. The options and recommendation are recorded in `docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md`; Q-023 remains OPEN for Product Owner decision. Recommendation for evaluation: separate host/VM and network boundary per cell, with a narrowly privileged shared control plane; separate cloud accounts/projects are the stronger alternative.
+D-011's original hosting objective remains a product objective, but a single shared VPS must not be treated as an adequate Alt-5 cell boundary against host/root compromise. D-020 requires a separate PostgreSQL cluster/instance and network boundary per cell; D-023 additionally requires Level 3 administrative independence and Level 4 independently controlled critical backups. Provider comparison/selection is deferred until hosted deployment planning as directed by the Product Owner. Q-023 remains OPEN under D-023; see `docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md`.
 
 D-017's previous global connection arithmetic is an estimate from the earlier topology, not capacity evidence for Alt-5. Per-cell connection and cost budgets remain unmeasured. No vendor, price, host topology, capacity, implementation, infrastructure, or test execution is claimed. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 and real student data remain prohibited.
 
@@ -47,7 +58,7 @@ D-017's previous global connection arithmetic is an estimate from the earlier to
 - **A1 cap:** 10 tenants is provisional, not capacity evidence. Capacity remains ESTIMATE — NOT MEASURED.
 - **Q-020:** retention duration and named responsible persons remain unresolved; no automatic tenant-role deletion.
 - **Q-021 / D-019:** Product Owner selected option B on 2026-10-23: require stronger architecture; no acceptance of K-L-N/K-O residual risks. Q-022 was subsequently resolved by D-020 (Alt-5). D-009's shared-database mechanism is historical and not the active topology, while the tenant-isolation requirement remains mandatory.
-- **Test contracts:** 123 specifications; 0 implemented; 0 executed; 0 passing. The 12 Option A-only TI-CTX contracts are SPEC-ONLY. TI-CTX-11/12 are future direct-pool lifecycle checks. Full current CI-column breakdown is in the current addendum at the top of `docs/phase1/PHASE1_REPORT.md` and must be rechecked from the file.
+- **Active Alt-5 test contracts:** 46 specifications; 0 implemented; 0 executed; 0 passing. The prior 123-contract catalog is archived for historical traceability and is not current acceptance evidence. All active contracts remain NOT-RUN; environment-only evidence remains unavailable until the relevant implementation/target environment exists.
 - **CI:** no successful run has been established as evidence for the current corrected head. Absence of a run is not success.
 - **D-014 real-data gate:** real student data remains PROHIBITED until required implementation security tests pass, blocking findings are fixed, capacity and pool limits are measured on the target host, independent implementation review is complete, and the Product Owner gives written approval.
 - **Phase 2:** NOT STARTED and NOT AUTHORIZED.
