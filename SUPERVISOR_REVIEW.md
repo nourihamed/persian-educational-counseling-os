@@ -544,7 +544,7 @@ NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
 - Option C selected as the preferred design direction, subject to design review. Not runtime security. Not pilot authorization.
 - Option D not selected; NOT SELECTION-READY until seven points are resolved and independently reviewed.
 - Provisional cap of 10 tenants (A1), subject to capacity analysis and owner confirmation.
-- Bounded, lazy, per-tenant pools; pooler mode not yet selected (Q-016).
+- HISTORICAL (superseded by D-017): bounded, lazy, per-tenant pools; pooler mode not yet selected (Q-016). Current pilot mode is direct PostgreSQL connections, pool size 1 per tenant per process; transaction pooling is deferred.
 - Tenant role lifecycle specified (design §5.5); contracts TI-CONN-04, 05, 06 added.
 - Shared-role fallback prohibited.
 - Capacity rule accepted as a constraint; measurement required before any real-data pilot.
