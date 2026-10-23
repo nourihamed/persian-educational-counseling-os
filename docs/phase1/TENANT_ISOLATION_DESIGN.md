@@ -206,7 +206,7 @@ Decision in this revision: FORCE is REQUIRED on every tenant-owned table. Reason
 
 ### 5.5 Option C tenant role lifecycle and pool strategy (recorded direction, D-016; applies if Option C is implemented)
 
-**Pool strategy (D-016 point 5):** bounded, lazy, per-tenant connections or pools. A pool for a tenant is created on first request for that tenant, is bounded in size per process, and is closed after an idle timeout. Pilot decision (D-017): direct PostgreSQL connections with pool size 1 per tenant per process; no pooler for the pilot. Transaction pooling is deferred and requires TI-CONN-04 to 06 and TI-CTX-11 to 12 to pass and a separate decision.
+**Pool strategy (D-016 point 5):** bounded, lazy, per-tenant connections or pools. A pool for a tenant is created on first request for that tenant, is bounded in size per process, and is closed after an idle timeout. Pilot decision (D-017): direct PostgreSQL connections with pool size 1 per tenant per process; no pooler for the pilot. TI-CONN-04 and TI-CTX-11/12 are direct-pool lifecycle checks. Transaction pooling is deferred and requires its own explicitly scoped compatibility contracts, execution evidence, and a separate Product Owner decision.
 
 **Suspension and offboarding (D-016 point 6), in order:**
 1. Disable the tenant login immediately (no new sessions).
