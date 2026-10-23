@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 ## Operational Memory — authoritative current status
 
-Last Updated: 2026-10-23
+Last Updated: 2026-10-23 (Q-022 independent review)
 
 ### Current Verified Operational Status
 
@@ -9,7 +9,7 @@ Last Updated: 2026-10-23
 
 **Phase 1 — Architecture & Multi-Tenancy:** **NOT APPROVED; supervisor re-review required.** PR #3 (`docs/phase1-tenant-isolation-design` → `main`) remains the delivery vehicle and must be checked live for current head/status. The previous independently reviewed head was `4715e3d168d3f680ab98b682688980f845a24d45`; corrective commits after that point changed the design, test contracts, and status documentation. No approval is implied by those edits.
 
-- **Current gate:** NOT READY pending independent review of the final corrected commit and subsequent Product Owner acceptance. Do not merge PR #3 as if approved.
+- **Current gate:** NOT READY / NOT APPROVED. Q-022 independent architecture review is documented; the Product Owner must explicitly choose a proposed architecture before normative Phase 1 design/test contracts can be aligned. Do not merge PR #3 as if approved.
 - **Scope:** design/documentation only. No Phase 1 application code, migrations, database roles, grants, RLS policies, infrastructure, or tests have been created or executed.
 - **Prior Option C design:** no longer accepted as sufficient for the selected risk tolerance. D-019 requires a stronger architecture; Q-022 remains open for final topology selection. The prior design is retained for comparison only and must not be implemented unless superseded by a new explicit decision.
 - **Option A:** GUC / `set_config` / `current_setting` examples are historical comparison only and must not be implemented as the selected Option C mechanism.
