@@ -100,7 +100,7 @@ Open points not decided here (classification: NOT SELECTION-READY): token signat
 **Option C design summary:**
 - Each tenant has its own database login role with no membership in any other tenant role and no membership in any platform role.
 - The application selects the connection (pool) from the authenticated principal's tenant before any SQL is sent (TI-CONN-03).
-- Policies identify the tenant from `current_user` through a mapping table written only by the owner role. No policy reads a GUC.
+- Policies identify the tenant from the authenticated PostgreSQL login through an owner-managed mapping table. The allowlisted helper uses `session_user` because `current_user` changes inside SECURITY DEFINER; for direct tenant connections, the authenticated login is the tenant identity. No policy reads a GUC.
 - PUBLIC privileges on tenant objects are revoked (TI-CFG-14).
 - Pools are bounded, lazily created per tenant, and closed when idle (§5.5).
 - Tenant role lifecycle, including suspension and offboarding, is specified in §5.5.
@@ -123,7 +123,7 @@ Status vocabulary (each claim has exactly one current status):
 | Claim | Current status |
 |---|---|
 | Tenant-owned queries are required to be tenant-scoped (repository and API design) | DESIGNED. REVIEWED (document-level). Not implemented. Not test-verified |
-| Option C RLS policies restrict rows by the authenticated tenant login mapping (`current_user`) | DESIGNED. Not implemented. Not test-verified (TI-CFG/TI-CONN pending). Legacy GUC contracts TI-CTX-01..10 and 13..14 are SPEC-ONLY for Option A |
+| Option C RLS policies restrict rows by the authenticated tenant login mapping (via reviewed helper; `session_user` inside SECURITY DEFINER) | DESIGNED. Not implemented. Not test-verified (TI-CFG/TI-CONN pending). Legacy GUC contracts TI-CTX-01..10 and 13..14 are SPEC-ONLY for Option A |
 | Composite keys prevent cross-tenant parent/child links for the listed relations | DESIGNED. Not implemented. Not test-verified (TI-FK-01..08 pending) |
 | Runtime role cannot bypass RLS through privileges | DESIGNED (R-DB-01..08). Not implemented. Not test-verified (TI-CFG-01..14 pending) |
 | Platform admin access is read-only, limited and audited | DESIGNED (D-013 decision; §8). Not implemented. Not test-verified (TI-PLAT pending) |
