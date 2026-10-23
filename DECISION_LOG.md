@@ -381,3 +381,28 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 **Consequences:** local development may proceed only when separately authorized by the phase plan; this decision does not approve Phase 1, authorize Phase 2, authorize implementation beyond the approved phase, approve hosting, or authorize real student data. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains NOT STARTED / NOT AUTHORIZED.
 
 **Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, docs/phase1/PHASE1_REPORT.md, SUPERVISOR_REVIEW.md, docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md.
+
+
+## D-023 — Production isolation target: Level 3 cells with Level 4 independent critical backups
+**Status: ACCEPTED — explicit Product Owner decision, 2026-10-23.**
+
+**Decision:** The target for the production architecture is **Level 3 administrative and infrastructure independence for production isolation cells**, combined with **Level 4 independence for critical backups/recovery**. These labels are project-specific security targets, not a claim that a provider or deployment already satisfies them.
+
+**Level 3 target for production cells:**
+1. A compromise of one cell's routine administrative credentials must not automatically grant administrative control over other cells.
+2. Each cell must have a distinct host/VM and network boundary, its own PostgreSQL cluster/instance, tenant-specific databases and runtime credentials, and cell-scoped workers, secrets and migration identities.
+3. Separate cloud accounts/projects or a demonstrably equivalent independent administrative boundary must be evaluated; multiple VMs or Compose stacks inside one shared administrative/root boundary are not sufficient evidence by themselves.
+4. Shared deployment/control-plane access must not become a routine universal path to tenant data or enumerate all usable tenant credentials. Any global/break-glass access must be constrained, time-limited, dual-approved where applicable, and auditable.
+5. Provider control-plane compromise and compromise of a genuinely global organization/root identity remain explicit residual risks; no absolute-immunity claim is made.
+
+**Level 4 target for critical backups/recovery:**
+1. Critical backups must be held outside the production account's ordinary administrative control, using a separate provider or a demonstrably independent account/administrative boundary.
+2. Backup encryption keys and deletion/retention controls must be independent of routine production credentials; production compromise alone should not permit deletion or replacement of all recovery copies.
+3. Backup integrity, retention/immutability options, restoration permissions and recovery procedures must be validated, and restore drills must preserve tenant suspension/offboarding state.
+4. The backup target and control model must be verified before claiming Level 4; if the selected provider cannot supply the required separation, an alternative provider/account or equivalent control must be evaluated.
+
+**Scope and unresolved work:** This decision sets the required security target, not the final provider, vendor, plan, price, account topology, or implementation. Q-023 remains OPEN until the hosting compatibility review establishes that a real candidate can meet the target and the architecture-level trust boundaries/residuals are independently reviewed. Exact pricing and measured capacity may remain deferred until hosted deployment planning; no security condition is waived.
+
+**Unchanged constraints:** D-020 Alt-5 remains the selected isolation direction; D-014 continues to prohibit real student data until required implementation, security, operations, capacity and independent-review gates pass and the Product Owner gives explicit written approval. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains NOT STARTED / NOT AUTHORIZED. No code, infrastructure, migration or executable test is authorized or claimed by this decision.
+
+**Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, docs/phase1/PHASE1_REPORT.md, SUPERVISOR_REVIEW.md, docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md, CHANGELOG.md.
