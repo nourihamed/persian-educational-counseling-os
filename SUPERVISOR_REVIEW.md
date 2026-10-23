@@ -1,3 +1,72 @@
+# CURRENT INDEPENDENT SUPERVISOR REVIEW — SECOND PASS AFTER CORRECTIONS (2026-10-23)
+
+## Phase
+Phase 1 — Architecture & Multi-Tenancy (design/documentation only)
+
+## Scope Reviewed
+Live branch \`docs/phase1-tenant-isolation-design\` after the latest correction commits; reviewed the active Alt-5 design and authorization/test contracts, D-020/D-023, Q-023, architecture/database/product/scope/security/test-plan/roadmap/state docs, hosting compatibility review, pre-pilot profile, target-environment test plan, emergency-stop runbook, retention draft and changelog. GitHub PR #3 and its current compare/status metadata were rechecked.
+
+## Summary
+The documentation-level corrections requested by the current decisions are recorded and a second consistency scan passed. This is **not** a runtime security assessment and does not prove the architecture is implemented. Phase 1 remains **NOT READY / NOT APPROVED** because Q-023 is still an explicit gate item under D-023, while provider comparison/selection is deferred by the Product Owner. I will not silently rewrite the accepted decision or claim the phase complete against that conflict.
+
+## Passed
+- Current architecture documents now identify D-020 Alt-5 as the active topology and label D-009/Q-001 shared-database wording as historical/superseded for the active isolation boundary.
+- D-023 Level 3 cell infrastructure/administrative independence and Level 4 independent critical-backup administration, keys, deletion/retention and restore requirements are explicit in the design and supporting documents.
+- Authorization flow rejects request-controlled tenant/cell routing and covers derived data and lifecycle operations.
+- Active Alt-5 test catalog recount: **46 unique active contract IDs**, with 0 implemented, 0 executed, 0 passing. TI-CELL-11 now requires evidence of independent backup administration/key/deletion controls; a different bucket/service label is not sufficient.
+- Target-environment plan no longer carries the stale Option C provisioning precondition; it uses Alt-5 tenant-database/credential provisioning and explicitly blocks candidate-specific backup verification until a target exists.
+- Pre-pilot hosting guidance no longer recommends a single VM as if it met Alt-5; it now states provider-neutral D-020/D-023 acceptance requirements.
+- Restore runbook and retention draft explicitly require D-023 backup independence and preservation of suspension/offboarding state.
+- Current-state/report/roadmap wording preserves the 46-active-contract count and the implementation/test evidence boundary.
+- No runtime implementation, migration, infrastructure or executable test is claimed to have been created or run by this pass.
+
+## Findings
+
+### CRITICAL
+- None identified in this **bounded documentation-only pass**. This does not mean runtime security has been assessed or that residual risks are eliminated.
+
+### HIGH
+- **Q-023 remains a Phase 1 gate blocker under D-023.** D-023 requires compatibility of a real hosting candidate with the selected Level 3/Level 4 target plus independent review. The Product Owner has deferred provider comparison/selection until hosted deployment planning. The design requirements are now much clearer, but the existing decision/gate cannot be marked satisfied without either candidate evidence or an explicit Product Owner amendment to the gate.
+- **PR #3 is still open/unmerged and GitHub reports mergeable: false.** The current compare reports 155 commits ahead and 0 behind main, with 27 changed files; no combined status checks or PR workflow runs are returned for the current head. Do not merge until the mergeability discrepancy is reconciled.
+
+### MEDIUM
+- Capacity, resource sizing, per-cell connection budgets, restore timing and cost remain NOT MEASURED. These are correctly marked as future hosted-deployment/pre-pilot evidence, not invented as facts.
+- All active acceptance contracts remain NOT-RUN because implementation and a representative target environment do not exist. This is an explicit evidence boundary, not a claim of test success.
+
+### LOW
+- Older revision history in the report and review files contains obsolete counts and prior designs; current addenda explicitly supersede that history. Readers must use the latest addenda and active catalog, not historical snapshots.
+
+## Architecture
+Alt-5 is coherent at the design level when its separate per-cell host/network/PostgreSQL boundary, per-tenant database/credential, scoped worker/secrets/migration identities and explicit global-admin residual are preserved. D-023 adds the independent critical-backup boundary. A shared unrestricted global root/organization administrator remains a material residual and must not be described as eliminated.
+
+## Database
+No schema or migration exists. The conceptual model retains tenant ownership and parent/child consistency; tenant_id and optional RLS are defense-in-depth and do not replace the separate database/credential and cell network boundaries.
+
+## API
+The authorization contract covers server-verified membership, trusted cell mapping, object-level authorization, generic handling of invisible objects, and tenant/cell scoping for jobs, reports, exports, files, notifications, caches and audit paths. Q-014 and other later-phase decisions remain open in their stated scope.
+
+## Security
+No implementation evidence exists. The design correctly records provider/global control-plane compromise as residual. Backup independence is now stated as an administrative/key/deletion-control property, not merely a storage location.
+
+## Testing
+The active inventory contains 46 unique Alt-5 contracts. Static consistency checks performed in this pass found no duplicate active IDs and confirmed the catalog's NOT-RUN boundary. No executable tests or CI runs were observed for the current head.
+
+## Documentation
+Core architecture, database, product requirements, project scope, security, test plan, roadmap, state, hosting compatibility, pre-pilot profile, load plan, emergency runbook, retention draft and changelog were reconciled to D-020/D-023 and the active 46-contract inventory.
+
+## Required Changes
+1. **Product Owner gate decision required:** either (A) authorize provider/candidate comparison now so Q-023 can be evidenced under D-023, or (B) explicitly amend the Phase 1 gate to defer candidate-specific verification until hosted deployment planning while keeping it a hard prerequisite before any hosted deployment or real-data pilot. I have not chosen between these options or changed D-023 silently.
+2. Reconcile GitHub's mergeable: false state for PR #3 before any merge; no merge was performed.
+3. Before hosted deployment/pilot, select and verify a candidate against D-023, measure cost/capacity and run the required security, backup/restore, revocation and incident drills. Before real student data, all D-014 conditions and explicit written Product Owner approval remain mandatory.
+
+## Recommendation
+The documentation correction cycle is complete for the items that can be resolved without changing the Product Owner's gate decision. Do not start Phase 2 and do not merge PR #3 yet.
+
+## Gate Status
+**NOT READY / NOT APPROVED.** The remaining blocker is not an unedited paragraph; it is the unresolved Q-023 gate versus the explicit instruction to defer provider comparison. The Product Owner must select one of the two gate options above before this supervisor can honestly declare Phase 1 complete.
+
+---
+
 # CURRENT INDEPENDENT REVIEW ADDENDUM — D-023 TARGET RECORDED; VERIFICATION STILL REQUIRED (2026-10-23)
 
 ## Decision reviewed
