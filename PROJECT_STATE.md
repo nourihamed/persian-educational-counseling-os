@@ -11,7 +11,7 @@ Last Updated: 2026-10-23
 
 - **Current gate:** NOT READY pending independent review of the final corrected commit and subsequent Product Owner acceptance. Do not merge PR #3 as if approved.
 - **Scope:** design/documentation only. No Phase 1 application code, migrations, database roles, grants, RLS policies, infrastructure, or tests have been created or executed.
-- **Option C:** preferred design direction under D-016, pending independent review. The normative design now uses per-tenant PostgreSQL login roles, a narrowly allowlisted helper mapping the authenticated login (`session_user` inside SECURITY DEFINER) to one tenant, and per-tenant direct connection pools. This is a design contract, not proof of runtime isolation.
+- **Prior Option C design:** no longer accepted as sufficient for the selected risk tolerance. D-019 requires a stronger architecture; Q-022 remains open for final topology selection. The prior design is retained for comparison only and must not be implemented unless superseded by a new explicit decision.
 - **Option A:** GUC / `set_config` / `current_setting` examples are historical comparison only and must not be implemented as the selected Option C mechanism.
 - **Option D:** not selected and NOT SELECTION-READY.
 - **D-017 / Q-016:** pilot uses direct PostgreSQL connections, bounded pool size 1 per tenant per application process; transaction pooling deferred pending a separate decision and compatibility validation.
@@ -28,7 +28,7 @@ Last Updated: 2026-10-23
 - D-013: platform-admin access in MVP is limited, audited, read-only; no BYPASSRLS role and no platform writes.
 - D-014: no real student data until the full pilot gate is met.
 - D-015: design-selection and pilot-validation criteria are separate; later-phase execution evidence is not a substitute for design review.
-- D-016: Option C preferred; Option D not selected/NOT SELECTION-READY; no shared-role fallback.
+- D-016: historical prior direction was Option C; D-019 now requires stronger architecture before approval. Option D remains unselected unless evaluated through Q-022; no shared-role fallback is authorized.
 - D-017: direct per-tenant connections and size-1 pools for pilot; 10-tenant cap provisional.
 - D-018: emergency stop/rollback runbook remains draft and must be exercised before pilot.
 
