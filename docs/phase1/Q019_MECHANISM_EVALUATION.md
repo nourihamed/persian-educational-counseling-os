@@ -110,10 +110,10 @@ The stolen secret differs by design, and this is stated explicitly:
 
 | Option | Stolen credential | Identity the credential grants | What the attacker can do | Reaches tenant B data? | Conditions the conclusion depends on | Status |
 |---|---|---|---|---|---|---|
-| A | Runtime login (K-L-1 = K-L-N) | Runtime role | Arbitrary SQL; sets `app.current_tenant_id` to any tenant; reads any tenant | **Yes** | None beyond the mechanism itself | **KNOWN-RESIDUAL** |
+| A | Runtime login (K-L-1 = K-L-N) | Runtime role | Arbitrary SQL; sets `app.current_tenant_id` to any tenant; reads any tenant | **Yes** | None beyond the mechanism itself | **Expected residual in an unselected comparison; not owner-accepted** |
 | C | Login of tenant A (K-L-1) | Tenant A role | Reads and writes tenant A rows only; cannot change its own role | **No** (for tenant B) | No membership to any other tenant or platform role (TI-CONN-02); no PUBLIC privileges on tenant objects (TI-CFG-14); mapping table not writable by tenant roles (TI-CFG-06, TI-CONN-02); no BYPASSRLS (TI-CFG-01) | Pass criterion (NOT-RUN): denied |
 | C | Login of tenant A, attacker targets tenant B (K-L-1) | Tenant A role | Same as above; cannot reach B | **No** | Same | Pass criterion (NOT-RUN): denied |
-| C | All tenant logins (K-L-N) | Every tenant role | Reads every tenant | **Yes** | Not preventable by this mechanism | **KNOWN-RESIDUAL** |
+| C | All tenant logins (K-L-N) | Every tenant role | Reads every tenant | **Yes** | Not preventable by this mechanism | **Expected residual; owner disposition pending Q-021; not accepted** |
 | D | Shared runtime login, **without a valid token** (K-L-1 = K-L-N) | Runtime role | See 4.4.3 | **No** (zero rows) | Runtime role has no table privilege that bypasses the helper (TI-CFG-05, 06, 14); helper and verification function are correct (TI-BYP-03, function review); runtime role cannot read the key table; no tokens are stored in the database | Pass criterion (NOT-RUN): zero rows |
 
 ### 4.4.3 Option D: stolen shared login without a valid token (explicit assessment)
@@ -134,13 +134,13 @@ Conclusion: a stolen shared login under Option D does not reach tenant data by i
 Neither option is stronger in all classes. This is a trade-off to be decided, not a ranking.
 
 ### 4.4.5 K-T (Option D only)
-A stolen token grants the tenant named in the token, until expiry. It does not grant other tenants, because the token is bound to one tenant. Result: **KNOWN-RESIDUAL** for that tenant within the TTL. Replay control (jti store, see §6.3) is not yet designed. Not applicable to Options A and C.
+A stolen token grants the tenant named in the token, until expiry. It does not grant other tenants, because the token is bound to one tenant. Expected residual for the unselected Option D: the token holder can access that tenant within the TTL; this is not owner-accepted. Replay control (jti store, see §6.3) is not yet designed. Not applicable to Options A and C.
 
 ### 4.4.6 K-S (Option D only)
-A compromised signing key allows minting a token for any tenant, and therefore reads of any tenant. It is not reachable from runtime SQL, but is reachable by anyone who can read the key store. Result: **KNOWN-RESIDUAL** under HMAC with a database-resident key. With an asymmetric signature (§6.3, point 1), the database holds only the public key, so K-S inside the database yields no minting capability; the private key then sits outside the database, with the application-process exposure already recorded as T4b. Not applicable to Options A and C.
+A compromised signing key allows minting a token for any tenant, and therefore reads of any tenant. It is not reachable from runtime SQL, but is reachable by anyone who can read the key store. Expected residual for the unselected Option D under HMAC with a database-resident key; not owner-accepted. With an asymmetric signature (§6.3, point 1), the database holds only the public key, so K-S inside the database yields no minting capability; the private key then sits outside the database, with the application-process exposure already recorded as T4b. Not applicable to Options A and C.
 
 ### 4.4.7 K-O (all options)
-Compromise of the owner or migrator role can change policies, grants, mapping tables and functions, and can read any key stored in the database. Result: **KNOWN-RESIDUAL under all options.** This is a process control, not a database mechanism (Phase 3 and Phase 26).
+Compromise of the owner or migrator role can change policies, grants, mapping tables and functions, and can read any key stored in the database. This is an expected residual under all options; Product Owner disposition is pending Q-021 and it must not be described as accepted until recorded. This is a process control, not a database mechanism (Phase 3 and Phase 26).
 
 ### 4.4.8 Consistency with the adversarial contracts
 - TI-ADV-02 covers K-L-1 and K-L-N with the same object (rows of tenant B) for every option (see its row in the contracts file).
