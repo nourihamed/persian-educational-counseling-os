@@ -1,3 +1,28 @@
+# CURRENT OPERATIONAL STATUS — 2026-10-23 (supersedes older pending-status snapshots below)
+
+## Phase 1 review status
+
+- Repository: `nourihamed/persian-educational-counseling-os`
+- PR #3: open, unmerged, base `main`, head branch `docs/phase1-tenant-isolation-design`.
+- Latest independently checked pre-correction head: `4715e3d168d3f680ab98b682688980f845a24d45`.
+- Corrections are being committed to this PR branch. The final correction SHA and PR state must be re-verified after the last document update.
+- Gate: **NOT READY pending a fresh independent review of the corrected head.** This status section is not an approval.
+- Scope remains design/documentation only. No implementation, migrations, roles, policies, grants, infrastructure, or tests have been created or executed by Phase 1.
+- Test contracts are specifications, not evidence: 123 specified, 0 implemented, 0 executed, 0 passing. Option A GUC-based TI-CTX-01..10 and TI-CTX-13..14 are now explicitly marked SPEC-ONLY because Option C is the preferred direction. TI-CTX-11..12 are future direct-pool lifecycle checks.
+- Option C is the Product Owner's preferred design direction (D-016), pending independent design approval. It is not implemented, test-verified, or proof against application-process compromise.
+- D-017 selected direct PostgreSQL connections for pilot with a bounded per-tenant pool size 1 per tenant per process; transaction pooling is deferred. The 10-tenant cap remains provisional and capacity is NOT measured.
+- Option D remains not selected and NOT SELECTION-READY. Q-020 retention durations and responsible persons remain unresolved.
+- D-014 remains absolute: no real student data until required implementation security tests pass, blocking findings are fixed, independent implementation review and target-host capacity validation complete, and the Product Owner gives written pilot approval.
+- No Phase 2 start authorization is implied. Phase 1 approval requires a separate final independent review and owner acceptance.
+
+## Corrective work completed in this revision
+
+1. Replaced the normative PostgreSQL GUC/current_setting examples with an Option C contract based on dedicated tenant login roles, protected role-to-tenant mapping, current_user, and tenant-specific direct connection pools.
+2. Marked GUC-dependent Option A tests as SPEC-ONLY; updated pool lifecycle contracts to test tenant-bound direct connection routing.
+3. Corrected the claims ledger and background-job routing wording to avoid describing the superseded GUC mechanism as the selected design.
+4. Remaining verification: inspect the complete corrected diff for consistency; reconcile current-state/report/decision documents; recount contract statuses; verify final PR head and workflow evidence. A passing document review cannot establish runtime isolation.
+
+---
 # SUPERVISOR_REVIEW.md
 
 این فایل برای ثبت **بازبینی خارجی (External Supervisor Review)** پروژه رزرو شده است، طبق بخش ۵۵ Master Prompt.
