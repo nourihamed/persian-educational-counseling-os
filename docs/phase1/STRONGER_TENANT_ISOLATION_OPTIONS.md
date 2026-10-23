@@ -65,7 +65,7 @@ These are qualitative design hypotheses, not measured or test-verified results.
 
 ## 4. Recommended next design direction (not an architecture selection)
 
-Investigate **Option C and Option E first**, and retain Option D as the higher-isolation reference point. Do not select Option B alone as the final answer: a separate database per tenant on a shared cluster does not, by itself, solve broad credential theft or cluster-owner compromise.
+Investigate **Alt-3 and Alt-5 first**, and retain Alt-4 as the higher-isolation reference point. Do not select Alt-2 alone as the final answer: a separate database per tenant on a shared cluster does not, by itself, solve broad credential theft or cluster-owner compromise.
 
 The next design must explicitly address:
 1. No routine runtime identity can enumerate or use all tenant credentials.
