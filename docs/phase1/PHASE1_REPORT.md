@@ -516,3 +516,12 @@ Statement: this document does not record any test as executed or passing, and do
 - Phase 1 approval: NOT granted by D-018; requires independent re-review of the pushed commit.
 - No test, drill, measurement, or security review has been executed.
 
+
+
+## Local-first development direction — D-021 (2026-10-23)
+
+The Product Owner has chosen to run the development environment on their own laptop first and consider server deployment once the product reaches an agreed demonstrable stage. The local-development workflow is documented in `docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md`. Use synthetic data only, keep local services unexposed, protect secrets, and do not treat local containers as an Alt-5 security boundary.
+
+This direction does not select the eventual server topology; Q-023 remains OPEN. It does not approve Phase 1, authorize Phase 2, or waive D-014's prohibition on real student data before the required gates and explicit Product Owner approval. No code, infrastructure, migration, or executable test was created or run by this documentation change.
+
+---
