@@ -173,25 +173,17 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Blocks Phase 1 approval:** No.
 
 ## Q-023 — سازگاری میزبانی سرور با Alt-5 isolation cells
-**Status: OPEN — server topology decision deferred until hosted deployment planning; remains a Phase 1 target-architecture gap (2026-10-23).**
+**Status: OPEN — final hosted topology deferred by D-022; the unresolved security-boundary question remains a Phase 1 gate item.**
 
-**New context from D-021:** Product Owner has chosen laptop-local development first, with server deployment later when the product is sufficiently demonstrable. This allows planning and documentation of a local-only development environment, but does not itself resolve the eventual server topology or approve Phase 1.
+**Product Owner decision D-022 (2026-10-23):** Defer selection of the final host/provider/topology until hosted deployment planning. Continue the local-first development strategy under D-021. This is a scheduling decision only; it does not select a topology or waive any Alt-5/D-014 requirement.
 
-**Context:** D-011's hosting objectives (Iran-based hosting, portability, low initial complexity) remain. D-020 requires a separate PostgreSQL cluster/instance and network boundary per Alt-5 cell, with a proposed maximum of two tenants per cell subject to measured cost/capacity. Multiple containers/databases on one shared server do not protect against host/root compromise.
+**Independent gate assessment:** The exact vendor, instance sizes, pricing and measured capacity may be deferred until deployment planning. The architectural trust boundary cannot be waived: before Phase 1 approval, the Alt-5 design must specify and independently justify how cell host/network boundaries, shared control-plane privileges, global cloud/root/admin access, credentials, backups and keys bound the compromise domain. Because the current Q-023 options leave the hosting and administrative boundary unresolved, Q-023 remains a Phase 1 blocker. No condition is removed by D-022.
 
-**Review:** `docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md` compares (A) one shared VPS with multiple Compose stacks, (B) separate host/VM and network boundary per cell with a narrowly privileged shared control plane, (C) separate cloud accounts/projects per cell, and (D) Alt-4 dedicated isolation per tenant. No vendor, cost, or capacity is verified.
+**Normative constraints remain:** D-020 requires a separate PostgreSQL cluster/instance and network boundary per cell, separate tenant databases and runtime credentials within a cell, scoped worker/secret/migration/backup access, and explicit treatment of global host/cloud/root compromise. Multiple containers/databases on one shared host must not be claimed as independent cell isolation against host/root compromise. The proposed two-tenants-per-cell and ten-tenant total limits remain provisional, not measured capacity.
 
-**Decision required before selecting a hosted/pilot topology:**
-- A — Evaluate Option B: separate host/VM and network boundary per cell.
-- B — Require Option C: separate cloud accounts/projects per cell.
-- C — Revisit Alt-4 dedicated isolation per tenant.
-- D — Provide another hosting/security/cost constraint.
+**Deferred until hosted deployment planning:** select the provider and exact topology; evaluate separate host/VM/network per cell versus separate cloud accounts/projects or Alt-4; itemize cost; calculate per-cell connection/resource budgets; and validate provisioning, monitoring, credential rotation, backup/restore, failure containment and operational runbooks on the target environment. These later activities do not waive the need for an approved architecture-level trust-boundary design in Phase 1.
 
-**Supervisor recommendation:** Evaluate Option B first; retain C as the stronger account-boundary alternative if the shared administrative compromise domain cannot be acceptably bounded. This remains a recommendation, not a selected topology.
-
-**Dependencies:** D-011, D-017, D-020, D-021, D-014; target-environment load/connection tests; cell provisioning, backup/restore, credential rotation, monitoring and incident runbooks.
-
-**Non-claims:** local development does not prove Alt-5 isolation, resolve the hosted topology, or validate capacity. No capacity measured; no executable tests run; no runtime security proven. Phase 1 remains NOT READY until its required target-architecture gaps are reviewed and accepted. Phase 2 remains unauthorized under the current gate; real student data remains prohibited.
+**Non-claims:** local development does not prove Alt-5 isolation, resolve Q-023, validate capacity, or authorize real student data. No executable tests have been run and no runtime security is proven. D-014 remains unchanged. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains unauthorized.
 
 ## بخش Resolved / Closed
 
