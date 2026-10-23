@@ -1,7 +1,7 @@
 # TENANT_ISOLATION_TEST_CONTRACTS.md
 
 Phase: 1 — design-only test contracts (corrective revision following independent review of commit 4715e3d).
-Status: SPECIFICATIONS ONLY. No test code exists. No test has been run or passed. Nothing in this file is evidence that isolation works.
+Status: SPECIFICATIONS ONLY; ARCHITECTURE-DEPENDENT SECTIONS ARE STALE PENDING Q-022. No test code exists. No test has been run or passed. Nothing in this file is evidence that isolation works. D-019 superseded the prior Option C direction as sufficient architecture. Until Q-022 is explicitly decided, the Option C/Option A/Option D labels below are historical traceability only and must not be used as current architecture acceptance criteria. After Q-022, remap/rewrite the applicable contracts before implementation.
 
 ---
 
@@ -69,11 +69,11 @@ Rules:
 | TI-VER | Program and Plan version history | 7 |
 | TI-AUD | Audit logs | 3 |
 | TI-PLAT | Platform admin cross-tenant access | 10 |
-| TI-CONN | Per-tenant connection principals (Option C, preferred direction under D-016; pending design review) | 6 |
+| TI-CONN | Prior per-tenant connection-principal proposal (Option C; historical pending Q-022 redesign) | 6 |
 | TI-ADV | Adversarial threat-based contracts (T4a, T4b, T4c; credential classes K-L, K-T, K-S, K-O) | 5 |
 | **Total** | | **123** |
 
-The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Mechanism status after D-016: Option C is the preferred design direction, subject to design review. TI-CONN-01 to 06 and TI-CFG-14 apply to Option C; implementation-dependent contracts are BLOCKED until implementation exists. Option D is not selected: TI-CTX-15 to 18 and TI-ADV-04 are SPEC-ONLY. TI-CTX-01 to 10 and TI-CTX-13 to 14 describe the superseded Option A GUC mechanism and are also SPEC-ONLY, not acceptance criteria for Option C. TI-CTX-11 and 12 are retained as future pool-lifecycle checks but their test setup must be revised for direct per-tenant pools, not tenant GUC context. TI-ADV-03 and TI-ADV-05 are evidence, not database tests. No contract is PASS.
+The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Historical note superseded by D-019: the former D-016 Option C preference is no longer the sufficient design direction. Q-022 must select the revised architecture; then this catalog must be reclassified and reconciled. TI-CONN-01 to 06 and TI-CFG-14 apply to Option C; implementation-dependent contracts are BLOCKED until implementation exists. Option D is not selected: TI-CTX-15 to 18 and TI-ADV-04 are SPEC-ONLY. TI-CTX-01 to 10 and TI-CTX-13 to 14 describe the superseded Option A GUC mechanism and are also SPEC-ONLY, not acceptance criteria for Option C. TI-CTX-11 and 12 are retained as future pool-lifecycle checks but their test setup must be revised for direct per-tenant pools, not tenant GUC context. TI-ADV-03 and TI-ADV-05 are evidence, not database tests. No contract is PASS.
 
 ---
 
