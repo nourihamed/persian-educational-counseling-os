@@ -265,7 +265,7 @@ The total is recomputed from the contract rows below; the verification command i
 
 ---
 
-### 2.15 TI-CONN — Per-tenant connection principals (contracts apply only if Option C is selected for Q-019)
+### 2.15 TI-CONN — Per-tenant connection principals (apply if Option C is implemented; design approval is pending)
 
 | ID | Modes | Operation | Expected | Failure consequence | CI |
 |---|---|---|---|---|---|
