@@ -159,19 +159,15 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Resolution evidence:** explicit Product Owner instruction in conversation on 2026-10-23; recorded in D-019.
 
 ## Q-022 — Select a revised tenant-isolation architecture after independent comparison
-**Status: OPEN — independent review completed; awaiting explicit Product Owner decision.** D-019 requires stronger architecture before Phase 1 approval. The independent assessment and proposed decision are in `docs/phase1/Q022_INDEPENDENT_ARCHITECTURE_REVIEW.md`.
+**Status: RESOLVED — Product Owner selected option A on 2026-10-23; recorded in DECISION_LOG.md D-020.**
 
-**Supervisor recommendation (not an owner decision):** Alt-5 hybrid isolation cells, using Alt-4 as the security reference. For a 10-tenant pilot, propose a maximum of two tenants per cell (up to five cells), only if separate data-plane, network, runtime-worker, secret, migration, backup, and privileged-access boundaries can be demonstrated and capacity/cost review supports it. This cell size is a proposed blast-radius limit, not measured capacity.
+**Decision:** Select Alt-5 hybrid isolation cells, using Alt-4 as the security reference. The initial pilot proposal remains capped at 10 tenants and no more than two tenants per cell (up to five cells), subject to documented capacity and cost evaluation. This is a proposed blast-radius limit, not measured capacity or pilot authorization.
 
-**Decision required — choose one or request another design:**
-- **A — Accept the recommended Alt-5 proposal:** maximum two tenants per pilot cell, subject to capacity/cost evidence; cell-scoped runtime credentials/workers, migration identities, backup keys, separate database clusters/instances and network boundaries; no routine global data-capable migrator; dual-approved, time-limited, audited break-glass.
-- **B — Choose Alt-4 dedicated operational isolation per tenant:** stronger separation and higher expected operating cost/complexity; still requires secret/process isolation and controls for global host/cloud administrators.
-- **C — Request another architecture proposal:** state a different cost or maximum-blast-radius target; no implementation while Q-022 remains open.
+**Mandatory constraints:** separate PostgreSQL cluster/instance and network boundary per cell; cell-scoped workers, runtime credentials, and secret access; cell-scoped migration identities with no routine global data-capable migrator; cell-scoped backup access/keys; deployment authority separated from routine data-read authority; dual-approved, time-limited, audited cross-cell break-glass; preserve suspension/offboarding state through restore. Revisit D-011 hosting and D-017 connection/pool assumptions for compatibility.
 
-**Important risk clarification:** actual theft of every tenant credential plus connectivity to every database, or compromise of global host/cloud root controlling all cells and keys, cannot honestly be claimed impossible through database topology alone. The design must prevent a single routine worker/vault policy/global migrator from becoming a universal access path and explicitly document remaining catastrophic scenarios. The owner must decide the residual global-root risk before real-data use.
+**Residual risks:** independent theft of all usable tenant credentials and compromise of global host/cloud/root controlling all cells and keys remain catastrophic scenarios. No claim is made that topology alone prevents them. A single ordinary worker, secret policy, or migrator must not provide a universal path across cells. Global-root residual risk must be explicitly assessed before real-data use.
 
-**Must be resolved before:** final Phase 1 architecture approval and any implementation. D-014 continues to prohibit real student data until separate implementation/security-test/capacity/incident-drill/written-approval gates pass.
-
+**Still required:** revise and independently review the normative design, authorization contract, and architecture-specific tests; measure cost/capacity on the actual target environment; pass all D-014 pilot gates. Q-022 resolution does not approve Phase 1, authorize implementation, or permit real student data.
 
 ## Q-020 — Tenant data-retention period and criteria for dropping tenant roles (OPEN; principle decided D-017)
 **Draft (2026-10-17):** `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md`. **Approach accepted (D-018):** data minimisation, per-category rule, short explicit periods, extensions only by recorded decision, legal/tax/privacy reviewers engaged. **Still OPEN:** all durations (NEEDS-DECISION or LEGAL-REVIEW; none set), the named reviewers, and the approver of role deletion (Product Owner, per D-018).
