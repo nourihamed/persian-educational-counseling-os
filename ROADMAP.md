@@ -1,13 +1,13 @@
 # ROADMAP.md
 
-Status (updated 2026-10-23): Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged. Phase 1: design and documentation submitted for independent review (PR #3, branch docs/phase1-tenant-isolation-design); corrective changes made after review of commit 4715e3d are pending independent re-review of the current live PR head. Q-015 resolved (D-013). Q-021 resolved by D-019 (Product Owner selected option B: stronger architecture required; no final topology selected). Q-022 open for architecture selection after independent comparison. Prior Option C direction is not approved as sufficient. Phase 1 NOT approved / NOT READY; Phase 2 NOT authorized; real-data pilot prohibited (D-014).
+Status (updated 2026-10-23): Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged. Phase 1: design and documentation submitted for independent review (PR #3, branch docs/phase1-tenant-isolation-design); corrective changes made after review of commit 4715e3d are pending independent re-review of the current live PR head. Q-015 resolved (D-013). Q-021 resolved by D-019 (Product Owner selected option B: stronger architecture required; no final topology selected). Q-022 open after independent review; supervisor recommends Alt-5 hybrid isolation cells (proposed max two tenants/cell for pilot, subject to capacity/cost evidence) with Alt-4 as reference. Await explicit Product Owner choice A/B/C in `OPEN_QUESTIONS.md` and see `docs/phase1/Q022_INDEPENDENT_ARCHITECTURE_REVIEW.md`. Prior Option C direction is not approved as sufficient. Phase 1 NOT approved / NOT READY; Phase 2 NOT authorized; real-data pilot prohibited (D-014).
 
 قانون: هر فاز طبق `Mandatory Development Workflow` (بخش ۷۶ Master Prompt) اجرا می‌شود و بعد از اتمام، **خودکار به فاز بعد نمی‌رویم** — منتظر تأیید می‌مانیم.
 
 | # | فاز | خروجی کلیدی |
 |---|---|---|
 | 0 | Product & Business Model | مجموعه اسناد پایه — تکمیل و تأیید شده؛ Phase 0 در 2026-10-14 بسته شد |
-| 1 | Architecture & Multi-Tenancy (design only) | اسناد طراحی اجرای shared PostgreSQL + tenant_id + RLS، قراردادهای authorization و طراحی تست‌های tenant isolation؛ بدون کد برنامه، migration یا پیاده‌سازی infrastructure. هر تغییر این مرز نیازمند تصمیم صریح Product Owner پیش از شروع است. |
+| 1 | Architecture & Multi-Tenancy (design only) | انتخاب معماری جداسازی تنانت طبق Q-022؛ تعیین trust boundaries و residual risks؛ قراردادهای authorization و تست متناسب با معماری انتخاب‌شده. معماری shared PostgreSQL + tenant_id + RLS قبلی صرفاً سابقه است و تا تصمیم Q-022 معماری فعال محسوب نمی‌شود. بدون کد برنامه، migration یا زیرساخت در این فاز. |
 | 2 | Database & Domain Model | ERD کامل، مدل‌های Core (Counselor, Student, Program, Activity...) |
 | 3 | Infrastructure | FastAPI skeleton، Alembic، Docker Compose برای Pilot روی VPS داخل ایران، CI اولیه؛ Redis فقط در صورت توجیه |
 | 4 | Authentication & RBAC | Register/Login/Refresh/Reset، Policy engine |
