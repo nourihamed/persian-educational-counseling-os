@@ -1,3 +1,7 @@
+> **Status update 2026-10-23:** D-019 supersedes the previous assumption that Option C is the preferred sufficient direction. The Product Owner selected Q-021 option B: stronger architecture is required before Phase 1 approval. This document remains a prior design proposal and is not the current approved normative architecture. See `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md` and Q-022. Do not implement this design or start Phase 2 until a revised architecture is explicitly selected and Phase 1 is approved.
+
+---
+
 # TENANT_ISOLATION_DESIGN.md
 
 Phase: 1 — Architecture & Multi-Tenancy (design only)
