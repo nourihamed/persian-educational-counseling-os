@@ -352,3 +352,9 @@ Product Owner selected local laptop development now, with server deployment to b
 - Recorded the Product Owner's decision to defer the final hosted topology/provider until hosted deployment planning while retaining local-first development under D-021.
 - Independent gate impact recorded: Q-023 remains a Phase 1 blocker for the unresolved architecture-level host/network/admin trust boundary. No security condition was removed; D-020 and D-014 remain unchanged.
 - Documentation-only update. No code, infrastructure, migrations or executable tests added or run.
+
+## 2026-10-23 — Production Level 3 / independent Level 4 backup target (D-023)
+- Recorded the Product Owner's explicit security-target decision: Level 3 infrastructure/administrative independence for production cells, with Level 4 independent control of critical backups and recovery.
+- Defined the target in project terms, including separate cell host/network boundaries, scoped credentials, independent backup administration/keys, and explicit residual risk from provider/global control-plane compromise.
+- Q-023 remains OPEN pending evidence that a real hosting candidate can meet the target and independent review of the architecture-level trust boundary. Vendor, pricing and measured capacity are not claimed as selected or validated.
+- D-020 Alt-5 and D-014's real-student-data prohibition remain unchanged. Phase 1 remains NOT READY; Phase 2 remains unauthorized. Documentation-only; no code, infrastructure, migrations or executable tests added or run.
