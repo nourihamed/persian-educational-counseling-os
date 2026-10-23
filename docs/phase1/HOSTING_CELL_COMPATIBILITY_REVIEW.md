@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-23  
 **Repository:** nourihamed/persian-educational-counseling-os  
-**Decision context:** D-011 (hosting objective), D-017 (connection/pool assumptions), D-020 (Alt-5 hybrid isolation cells)  
+**Decision context:** D-011 (hosting objective), D-017 (connection/pool assumptions), D-020 (Alt-5 hybrid isolation cells), D-023 (Level 3 production / Level 4 critical-backup target)  
 **Status:** D-023 target security level accepted by Product Owner; concrete provider/topology compatibility remains OPEN.  
 **Gate:** Phase 1 remains NOT READY / NOT APPROVED.
 
@@ -19,17 +19,19 @@ No target provider, instance size, pricing, network topology, account separation
 ### Accepted / normative constraints
 - D-020 selects Alt-5; Alt-4 (dedicated operational isolation per tenant) is the security reference.
 - Initial proposal: no more than two tenants per cell, up to five cells for a provisional ten-tenant cap. Neither figure proves capacity or authorizes a pilot.
-- Each cell requires its own PostgreSQL cluster/instance and network boundary.
+- Each cell requires its own distinct host/VM and network boundary plus its own PostgreSQL cluster/instance.
 - Each tenant requires its own database and tenant-specific runtime credential within its cell.
+- Level 3 requires cell-scoped administrative boundaries: a routine administrator for one cell must not automatically administer all other cells; separate cloud accounts/projects or demonstrably equivalent controls must be evaluated. Shared organization/root administrators remain an explicit residual.
+- Level 4 requires critical backups outside ordinary production-account administrative control, with independently controlled backup administration, encryption keys, deletion/retention controls, and verified restore procedures.
 - Routine migration identity, secret access, backup access/keys, and recovery permissions must be scoped; no routine global data-capable migrator/owner.
 - Global host/cloud/root compromise and compromise of all usable credentials remain catastrophic residual scenarios.
 - D-014 continues to prohibit real student data until all implementation, security-test, capacity, incident-drill, and written-approval gates are satisfied.
 
 ### Unresolved
-- Whether each cell receives a separate VPS/VM/host, separate cloud account/project, or another demonstrably equivalent boundary.
+- Which concrete provider/account/host profile can implement the accepted Level 3/Level 4 requirements. Per the Product Owner's instruction, provider comparison and selection are deferred until hosted deployment planning; no provider-specific claim is made here.
 - Whether the application/API/control plane is shared, and how it is prevented from holding or enumerating every tenant/cell credential.
 - Whether deployment credentials, cloud organization administrators, backup administrators, encryption keys, and monitoring accounts can reach all cells.
-- Whether the user's desired hosting location/provider can support private networking, scoped identities, independent backups, restore tests, and required availability.
+- Whether the eventual hosting candidate supports private networking, scoped identities, independently administered backups, restore tests, and required availability.
 - Actual cost per cell and the operational cost of maintaining up to five cells.
 - The correct connection budget after tenant-scoped workers, per-tenant pools, per-cell clusters, migration/admin connections, monitoring, and recovery processes are defined.
 
@@ -52,7 +54,8 @@ Conditions for Option B to be accepted:
 1. Each cell's host/VM, network, PostgreSQL instance, runtime identities, secret access, migration identity, backup permissions and encryption keys are scoped to that cell.
 2. Ordinary application/worker identities cannot enumerate or retrieve credentials for other tenants or cells.
 3. The deployment controller cannot routinely read tenant databases or decrypt backups.
-4. Cross-cell break-glass is time-limited, dual-approved, ticketed, auditable, revocable and followed by review.
+4. Critical backups, keys, deletion/retention controls and backup-administration identities are outside ordinary production-account control; a production-account compromise alone cannot destroy all recovery copies.
+5. Cross-cell break-glass is time-limited, dual-approved, ticketed, auditable, revocable and followed by review.
 5. Global cloud/root/organization-admin compromise is documented as a residual, with mitigations and detection; do not claim it is impossible.
 6. Cost and capacity are assessed on the actual proposed target environment before any real-data pilot.
 
@@ -86,13 +89,13 @@ The Product Owner has selected the following target:
 
 The target is specified normatively in DECISION_LOG.md D-023. It does not mean Option B or C in this review is already selected, and it does not establish that a provider can meet the target.
 
-**Next evaluation:** test whether separate host/VM/network plus account/project-level administrative independence can be implemented; determine whether provider organization/root identities can administer all cells; and verify that production cannot delete or alter all critical backup copies or their keys. If no candidate can satisfy the target, return to the Product Owner with explicit options and residual risks. Exact vendor, price and measured capacity may be completed during hosted deployment planning, but the architecture-level trust boundary must be independently reviewed before Phase 1 approval.
+**Next evaluation (deferred provider work):** during hosted deployment planning, compare concrete candidates against this already-defined provider-neutral acceptance baseline; determine whether organization/root identities can administer all cells; verify that production cannot delete/alter all critical backups or control all keys; and measure cost/capacity. If no candidate meets the target, return to the Product Owner with explicit options and residual risks. No provider has been selected or validated. The architecture-level requirements and their residual risks are specified in D-020/D-023 and `TENANT_ISOLATION_DESIGN.md`; the unresolved Q-023 gate remains open until the required independent review and candidate-compatibility evidence exist.
 
 ## 8. Gate and scope
 
 - No code, migration, infrastructure, secrets, database roles, grants, policies, or executable tests were created by this review.
 - No vendor or price has been selected or verified.
 - No capacity has been measured and no test is claimed as executed or passed.
-- Phase 1 remains NOT READY / NOT APPROVED pending independent review of the D-023 target against a concrete candidate and the remaining Alt-5 design.
+- Phase 1 remains NOT READY / NOT APPROVED. Provider comparisons are deferred as requested, but Q-023 remains open under D-023 until candidate compatibility and the independent gate review are completed; this document does not waive that requirement.
 - PR #3 must remain open and unmerged pending independent review.
 - Phase 2 and real student data remain prohibited under D-014.
