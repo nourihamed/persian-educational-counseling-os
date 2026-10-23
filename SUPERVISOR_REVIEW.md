@@ -5,7 +5,7 @@
 - Repository: `nourihamed/persian-educational-counseling-os`
 - PR #3: open, unmerged, base `main`, head branch `docs/phase1-tenant-isolation-design`.
 - Latest independently checked pre-correction head: `4715e3d168d3f680ab98b682688980f845a24d45`.
-- Corrections are being committed to this PR branch. The final correction SHA and PR state must be re-verified after the last document update.
+- Corrective changes have been committed to this PR branch. The current live head must be re-fetched from GitHub after the final status-document update before recording a review verdict.
 - Gate: **NOT READY pending a fresh independent review of the corrected head.** This status section is not an approval.
 - Scope remains design/documentation only. No implementation, migrations, roles, policies, grants, infrastructure, or tests have been created or executed by Phase 1.
 - Test contracts are specifications, not evidence: Current CI-column breakdown (123 rows): PR 91; PR (Phase 2-3) 2; ENV:direct-pool (D-017) 2; ENV:direct-pool (Phase 3) 1; ENV:pooler (Q-016) 1; ENV:worker (Q-017) 1; ENV:security-review (Phase 26) 1; ENV:security-review (Phase 3 and 26) 1; BLOCKED:Q-007 1; BLOCKED:implementation (Option C, D-016) 4; BLOCKED:implementation (Option C, D-016); Option D part SPEC-ONLY 1; SPEC-ONLY (Option A not selected) 12; SPEC-ONLY (Option D not selected, D-016) 5. These are execution routing labels, not results. All 123 remain NOT-RUN; 0 implemented, 0 executed, 0 passing. Option A GUC-based TI-CTX-01..10 and TI-CTX-13..14 are SPEC-ONLY; TI-CTX-11..12 are future direct-pool lifecycle checks.
