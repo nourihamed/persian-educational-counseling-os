@@ -353,3 +353,17 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 **Consequences:** Q-022 is resolved as an architecture direction, not as proof of implementation or capacity. Phase 1 remains NOT READY pending independent review. No code, migration, infrastructure, Phase 2 work, or real-data pilot is authorized. D-014 remains in force.
 
 **Affected artifacts:** `OPEN_QUESTIONS.md`, `docs/phase1/TENANT_ISOLATION_DESIGN.md`, `docs/phase1/AUTHORIZATION_CONTRACT.md`, `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`, `PROJECT_STATE.md`, `ROADMAP.md`, `docs/phase1/PHASE1_REPORT.md`.
+
+
+## D-021 — Local laptop development first; server deployment later
+**Status: ACCEPTED — explicit Product Owner direction (2026-10-23).**
+
+**Decision:** For the current development period, the project is to run on the Product Owner's own laptop so implementation can progress without prematurely selecting or paying for a remote server. When the product reaches an agreed demonstrable stage, server deployment will be planned and reviewed separately.
+
+**Local environment constraints:** Prefer reproducible local setup; keep development services bound to loopback/local interfaces; use synthetic/test data only; do not expose database, cache, debug or admin services to the public internet; do not commit or reuse production secrets. Local containers on one laptop are not a security boundary against compromise of the laptop/host administrator.
+
+**Relationship to Alt-5:** D-020 remains in force as the selected isolation direction for the proposed pilot. D-021 does not replace Alt-5 with a weaker hosted architecture, and does not claim that laptop containers prove tenant isolation. Q-023 remains OPEN for the eventual server topology. The proposed maximum of two tenants per cell remains provisional pending measured cost/capacity.
+
+**Transition gate:** Before server deployment, resolve Q-023, evaluate target hosting and itemized cost/capacity, define operations and recovery controls, rehearse migration/restore with synthetic data, and complete applicable independent security and phase gates. D-014's real-data pilot prohibition remains in force until all required gates and explicit Product Owner approval.
+
+**Scope:** This decision records a development strategy only. It does not authorize Phase 2, create infrastructure or code, approve Phase 1, or authorize real student data. See `docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md`.
