@@ -1,3 +1,7 @@
+> **Decision update — 2026-10-23:** The Product Owner subsequently selected Q-022 option A; D-020 records Alt-5 hybrid isolation cells, with Alt-4 as the security reference and a proposed maximum of two tenants per cell for the initial pilot, subject to measured cost/capacity. This document's earlier A/B/C text is a pre-decision proposal and is superseded by D-020. The active normative design is `docs/phase1/TENANT_ISOLATION_DESIGN.md`; active tests are `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`. The within-cell design now requires a separate database and tenant-specific runtime credential per tenant. Q-022 is resolved as a direction only; Phase 1 remains NOT READY, and no implementation or real-data pilot is authorized.
+
+---
+
 # Q-022 Independent Architecture Review and Decision Proposal
 
 **Review date:** 2026-10-23  
