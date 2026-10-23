@@ -329,3 +329,13 @@ Verification boundary: PR #1 changed 15 documentation files only. GitHub returne
 - Added `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md` (design study only; no final topology selected).
 - Updated `DECISION_LOG.md`, `OPEN_QUESTIONS.md`, `PROJECT_STATE.md`, `ROADMAP.md`, and `SUPERVISOR_REVIEW.md`.
 - No code, migrations, infrastructure, runtime tests, Phase 2 work, or real-data authorization was created or implied.
+
+
+## 2026-10-23 — Product Owner selects Alt-5 and Q-022 documents aligned (D-020)
+- Recorded explicit Q-022 option A selection in DECISION_LOG.md D-020 and resolved Q-022 in OPEN_QUESTIONS.md.
+- Replaced the normative Phase 1 tenant-isolation design with an Alt-5 hybrid isolation-cell design; Alt-4 remains the security reference.
+- Replaced AUTHORIZATION_CONTRACT.md with trusted tenant-to-cell routing and cell-scoped authorization rules.
+- Archived the 123-contract pre-Q-022 test catalog and replaced the active catalog with 46 Alt-5-specific contracts plus a mapping of historical IDs.
+- Tightened within-cell isolation: each tenant has a separate database and tenant-specific runtime credential within its cell; shared cell/host/root compromise remains a distinct residual.
+- Aligned PROJECT_STATE.md, ROADMAP.md, PHASE1_REPORT.md, SUPERVISOR_REVIEW.md and the Q-022 review record.
+- No application code, migration, infrastructure, runtime test, Phase 2 work, or real-data pilot was created or authorized. Active tests remain NOT-RUN; capacity and cost are unmeasured.
