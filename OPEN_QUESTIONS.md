@@ -122,28 +122,41 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Blocks Phase 1 approval:** No.
 
 ## Q-019 — Tenant-context boundary against threat T4 (decomposed)
-**CURRENT STATUS (authoritative, D-014, D-015, D-016, 2026-10-17):** (1) D-014 sets the real-data pilot gate and is unchanged. (2) D-016 records Option C as the preferred design direction, subject to independent design review. (3) Option D is NOT SELECTED and is NOT SELECTION-READY (seven open points, Q019 §6.3). (4) The mechanism is not implemented, not test-verified, and is not a runtime security claim. **Text below that asks the owner to choose between C and D, or describes the mechanism as open, is HISTORICAL (Revisions 6 to 8) and superseded by this status.**
-**Owner direction (decided, D-014, 2026-10-15):** strengthen the boundary before any pilot containing real student data. Pilot rule: no real student data before independent security review, required security tests passing, blocking findings fixed, and written owner approval of the Pilot gate.
-**Status (updated 2026-10-17, D-016):** mechanism DIRECTION decided — Option C as preferred design direction, subject to design review. Option D not selected (NOT SELECTION-READY). Not runtime security; not authorization for real-data pilot. Pilot prerequisites (D-014) unchanged. Remaining: design review (supervisor), implementation, test execution, capacity measurement, pool and pooler validation.
-**Decomposition (added Revision 4, design §1.4):** T4a (SQL injection on a tenant connection), T4b (application process compromise), T4c (database credential theft). Option C addresses T4a for one tenant connection and partly T4c. No option addresses T4b in the database; T4b requires process isolation (Phase 3/26). Claims must be made per sub-threat.
-**Historical candidate comparison (superseded by D-016 for design direction):** Option C (per-tenant database principals) and Option D (signed context token through a SECURITY DEFINER function) were evaluated. Current direction: Option C preferred, pending independent design review; Option D is not selected and NOT SELECTION-READY. Option A alone is not a boundary against T4a.
-**Required to resolve the mechanism:** independent security review of the selected option; evidence for the matching sub-threat claims (TI-ADV-01, TI-ADV-02; TI-CONN-01..03 for C; TI-CTX-15..18 for D); owner selection recorded in DECISION_LOG.
-**Technical evaluation (Revision 6):** `docs/phase1/Q019_MECHANISM_EVALUATION.md` compares A, C and D against attacker models AM1 to AM5 with forging paths, residual risks, cost, testability and evidence required. It recommends Option C as a technical candidate for pilot scale (Option D as alternative; Option A not a boundary). This is a recommendation for review, not a decision.
-**Revision 9 (owner decision D-016):** Option C selected as preferred design direction. A1 provisional cap 10 tenants. Bounded lazy per-tenant pools. Tenant role lifecycle as specified in design §5.5. Shared-role fallback prohibited. Capacity rule accepted as a constraint.
+**CURRENT STATUS (2026-10-23):** The Product Owner's preferred design direction is Option C under D-016, pending independent design review. Option D is not selected and NOT SELECTION-READY. D-017 sets direct PostgreSQL connections and pool size 1 per tenant per process for the pilot; transaction pooling is deferred. This is a design direction, not implemented or test-verified security.
 
-**Revision 8 (independent review H-01, H-02, M-01):**
-- Credential classes K-L-1, K-L-N, K-T, K-S, K-O defined and analysed per option (Q019 §4.4). Option D's no-token case assessed explicitly (§4.4.3).
-- Option C capacity: ESTIMATE — NOT MEASURED (Q019 §6.2). A1 = 10 is accepted as the initial pilot cap (D-017), NOT proven capacity; pilot entry requires load and connection tests, memory/CPU/latency measurement, tenant isolation tests passing, an emergency stop and rollback procedure, and written owner approval after the evidence (D-017). Direct connections not feasible under the stated assumptions; per-user pooler feasible in count only under the assumptions. Measurement is a pilot criterion.
-- Option D: NOT SELECTION-READY (Q019 §6.3, seven open points).
-- **Product Owner decisions needed for Q-019:** (1) choose C, or D after readiness, or residual acceptance; (2) if D: signature algorithm (HMAC or asymmetric) and whether a jti store is acceptable; (3) if C: confirm the pilot tenant count assumption (A1), the pool strategy, the tenant-role retention rule, and that grouping tenants into shared roles is not an allowed fallback without a new decision; (4) capacity rule (§6.2) acceptance.
-- Design-selection criteria (D-015) are met for C at design level and not met for D.
-**Owner decision still required** after independent review; to be recorded in DECISION_LOG.md.
-**Must be resolved before:** any Pilot with real student data; Phase 26.
-**Blocks Phase 1 approval:** Yes (reviewer-stated NOT READY depends on it).
+**What is decided:**
+- D-014: no real student data until the full pilot gate is met.
+- D-015: design-selection criteria and pilot-validation criteria are separate.
+- D-016: Option C preferred; no shared-role fallback; Option D not selected.
+- D-017: direct per-tenant connections, pool size 1, provisional cap of 10 tenants; capacity not measured.
+
+**What remains:**
+- Independent review of the corrected Option C design and its security helper/role contract.
+- Implementation of the chosen design and execution of the applicable contracts; all 123 contracts are currently NOT-RUN.
+- Explicit Product Owner disposition of the residual-risk decision Q-021 (all tenant credentials compromised; owner/migrator role compromised).
+- Target-host capacity measurements and all D-014 pilot-entry conditions before real student data.
+
+**Threat decomposition:** T4a is SQL injection on one tenant connection; Option C is designed to constrain that connection to one tenant, but this is not verified. T4b is application-process compromise and remains outside the Option C database boundary. T4c includes single-tenant credential theft (K-L-1), theft of many/all tenant logins (K-L-N), token/key classes for unselected Option D, and owner/migrator compromise (K-O). Do not claim any of these controls as verified before evidence exists.
+
+**Historical material:** all Revision 4–9 candidate comparisons and prompts below the earlier Q-019 block are superseded by D-016/D-017 and the status above. Option C is no longer awaiting a C-versus-D selection; it is awaiting independent design review and the explicit residual-risk disposition in Q-021.
+
+**Must be resolved before:** Phase 1 design approval requires independent review and Q-021 disposition; real-data pilot additionally requires every D-014 condition.
+**Blocks Phase 1 approval:** Yes, until the current design is independently reviewed and Q-021 is decided.
 
 ## Q-007 — Gate impact (Phase 1 review)
 **Status:** Product question OPEN (default parent access level). Gate impact: **CONFIRMED by the independent reviewer** (PR #3 review): TI-API-09 blocks closure of the phase that implements parent access (Phase 23), not Phase 1 architectural approval, provided parent access is not implemented in Phase 1 and TI-API-09 stays BLOCKED.
 **Owner acceptance of the gate wording:** pending.
+
+## Q-021 — Product Owner disposition of Option C credential-compromise residuals
+**Status: OPEN — Product Owner decision required.** D-016 records Option C as the preferred design direction, but does not explicitly accept the residual consequences of (a) theft of many/all tenant login credentials (K-L-N), or (b) compromise of the owner/migrator security boundary (K-O). The current test contract must not label these as owner-accepted KNOWN-RESIDUAL outcomes until this decision is recorded.
+
+**Decision required:**
+- **A — Accept as explicit residual risks:** acknowledge that compromise of all tenant login credentials can expose multiple tenants, and compromise of the owner/migrator boundary can defeat tenant isolation. Keep the shared-database Option C design, require separate controls and evidence for credential storage/rotation, owner-role separation, privileged access audit, incident response, and D-014 pilot approval. This does not authorize real data by itself.
+- **B — Require stronger architecture before approval:** do not accept these residuals for the intended risk level; request a revised design (for example, stronger process/credential isolation and a separately reviewed privileged-role boundary). Any database-per-tenant or other scope change must be evaluated against D-009 and explicitly decided before implementation.
+
+**Recommendation:** Option A only if the Product Owner explicitly accepts the stated limits and the controls above are made enforceable and testable. If the product's risk tolerance does not permit multi-tenant exposure after broad credential or owner-role compromise, choose B and reopen the architecture before implementation.
+**Must be resolved before:** Phase 1 design approval; in all cases before any real-data pilot.
+**Why it matters:** the contract vocabulary permits KNOWN-RESIDUAL only after an owner decision. A preferred mechanism is not itself acceptance of its residual risks.
 
 ## Q-020 — Tenant data-retention period and criteria for dropping tenant roles (OPEN; principle decided D-017)
 **Draft (2026-10-17):** `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md`. **Approach accepted (D-018):** data minimisation, per-category rule, short explicit periods, extensions only by recorded decision, legal/tax/privacy reviewers engaged. **Still OPEN:** all durations (NEEDS-DECISION or LEGAL-REVIEW; none set), the named reviewers, and the approver of role deletion (Product Owner, per D-018).
