@@ -4,7 +4,7 @@
 Phase 1 — Architecture & Multi-Tenancy (design/documentation only)
 
 ## Scope Reviewed
-Live branch \`docs/phase1-tenant-isolation-design\` after the latest correction commits; reviewed the active Alt-5 design and authorization/test contracts, D-020/D-023, Q-023, architecture/database/product/scope/security/test-plan/roadmap/state docs, hosting compatibility review, pre-pilot profile, target-environment test plan, emergency-stop runbook, retention draft and changelog. GitHub PR #3 and its current compare/status metadata were rechecked.
+Live branch `docs/phase1-tenant-isolation-design` after the latest correction commits; reviewed the active Alt-5 design and authorization/test contracts, D-020/D-023, Q-023, architecture/database/product/scope/security/test-plan/roadmap/state docs, hosting compatibility review, pre-pilot profile, target-environment test plan, emergency-stop runbook, retention draft and changelog. GitHub PR #3 and its current compare/status metadata were rechecked.
 
 ## Summary
 The documentation-level corrections requested by the current decisions are recorded and a second consistency scan passed. This is **not** a runtime security assessment and does not prove the architecture is implemented. Phase 1 remains **NOT READY / NOT APPROVED** because Q-023 is still an explicit gate item under D-023, while provider comparison/selection is deferred by the Product Owner. I will not silently rewrite the accepted decision or claim the phase complete against that conflict.
