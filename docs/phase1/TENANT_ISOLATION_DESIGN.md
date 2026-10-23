@@ -365,7 +365,7 @@ Platform aggregate jobs operate on aggregates or on a per-tenant loop with per-i
 
 ## 11. Non-Goals for Phase 1
 - No schema, migration, policy, role, or grant is created.
-- No pooler mode, managed host, or storage provider is chosen.
+- D-017 chooses direct PostgreSQL connections with no external pooler for the pilot; transaction pooling is deferred. Managed host and storage provider remain open.
 - No Parent access design (Q-007 open).
 - No claim of runtime security (§2.5).
 - No change to D-009.
