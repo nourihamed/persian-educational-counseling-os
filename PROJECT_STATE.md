@@ -12,7 +12,7 @@ Last Updated: 2026-10-23 (Q-022 independent review)
 - **Current gate:** NOT READY / NOT APPROVED. Q-022 independent architecture review is documented; the Product Owner must explicitly choose a proposed architecture before normative Phase 1 design/test contracts can be aligned. Do not merge PR #3 as if approved.
 - **Scope:** design/documentation only. No Phase 1 application code, migrations, database roles, grants, RLS policies, infrastructure, or tests have been created or executed.
 - **Prior Option C design:** no longer accepted as sufficient for the selected risk tolerance. D-019 requires a stronger architecture; Q-022 remains open for final topology selection. The prior design is retained for comparison only and must not be implemented unless superseded by a new explicit decision.
-- **Option A:** GUC / `set_config` / `current_setting` examples are historical comparison only and must not be implemented as the selected Option C mechanism.
+- **Prior Option A/GUC and Option C mechanisms:** historical comparison only; neither is the current selected architecture. Q-022 must be decided before the normative design is replaced.
 - **Option D:** not selected and NOT SELECTION-READY.
 - **D-017 / Q-016:** pilot uses direct PostgreSQL connections, bounded pool size 1 per tenant per application process; transaction pooling deferred pending a separate decision and compatibility validation.
 - **A1 cap:** 10 tenants is provisional, not capacity evidence. Capacity remains ESTIMATE — NOT MEASURED.
@@ -34,7 +34,7 @@ Last Updated: 2026-10-23 (Q-022 independent review)
 
 ### Required next action
 
-Complete the stronger-architecture comparison in `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md`, resolve Q-022 with an explicit Product Owner architecture decision, revise the Phase 1 design and test contracts accordingly, then conduct an independent gate review. Do not start Phase 2 or use real student data before approval.
+Independent Q-022 review is complete: `docs/phase1/Q022_INDEPENDENT_ARCHITECTURE_REVIEW.md`. Supervisor recommends Alt-5 hybrid isolation cells (proposed maximum two tenants per pilot cell, subject to capacity/cost evidence) with Alt-4 as reference. Product Owner must explicitly choose Q-022 A/B/C or request another design. Only after that decision should the normative design and test contracts be rewritten and independently reviewed. Do not start Phase 2 or use real student data before approval.
 
 ---
 ### Current Phase
