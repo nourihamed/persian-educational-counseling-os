@@ -132,7 +132,7 @@ Status vocabulary (each claim has exactly one current status):
 | T4a: SQL injection on a tenant connection cannot cross tenants | NOT CLAIMABLE as a verified property. Option C is the preferred design direction and is designed to limit a single tenant connection to that tenant; this remains unimplemented and untested. Claim only after TI-CONN and TI-ADV-01 pass. Evaluation: Q019_MECHANISM_EVALUATION.md |
 | T4b: code execution in the application process cannot cross tenants | NOT CLAIMABLE under any option in this design. Requires process isolation (Phase 3/26) |
 | T4c-K-L: a stolen tenant login cannot read other tenants | NOT CLAIMABLE as a verified property. Option C is designed to limit a stolen single-tenant login to that tenant, but this remains unimplemented and untested; require TI-ADV-02 plus catalog/credential-scope evidence |
-| T4c-K-T / K-S / K-O: tokens, signing key, owner role | NOT CLAIMABLE under any option. Residuals recorded as KNOWN-RESIDUAL (TI-ADV-04, TI-ADV-05) |
+| T4c-K-T / K-S / K-O: tokens, signing key, owner role | NOT CLAIMABLE under the current direction. Option D token/key outcomes are unselected comparison risks; K-O and K-L-N residual disposition is pending Q-021. Do not label them owner-accepted KNOWN-RESIDUAL until recorded |
 | Credential-scope limits of Option C are as stated in §2.4 | DESIGNED (§2.4). REVIEWED (document-level) only if the independent reviewer confirms. Not implemented |
 
 ## 3. Principal and Tenant Context (Application Level)
