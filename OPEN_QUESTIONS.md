@@ -172,6 +172,25 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Must be resolved before:** the first tenant offboarding feature (Phase 4 or later).
 **Blocks Phase 1 approval:** No.
 
+## Q-023 — سازگاری میزبانی با Alt-5 isolation cells
+**Status: OPEN — requires Product Owner decision after D-020 (2026-10-23). Blocks Phase 1 approval.**
+
+**Context:** D-011 previously set an initial Iran-hosted VPS and portable Docker Compose deployment as the hosting objective. D-020 now requires a separate PostgreSQL cluster/instance and network boundary per cell, with no more than two tenants per cell in the initial proposal. Containers or databases on one shared host do not protect against host/root compromise and must not be described as independent cell-host boundaries.
+
+**Review:** `docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md` compares (A) one shared VPS with multiple Compose stacks, (B) separate host/VM and network boundary per cell with a narrowly privileged shared control plane, (C) separate cloud accounts/projects per cell, and (D) Alt-4 dedicated isolation per tenant. No vendor, cost, or capacity is verified.
+
+**Decision needed from Product Owner:**
+- A — Accept Option B as the target topology for detailed design and cost/capacity evaluation, conditional on its listed controls.
+- B — Require Option C's stronger account/project separation, accepting higher expected cost and operational complexity.
+- C — Revisit Alt-4 dedicated isolation per tenant.
+- D — Defer selection and provide a different constraint.
+
+**Supervisor recommendation:** A for the next design/evaluation step, with C as fallback if the shared administrative compromise domain cannot be acceptably bounded. This is not implementation authorization.
+
+**Dependencies:** D-011, D-017, D-020, D-014; target-environment load/connection test plan; cell provisioning, backup/restore, credential rotation, monitoring and incident runbooks.
+
+**Non-claims:** no capacity measured; no executable tests run; no runtime security proven. Phase 1 remains NOT READY; Phase 2 and real student data remain prohibited.
+
 ## بخش Resolved / Closed
 
 ## C-01 — Gate deadlock between design selection and later test execution (RESOLVED 2026-10-17)
