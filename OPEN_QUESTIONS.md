@@ -122,7 +122,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Blocks Phase 1 approval:** No.
 
 ## Q-019 — Tenant-context boundary against threat T4 (decomposed)
-**CURRENT STATUS (2026-10-23):** The Product Owner's preferred design direction is Option C under D-016, pending independent design review. Option D is not selected and NOT SELECTION-READY. D-017 sets direct PostgreSQL connections and pool size 1 per tenant per process for the pilot; transaction pooling is deferred. This is a design direction, not implemented or test-verified security.
+**CURRENT STATUS (updated 2026-10-23 by D-019):** The earlier D-016 preference for Option C is superseded as the sufficient design direction. The Product Owner selected Q-021 option B: stronger architecture is required before Phase 1 approval. Q-022 is OPEN for final topology selection after independent comparison. The prior Option C and Option D analyses are retained as historical comparison material; no new topology is selected. D-017's direct-connection/pool-size-1 decision is a prior pilot assumption and must be re-evaluated against the selected revised architecture. This is a design direction, not implemented or test-verified security.
 
 **What is decided:**
 - D-014: no real student data until the full pilot gate is met.
@@ -140,7 +140,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 
 **Historical material:** all Revision 4–9 candidate comparisons and prompts below the earlier Q-019 block are superseded by D-016/D-017 and the status above. Option C is no longer awaiting a C-versus-D selection; it is awaiting independent design review and the explicit residual-risk disposition in Q-021.
 
-**Must be resolved before:** Phase 1 design approval requires independent review and Q-021 disposition; real-data pilot additionally requires every D-014 condition.
+**Must be resolved before:** Phase 1 design approval requires resolution of Q-022, a revised normative design, and independent review; real-data pilot additionally requires every D-014 condition.
 **Blocks Phase 1 approval:** Yes, until the current design is independently reviewed and Q-021 is decided.
 
 ## Q-007 — Gate impact (Phase 1 review)
