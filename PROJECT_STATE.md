@@ -17,6 +17,7 @@ Last Updated: 2026-10-23
 - **D-017 / Q-016:** pilot uses direct PostgreSQL connections, bounded pool size 1 per tenant per application process; transaction pooling deferred pending a separate decision and compatibility validation.
 - **A1 cap:** 10 tenants is provisional, not capacity evidence. Capacity remains ESTIMATE — NOT MEASURED.
 - **Q-020:** retention duration and named responsible persons remain unresolved; no automatic tenant-role deletion.
+- **Q-021:** Product Owner disposition of Option C residual risk for theft of all tenant logins (K-L-N) and owner/migrator compromise (K-O) is OPEN; no risk acceptance is implied.
 - **Test contracts:** 123 specifications; 0 implemented; 0 executed; 0 passing. The 12 Option A-only TI-CTX contracts are SPEC-ONLY. TI-CTX-11/12 are future direct-pool lifecycle checks. Full current CI-column breakdown is in the current addendum at the top of `docs/phase1/PHASE1_REPORT.md` and must be rechecked from the file.
 - **CI:** no successful run has been established as evidence for the current corrected head. Absence of a run is not success.
 - **D-014 real-data gate:** real student data remains PROHIBITED until required implementation security tests pass, blocking findings are fixed, capacity and pool limits are measured on the target host, independent implementation review is complete, and the Product Owner gives written approval.
