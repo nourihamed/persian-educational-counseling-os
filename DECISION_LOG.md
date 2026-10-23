@@ -367,3 +367,17 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 **Transition gate:** Before server deployment, resolve Q-023, evaluate target hosting and itemized cost/capacity, define operations and recovery controls, rehearse migration/restore with synthetic data, and complete applicable independent security and phase gates. D-014's real-data pilot prohibition remains in force until all required gates and explicit Product Owner approval.
 
 **Scope:** This decision records a development strategy only. It does not authorize Phase 2, create infrastructure or code, approve Phase 1, or authorize real student data. See `docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md`.
+
+
+## D-022 — Q-023 deferral: local development first, hosting decision later
+**Status: ACCEPTED — explicit Product Owner decision, 2026-10-23.**
+
+**Decision:** Defer selection of the eventual hosted topology/provider until hosted deployment planning. Continue only the local-development strategy under D-021, using synthetic data and local-only services. Q-023 remains OPEN; this decision does not select Q-023 topology option B/C/Alt-4 and does not amend D-020's Alt-5 security requirements.
+
+**Independent gate disposition:** The deferral is accepted as a scheduling decision, not as a security waiver. The exact provider, instance sizes, pricing and measured capacity need not be selected merely to continue local development. However, Phase 1 approval still requires the Alt-5 target architecture's host/network/admin trust boundaries and global-compromise residual to be sufficiently specified and independently accepted. Since Q-023 currently leaves the cell hosting/administrative compromise boundary unresolved, this reviewer does **not** remove it from the Phase 1 gate. A later explicit, documented Product Owner decision may change the gate only after a review establishes that doing so does not weaken D-020/D-014; this decision does not do so.
+
+**Unchanged constraints:** D-020 remains normative; each cell needs its own PostgreSQL cluster/instance and network boundary; no shared-host container arrangement may be represented as independent against host/root compromise. The proposed maximum of two tenants per cell and ten tenants total remains provisional pending measured cost/capacity. D-014 remains in force: no real student data until all applicable security, implementation, operational, capacity, independent-review and written-approval gates pass.
+
+**Consequences:** local development may proceed only when separately authorized by the phase plan; this decision does not approve Phase 1, authorize Phase 2, authorize implementation beyond the approved phase, approve hosting, or authorize real student data. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains NOT STARTED / NOT AUTHORIZED.
+
+**Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, docs/phase1/PHASE1_REPORT.md, SUPERVISOR_REVIEW.md, docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md.
