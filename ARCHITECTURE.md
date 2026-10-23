@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-Status: DRAFT — Phase 0 — Foundation (no implementation yet)
+Status: conceptual architecture baseline; no implementation yet. Current tenant-isolation topology is governed by D-020/D-023 and Phase 1 design docs.
 
 ## 1. Layering
 
@@ -17,24 +17,26 @@ Rule (non-negotiable, Master Prompt §50, §66): business logic never lives in r
 
 **Tenant = Counselor.** Every tenant-scoped row carries a `tenant_id` (= owning Counselor's id, even when the row is logically a Student's — the Student belongs to exactly one tenant via `CounselorStudent`).
 
-**Decision accepted by the Product Owner on 2026-10-12:** use one shared PostgreSQL database/schema with direct, indexed, `NOT NULL` `tenant_id` on every tenant-scoped row; application/API authorization and PostgreSQL Row-Level Security (RLS) are both required layers. See the resolved `OPEN_QUESTIONS.md` Q-001 and the Product Owner decision addendum in `SUPERVISOR_REVIEW.md`. This is the selected MVP mechanism, not proof of implemented or tested runtime security.
+**Current isolation direction (D-020 / Phase 1):** Alt-5 hybrid isolation cells, with Alt-4 as the security reference. Each cell requires a distinct host/VM and network boundary and its own PostgreSQL cluster/instance; each tenant has its own database and tenant-specific runtime credential within that cell. Tenant/cell routing is derived from authenticated, server-verified membership. D-023 adds Level 3 infrastructure/administrative independence for cells and Level 4 independent administrative control of critical backups/recovery. D-009/Q-001 recorded an earlier shared-database mechanism; it is historical and is superseded as the active isolation topology by D-020. This remains design-only, not proof of implementation or runtime security.
 
 **Scope qualification (D-012 accepted; Q-013 resolved):** In the MVP, `ProgramTemplate` and its `ProgramVersion` rows are tenant-owned only, with `tenant_id NOT NULL`; a Version must belong to the same Tenant as its source Template. Platform-owned/shared catalog templates and their versions are out of MVP. Do not implement nullable tenant ownership or mixed-ownership shared rows under the MVP decision. A future platform catalog requires a separate architecture decision before implementation. Student enrollments, plans, and student-facing records remain tenant-owned without exception.
 
-- Derive the request-scoped tenant context from the authenticated principal; never trust a path/body tenant identifier by itself.
-- Require explicit tenant context for every tenant repository operation and object-level authorization for each resource/action.
-- Enforce parent/child tenant consistency using composite foreign keys/constraints or an equivalent database-enforced mechanism.
-- Keep Platform Admin cross-tenant access explicit, least-privileged, and audited.
-- Database runtime roles must not own tenant tables or have privileged RLS-bypass capabilities; review table-owner behavior and use forced RLS or equivalent safeguards where appropriate.
-- Add negative isolation tests for API/repositories and for background jobs, reports/exports, files, and notifications.
+- Derive tenant/cell routing from authenticated, server-verified membership; never trust request-supplied tenant/cell/database identifiers.
+- Give each tenant its own database and tenant-specific runtime credential within its assigned cell; enforce host/VM and network boundaries between cells.
+- Require object-level authorization for every resource/action and tenant-aware relationship constraints within each tenant database.
+- Keep Platform Admin cross-tenant access explicit, least-privileged, read-only where D-013 requires, and audited.
+- Scope workers, secrets, migrations, backup/restore identities and privileged operations; routine deployment authority must not imply data-read or backup-key authority.
+- Meet D-023 Level 3 cell administrative independence and Level 4 critical-backup independence; provider-global compromise remains an explicit residual.
+- RLS may be used as defense in depth within a tenant database, but is not the cell boundary and does not protect against host/root compromise.
+- Add adversarial tests for API/object authorization, network and credentials, jobs, reports/exports, files, notifications, backup/restore, revocation and privileged access.
 
-Schema-per-tenant and database-per-tenant are not selected for the MVP because of their operational/migration/backup overhead. Reconsideration requires a documented architecture decision; the choice must not weaken the non-negotiable tenant-isolation requirement.
+The earlier statement that database-per-tenant was not selected is superseded by D-020 for the active Alt-5 design. Within-cell tenant databases are required; the concrete hosted topology/provider remains open under Q-023 and must meet D-023 before hosted deployment. No capacity or provider claim is established.
 
 ## 3. Isolation applies to every surface (Master Prompt §3)
 
 | Surface | Isolation mechanism (planned) |
 |---|---|
-| Database | `tenant_id` + RLS |
+| Database | Separate PostgreSQL cluster/instance per cell; separate database and credential per tenant; optional RLS as defense in depth |
 | API | Authorization middleware resolves tenant from the authenticated principal; path/body IDs are never trusted alone (IDOR protection) |
 | Services | Application services require an explicit tenant context object, no ambient global |
 | Queries | Repository layer injects `tenant_id` filter automatically; raw queries forbidden outside Infrastructure layer |
@@ -99,8 +101,8 @@ Jalali⇄Gregorian conversion lives in one isolated module (`domain/calendar` or
 ## 9. Deferred Architectural Decisions
 
 Tracked in `OPEN_QUESTIONS.md`:
-- Detailed policy/constraint/test design for the accepted tenant isolation mechanism (Q-001 resolved)
-- Concrete VPS provider/plan and adapter-specific external-service reachability (Q-010 approach accepted; vendor remains unselected)
+- Alt-5 isolation-cell implementation and adversarial verification (D-020/D-023; design-only in Phase 1; implementation/test gates remain open)
+- Concrete hosting candidate, account/admin boundary, backup independence, provider/plan and capacity (Q-023 remains open; provider selection deferred until hosted deployment planning)
 - Payment gateway target (Q-004)
 
 No code, migration, or infrastructure provisioning happens in Phase 0.
