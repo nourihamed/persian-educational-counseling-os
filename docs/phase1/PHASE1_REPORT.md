@@ -9,7 +9,18 @@ This addendum supersedes conflicting earlier status text below; older revision h
 - **Test state:** active catalog 46 contracts; 0 implemented, 0 executed, 0 passing. No workflows/runs or runtime security evidence are implied.
 - **Hosting and operations:** D-011 single-VPS/Docker Compose and D-017 direct pool-size assumptions are not yet reconciled with the selected cell topology. Shared-host containers are not equivalent to separate operational isolation.
 - **Residual risks:** theft of all usable tenant credentials and global host/cloud/root compromise remain catastrophic scenarios. No topology-only guarantee is claimed.
-- **Gate:** Phase 1 remains NOT READY / NOT APPROVED pending independent review, hosting/capacity/cost analysis and required corrections. Phase 2 remains NOT STARTED / NOT AUTHORIZED. No code, migration, infrastructure, runtime test, or real student data was introduced or authorized.
+- 
+## Hosting compatibility follow-up — Q-023 (2026-10-23)
+
+D-011's accepted product objective (Iran-based hosting, portability and low initial complexity) is preserved, but its prior single-VPS assumption is not yet reconciled with D-020. A shared host containing multiple Compose stacks/containers does not create independent cell boundaries against host/root compromise. The Alt-5 design requires a separate PostgreSQL cluster/instance and network boundary per cell.
+
+The new review `docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md` compares four patterns: one shared VPS (not acceptable for the intended cell-boundary claim), separate host/VM per cell (recommended for further evaluation), separate cloud accounts/projects per cell (stronger isolation, higher expected complexity), and Alt-4 dedicated isolation per tenant. Q-023 is OPEN; the Product Owner has not yet selected the hosting topology. No vendor, pricing, or capacity is verified.
+
+D-017's prior connection arithmetic is not an Alt-5 capacity result. Connection limits must be recalculated per PostgreSQL instance from the actual tenant-scoped worker/process/pool topology and admin/monitoring/recovery reserve. Cost and capacity remain NOT MEASURED. No code, infrastructure, migration or executable test was created or run. Phase 1 remains NOT READY; Phase 2 and real student data remain prohibited.
+
+---
+
+**Gate:** Phase 1 remains NOT READY / NOT APPROVED pending independent review, hosting/capacity/cost analysis and required corrections. Phase 2 remains NOT STARTED / NOT AUTHORIZED. No code, migration, infrastructure, runtime test, or real student data was introduced or authorized.
 
 # CURRENT STATUS ADDENDUM — 2026-10-23 (Revision 10)
 
