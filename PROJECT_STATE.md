@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 ## Operational Memory — authoritative current status
 
-Last Updated: 2026-10-23 (Q-022 decision recorded; Alt-5 docs aligned)
+Last Updated: 2026-10-23 (Q-023 hosting review recorded; topology decision remains open)
 ### Current hosting/cell compatibility finding (Q-023)
 
 D-011's original objective (Iran-hosted, portable, low-complexity deployment using Docker Compose as a starting tool) remains a product objective, but a single shared VPS must not be treated as an adequate Alt-5 cell boundary against host/root compromise. D-020 requires a separate PostgreSQL cluster/instance and network boundary per cell. The options and recommendation are recorded in `docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md`; Q-023 remains OPEN for Product Owner decision. Recommendation for evaluation: separate host/VM and network boundary per cell, with a narrowly privileged shared control plane; separate cloud accounts/projects are the stronger alternative.
