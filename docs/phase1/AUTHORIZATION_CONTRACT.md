@@ -1,8 +1,8 @@
 # AUTHORIZATION_CONTRACT.md — Alt-5 Hybrid Isolation Cells
 
 **Phase:** 1 — Architecture & Multi-Tenancy (design only)  
-**Status:** DRAFT aligned to D-020/Q-022; pending independent review. No endpoint exists and no behavior is test-verified.  
-**Normative architecture:** `docs/phase1/TENANT_ISOLATION_DESIGN.md`. Historical pre-Q-022 contract versions are not normative.
+**Status:** DRAFT aligned to D-020/Q-022 and D-023; pending independent review. No endpoint exists and no behavior is test-verified.  
+**Normative architecture:** `docs/phase1/TENANT_ISOLATION_DESIGN.md`; security targets D-020/D-023 apply. Historical pre-Q-022 contract versions are not normative.
 
 ## 1. Purpose and mandatory rule
 
@@ -76,6 +76,8 @@ The same tenant/cell restrictions apply to:
 - audit events, application logs, traces and metrics labels;
 - backup/restore and data-repair workflows.
 
+**Backup/recovery authorization under D-023:** a cell backup identity may operate only within its approved cell scope. Critical recovery copies, backup-administration permissions, encryption keys, deletion/retention controls, and audit evidence must be outside ordinary production-account administrative control. Production deployment or cell-admin credentials must not automatically grant backup deletion or decryption authority. Restore operators must verify authoritative tenant suspension/offboarding/retention state before service is returned. A different bucket or service label alone is not evidence of administrative independence. Every exceptional restore or recovery action must be scoped, approved, audited, and verified after completion.
+
 No endpoint may fetch broad results then filter by tenant in memory. Tenant/cell constraints must be applied at the query/selection boundary, and the cell network/credential boundary remains independent defense in depth.
 
 ## 7. Error handling
@@ -107,5 +109,7 @@ Error messages must not disclose another tenant's identifiers, names, counts, ce
 - [ ] Error response does not reveal cross-tenant existence.
 - [ ] At least one applicable test contract from the active catalog linked.
 - [ ] Revocation/suspension and idempotency behavior defined where relevant.
+- [ ] Backup/restore and emergency recovery identities are scoped; critical backups, keys and deletion/retention controls meet D-023's independent administrative boundary.
+- [ ] Restore workflow rechecks authoritative tenant lifecycle state and cannot reactivate suspended/offboarded users or tenants.
 
 No authorization contract in this document constitutes runtime evidence. All behavior requires implementation and executed tests after the relevant phase is authorized.
