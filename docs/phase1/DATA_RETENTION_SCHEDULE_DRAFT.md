@@ -39,10 +39,11 @@ Legend for durations:
 
 ## 3. Backups
 
-- Backup retention period: NEEDS-DECISION.
+- Backup retention period: NEEDS-DECISION; retention/immutability controls must be documented and approved before pilot.
 - A deleted record may remain in backups until those backups expire. This must be disclosed to the Product Owner and reflected in the approved policy; this draft does not claim immediate erasure from backups.
 - Restore procedure must re-apply deletion and tenant-suspension decisions taken after the backup was made, or it must be blocked. This is a requirement, not yet implemented.
-- Backup encryption and access control: required; implementation status NOT-RUN.
+- **D-023 Level 4:** critical backups, backup administration, encryption keys and deletion/retention controls must be outside ordinary production-account administrative control. A separate bucket/service name alone is not evidence of independence; production compromise alone must not destroy all critical recovery copies.
+- Backup integrity, key custody, access control, retention/immutability and restore behavior must be tested on the selected target; current status NOT-RUN / NOT-VERIFIED.
 
 ## 4. Tenant role deletion checklist (aligned with D-017 and Q-020)
 
