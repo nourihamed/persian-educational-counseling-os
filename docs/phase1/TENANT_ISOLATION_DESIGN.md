@@ -1,9 +1,9 @@
 # TENANT_ISOLATION_DESIGN.md — Alt-5 Hybrid Isolation Cells
 
 **Phase:** 1 — Architecture & Multi-Tenancy (design only)  
-**Status:** DRAFT — aligned to Product Owner decision D-020 / Q-022 (2026-10-23); pending independent review and Phase 1 gate.  
+**Status:** DRAFT — aligned to Product Owner decisions D-020 / Q-022 and D-023 (2026-10-23); pending independent review and Phase 1 gate.  
 **Scope boundary:** architecture and contracts only. No code, migrations, roles, grants, policies, infrastructure, or runtime tests are authorized or claimed to exist.  
-**Decision source:** `DECISION_LOG.md` D-020; `OPEN_QUESTIONS.md` Q-022.  
+**Decision source:** `DECISION_LOG.md` D-020 and D-023; `OPEN_QUESTIONS.md` Q-022 and Q-023.  
 **Historical material:** the former shared-database/Option C design is archived in Git history and is not normative. Any contradictory historical references elsewhere are superseded by this document and D-020.
 
 ## 1. Architecture decision and invariants
@@ -21,6 +21,8 @@ Non-negotiable invariants:
 8. The two-tenants-per-cell proposal cannot be raised without measured capacity/cost evidence and a separate explicit Product Owner decision.
 9. RLS may be used as defense in depth inside a cell, but is not the cell boundary and is not a defense against a superuser or compromised host/cloud root.
 10. All security claims remain design hypotheses until supported by implementation evidence and executed tests. Tenant-level isolation inside a two-tenant cell is a required control, not an optional future enhancement.
+11. Production cell boundaries target Level 3 infrastructure and administrative independence as defined by D-023; separate containers or VMs under one unrestricted global administrator do not alone establish that independence.
+12. Critical backup/recovery controls target Level 4 independent administration under D-023: production administrators must not be able, by themselves, to destroy all critical recovery copies or control all backup decryption keys.
 
 ## 2. Scope, topology, and cell definition
 
@@ -33,7 +35,7 @@ A cell is not merely a schema, database name, Docker container, process label, o
 - cell-scoped backup access and encryption-key permissions;
 - cell-specific monitoring labels, audit context, restore/suspension state, and revocation procedures.
 
-**Hosting consequence:** the previous D-011 initial single-VPS/Docker-Compose assumption is not automatically compatible. Multiple containers on one host do not isolate tenants against host/root compromise. Before approval, a hosting design must state whether cells have separate VMs/accounts/network security boundaries or share a host; any shared-host design must explicitly narrow its threat claim and be accepted only after an evidence-based risk review. This document does not select a cloud/host provider or assert capacity.
+**Hosting and administrative boundary (D-023):** the previous D-011 single-VPS/Docker-Compose assumption is not automatically compatible. Each production cell requires a distinct host/VM and network boundary, a separate PostgreSQL cluster/instance, cell-scoped runtime/worker/secret/migration identities, and an administrative boundary that prevents routine administrators of one cell from automatically administering all others. Separate VMs or networks under a common unrestricted root/organization administrator are not, by themselves, proof of Level 3 independence. The eventual provider/account design must disclose all global administrators, control-plane identities, deployment authority, secret-store administrators, and emergency access. Provider-wide control-plane compromise remains an explicit residual risk. This document does not select a provider or assert that any provider can meet the target.
 
 **Cell membership and tenant data boundary:** a tenant maps to exactly one active cell at a time and to its own database inside that cell. A tenant database must not be shared with another tenant. The mapping is stored in a control-plane registry with strict write permissions, audit history, and uniqueness constraints. Tenant-to-cell migration is an explicit operation with a maintenance state, verified export/import or replication process, integrity checks, authorization freeze, and a rollback plan. It must not be an ordinary user-editable field.
 
@@ -47,7 +49,7 @@ A cell is not merely a schema, database name, Docker container, process label, o
 | TB-4 Secret distribution | Workload identity, secret store, rotation | Ordinary workload cannot enumerate all cell secrets; each secret has cell audience/scope | One cell; global vault-admin compromise remains |
 | TB-5 Cell database/network | PostgreSQL cluster, role grants, network ACLs, RLS if used | Credential/network path from cell A cannot access cell B | One cell |
 | TB-6 Migration and ownership | DDL role, data owner, migration runner | Per-cell identities; no routine global data-capable owner/migrator | One cell per migration identity |
-| TB-7 Backup and restore | Snapshots, encryption keys, restore operators | Cell-scoped keys/access; lifecycle state remains correct after restore | One cell |
+| TB-7 Backup and restore | Snapshots, encryption keys, backup account/admin, restore operators | Level 4 independent admin/control boundary; production account cannot alone destroy all recovery copies or control all keys; restore preserves lifecycle state | One cell; provider/global compromise remains residual |
 | TB-8 Deployment/control plane | CI/CD, artifact signing, host/cloud control plane | Deploying software does not inherently grant data-read or backup-key access | Explicitly documented; global root can be catastrophic |
 | TB-9 Support/platform administration | Platform Admin, break-glass | Default no cross-tenant content access; exceptional access scoped, dual-approved, time-limited, audited | Approved incident scope |
 | TB-10 Derived data | Files, exports, reports, logs, caches, search, notifications, jobs | Same or narrower tenant/cell scope; no cross-cell fan-out by untrusted identifiers | Source tenant/cell |
@@ -77,7 +79,7 @@ If an attacker independently obtains all valid credentials and can connect to ev
 A routine migration identity must not read/write every cell. Migration orchestration may coordinate releases, but each database operation authenticates using the specific cell's migration identity. A compromised cell migrator should be bounded to that cell. Global cloud/host/database root or an operator able to assume all cell identities remains a high-trust residual; use split administration, just-in-time access, dual approval for cross-cell actions, short sessions, immutable audit, and tested revocation. Do not claim RLS protects against superuser.
 
 ### 4.7 Backup, restore, and offboarding
-Backup access and keys must be cell-scoped. Restore must preserve tenant suspension/deletion/retention state from an authoritative lifecycle source and must not resurrect revoked accounts or credentials. Role deletion is not automatic: disable login, revoke grants, terminate sessions/pools, rotate secrets, retain audit evidence, review ownership/dependencies/retention, and obtain the designated approval first.
+Cell-scoped backup permissions are necessary but do **not** by themselves satisfy D-023's Level 4 target. Critical recovery copies must be outside ordinary production-account administrative control, with independently controlled backup administration, encryption keys, deletion permissions, retention/immutability settings, and audit evidence. Production compromise alone must not permit an attacker to delete all critical copies or obtain all keys. Independence must be demonstrated, not inferred from a different bucket, project label, or service name. Recovery testing must prove integrity and restore ability and must reconcile against an authoritative tenant lifecycle source so suspended, deleted, offboarded, or revoked identities cannot silently become active. Role deletion is not automatic: disable login, revoke grants, terminate sessions/pools, rotate secrets, retain audit evidence, review ownership/dependencies/retention, and obtain the designated approval first.
 
 ### 4.8 Global host/cloud/control-plane compromise
 A global administrator able to control every cell, workload identity, network rule, backup key, or deployment artifact may still cause broad exposure. Cell topology alone cannot eliminate this. The design must enumerate global authorities, separate duties, minimize standing privilege, log privileged actions outside the compromised boundary where feasible, and require explicit risk review before real-data use.
@@ -102,7 +104,7 @@ The exact application framework and implementation are outside this design-only 
 |---|---|---|
 | Tenant runtime identity | One tenant database within its assigned cell, least privilege | Connect to the other tenant database or other cells; DDL; create roles; read global secrets |
 | Tenant/cell migration identity | A specifically named tenant database or approved cell migration scope | Routine read/write access to all cells; manage global credentials |
-| Cell backup/restore identity | Backup/restore for assigned cell only | Decrypt every cell's backups by default |
+| Cell backup/restore identity | Backup/restore for assigned cell only | Decrypt other cells' backups; administer all critical backup copies or keys |
 | Deployment controller | Release orchestration, artifact integrity | Routine access to tenant DB credentials or backup keys |
 | Control-plane registry service | Tenant-to-cell mapping and lifecycle metadata | General access to student content |
 | Platform Admin | Metadata and explicitly approved read-only support path per D-013 | Default cross-cell student-content access or writes |
@@ -127,7 +129,9 @@ Within each cell, each tenant receives a separate database and tenant-specific r
 ## 8. Capacity, cost, and hosting gates
 
 Before any pilot:
-- select the actual target hosting profile and document the cell-to-host/VM/account/network mapping;
+- select the actual target hosting profile and document the cell-to-host/VM/account/network mapping and every global/root/organization administrator;
+- demonstrate the D-023 Level 3 boundary: separate cell host/VM and network, cell-scoped identities, and no routine single-cell administrator able to administer other cells; document the provider-global compromise residual;
+- demonstrate the D-023 Level 4 backup boundary: critical copies, keys, deletion/retention controls and backup administration are outside ordinary production-account control;
 - measure CPU, memory, disk I/O, connection count, connection churn, latency, restore time, deploy time, and cost at the proposed ten-tenant/five-cell maximum;
 - test failure of one cell without disrupting unrelated cells;
 - document per-cell connection pool settings; D-017's former pool size 1 per tenant per process is a provisional historical assumption and must be re-evaluated against cell workers and actual concurrency;
@@ -143,7 +147,7 @@ At minimum, the test catalog must cover:
 - one worker cannot enumerate or retrieve other cell secrets;
 - cross-cell network and routing are denied by default;
 - per-cell migration identity cannot read/write another cell;
-- backup keys/restore identities are cell-scoped and restore preserves suspension/offboarding;
+- backup keys/restore identities are cell-scoped, critical backups have independent administrative/deletion/key controls outside ordinary production-account control, and restore preserves suspension/offboarding;
 - deployment controller lacks routine data-plane credentials;
 - break-glass requires dual approval, expires, is audited, and revokes sessions;
 - API, repository, jobs, reports, exports, files, notifications, search, cache, and logs remain tenant-scoped;
@@ -154,7 +158,7 @@ All contracts remain NOT-RUN until executed with evidence. Threat/control/test m
 
 ## 10. Explicit non-goals and open dependencies
 
-- This is not a choice of host/provider, cloud account topology, secret-manager product, or implementation framework.
+- This is not a choice of host/provider, exact cloud account topology, secret-manager product, or implementation framework. The provider-neutral Level 3/Level 4 requirements in D-023 are mandatory; a real candidate must be verified against them before hosted deployment and the Q-023 gate can close.
 - It does not resolve Q-007 parent access, Q-014 exact response status, Q-017 job execution model, Q-018 file storage provider, retention durations, named incident roles, or legal/tax requirements.
 - D-011 hosting and D-017 pool assumptions must be re-evaluated for cell compatibility; this document does not silently change those business decisions.
 - It does not authorize implementation, migration, infrastructure, Phase 2, real student data, or a pilot.
@@ -162,4 +166,4 @@ All contracts remain NOT-RUN until executed with evidence. Threat/control/test m
 
 ## 11. Current gate
 
-**NOT READY / NOT APPROVED.** Alt-5 is the selected design direction, but its implementation feasibility, hosting boundary, cost/capacity, operational controls, test evidence, and residual risks remain to be independently reviewed. Phase 2 is not authorized. No code, migration, infrastructure, runtime test, or real-data pilot is authorized.
+**NOT READY / NOT APPROVED.** Alt-5 is the selected design direction and the provider-neutral Level 3/Level 4 security requirements are now explicit, but Q-023 remains open: no actual hosting candidate has been verified against those requirements, and the trust boundary/residuals still require independent gate review. Cost/capacity, implementation, operations and runtime-test evidence remain future hosted-deployment/pilot gates. Phase 2 is not authorized. No code, migration, infrastructure, runtime test, or real-data pilot is authorized.
