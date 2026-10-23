@@ -1,6 +1,6 @@
 # TENANT_ISOLATION_TEST_CONTRACTS.md
 
-Phase: 1 — design-only test contracts (revision 2, corrective pass).
+Phase: 1 — design-only test contracts (corrective revision following independent review of commit 4715e3d).
 Status: SPECIFICATIONS ONLY. No test code exists. No test has been run or passed. Nothing in this file is evidence that isolation works.
 
 ---
@@ -73,7 +73,7 @@ Rules:
 | TI-ADV | Adversarial threat-based contracts (T4a, T4b, T4c; credential classes K-L, K-T, K-S, K-O) | 5 |
 | **Total** | | **123** |
 
-The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Mechanism status after D-016: Option C is the preferred design direction, subject to design review. TI-CONN-01 to 06 and TI-CFG-14 apply to Option C; TI-CONN-01 to 03 and TI-ADV-01 and 02 are BLOCKED until implementation exists (Phase 2-3). Option D is not selected: TI-CTX-15 to 18 and TI-ADV-04 are SPEC-ONLY. TI-ADV-03 and TI-ADV-05 are evidence, not database tests. No contract is PASS.
+The total is recomputed from the contract rows below; the verification command is in PHASE1_REPORT.md §3. Mechanism status after D-016: Option C is the preferred design direction, subject to design review. TI-CONN-01 to 06 and TI-CFG-14 apply to Option C; implementation-dependent contracts are BLOCKED until implementation exists. Option D is not selected: TI-CTX-15 to 18 and TI-ADV-04 are SPEC-ONLY. TI-CTX-01 to 10 and TI-CTX-13 to 14 describe the superseded Option A GUC mechanism and are also SPEC-ONLY, not acceptance criteria for Option C. TI-CTX-11 and 12 are retained as future pool-lifecycle checks but their test setup must be revised for direct per-tenant pools, not tenant GUC context. TI-ADV-03 and TI-ADV-05 are evidence, not database tests. No contract is PASS.
 
 ---
 
@@ -98,24 +98,26 @@ The total is recomputed from the contract rows below; the verification command i
 | TI-CFG-13 | S + C | Scan all policy expressions (`pg_policies.qual`, `with_check`) for references to `current_setting` or custom GUCs | No policy references a GUC (required by §2.3.1 if Option D is chosen; enforced now as a guard) | Policy trusts a forgeable value | PR |
 | TI-CFG-14 | C | Check PUBLIC privileges on the database schemas and on all tenant-owned tables and sequences | No PUBLIC privilege on tenant objects; PUBLIC CREATE on schemas revoked | Any role reaches objects through PUBLIC, bypassing role mapping | PR |
 
-### 2.2 TI-CTX — Tenant context behavior and pooling
+### 2.2 TI-CTX — Legacy GUC context contracts and connection-pool lifecycle
+
+**Option A-only contracts:** TI-CTX-01..10 and TI-CTX-13..14 depend on `app.current_tenant_id` / `set_config`, which is NOT the selected Option C mechanism. They are retained for traceability only and must not be implemented or counted as Option C acceptance evidence. TI-CTX-11..12 remain future pool-lifecycle checks but must use per-tenant direct connections for the pilot; transaction-pooler-specific variants are deferred.
 
 | ID | Modes | Operation | Expected | Failure consequence | CI |
 |---|---|---|---|---|---|
-| TI-CTX-01 | R | Session as app_runtime, context unset, SELECT from tenant table | Zero rows | Fail-open on missing context | PR |
-| TI-CTX-02 | R | Context set to empty string, SELECT | Zero rows; no unhandled exception | Fail-open or crash that leaks details | PR |
-| TI-CTX-03 | R | Context set to 'not-a-uuid', SELECT | Error raised; zero rows; error text contains no tenant data | Data returned, or tenant data in error | PR |
-| TI-CTX-04 | R | Context = A; SELECT rows of tenant B | Zero rows of B; positive control: rows of A visible | Cross-tenant read | PR |
-| TI-CTX-05 | R | Context = A; INSERT row with tenant_id = B | Rejected by WITH CHECK; zero rows written | Cross-tenant write | PR |
-| TI-CTX-06 | R | Context = A; UPDATE row of tenant B | Zero rows affected; row unchanged | Cross-tenant update | PR |
-| TI-CTX-07 | R | Context = A; DELETE row of tenant B | Zero rows affected; row remains | Cross-tenant delete | PR |
-| TI-CTX-08 | R | Context = A; UPDATE an A row setting tenant_id = B | Rejected by WITH CHECK; row unchanged | Row moved to another tenant | PR |
-| TI-CTX-09 | I | Repository attempts a second context set within one transaction | Repository API refuses; a static check forbids the pattern | Context switch mid-transaction | PR |
-| TI-CTX-10 | I | Set context in transaction, then ROLLBACK; new transaction without set | No rows visible; context not carried | Context leaks across transactions | PR |
-| TI-CTX-11 | I | Pooled connection: request for A commits; next request for B runs on same physical connection without set | No A rows visible to B's request | Pool leakage | ENV:pooler (Q-016) |
-| TI-CTX-12 | I | Request for A raises an exception mid-transaction; next request for B on same connection | No A rows visible; connection state clean | Pool leakage after failure | ENV:pooler (Q-016) |
-| TI-CTX-13 | S | Static scan: no `set_config(..., false)` and no session-level `SET` for app.current_tenant_id in application code | None present | Context outlives transaction | PR |
-| TI-CTX-14 | A | Repository call outside a transaction attempts a tenant query | Repository refuses (no implicit context); no query executed | Query run without context | PR |
+| TI-CTX-01 | R | Session as app_runtime, context unset, SELECT from tenant table | Zero rows | Fail-open on missing context | SPEC-ONLY (Option A not selected) |
+| TI-CTX-02 | R | Context set to empty string, SELECT | Zero rows; no unhandled exception | Fail-open or crash that leaks details | SPEC-ONLY (Option A not selected) |
+| TI-CTX-03 | R | Context set to 'not-a-uuid', SELECT | Error raised; zero rows; error text contains no tenant data | Data returned, or tenant data in error | SPEC-ONLY (Option A not selected) |
+| TI-CTX-04 | R | Context = A; SELECT rows of tenant B | Zero rows of B; positive control: rows of A visible | Cross-tenant read | SPEC-ONLY (Option A not selected) |
+| TI-CTX-05 | R | Context = A; INSERT row with tenant_id = B | Rejected by WITH CHECK; zero rows written | Cross-tenant write | SPEC-ONLY (Option A not selected) |
+| TI-CTX-06 | R | Context = A; UPDATE row of tenant B | Zero rows affected; row unchanged | Cross-tenant update | SPEC-ONLY (Option A not selected) |
+| TI-CTX-07 | R | Context = A; DELETE row of tenant B | Zero rows affected; row remains | Cross-tenant delete | SPEC-ONLY (Option A not selected) |
+| TI-CTX-08 | R | Context = A; UPDATE an A row setting tenant_id = B | Rejected by WITH CHECK; row unchanged | Row moved to another tenant | SPEC-ONLY (Option A not selected) |
+| TI-CTX-09 | I | Repository attempts a second context set within one transaction | Repository API refuses; a static check forbids the pattern | Context switch mid-transaction | SPEC-ONLY (Option A not selected) |
+| TI-CTX-10 | I | Set context in transaction, then ROLLBACK; new transaction without set | No rows visible; context not carried | Context leaks across transactions | SPEC-ONLY (Option A not selected) |
+| TI-CTX-11 | I | Router attempts to return a tenant-A connection to tenant-B pool after A commits | Router refuses reuse; B request can only acquire a B-authenticated connection | Cross-tenant connection reuse | ENV:direct-pool (D-017) |
+| TI-CTX-12 | I | Tenant-A request raises an exception mid-transaction; pool cleanup and subsequent tenant-B acquisition are observed | A connection is rolled back/reset and remains exclusively bound to A; B gets only a B-authenticated connection | Cross-tenant connection reuse after failure | ENV:direct-pool (D-017) |
+| TI-CTX-13 | S | Static scan: no `set_config(..., false)` and no session-level `SET` for app.current_tenant_id in application code | None present | Context outlives transaction | SPEC-ONLY (Option A not selected) |
+| TI-CTX-14 | A | Repository call outside a transaction attempts a tenant query | Repository refuses (no implicit context); no query executed | Query run without context | SPEC-ONLY (Option A not selected) |
 | TI-CTX-15 | R | (Option D only) app_runtime INSERT into `request_tenant_context` | Denied | Context forged directly | SPEC-ONLY (Option D not selected, D-016) |
 | TI-CTX-16 | R | (Option D only) app_runtime calls the context function with a forged or foreign token | Refused; no context row; zero rows | Forged tenant context | SPEC-ONLY (Option D not selected, D-016) |
 | TI-CTX-17 | I | (Option D only) valid token for A, then read rows of B in same session | Zero B rows | Context switch by reuse | SPEC-ONLY (Option D not selected, D-016) |
