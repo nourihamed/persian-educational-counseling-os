@@ -7,7 +7,7 @@ Status (updated 2026-10-23): Phase 0 closed by Product Owner on 2026-10-14; PR #
 | # | فاز | خروجی کلیدی |
 |---|---|---|
 | 0 | Product & Business Model | مجموعه اسناد پایه — تکمیل و تأیید شده؛ Phase 0 در 2026-10-14 بسته شد |
-| 1 | Architecture & Multi-Tenancy (design only) | انتخاب معماری جداسازی تنانت طبق Q-022؛ تعیین trust boundaries و residual risks؛ قراردادهای authorization و تست متناسب با معماری انتخاب‌شده. معماری shared PostgreSQL + tenant_id + RLS قبلی صرفاً سابقه است و تا تصمیم Q-022 معماری فعال محسوب نمی‌شود. بدون کد برنامه، migration یا زیرساخت در این فاز. |
+| 1 | Architecture & Multi-Tenancy (design only) | انتخاب معماری جداسازی تنانت طبق Q-022؛ تعیین trust boundaries و residual risks؛ قراردادهای authorization و تست متناسب با معماری انتخاب‌شده. معماری shared PostgreSQL + tenant_id + RLS قبلی صرفاً سابقه است؛ Q-022 با D-020 حل شده و معماری فعال، Alt-5 isolation cells با دیتابیس و اعتبارنامه مجزا برای هر تنانت درون سلول است. بدون کد برنامه، migration یا زیرساخت در این فاز. |
 | 2 | Database & Domain Model | ERD کامل، مدل‌های Core (Counselor, Student, Program, Activity...) |
 | 3 | Infrastructure | FastAPI skeleton، Alembic، Docker Compose برای Pilot روی VPS داخل ایران، CI اولیه؛ Redis فقط در صورت توجیه |
 | 4 | Authentication & RBAC | Register/Login/Refresh/Reset، Policy engine |
