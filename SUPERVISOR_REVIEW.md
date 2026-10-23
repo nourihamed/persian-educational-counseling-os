@@ -1,3 +1,31 @@
+# CURRENT SUPERVISOR REVIEW — D-020 / Q-022 ALT-5 DOCUMENT ALIGNMENT (2026-10-23)
+
+## Product Owner decision
+Q-022 option A was explicitly selected. D-020 records Alt-5 hybrid isolation cells, Alt-4 as reference, and a proposed maximum of two tenants per cell for the initial pilot, subject to capacity/cost evaluation. Q-022 is resolved as a design direction only; Phase 1 remains NOT READY.
+
+## Work performed
+- Replaced the prior normative design with an Alt-5 cell architecture and explicit trust boundaries, residual risks, lifecycle and capacity gates.
+- Replaced the authorization contract with trusted tenant-to-cell routing and object-level/derived-data rules.
+- Archived the 123 pre-Q-022 test specifications and created an active Alt-5 catalog. The active catalog now contains 46 contracts, all NOT-RUN.
+- Tightened the within-cell model: each tenant has a separate database and tenant-specific runtime credential; a normal tenant credential must not access the other tenant in the same cell. A shared cell/host/root compromise remains a separate residual.
+- Updated Q-022/D-020, project state, roadmap, and Phase 1 status addendum.
+- No application code, migrations, infrastructure, executable tests, Phase 2 work, or real-data use was started.
+
+## Independent findings / blockers
+1. **CRITICAL — Phase 1 is not approved.** The rewritten documents require independent review and evidence. Do not merge PR #3 as a proxy for approval.
+2. **HIGH — Hosting compatibility unresolved.** D-011's single-VPS/Docker Compose assumption may conflict with separate operational cells. Containers on one host do not isolate against host/root compromise.
+3. **HIGH — Capacity/cost unmeasured.** Ten tenants/five cells and two tenants/cell are proposed limits, not measured feasibility.
+4. **HIGH — Global privilege residual.** Global host/cloud/root and compromise of all usable credentials remain catastrophic scenarios.
+5. **HIGH — Runtime controls unverified.** No implementation or test has run; all 46 active contracts remain NOT-RUN.
+6. **HIGH — Within-cell tenant separation must be enforced.** The active design requires separate tenant databases and tenant-specific credentials inside each cell. If the implementation instead shares a tenant-content database or worker identity, it must be reviewed as a design deviation before approval.
+7. **MEDIUM — D-017 pool size 1 per tenant per process must be reconciled with tenant-scoped workers, cell placement, and connection budget.**
+8. **MEDIUM — Historical Option C references survive in old revision/history sections.** Active normative documents and dated addenda must clearly supersede them.
+
+## Gate
+**NOT READY / NOT APPROVED.** Next step is independent review of the rewritten design/contracts and documentary reconciliation of D-011/D-017, target topology, capacity/cost and operations. Phase 2 remains unauthorized; no real student data.
+ 
+---
+
 # CURRENT INDEPENDENT ARCHITECTURE REVIEW — Q-022 (2026-10-23)
 
 ## Result
