@@ -1,3 +1,21 @@
+# CURRENT INDEPENDENT REVIEW ADDENDUM — D-023 TARGET RECORDED; VERIFICATION STILL REQUIRED (2026-10-23)
+
+## Decision reviewed
+The Product Owner selected a project security target: Level 3 infrastructure/administrative independence for production cells, paired with Level 4 independent control of critical backups/recovery. The normative details are recorded in DECISION_LOG.md D-023.
+
+## Independent assessment
+This is a useful and materially clearer target than leaving the required independence level unspecified. It does not prove that ArvanCloud or any other provider/plan can satisfy it. Separate VMs or networks under a common root/organization administrator do not automatically provide independent administrative boundaries. Likewise, a backup stored in another bucket or service is not proven independent if the production account can delete it or control its encryption keys.
+
+## Remaining findings
+- **HIGH:** Q-023 remains OPEN until a concrete hosting candidate's cell/account/admin boundary and provider-global residual are documented and independently reviewed.
+- **HIGH:** Level 4 backup independence is a target only; backup account/provider, key custody, deletion protection, retention/immutability and restore behavior are not verified.
+- **HIGH:** Cost/capacity and target-environment security tests remain NOT MEASURED / NOT RUN.
+
+## Gate and scope
+D-020 Alt-5 and D-014's real-student-data prohibition remain unchanged. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains unauthorized. The target decision alone does not authorize hosting, implementation beyond the approved phase, or real student data. No code, infrastructure, migrations or executable tests were created or run by this documentation update.
+
+---
+
 # CURRENT INDEPENDENT REVIEW ADDENDUM — D-022 / Q-023 DEFERRAL (2026-10-23)
 
 ## Decision reviewed
