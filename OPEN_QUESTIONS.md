@@ -122,26 +122,21 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Blocks Phase 1 approval:** No.
 
 ## Q-019 — Tenant-context boundary against threat T4 (decomposed)
-**CURRENT STATUS (updated 2026-10-23 by D-019):** The earlier D-016 preference for Option C is superseded as the sufficient design direction. The Product Owner selected Q-021 option B: stronger architecture is required before Phase 1 approval. Q-022 is OPEN for final topology selection after independent comparison. The prior Option C and Option D analyses are retained as historical comparison material; no new topology is selected. D-017's direct-connection/pool-size-1 decision is a prior pilot assumption and must be re-evaluated against the selected revised architecture. This is a design direction, not implemented or test-verified security.
+**CURRENT STATUS (updated 2026-10-23 by D-020): RESOLVED as a design direction, not as security evidence.** D-020 selects Alt-5 hybrid isolation cells; the active normative design is `docs/phase1/TENANT_ISOLATION_DESIGN.md`. The prior Option A/C/D mechanism analysis is historical only and is retained in `docs/phase1/Q019_MECHANISM_EVALUATION.md` for traceability.
 
-**What is decided:**
-- D-014: no real student data until the full pilot gate is met.
-- D-015: design-selection criteria and pilot-validation criteria are separate.
-- D-016: Option C preferred; no shared-role fallback; Option D not selected.
-- D-017: direct per-tenant connections, pool size 1, provisional cap of 10 tenants; capacity not measured.
+**Current requirements:**
+- Each cell has a separate PostgreSQL cluster/instance and network boundary.
+- Each tenant within a cell has its own database and tenant-specific runtime credential; an ordinary tenant credential must not access the other tenant in the same cell.
+- Worker/secret access, migration identities, backup permissions/keys, and recovery actions are scoped and audited; no routine global data-capable migrator/owner is allowed.
+- The active authorization contract and active 46-contract catalog define the current planned controls. All tests remain NOT-RUN; no security property is verified.
+- The initial pilot proposal remains capped at 10 tenants and at most two tenants per cell, subject to measured capacity/cost and separate written pilot approval.
 
-**What remains:**
-- Independent review of the corrected Option C design and its security helper/role contract.
-- Implementation of the chosen design and execution of the applicable contracts; all 123 contracts are currently NOT-RUN.
-- Explicit Product Owner disposition of the residual-risk decision Q-021 (all tenant credentials compromised; owner/migrator role compromised).
-- Target-host capacity measurements and all D-014 pilot-entry conditions before real student data.
+**Residual risks:** independent theft of all usable credentials and global host/cloud/root compromise can still create broad exposure. Topology alone does not eliminate these risks. D-014 continues to prohibit real student data until all pilot gates pass.
 
-**Threat decomposition:** T4a is SQL injection on one tenant connection; Option C is designed to constrain that connection to one tenant, but this is not verified. T4b is application-process compromise and remains outside the Option C database boundary. T4c includes single-tenant credential theft (K-L-1), theft of many/all tenant logins (K-L-N), token/key classes for unselected Option D, and owner/migrator compromise (K-O). Do not claim any of these controls as verified before evidence exists.
+**Historical decision trace:** D-014 established the pre-pilot security gate; D-016 preferred Option C at that time; D-019 rejected that prior residual-risk posture as sufficient; D-020 subsequently selected Alt-5. D-016's Option C mechanism is no longer normative.
 
-**Historical material:** all Revision 4–9 candidate comparisons and prompts below the earlier Q-019 block are superseded by D-016/D-017 and the status above. Option C is no longer awaiting a C-versus-D selection; it is awaiting independent design review and the explicit residual-risk disposition in Q-021.
+**Blocks Phase 1 approval:** independent review of the current Alt-5 design/contracts, reconciliation of D-011/D-017, and explicit evidence for the design's trust boundaries are still required.
 
-**Must be resolved before:** Phase 1 design approval requires resolution of Q-022, a revised normative design, and independent review; real-data pilot additionally requires every D-014 condition.
-**Blocks Phase 1 approval:** Yes, until the current design is independently reviewed and Q-021 is decided.
 
 ## Q-007 — Gate impact (Phase 1 review)
 **Status:** Product question OPEN (default parent access level). Gate impact: **CONFIRMED by the independent reviewer** (PR #3 review): TI-API-09 blocks closure of the phase that implements parent access (Phase 23), not Phase 1 architectural approval, provided parent access is not implemented in Phase 1 and TI-API-09 stays BLOCKED.
