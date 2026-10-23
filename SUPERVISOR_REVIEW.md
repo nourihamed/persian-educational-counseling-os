@@ -1,3 +1,27 @@
+# FINAL INDEPENDENT RE-REVIEW — 2026-10-23
+
+## Reviewed revision
+- Commit reviewed: `e17be4833c7fff0ea070a4b5388b92ef576cba79` on `docs/phase1-tenant-isolation-design`.
+- PR #3: open and unmerged; comparison to `main` reports 52 commits ahead and 0 behind. The PR metadata's `mergeable` field reported false on the same check, inconsistent with the zero-behind comparison; recheck mergeability before any merge.
+- GitHub Actions/workflow runs associated with the reviewed commit: none returned. No CI success is claimed.
+
+## Result
+**Gate: NOT READY.** The prior Option A GUC versus Option C contradiction has been corrected in the normative design and contracts. The 123 contract IDs are unique and the current routing labels sum to 123. All 123 remain NOT-RUN; 0 implemented, 0 executed, 0 passing. No runtime isolation is proven.
+
+## Remaining blocker — Product Owner decision
+Q-021 was added because D-016 prefers Option C but does not explicitly accept two material residuals: (1) theft of all tenant login credentials (K-L-N) can expose multiple tenants, and (2) compromise of the owner/migrator boundary (K-O) can defeat the isolation controls. The contracts and evaluation now label these as expected residuals, not owner-accepted KNOWN-RESIDUAL outcomes. The Product Owner must choose Q-021 option A (explicitly accept the residuals with the required controls) or B (require stronger architecture). I have not made this decision on the owner's behalf.
+
+## Other verified constraints
+- D-017 direct PostgreSQL connections, per-tenant pool size 1, and deferred transaction pooling are aligned across the current design and test contracts.
+- Tenant data migrations are specified to run tenant-by-tenant through the corresponding tenant login/pool under FORCE RLS; exceptional cross-tenant repair requires a separately approved and audited break-glass decision.
+- Q-020 retention durations and named responsibilities remain open but are explicitly pre-pilot deliverables; no automatic role deletion.
+- D-014 remains in force: no real student data until implementation security tests pass, blocking findings are fixed, target-host capacity is measured, independent implementation review is complete, and written Product Owner pilot approval is recorded.
+- Phase 2 remains NOT STARTED and NOT AUTHORIZED. PR #3 must not be merged as a proxy for approval while Q-021 is open.
+
+## Recommendation
+Resolve Q-021 explicitly. After the owner records the decision, re-fetch the latest PR head, inspect the resulting diff and mergeability, and perform the final gate review. No code or runtime test should be added to Phase 1; its approved scope remains design/documentation only.
+
+---
 # CURRENT OPERATIONAL STATUS — 2026-10-23 (supersedes older pending-status snapshots below)
 
 ## Phase 1 review status
