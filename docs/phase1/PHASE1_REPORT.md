@@ -8,8 +8,8 @@ This addendum is authoritative for the current state. The revision history below
 - Current CI-column breakdown (123 rows): PR 91; PR (Phase 2-3) 2; ENV:direct-pool (D-017) 2; ENV:direct-pool (Phase 3) 1; ENV:pooler (Q-016) 1; ENV:worker (Q-017) 1; ENV:security-review (Phase 26) 1; ENV:security-review (Phase 3 and 26) 1; BLOCKED:Q-007 1; BLOCKED:implementation (Option C, D-016) 4; BLOCKED:implementation (Option C, D-016); Option D part SPEC-ONLY 1; SPEC-ONLY (Option A not selected) 12; SPEC-ONLY (Option D not selected, D-016) 5. These are execution routing labels, not results. All 123 remain NOT-RUN; 0 implemented, 0 executed, 0 passing.
 - D-017: pilot connection mode is direct PostgreSQL connections, pool size 1 per tenant per application process. Transaction pooling is deferred. The A1 cap of 10 is provisional; capacity remains ESTIMATE — NOT MEASURED.
 - Q-020 retention duration and responsible people remain unresolved. This does not silently authorize real data.
-- Q-021 remains OPEN: the Product Owner must explicitly accept the expected K-L-N and K-O residual risks or require stronger architecture. This decision is required before Phase 1 design approval.
-- Gate remains **NOT READY pending independent review of the final corrected commit**. Phase 2 is not authorized. No real student data is permitted under D-014.
+- Q-021 resolved by D-019 on 2026-10-23: Product Owner selected option B, requiring stronger architecture; K-L-N and K-O residual risks are not accepted as sufficient. Q-022 is OPEN for final topology selection. Phase 1 remains NOT READY.
+- Gate remains **NOT READY / NOT APPROVED** pending stronger-architecture design, Q-022 resolution, and independent review. Phase 2 is not authorized. No real student data is permitted under D-014.
 
 ---
 # PHASE 1 REPORT — Architecture & Multi-Tenancy (design only, revision 2)
