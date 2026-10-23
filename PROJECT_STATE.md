@@ -7,7 +7,7 @@ Last Updated: 2026-10-23 (Q-022 decision recorded; Alt-5 docs aligned)
 
 **Phase 0 — Product & Business Model Foundation:** recorded as approved by the Product Owner on 2026-10-14 and merged via PR #1. This is a historical project decision; this update does not re-audit the full Phase 0 history.
 
-**Phase 1 — Architecture & Multi-Tenancy:** **NOT APPROVED; supervisor re-review required.** PR #3 (`docs/phase1-tenant-isolation-design` → `main`) remains the delivery vehicle and must be checked live for current head/status. The previous independently reviewed head was `4715e3d168d3f680ab98b682688980f845a24d45`; corrective commits after that point changed the design, test contracts, and status documentation. No approval is implied by those edits.
+**Phase 1 — Architecture & Multi-Tenancy:** **NOT APPROVED; supervisor re-review required.** PR #3 (`docs/phase1-tenant-isolation-design` → `main`) remains the delivery vehicle and must be checked live for current head/status. The prior independent review snapshots are historical; current live HEAD must be re-fetched for each review. D-020 has since changed the design, test contracts, and status documentation. No approval is implied by those edits.
 
 - **Current gate:** NOT READY / NOT APPROVED. Q-022 is RESOLVED by D-020: Alt-5 hybrid isolation cells selected, with proposed max two tenants/cell for initial pilot, subject to measured capacity/cost. The normative design, authorization contract, and active test catalog have been rewritten for Alt-5 and require independent re-review. The design now requires a separate database and tenant-specific credential per tenant within each cell; shared cell-level compromise remains a distinct residual. Do not merge PR #3 as if approved.
 - **Scope:** design/documentation only. No Phase 1 application code, migrations, database roles, grants, RLS policies, infrastructure, or tests have been created or executed.
@@ -17,7 +17,7 @@ Last Updated: 2026-10-23 (Q-022 decision recorded; Alt-5 docs aligned)
 - **D-017 / Q-016:** pilot uses direct PostgreSQL connections, bounded pool size 1 per tenant per application process; transaction pooling deferred pending a separate decision and compatibility validation.
 - **A1 cap:** 10 tenants is provisional, not capacity evidence. Capacity remains ESTIMATE — NOT MEASURED.
 - **Q-020:** retention duration and named responsible persons remain unresolved; no automatic tenant-role deletion.
-- **Q-021 / D-019:** Product Owner selected option B on 2026-10-23: require stronger architecture; no acceptance of K-L-N/K-O residual risks. Q-022 is open for final topology selection after independent comparison. D-009's shared-database mechanism is reopened for evaluation, while the tenant-isolation requirement remains mandatory.
+- **Q-021 / D-019:** Product Owner selected option B on 2026-10-23: require stronger architecture; no acceptance of K-L-N/K-O residual risks. Q-022 was subsequently resolved by D-020 (Alt-5). D-009's shared-database mechanism is historical and not the active topology, while the tenant-isolation requirement remains mandatory.
 - **Test contracts:** 123 specifications; 0 implemented; 0 executed; 0 passing. The 12 Option A-only TI-CTX contracts are SPEC-ONLY. TI-CTX-11/12 are future direct-pool lifecycle checks. Full current CI-column breakdown is in the current addendum at the top of `docs/phase1/PHASE1_REPORT.md` and must be rechecked from the file.
 - **CI:** no successful run has been established as evidence for the current corrected head. Absence of a run is not success.
 - **D-014 real-data gate:** real student data remains PROHIBITED until required implementation security tests pass, blocking findings are fixed, capacity and pool limits are measured on the target host, independent implementation review is complete, and the Product Owner gives written approval.
@@ -28,7 +28,7 @@ Last Updated: 2026-10-23 (Q-022 decision recorded; Alt-5 docs aligned)
 - D-013: platform-admin access in MVP is limited, audited, read-only; no BYPASSRLS role and no platform writes.
 - D-014: no real student data until the full pilot gate is met.
 - D-015: design-selection and pilot-validation criteria are separate; later-phase execution evidence is not a substitute for design review.
-- D-016: historical prior direction was Option C; D-019 now requires stronger architecture before approval. Option D remains unselected unless evaluated through Q-022; no shared-role fallback is authorized.
+- D-016: historical prior direction was Option C; D-019 required stronger architecture and D-020 selected Alt-5. Option D remains unselected; no shared-role fallback is authorized.
 - D-017: direct per-tenant connections and size-1 pools for pilot; 10-tenant cap provisional.
 - D-018: emergency stop/rollback runbook remains draft and must be exercised before pilot.
 
