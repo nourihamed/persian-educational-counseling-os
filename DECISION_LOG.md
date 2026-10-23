@@ -334,13 +334,15 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 
 **Minimum design requirements:**
 1. Each cell has its own PostgreSQL cluster/instance and network boundary. A different database/schema or container on one shared host is not equivalent to this boundary.
-2. Runtime workers, credentials, and secret access are cell-scoped; an ordinary worker or secret policy cannot enumerate credentials for other cells.
+2. Each tenant has a separate database and tenant-specific runtime credential within its cell. Runtime workers and secret access are scoped to one tenant or one cell under an explicitly documented boundary; no ordinary worker may hold reusable credentials for both tenants, and no ordinary worker or secret policy can enumerate credentials for other cells.
 3. Each cell has cell-scoped migration identities. No routine standing global owner/migrator may read or write all tenant data.
 4. Backup access and encryption keys are scoped by cell; restore controls must preserve tenant suspension/offboarding state.
 5. Deployment authority is separated from routine data-read authority. Global host/cloud/root compromise remains an explicit high-trust residual and must be mitigated, monitored, and disclosed.
 6. Cross-cell break-glass requires dual approval, a ticket/reason, short-lived access, immutable audit evidence, session termination, and post-incident review.
 7. The two-tenant cell limit and provisional ten-tenant pilot cap may not be raised without measured capacity/cost evidence and a separate explicit Product Owner decision.
 8. The revised design, authorization contract, test catalog, hosting assumption D-011, and pool/capacity assumptions D-017 must be reconciled and independently reviewed before Phase 1 approval.
+
+**Within-cell boundary:** the two tenants in a cell must not share a tenant-content database or routine runtime credential. A normal tenant credential must not access the other tenant in the same cell. A shared cluster/host/root compromise may affect both tenants and is a separate residual.
 
 **Residual-risk statement:** If all valid tenant credentials are independently stolen and usable from an attacker-controlled network, or a global host/cloud administrator controlling every cell and key is compromised, the architecture cannot guarantee zero broad exposure. Controls must prevent a single routine worker, secret-distribution policy, or migration identity from becoming a universal access path. Global-root risk remains subject to explicit pre-pilot risk review; this decision does not silently accept it.
 
