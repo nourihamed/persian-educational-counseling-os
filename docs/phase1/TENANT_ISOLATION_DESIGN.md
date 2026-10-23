@@ -123,7 +123,7 @@ Status vocabulary (each claim has exactly one current status):
 | Claim | Current status |
 |---|---|
 | Tenant-owned queries are required to be tenant-scoped (repository and API design) | DESIGNED. REVIEWED (document-level). Not implemented. Not test-verified |
-| RLS with correct context restricts rows of the runtime role | DESIGNED. Not implemented. Not test-verified (TI-CTX-01..08 pending) |
+| Option C RLS policies restrict rows by the authenticated tenant login mapping (`current_user`) | DESIGNED. Not implemented. Not test-verified (TI-CFG/TI-CONN pending). Legacy GUC contracts TI-CTX-01..10 and 13..14 are SPEC-ONLY for Option A |
 | Composite keys prevent cross-tenant parent/child links for the listed relations | DESIGNED. Not implemented. Not test-verified (TI-FK-01..08 pending) |
 | Runtime role cannot bypass RLS through privileges | DESIGNED (R-DB-01..08). Not implemented. Not test-verified (TI-CFG-01..14 pending) |
 | Platform admin access is read-only, limited and audited | DESIGNED (D-013 decision; §8). Not implemented. Not test-verified (TI-PLAT pending) |
@@ -131,7 +131,7 @@ Status vocabulary (each claim has exactly one current status):
 | RLS alone isolates tenants | NOT CLAIMABLE. RLS is a defense against application defects, not a boundary against arbitrary SQL |
 | T4a: SQL injection on a tenant connection cannot cross tenants | NOT CLAIMABLE as a verified property. Option C is the preferred design direction and is designed to limit a single tenant connection to that tenant; this remains unimplemented and untested. Claim only after TI-CONN and TI-ADV-01 pass. Evaluation: Q019_MECHANISM_EVALUATION.md |
 | T4b: code execution in the application process cannot cross tenants | NOT CLAIMABLE under any option in this design. Requires process isolation (Phase 3/26) |
-| T4c-K-L: a stolen tenant login cannot read other tenants | NOT CLAIMABLE under Option A (login reaches all). Option C: limited to one tenant. Option D: login alone returns no rows. Claim allowed only after TI-ADV-02 passes for the chosen option |
+| T4c-K-L: a stolen tenant login cannot read other tenants | NOT CLAIMABLE as a verified property. Option C is designed to limit a stolen single-tenant login to that tenant, but this remains unimplemented and untested; require TI-ADV-02 plus catalog/credential-scope evidence |
 | T4c-K-T / K-S / K-O: tokens, signing key, owner role | NOT CLAIMABLE under any option. Residuals recorded as KNOWN-RESIDUAL (TI-ADV-04, TI-ADV-05) |
 | Credential-scope limits of Option C are as stated in §2.4 | DESIGNED (§2.4). REVIEWED (document-level) only if the independent reviewer confirms. Not implemented |
 
@@ -354,7 +354,7 @@ Platform aggregate jobs operate on aggregates or on a per-tenant loop with per-i
 | Reports / exports | Generated inside one tenant transaction; file name and metadata contain only that tenant's identifiers | Cross-tenant export |
 | Files | Storage key `tenants/{tenant_id}/…` derived from the stored record; access via short-lived signed URLs issued only after authorization; file metadata is tenant-owned with RLS; direct unsigned URLs are denied | Guessable or shared URLs |
 | Notifications | Delivery rows carry tenant_id and recipient; adapters receive one recipient and one tenant's content; status updates tenant-scoped | Message to wrong recipient |
-| Background jobs | Payload carries exactly one tenant_id (or the explicit platform marker with aggregate-only access); worker sets context per job; failure leaves no context set (see Q-017) | Cross-tenant processing and retries |
+| Background jobs | Payload carries exactly one tenant_id (or the explicit platform marker with aggregate-only access); worker selects only that tenant's connection identity for tenant-owned queries; failure cannot route a connection to another tenant (see Q-017) | Cross-tenant processing and retries |
 | Audit logs | Append-only for `app_runtime` (no UPDATE/DELETE); tenant-scoped reads; platform events carry actor and target | Missing evidence |
 | Version history | `ProgramVersion` and `PlanVersion` are tenant- and student-scoped; published versions immutable (D-008); activation atomic | Cross-tenant version read or write; silent mutation |
 
@@ -365,8 +365,8 @@ Platform aggregate jobs operate on aggregates or on a per-tenant loop with per-i
 | Condition | Required behavior |
 |---|---|
 | TenantContext missing in a repository call | Programming error; raise internal error; no unscoped query |
-| DB context unset or empty | No rows; no writes |
-| DB context invalid UUID | Error; no rows; no tenant data in error |
+| Tenant login has no active mapping | No rows; no writes (fail closed) |
+| Request tenant and selected database login disagree | Request rejected before tenant SQL; audit event without tenant data leakage |
 | Object exists in another tenant | Same response as for a nonexistent object (status and body); exact status is Q-014 |
 | Audit write fails during platform access | Access refused |
 | Cross-tenant composite FK violation | Database rejects; application maps to validation error without revealing other tenant's data |
