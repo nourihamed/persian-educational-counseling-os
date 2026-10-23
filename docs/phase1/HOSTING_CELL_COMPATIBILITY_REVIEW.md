@@ -3,7 +3,7 @@
 **Date:** 2026-10-23  
 **Repository:** nourihamed/persian-educational-counseling-os  
 **Decision context:** D-011 (hosting objective), D-017 (connection/pool assumptions), D-020 (Alt-5 hybrid isolation cells)  
-**Status:** Architecture review and recommendation only; Product Owner topology decision remains OPEN.  
+**Status:** D-023 target security level accepted by Product Owner; concrete provider/topology compatibility remains OPEN.  
 **Gate:** Phase 1 remains NOT READY / NOT APPROVED.
 
 ## 1. Executive finding
@@ -78,21 +78,21 @@ No numeric estimate is defensible until the target provider/instance type and wo
 
 All of the above is **NOT MEASURED / NOT RUN** at this point.
 
-## 7. Product Owner decision required (Q-023)
+## 7. Product Owner decision — D-023 target accepted; provider topology still open
 
-Choose one:
-- **A.** Accept Option B as the target topology for detailed design and cost/capacity evaluation, subject to the conditions above.
-- **B.** Require Option C's stronger account/project separation for each cell, accepting higher expected cost/complexity.
-- **C.** Revisit Alt-4 dedicated isolation per tenant.
-- **D.** Defer topology selection and provide a different hosting/security/cost constraint.
+The Product Owner has selected the following target:
+- **Production:** Level 3 infrastructure and administrative independence for isolation cells.
+- **Critical backups/recovery:** Level 4 independent administrative/control boundary.
 
-**Supervisor recommendation:** A for the next design/cost-evaluation step, with Option C as the fallback if independent review cannot bound the shared administrative compromise domain. This is not an implementation authorization.
+The target is specified normatively in DECISION_LOG.md D-023. It does not mean Option B or C in this review is already selected, and it does not establish that a provider can meet the target.
+
+**Next evaluation:** test whether separate host/VM/network plus account/project-level administrative independence can be implemented; determine whether provider organization/root identities can administer all cells; and verify that production cannot delete or alter all critical backup copies or their keys. If no candidate can satisfy the target, return to the Product Owner with explicit options and residual risks. Exact vendor, price and measured capacity may be completed during hosted deployment planning, but the architecture-level trust boundary must be independently reviewed before Phase 1 approval.
 
 ## 8. Gate and scope
 
 - No code, migration, infrastructure, secrets, database roles, grants, policies, or executable tests were created by this review.
 - No vendor or price has been selected or verified.
 - No capacity has been measured and no test is claimed as executed or passed.
-- Phase 1 remains NOT READY / NOT APPROVED.
+- Phase 1 remains NOT READY / NOT APPROVED pending independent review of the D-023 target against a concrete candidate and the remaining Alt-5 design.
 - PR #3 must remain open and unmerged pending independent review.
 - Phase 2 and real student data remain prohibited under D-014.
