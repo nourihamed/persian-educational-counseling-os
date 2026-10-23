@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 ## Operational Memory — authoritative current status
 
-Last Updated: 2026-10-23 (Q-022 independent review)
+Last Updated: 2026-10-23 (Q-022 decision recorded; Alt-5 docs aligned)
 
 ### Current Verified Operational Status
 
@@ -9,9 +9,9 @@ Last Updated: 2026-10-23 (Q-022 independent review)
 
 **Phase 1 — Architecture & Multi-Tenancy:** **NOT APPROVED; supervisor re-review required.** PR #3 (`docs/phase1-tenant-isolation-design` → `main`) remains the delivery vehicle and must be checked live for current head/status. The previous independently reviewed head was `4715e3d168d3f680ab98b682688980f845a24d45`; corrective commits after that point changed the design, test contracts, and status documentation. No approval is implied by those edits.
 
-- **Current gate:** NOT READY / NOT APPROVED. Q-022 independent architecture review is documented; the Product Owner must explicitly choose a proposed architecture before normative Phase 1 design/test contracts can be aligned. Do not merge PR #3 as if approved.
+- **Current gate:** NOT READY / NOT APPROVED. Q-022 is RESOLVED by D-020: Alt-5 hybrid isolation cells selected, with proposed max two tenants/cell for initial pilot, subject to measured capacity/cost. The normative design, authorization contract, and active test catalog have been rewritten for Alt-5 and require independent re-review. Do not merge PR #3 as if approved.
 - **Scope:** design/documentation only. No Phase 1 application code, migrations, database roles, grants, RLS policies, infrastructure, or tests have been created or executed.
-- **Prior Option C design:** no longer accepted as sufficient for the selected risk tolerance. D-019 requires a stronger architecture; Q-022 remains open for final topology selection. The prior design is retained for comparison only and must not be implemented unless superseded by a new explicit decision.
+- **Prior Option C design:** no longer accepted as sufficient for the selected risk tolerance. D-019 requires a stronger architecture; Q-022 is resolved by D-020 (Alt-5 hybrid cells; maximum two tenants/cell proposed, capacity/cost unmeasured). The prior design is retained for comparison only and must not be implemented unless superseded by a new explicit decision.
 - **Prior Option A/GUC and Option C mechanisms:** historical comparison only; neither is the current selected architecture. Q-022 must be decided before the normative design is replaced.
 - **Option D:** not selected and NOT SELECTION-READY.
 - **D-017 / Q-016:** pilot uses direct PostgreSQL connections, bounded pool size 1 per tenant per application process; transaction pooling deferred pending a separate decision and compatibility validation.
@@ -34,7 +34,7 @@ Last Updated: 2026-10-23 (Q-022 independent review)
 
 ### Required next action
 
-Independent Q-022 review is complete: `docs/phase1/Q022_INDEPENDENT_ARCHITECTURE_REVIEW.md`. Supervisor recommends Alt-5 hybrid isolation cells (proposed maximum two tenants per pilot cell, subject to capacity/cost evidence) with Alt-4 as reference. Product Owner must explicitly choose Q-022 A/B/C or request another design. Only after that decision should the normative design and test contracts be rewritten and independently reviewed. Do not start Phase 2 or use real student data before approval.
+Independent Q-022 review is complete: `docs/phase1/Q022_INDEPENDENT_ARCHITECTURE_REVIEW.md`. Supervisor recommends Alt-5 hybrid isolation cells (proposed maximum two tenants per pilot cell, subject to capacity/cost evidence) with Alt-4 as reference. Independently review the rewritten Alt-5 design, authorization contract and active test catalog; reconcile D-011 hosting and D-017 pool/capacity assumptions. No Phase 2 or real data before approval. Only after that decision should the normative design and test contracts be rewritten and independently reviewed. Do not start Phase 2 or use real student data before approval.
 
 ---
 ### Current Phase
