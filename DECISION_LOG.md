@@ -112,7 +112,7 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 
 
 ## D-009 — Tenant Isolation برای MVP
-**وضعیت: ACCEPTED — تصمیم صریح مالک محصول در 2026-10-12؛ پاسخ Q-001.**
+**وضعیت: ACCEPTED در 2026-10-12؛ مکانیزم قبلی با D-019 در 2026-10-23 برای بازطراحی مجدداً OPEN شد.** الزام Tenant Isolation همچنان غیرقابل‌مذاکره است؛ D-009 قبلاً مکانیزم MVP را تعیین می‌کرد، اما D-019 آن مکانیزم را برای ارزیابی مجدد باز کرده است. تا حل Q-022، این بخش سابقه تصمیم قبلی است و مجوز اجرای shared-database/Option C نیست.
 
 **تصمیم:** یک PostgreSQL database/schema مشترک؛ ستون مستقیم، indexed و `NOT NULL` به نام `tenant_id` روی همه ردیف‌های tenant-scoped؛ authorization در Application/API layer و PostgreSQL RLS به‌عنوان defense in depth. قیدها و روابط composite یا سازوکار معادل باید سازگاری tenant والد/فرزند را enforce کنند. دسترسی cross-tenant برای Platform Admin فقط با مجوز صریح، محدود و audit‌شده مجاز است.
 
