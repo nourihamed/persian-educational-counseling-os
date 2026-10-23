@@ -358,3 +358,13 @@ Product Owner selected local laptop development now, with server deployment to b
 - Defined the target in project terms, including separate cell host/network boundaries, scoped credentials, independent backup administration/keys, and explicit residual risk from provider/global control-plane compromise.
 - Q-023 remains OPEN pending evidence that a real hosting candidate can meet the target and independent review of the architecture-level trust boundary. Vendor, pricing and measured capacity are not claimed as selected or validated.
 - D-020 Alt-5 and D-014's real-student-data prohibition remain unchanged. Phase 1 remains NOT READY; Phase 2 remains unauthorized. Documentation-only; no code, infrastructure, migrations or executable tests added or run.
+
+## 2026-10-23 — Independent Phase 1 correction and consistency pass (D-023)
+
+- Updated the normative Alt-5 design to explicitly define D-023 Level 3 cell infrastructure/administrative independence and Level 4 independent administration of critical backups, keys, deletion/retention controls and recovery.
+- Updated the authorization contract and active TI-CELL-11 acceptance contract to require independent backup administration evidence; a separate bucket/service name alone is not accepted as proof.
+- Reconciled SECURITY.md and TEST_PLAN.md so the earlier D-009 shared-database mechanism is not confused with the active Alt-5 architecture; linked D-023 to the affected artifacts.
+- Updated PROJECT_STATE.md, PHASE1_REPORT.md and ROADMAP.md with the current active contract count and review boundary.
+- Provider comparison/selection remains deferred until hosted deployment planning per Product Owner direction. Q-023 remains OPEN and Phase 1 gate-blocking under D-023; no provider, price, capacity or runtime security result is claimed.
+- Active Alt-5 test catalog remains 46 specifications, 0 implemented, 0 executed, 0 passing. No application code, migration, infrastructure or executable test was created/run. PR #3 remains open/unmerged; Phase 1 NOT READY; Phase 2 unauthorized; real student data prohibited.
+
