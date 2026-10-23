@@ -20,22 +20,22 @@ Non-negotiable invariants:
 7. Backups, encryption keys, restore permissions, and recovery procedures are scoped to the cell. A restore cannot silently reactivate a suspended/offboarded tenant.
 8. The two-tenants-per-cell proposal cannot be raised without measured capacity/cost evidence and a separate explicit Product Owner decision.
 9. RLS may be used as defense in depth inside a cell, but is not the cell boundary and is not a defense against a superuser or compromised host/cloud root.
-10. All security claims remain design hypotheses until supported by implementation evidence and executed tests.
+10. All security claims remain design hypotheses until supported by implementation evidence and executed tests. Tenant-level isolation inside a two-tenant cell is a required control, not an optional future enhancement.
 
 ## 2. Scope, topology, and cell definition
 
 A cell is not merely a schema, database name, Docker container, process label, or connection-pool partition. For this design, each cell requires:
 - a separate PostgreSQL cluster/instance;
 - a cell-specific network access policy so a worker assigned to one cell cannot connect to other cell databases by default;
-- cell-scoped runtime credentials and secret retrieval policy;
-- runtime worker/process isolation bound to one cell;
+- tenant-specific database/credential boundaries within each cell, plus cell-scoped infrastructure and secret retrieval policy;
+- runtime workers/processes scoped to a single tenant within its assigned cell where feasible; any shared cell worker must not hold reusable credentials for both tenants at once;
 - cell-scoped migration identity and controlled migration orchestration;
 - cell-scoped backup access and encryption-key permissions;
 - cell-specific monitoring labels, audit context, restore/suspension state, and revocation procedures.
 
 **Hosting consequence:** the previous D-011 initial single-VPS/Docker-Compose assumption is not automatically compatible. Multiple containers on one host do not isolate tenants against host/root compromise. Before approval, a hosting design must state whether cells have separate VMs/accounts/network security boundaries or share a host; any shared-host design must explicitly narrow its threat claim and be accepted only after an evidence-based risk review. This document does not select a cloud/host provider or assert capacity.
 
-**Cell membership:** a tenant maps to exactly one active cell at a time. The mapping is stored in a control-plane registry with strict write permissions, audit history, and uniqueness constraints. Tenant-to-cell migration is an explicit operation with a maintenance state, verified export/import or replication process, integrity checks, authorization freeze, and a rollback plan. It must not be an ordinary user-editable field.
+**Cell membership and tenant data boundary:** a tenant maps to exactly one active cell at a time and to its own database inside that cell. A tenant database must not be shared with another tenant. The mapping is stored in a control-plane registry with strict write permissions, audit history, and uniqueness constraints. Tenant-to-cell migration is an explicit operation with a maintenance state, verified export/import or replication process, integrity checks, authorization freeze, and a rollback plan. It must not be an ordinary user-editable field.
 
 ## 3. Trust boundaries and failure domains
 
@@ -61,14 +61,14 @@ A common host, universal secret, global backup key, unrestricted control-plane r
 ### 4.1 Ordinary application/API defect or IDOR
 Tenant and object access must be checked against authenticated membership and loaded within the tenant/cell. IDs are references, not capabilities. A tenant A request must never select tenant B's cell by changing a path/body/header value. Uniform not-found behavior for invisible and nonexistent objects is required, subject to Q-014's final status-code choice.
 
-### 4.2 SQL injection or arbitrary query on one cell connection
-The database credential and network reach available to that connection must be confined to one cell. RLS and least-privilege grants can provide defense in depth, but cannot be presented as the cell boundary. Tests must deliberately omit application filters and verify that a cell A credential cannot connect to or query cell B.
+### 4.2 SQL injection or arbitrary query on one tenant connection
+A tenant-specific database credential must be confined to that tenant's database within its assigned cell; the network and cluster boundary then prevents access outside the cell. Tests must deliberately omit application filters and verify both that tenant A cannot read tenant B even when they share a cell, and that no credential in cell A can connect to cell B. RLS and least-privilege grants are defense in depth, not the cell boundary.
 
 ### 4.3 One tenant credential stolen
-The stolen credential must be valid only within its cell and must not enable access to other cell endpoints. Within-cell impact may include both tenants assigned to that cell; this is the accepted *design blast-radius target*, not an accepted security incident outcome. Detection, rotation, session termination, and cell-level containment are required.
+The stolen credential must authenticate only to that tenant's database and must not enable access to the other tenant in the same cell or any other cell. The cell-level shared cluster/host remains a residual boundary for privileged compromise, but ordinary tenant credentials must be tenant-specific. Detection, rotation, session termination, and revocation are required.
 
 ### 4.4 One worker or one cell secret set compromised
-Expected maximum routine data-plane impact is the assigned cell (up to two tenants under the pilot proposal). A worker must not possess an all-cells secret list or global credential. The design must test secret enumeration, network reach, token audience, workload identity, and process/pool assignment.
+Expected maximum impact depends on the compromised identity: a tenant-scoped worker/secret must be limited to one tenant; compromise of a shared cell control-plane/worker or cell-level privileged identity may expose up to the two tenants assigned to that cell. No ordinary worker may possess reusable credentials for both tenants or an all-cells secret list. Test secret enumeration, network reach, workload identity, and process/pool assignment.
 
 ### 4.5 All tenant credentials stolen (K-L-N)
 If an attacker independently obtains all valid credentials and can connect to every corresponding database, the architecture cannot guarantee that broad exposure is prevented. The design must make this require multiple independent compromises rather than one worker or one ordinary secret policy, reduce credential lifetime, detect anomalous use, and enable rapid revocation. This remains a catastrophic residual scenario for pre-pilot risk review.
@@ -100,8 +100,8 @@ The exact application framework and implementation are outside this design-only 
 
 | Identity | Allowed scope | Prohibited standing capability |
 |---|---|---|
-| Cell runtime identity | One cell's application data, least privilege | Connect to other cells; DDL; create roles; read global secrets |
-| Cell migration identity | One cell's approved schema/data migration | Routine read/write access to all cells; manage global credentials |
+| Tenant runtime identity | One tenant database within its assigned cell, least privilege | Connect to the other tenant database or other cells; DDL; create roles; read global secrets |
+| Tenant/cell migration identity | A specifically named tenant database or approved cell migration scope | Routine read/write access to all cells; manage global credentials |
 | Cell backup/restore identity | Backup/restore for assigned cell only | Decrypt every cell's backups by default |
 | Deployment controller | Release orchestration, artifact integrity | Routine access to tenant DB credentials or backup keys |
 | Control-plane registry service | Tenant-to-cell mapping and lifecycle metadata | General access to student content |
@@ -122,7 +122,7 @@ The cell registry must enforce:
 - a migration manifest and integrity verification before cutover;
 - idempotent, resumable provisioning and teardown with secrets handled outside logs.
 
-Within a cell, tenant-owned tables still need explicit tenant ownership, foreign keys, uniqueness and authorization constraints appropriate to the domain. Cross-cell relationships are forbidden in the MVP data plane. Shared global reference data must be read-only, explicitly classified, and contain no tenant content or identifiers.
+Within each cell, each tenant receives a separate database and tenant-specific runtime credential; no shared tenant-content database is assumed by this design. Within that database, tenant-owned tables still need explicit ownership, foreign keys, uniqueness and authorization constraints appropriate to the domain. Cross-tenant and cross-cell relationships are forbidden in the MVP data plane. A cell-level migration must authenticate using a named, narrowly scoped identity and may not become a routine all-tenant data credential. Shared global reference data must be read-only, explicitly classified, and contain no tenant content or identifiers.
 
 ## 8. Capacity, cost, and hosting gates
 
