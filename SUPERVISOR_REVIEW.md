@@ -1,3 +1,58 @@
+# FINAL INDEPENDENT DOCUMENT REVIEW — D-020 / Q-022 ALT-5 (2026-10-23)
+
+**Reviewed live PR head:** `8027bd1c6d4002fd7f81a3452b52b48ea6a345d4`  
+**Repository:** `nourihamed/persian-educational-counseling-os`  
+**Review scope:** GitHub source-of-truth document review after explicit Product Owner selection of Q-022 option A. This is not a runtime security assessment.
+
+## Result
+**Gate: NOT READY / NOT APPROVED.** The Q-022 decision is recorded and the active design, authorization contract and test catalog are aligned to Alt-5. The remaining hosting, capacity, cost and security-evidence gates prevent Phase 1 approval.
+
+## Verified source state
+- PR #3 is open and unmerged; branch `docs/phase1-tenant-isolation-design` is 101 commits ahead and 0 behind `main`.
+- GitHub currently reports `mergeable=false`; this is not itself a merge-conflict diagnosis or a security verdict.
+- No PR workflow runs were returned for the reviewed head. This is not a test pass.
+- D-020 records the explicit Product Owner decision: Alt-5 hybrid isolation cells, Alt-4 as the security reference, proposed maximum two tenants per cell and a provisional 10-tenant initial pilot cap subject to measured cost/capacity.
+- Q-022 is RESOLVED as a design direction. Phase 1 is still NOT READY; Phase 2 and real-data use remain prohibited.
+
+## Passed documentation checks
+- D-020 and Q-022 status are present and consistent with the Product Owner's explicit choice.
+- The normative tenant-isolation design and authorization contract now describe Alt-5, trusted tenant-to-cell routing, separate tenant database/credential boundaries within a cell, scoped runtime/migration/backup access, and global-root residual risk.
+- The pre-Q-022 catalog is archived; the active catalog has **46 unique active contract IDs**. All are specifications only: 0 implemented, 0 executed, 0 passing.
+- The active catalog includes an explicit intra-cell test requiring a tenant credential for A to be denied access to tenant B's database in the same cell.
+- Project state, roadmap, changelog and Phase 1 report have current addenda reflecting D-020 and the unresolved approval gate.
+- No application code, migration, infrastructure, executable test, Phase 2 work, or real student data was created or authorized by these changes.
+
+## Findings
+
+### CRITICAL
+- **No critical document contradiction found in the active normative design/auth/test artifacts during this pass.** This does not mean the architecture is runtime-secure.
+
+### HIGH
+1. **Hosting boundary unresolved:** D-011's previous single-VPS/Docker Compose assumption is not reconciled with separate PostgreSQL clusters/instances and network boundaries per cell. Containers or databases on one shared host do not protect against host/root compromise.
+2. **Capacity/cost unmeasured:** the proposed two-tenants-per-cell and ten-tenant cap are not backed by measurements from an actual target environment.
+3. **Global privilege residual:** compromise of all usable tenant credentials or global host/cloud/root controlling cells and keys can still cause broad exposure. This must remain explicit and be included in pre-pilot risk review.
+4. **Runtime security unverified:** no implementation or executable security test has been reviewed or run. The active contracts are not evidence of a working control.
+
+### MEDIUM
+1. D-017's historical pool-size-1-per-tenant-per-process assumption needs recalculation against tenant-scoped workers, per-tenant databases, per-cell cluster limits and the actual connection budget.
+2. Operations must specify cell provisioning, tenant moves, monitoring, backup/restore, credential rotation, incident containment, and recovery ownership before approval.
+3. The prior single-VPS hosting decision D-011 and any other hosting-specific assumptions must be explicitly reconciled in the decision log rather than silently treated as compatible.
+
+### LOW
+- Older Q-019/Option C analysis remains in the repository for history. Current status notices and the active normative files supersede it; future reviewers should not use historical text as an active contract.
+
+## Required changes before gate reconsideration
+1. Reconcile D-011 with the cell topology: specify the intended host/VM/account/network separation and explicitly state which compromise domains remain shared.
+2. Produce a target-environment cost/capacity plan for up to five cells and ten tenants; measure connection limits, CPU/RAM/I/O, latency, deployment, backup/restore, and failure containment. Do not claim capacity before the measurements.
+3. Reconcile D-017 pool assumptions and specify how a request's worker/credential is tenant-scoped inside its assigned cell.
+4. Review the 46 active contracts for complete threat → control → contract → evidence mapping; implement and execute them only after the relevant phase is authorized.
+5. Independently review the resulting design/hosting changes and confirm D-014's separate pilot gates remain enforced.
+
+## Final recommendation
+Keep PR #3 open and unmerged. Do not start Phase 2 or use real student data. Q-022 selection is recorded, but **Phase 1 remains NOT READY / NOT APPROVED** until the required corrections and independent gate review are complete.
+
+---
+
 # CURRENT SUPERVISOR REVIEW — D-020 / Q-022 ALT-5 DOCUMENT ALIGNMENT (2026-10-23)
 
 ## Product Owner decision
