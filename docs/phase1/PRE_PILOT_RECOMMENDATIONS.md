@@ -41,15 +41,15 @@ Recommended: one legal/privacy reviewer with minors' data experience, plus one t
 
 ## 3. Target host (D-011) — recommended profile to test, not a measured host
 
-Recommended for the pilot test environment (a profile to be provisioned and then measured; NOT a measurement):
-- Single dedicated Linux VM on the D-011 hosting option, separated from any other workload.
-- PostgreSQL 15 or later (supported major version), with `max_connections` set explicitly and documented, not left at a default without a recorded value.
-- Application workers and background workers on the same host only if measured; otherwise separate processes with their own limits.
-- Storage: encrypted disk; backups stored off the same disk.
-- Network: database reachable only from the application host; no public database port.
-- Monitoring: host CPU, memory, disk, PostgreSQL connections, and application latency, recorded from the first test run.
+Provider-neutral acceptance profile for later hosted deployment planning (requirements, not a selected provider or measured host):
+- Each Alt-5 cell has a distinct host/VM and private network boundary, with its own PostgreSQL cluster/instance; each tenant has a separate database and tenant-specific runtime credential within that cell.
+- The cell host/network and routine administrative identities must meet D-023 Level 3 independence; multiple VMs/Compose stacks under one unrestricted root/organization admin do not alone prove compliance.
+- Critical backups/recovery meet D-023 Level 4: backup administration, encryption keys, deletion/retention controls and critical copies are outside ordinary production-account control. Production compromise alone must not destroy all recovery copies.
+- PostgreSQL `max_connections`, pool/process counts, admin/monitoring/recovery reserve, memory and disk budgets must be explicitly documented and measured per cell, not inferred from a single-host total.
+- No public database port; monitoring records per-cell CPU, memory, disk, connections, latency, backup integrity and restore evidence.
+- Provider, account topology, resource sizes, cost and capacity remain NOT SELECTED / NOT MEASURED until hosted deployment planning. These are mandatory D-023 acceptance criteria, not an approval of any candidate.
 
-The exact CPU, RAM and disk figures should be chosen after the first ramp test (L-01), not before. Choosing them first and calling them "measured" would be wrong.
+The exact CPU, RAM and disk figures should be chosen after reproducible load tests on the selected candidate. Choosing them first and calling them "measured" would be wrong.
 
 ---
 
@@ -92,7 +92,7 @@ Every row must be completed before any real student data is considered. "NOT ASS
 | Tax reviewer (R4 only) | NOT ASSIGNED | NEEDS-DECISION (Product Owner) | Signed memo | — |
 | Approver of tenant role deletion | NOT ASSIGNED | NEEDS-DECISION (Product Owner) | Completed checklist, DATA_RETENTION_SCHEDULE_DRAFT.md §4 | — |
 | Independent implementation security reviewer | NOT ASSIGNED | NEEDS-DECISION (Product Owner) | Written review with blocking findings classified | — |
-| Target host confirmed (D-011) | NOT ASSIGNED | BLOCKED (host not confirmed) | Host description, versions, max_connections recorded | — |
+| Hosted cell topology confirmed against D-020/D-023 | NOT ASSIGNED | BLOCKED (provider/candidate deferred; not verified) | Per-cell host/network/admin boundary, independent backup/key/deletion controls, versions and per-cell connection budgets | — |
 | Load and connection tests run (L-01 to L-11) | — | NOT-RUN | Results per scenario with criteria | — |
 | Retention schedule durations approved | — | NEEDS-DECISION (Q-020) | Legal and tax review memos; approved schedule | — |
 | Emergency stop drill (L-11) | — | NOT-RUN | Timed drill record | — |
