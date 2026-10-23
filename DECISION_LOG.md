@@ -405,4 +405,4 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 
 **Unchanged constraints:** D-020 Alt-5 remains the selected isolation direction; D-014 continues to prohibit real student data until required implementation, security, operations, capacity and independent-review gates pass and the Product Owner gives explicit written approval. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains NOT STARTED / NOT AUTHORIZED. No code, infrastructure, migration or executable test is authorized or claimed by this decision.
 
-**Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, docs/phase1/PHASE1_REPORT.md, SUPERVISOR_REVIEW.md, docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md, CHANGELOG.md.
+**Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, ROADMAP.md, SECURITY.md, TEST_PLAN.md, docs/phase1/PHASE1_REPORT.md, SUPERVISOR_REVIEW.md, docs/phase1/TENANT_ISOLATION_DESIGN.md, docs/phase1/AUTHORIZATION_CONTRACT.md, docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md, docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md, CHANGELOG.md.
