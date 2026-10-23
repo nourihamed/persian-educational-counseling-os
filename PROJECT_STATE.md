@@ -11,7 +11,7 @@ Last Updated: 2026-10-23
 
 - **Current gate:** NOT READY pending independent review of the final corrected commit and subsequent Product Owner acceptance. Do not merge PR #3 as if approved.
 - **Scope:** design/documentation only. No Phase 1 application code, migrations, database roles, grants, RLS policies, infrastructure, or tests have been created or executed.
-- **Option C:** preferred design direction under D-016, pending independent review. The normative design now uses per-tenant PostgreSQL login roles, protected role-to-tenant mapping through `current_user`, and per-tenant direct connection pools. This is a design contract, not proof of runtime isolation.
+- **Option C:** preferred design direction under D-016, pending independent review. The normative design now uses per-tenant PostgreSQL login roles, a narrowly allowlisted helper mapping the authenticated login (`session_user` inside SECURITY DEFINER) to one tenant, and per-tenant direct connection pools. This is a design contract, not proof of runtime isolation.
 - **Option A:** GUC / `set_config` / `current_setting` examples are historical comparison only and must not be implemented as the selected Option C mechanism.
 - **Option D:** not selected and NOT SELECTION-READY.
 - **D-017 / Q-016:** pilot uses direct PostgreSQL connections, bounded pool size 1 per tenant per application process; transaction pooling deferred pending a separate decision and compatibility validation.
