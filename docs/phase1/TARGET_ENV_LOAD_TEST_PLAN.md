@@ -1,23 +1,24 @@
 # Target-Environment Load and Connection Test Plan (pre-pilot)
 
-Status: PLAN ONLY. No test has been run. Target environment (D-011 host): NOT PROVISIONED / NOT CONFIRMED. All results below are NOT-RUN or BLOCKED. This document is NOT a measurement.
+Status: PLAN ONLY. No test has been run. Alt-5 target cell topology under D-020/D-023: NOT SELECTED / NOT PROVISIONED / NOT CONFIRMED. All results below are NOT-RUN or BLOCKED. This document is NOT a measurement.
 Gate: pilot-validation criteria (D-015, D-014 condition 3). Not a prerequisite for Phase 1 design approval.
 
 ## 1. Objectives
 - Measure, not estimate, tenant count capacity, connection usage, memory, CPU, latency and error behaviour on the target host.
 - Verify the D-017 configuration: direct PostgreSQL connections, pool size 1 per tenant per process.
-- Verify tenant isolation under load (TI-CONN-01 to 06, TI-CTX-01 to 14 where applicable, TI-ADV-01 and 02 for the selected mechanism).
+- Verify the active Alt-5 acceptance catalog under load and in the target environment, including per-tenant database/credential boundaries, cross-cell network denial, trusted routing, revocation, backup independence and restore lifecycle. The active catalog is `TENANT_ISOLATION_TEST_CONTRACTS.md`; historical TI-CONN/TI-CTX identifiers are not current acceptance evidence unless explicitly mapped.
 - Verify recovery after failure and the emergency stop procedure.
 
 ## 2. Preconditions (each must be recorded; if not met the test is BLOCKED)
 | ID | Precondition | Status |
 |---|---|---|
-| P1 | Target host provisioned and described (CPU, RAM, disk, PostgreSQL version, max_connections, work_mem, shared_buffers) | BLOCKED: target host not confirmed |
+| P1 | Target Alt-5 cells provisioned and described (per-cell host/VM, network, PostgreSQL instance, CPU/RAM/disk, max_connections, account/admin boundary) | BLOCKED: provider/candidate deferred; target not confirmed |
 | P2 | Implementation of the application and migrations exists on the test branch | BLOCKED: Phase 2 or later |
-| P3 | Tenant role provisioning implemented (Option C) | BLOCKED: implementation |
+| P3 | Alt-5 tenant database and tenant-specific runtime credential provisioning implemented and reviewed | BLOCKED: implementation (Phase 2 or later) |
 | P4 | Test data generator produces synthetic data only (no real student data) | NOT-RUN |
 | P5 | Monitoring of host metrics available | NOT-RUN |
 | P6 | Emergency stop and rollback procedure written | NOT-RUN |
+| P7 | D-023 Level 4 backup copies, administration, keys and deletion/retention controls are demonstrably outside ordinary production-account control | BLOCKED: no hosted candidate selected/verified |
 
 ## 3. Scenarios
 | ID | Scenario | Variables | Pass criterion (to be finalised before run) | Status |
@@ -31,7 +32,7 @@ Gate: pilot-validation criteria (D-015, D-014 condition 3). Not a prerequisite f
 | L-07 | Failure injection: database restart | DB restart | Recovery within documented time; no stale context | NOT-RUN |
 | L-08 | Tenant suspension during load | suspension | Login refused immediately; sessions terminated (TI-CONN-04) | NOT-RUN |
 | L-09 | Isolation under load: tenant A requests never return tenant B rows | parallel tenants | Zero cross-tenant rows in all responses | NOT-RUN |
-| L-10 | Restore-from-backup test (R7) on SYNTHETIC data: restored environment must re-apply tenant suspensions and deletions decided after the restore point | backup restore | Suspended tenant stays suspended after restore; no cross-tenant data; checksums match the evidence copy | BLOCKED: restore re-application mechanism not implemented (Phase 2 or later). Does NOT depend on Q-020 duration decisions; the retention policy is a separate pre-pilot gate |
+| L-10 | Restore-from-independent-backup test (R7) on SYNTHETIC data: restore must re-apply tenant suspensions/deletions decided after the restore point and demonstrate independent backup administration/key/deletion controls | backup restore | Suspended tenant stays suspended after restore; no cross-tenant data; checksums match the evidence copy; production credentials cannot delete all critical copies or decrypt all backups | BLOCKED: target backup boundary and restore re-application mechanism not implemented/verified (Phase 2 or later). Does NOT depend on Q-020 duration decisions; retention policy is a separate pre-pilot gate |
 | L-11 | Exercise the emergency stop and rollback runbook (EMERGENCY_STOP_AND_ROLLBACK_RUNBOOK.md) with recorded timing | incident drill | All steps executed in order; timings recorded; no tenant re-enabled before reopen criteria are met | NOT-RUN |
 
 ## 4. Measurements to record
