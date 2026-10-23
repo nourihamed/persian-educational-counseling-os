@@ -1,3 +1,17 @@
+# CURRENT STATUS ADDENDUM — INDEPENDENT CORRECTION PASS (2026-10-23)
+
+This addendum supersedes earlier current-status statements where they conflict; prior revision history is retained as historical traceability.
+
+- Reviewed the current Alt-5 design, authorization contract, active test catalog, hosting compatibility review, D-020/D-023 decisions, Q-023, PROJECT_STATE.md, SECURITY.md, TEST_PLAN.md and ROADMAP.md.
+- Corrected the normative design to distinguish D-023 Level 3 production-cell infrastructure/administrative independence from Level 4 independent administration of critical backup copies, keys, deletion/retention controls and restore.
+- Corrected authorization and TI-CELL-11 to require adversarial evidence for backup-admin/key/deletion independence; a separate bucket/service label is not sufficient. Reconciled SECURITY.md and TEST_PLAN.md so D-009 is not mistaken for the current Alt-5 cell boundary.
+- Provider comparisons and selection are deferred until hosted deployment planning, as directed by the Product Owner. No provider, plan, cost or capacity is selected or verified. This pass does not amend D-023: Q-023 remains OPEN and Phase 1 gate-blocking until the recorded candidate-compatibility and independent-review requirement is satisfied.
+- Active Alt-5 catalog: 46 contracts; 0 implemented, 0 executed, 0 passing. All active contracts remain NOT-RUN; the 123-contract pre-Q-022 catalog is archived and is not active acceptance evidence.
+- PR #3 remains open/unmerged. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains NOT STARTED / NOT AUTHORIZED; real student data remains prohibited under D-014.
+- Scope remains documentation-only. No application code, migration, infrastructure, executable test or runtime security evidence was created/run by this pass.
+
+---
+
 # CURRENT STATUS ADDENDUM — D-023 LEVEL 3 PRODUCTION / LEVEL 4 BACKUP TARGET (2026-10-23)
 
 - **Product Owner decision:** production architecture target is Level 3 infrastructure/administrative independence for cells, paired with Level 4 independent administrative control of critical backups/recovery. The project-specific requirements are in DECISION_LOG.md D-023.
