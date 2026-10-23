@@ -4,6 +4,12 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-10-23 — Phase 1 corrective alignment (design only)
+`docs:` Corrected the Option A / Option C contradiction: Option C's normative contract now uses per-tenant PostgreSQL login roles, a narrowly allowlisted tenant-mapping helper, and direct per-tenant pools. Marked legacy GUC-dependent TI-CTX contracts as SPEC-ONLY, revised direct-pool lifecycle contracts, corrected current project/review/report status, and aligned Q-016 pooler language with D-017.
+
+Verification boundary: documentation only. The 123 contracts remain specifications: 0 implemented, 0 executed, 0 passing. PR #3 remains unmerged and Phase 1 remains NOT APPROVED pending independent review. Phase 2 is not authorized and real student data remains prohibited by D-014.
+
+
 ### 2026-10-17 — Phase 1 Corrective Pass and Owner Decisions (design only)
 `docs:` Reconciled Q-019 gates (design direction, implementation validation, pilot authorization) in Q019 evaluation §6 and §8. Recorded owner decisions D-016 (Option C preferred design direction, subject to design review; Option D not selected; pool, lifecycle, shared-role prohibition; provisional cap of 10 tenants). Added TI-CONN-04/05/06; contracts recounted to 123. Updated PROJECT_STATE and ROADMAP status to separate Phase 0 (approved, closed), Phase 1 (submitted for review, not approved) and real-data pilot (prohibited).
 
