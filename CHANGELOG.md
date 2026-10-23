@@ -5,7 +5,7 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 ## [Unreleased]
 
 ### 2026-10-23 — Phase 1 corrective alignment (design only)
-`docs:` Corrected the Option A / Option C contradiction: Option C's normative contract now uses per-tenant PostgreSQL login roles, a narrowly allowlisted tenant-mapping helper, and direct per-tenant pools. Marked legacy GUC-dependent TI-CTX contracts as SPEC-ONLY, revised direct-pool lifecycle contracts, corrected current project/review/report status, and aligned Q-016 pooler language with D-017.
+`docs:` Corrected the Option A / Option C contradiction: Option C's normative contract now uses per-tenant PostgreSQL login roles, a narrowly allowlisted tenant-mapping helper, and direct per-tenant pools. Marked legacy GUC-dependent TI-CTX contracts as SPEC-ONLY, revised direct-pool lifecycle contracts, defined tenant-by-tenant data-migration rules under FORCE RLS, aligned Q-016 with D-017, and added Q-021 for explicit Product Owner disposition of broad-credential/owner-role compromise residuals.
 
 Verification boundary: documentation only. The 123 contracts remain specifications: 0 implemented, 0 executed, 0 passing. PR #3 remains unmerged and Phase 1 remains NOT APPROVED pending independent review. Phase 2 is not authorized and real student data remains prohibited by D-014.
 
