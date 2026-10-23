@@ -56,8 +56,8 @@ Conditions for Option B to be accepted:
 3. The deployment controller cannot routinely read tenant databases or decrypt backups.
 4. Critical backups, keys, deletion/retention controls and backup-administration identities are outside ordinary production-account control; a production-account compromise alone cannot destroy all recovery copies.
 5. Cross-cell break-glass is time-limited, dual-approved, ticketed, auditable, revocable and followed by review.
-5. Global cloud/root/organization-admin compromise is documented as a residual, with mitigations and detection; do not claim it is impossible.
-6. Cost and capacity are assessed on the actual proposed target environment before any real-data pilot.
+6. Global cloud/root/organization-admin compromise is documented as a residual, with mitigations and detection; do not claim it is impossible.
+7. Cost and capacity are assessed on the actual proposed target environment before any real-data pilot.
 
 This is a technical recommendation only. It does not silently change D-011 or select the hosting topology on behalf of the Product Owner.
 
