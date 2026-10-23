@@ -339,3 +339,8 @@ Verification boundary: PR #1 changed 15 documentation files only. GitHub returne
 - Tightened within-cell isolation: each tenant has a separate database and tenant-specific runtime credential within its cell; shared cell/host/root compromise remains a distinct residual.
 - Aligned PROJECT_STATE.md, ROADMAP.md, PHASE1_REPORT.md, SUPERVISOR_REVIEW.md and the Q-022 review record.
 - No application code, migration, infrastructure, runtime test, Phase 2 work, or real-data pilot was created or authorized. Active tests remain NOT-RUN; capacity and cost are unmeasured.
+
+### 2026-10-23 — Hosting compatibility review for Alt-5 (Q-023)
+`docs:` Reconciled D-011's hosting objective with D-020's cell requirements without silently selecting a new topology. Added `docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md` comparing a single shared VPS, separate host/VM per cell, separate cloud accounts/projects per cell, and Alt-4 dedicated tenant isolation. Recorded Q-023 as OPEN for Product Owner decision; recommendation is separate host/VM and network boundary per cell for further cost/capacity evaluation, with account/project separation as a stronger alternative.
+
+D-017's prior connection estimate is explicitly treated as historical estimate, not Alt-5 capacity evidence; per-cell connection budgets must be recalculated from the actual worker/pool topology. No vendor, price, capacity measurement, implementation, infrastructure, or executable test is claimed. PR #3 remains open/unmerged; Phase 1 NOT READY; Phase 2 and real-data use remain prohibited.
