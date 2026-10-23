@@ -1,3 +1,12 @@
+# CURRENT STATUS ADDENDUM — D-023 LEVEL 3 PRODUCTION / LEVEL 4 BACKUP TARGET (2026-10-23)
+
+- **Product Owner decision:** production architecture target is Level 3 infrastructure/administrative independence for cells, paired with Level 4 independent administrative control of critical backups/recovery. The project-specific requirements are in DECISION_LOG.md D-023.
+- **Interpretation:** this sets a target, not a provider selection or proof of implementation. Multiple VMs/Compose stacks in one shared root/admin boundary are not sufficient by themselves. Critical backups and their keys/deletion controls must be outside ordinary production-account control.
+- **Gate impact:** Q-023 remains OPEN because no hosting candidate has yet been verified against this target and the architecture-level trust boundary/residual still requires independent review. Vendor, price and measured capacity can be deferred; security requirements cannot be waived.
+- **Unchanged:** D-020 Alt-5 and D-014 real-data prohibition; Phase 1 NOT READY / NOT APPROVED; Phase 2 NOT STARTED / NOT AUTHORIZED. No code, infrastructure, executable tests or runtime security evidence is claimed.
+
+---
+
 # CURRENT STATUS ADDENDUM — D-022 Q-023 DEFERRAL (2026-10-23)
 
 - The Product Owner has deferred the final hosted topology/provider decision until hosted deployment planning. This records a schedule choice, not a topology selection or security waiver.
