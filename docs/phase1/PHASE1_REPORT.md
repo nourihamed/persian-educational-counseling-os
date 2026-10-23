@@ -1,3 +1,16 @@
+# CURRENT STATUS ADDENDUM — 2026-10-23 (Revision 11, D-020/Q-022)
+
+This addendum supersedes conflicting earlier status text below; older revision history is retained for traceability only.
+
+- **Product Owner decision:** Q-022 option A selected and recorded as D-020: Alt-5 hybrid isolation cells; Alt-4 is the security reference.
+- **Provisional blast-radius limits:** initial pilot proposal up to 10 tenants, no more than two tenants per cell (up to five cells), subject to measured cost/capacity. Neither capacity nor cost is yet validated; this is not pilot authorization.
+- **Active normative design:** `docs/phase1/TENANT_ISOLATION_DESIGN.md` rewritten for Alt-5; `AUTHORIZATION_CONTRACT.md` rewritten for trusted tenant-to-cell routing and object authorization; `TENANT_ISOLATION_TEST_CONTRACTS.md` is the new active Alt-5 catalog.
+- **Historical catalog:** 123 pre-Q-022 contracts archived at `docs/phase1/archive/TENANT_ISOLATION_TEST_CONTRACTS_PRE_Q022.md`. They are historical and do not retain PASS status. Active Alt-5 catalog contains 45 contracts.
+- **Test state:** active catalog 45 contracts; 0 implemented, 0 executed, 0 passing. No workflows/runs or runtime security evidence are implied.
+- **Hosting and operations:** D-011 single-VPS/Docker Compose and D-017 direct pool-size assumptions are not yet reconciled with the selected cell topology. Shared-host containers are not equivalent to separate operational isolation.
+- **Residual risks:** theft of all usable tenant credentials and global host/cloud/root compromise remain catastrophic scenarios. No topology-only guarantee is claimed.
+- **Gate:** Phase 1 remains NOT READY / NOT APPROVED pending independent review, hosting/capacity/cost analysis and required corrections. Phase 2 remains NOT STARTED / NOT AUTHORIZED. No code, migration, infrastructure, runtime test, or real student data was introduced or authorized.
+
 # CURRENT STATUS ADDENDUM — 2026-10-23 (Revision 10)
 
 This addendum is authoritative for the current state. The revision history below is retained for traceability; statements in earlier revision sections that conflict with this addendum are historical, not current operational guidance.
