@@ -321,3 +321,11 @@ Changed on the follow-up branch docs/post-merge-state-reconciliation:
 - PR #1 description — updated after merge to show the final closed/merged state, merge commit, unresolved questions, and runtime-verification boundary.
 
 Verification boundary: PR #1 changed 15 documentation files only. GitHub returned no workflow runs or commit statuses for its head. No application code, database migrations, endpoints, executable tests, CI workflows, deployment configuration, or runtime security proof were added. Phase 1 remains not started and not authorized. These corrections are on a separate follow-up branch and have not yet been merged into main.
+
+
+## 2026-10-23 — Product Owner selects stronger-architecture requirement (D-019)
+- Recorded Q-021 option B: current Option C residual risks (K-L-N and K-O) are not accepted as sufficient for Phase 1 approval.
+- Added Q-022 for explicit selection of a revised architecture after independent comparison.
+- Added `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md` (design study only; no final topology selected).
+- Updated `DECISION_LOG.md`, `OPEN_QUESTIONS.md`, `PROJECT_STATE.md`, `ROADMAP.md`, and `SUPERVISOR_REVIEW.md`.
+- No code, migrations, infrastructure, runtime tests, Phase 2 work, or real-data authorization was created or implied.
