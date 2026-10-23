@@ -56,7 +56,7 @@ Core architecture, database, product requirements, project scope, security, test
 
 ## Required Changes
 1. **Product Owner gate decision required:** either (A) authorize provider/candidate comparison now so Q-023 can be evidenced under D-023, or (B) explicitly amend the Phase 1 gate to defer candidate-specific verification until hosted deployment planning while keeping it a hard prerequisite before any hosted deployment or real-data pilot. I have not chosen between these options or changed D-023 silently.
-2. Reconcile GitHub's mergeable: false state for PR #3 before any merge; no merge was performed.
+2. Do not merge PR #3 until the Product Owner resolves the Q-023 Phase 1 gate. Direct GitHub API currently reports the branch clean/mergeable; mergeability does not equal phase approval.
 3. Before hosted deployment/pilot, select and verify a candidate against D-023, measure cost/capacity and run the required security, backup/restore, revocation and incident drills. Before real student data, all D-014 conditions and explicit written Product Owner approval remain mandatory.
 
 ## Recommendation
