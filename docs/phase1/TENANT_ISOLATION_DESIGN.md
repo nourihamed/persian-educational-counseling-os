@@ -238,30 +238,19 @@ Normative rules:
 
 Option C policies derive the tenant from the authenticated PostgreSQL identity through a protected mapping table. They do **not** read a session variable, custom GUC, request parameter, or client-supplied tenant ID.
 
-Illustrative shape only; exact schema, function and grants must be finalized in implementation review:
+The normative policy shape is `tenant_id = tenant_id_for_login()`, where the helper has **no tenant-id argument** and resolves the database-authenticated login to exactly one active tenant. Because tenant logins should not receive direct read access to the full mapping table, the helper is a narrowly allowlisted `SECURITY DEFINER` function. It must be owned by a non-login, non-superuser role; use a fixed safe `search_path`; schema-qualify every object; use no dynamic SQL; return NULL when no unique active mapping exists; expose no mapping rows or secrets; and have PUBLIC EXECUTE revoked with EXECUTE granted only to the intended tenant login roles. Its only authority is to read the owner-managed login-to-tenant mapping and return the tenant ID associated with the authenticated connection. The helper must not accept a caller-supplied role or tenant ID.
+
+Illustrative shape only; this is **not executable migration SQL**:
 
 ```sql
--- Illustrative only. tenant_login_map is owner-managed and not writable by tenant logins.
+-- tenant_id_for_login() is a reviewed, fixed-search-path SECURITY DEFINER helper.
+-- It resolves session_user (the authenticated login), not a caller-provided identifier.
 CREATE POLICY tenant_isolation ON plan
-  USING (
-    tenant_id = (
-      SELECT m.tenant_id
-      FROM tenant_login_map AS m
-      WHERE m.login_role = current_user
-        AND m.active = true
-    )
-  )
-  WITH CHECK (
-    tenant_id = (
-      SELECT m.tenant_id
-      FROM tenant_login_map AS m
-      WHERE m.login_role = current_user
-        AND m.active = true
-    )
-  );
+  USING (tenant_id = tenant_id_for_login())
+  WITH CHECK (tenant_id = tenant_id_for_login());
 ```
 
-This is a design sketch, not verified production-ready SQL. PostgreSQL policy behavior, owner/bypass paths, mapping-table access, and any helper-function choice must be proven with migrations and catalog tests. The map must have a unique constraint on login role and tenant role lifecycle must disable access promptly.
+This is a design sketch, not verified production-ready SQL. The helper is an explicit bypass surface and must be in the TI-BYP-03 allowlist, with negative tests proving it cannot return another tenant's mapping, expose the mapping table, or be repurposed as a cross-tenant read primitive. The map must have a unique constraint on login role; disabled or missing mappings fail closed. PostgreSQL policy behavior, function ownership, grants, owner/bypass paths, and role lifecycle must be proven with migrations and catalog/adversarial tests.
 
 ### 6.3 Required behavior for Option C
 
