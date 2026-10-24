@@ -15,8 +15,9 @@ The post-merge re-review of `main` found and corrected stale status text in `ROA
 - D-023 Level 3 production-cell and Level 4 independent critical-backup requirements are explicit, including key/deletion/retention controls and preservation of tenant lifecycle state during restore.
 - Global/root/provider control-plane compromise and all-credentials-compromised scenarios are explicitly treated as residual risks, not claimed eliminated.
 - Authorization contract rejects request-controlled tenant/cell routing and covers object-level access plus files, exports, reports, jobs, notifications, cache/search and audit paths.
-- Static recount of the active catalog found 47 unique active contract IDs and no duplicates. All remain specifications only: 0 implemented, 0 executed, 0 passing.
+- Static recount of the active catalog found 47 unique active contract IDs and no duplicates. TI-CELL-23 now explicitly covers the K-L-N broad credential-compromise residual through a tabletop/containment exercise. All 47 remain specifications only: 0 implemented, 0 executed, 0 passing.
 - D-024, Q-023, design status, project state, roadmap, phase report and hosting review have been aligned to distinguish design approval from deployment validation.
+- The stale Roadmap Phase 0 snapshot is explicitly historical; Q-019's old Phase 1 blocker note is superseded by D-024; SECURITY.md no longer treats RLS as the primary Alt-5 isolation boundary.
 
 ## Findings
 
