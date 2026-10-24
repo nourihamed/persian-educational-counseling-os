@@ -134,7 +134,7 @@ Before any pilot:
 - demonstrate the D-023 Level 4 backup boundary: critical copies, keys, deletion/retention controls and backup administration are outside ordinary production-account control;
 - measure CPU, memory, disk I/O, connection count, connection churn, latency, restore time, deploy time, and cost at the proposed ten-tenant/five-cell maximum;
 - test failure of one cell without disrupting unrelated cells;
-- document per-cell connection pool settings; D-017's former pool size 1 per tenant per process is a provisional historical assumption and must be re-evaluated against cell workers and actual concurrency;
+- document per-cell connection pool settings; D-017's recorded pilot baseline remains direct PostgreSQL connections with pool size 1 per tenant per process, but its compatibility and capacity under the Alt-5 cell topology are unverified and must be measured per PostgreSQL instance before hosting/pilot; changing the baseline requires a separate Product Owner decision;
 - confirm that migration, monitoring, backups, security patches, and incident response are affordable and operationally repeatable;
 - do not increase two tenants per cell or ten tenants overall without a separate owner decision backed by measurements.
 

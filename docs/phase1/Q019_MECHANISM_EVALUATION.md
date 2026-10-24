@@ -1,4 +1,4 @@
-> **Status notice 2026-10-23:** D-020 resolved Q-022 by selecting Alt-5 hybrid isolation cells. This Q-019 mechanism evaluation is historical comparison material only; Option C/Option D language below is not normative and must not be used as current acceptance criteria. The active design is `TENANT_ISOLATION_DESIGN.md`; the active test catalog is `TENANT_ISOLATION_TEST_CONTRACTS.md`.
+> **HISTORICAL / NON-NORMATIVE:** D-020 resolved Q-022 by selecting Alt-5 hybrid isolation cells. This Q-019 mechanism evaluation is historical comparison material only; Option C/Option D language and the review-time gate statements below are not current acceptance criteria. D-024 approved the provider-neutral Phase 1 design/documentation gate on 2026-10-24. Q-023 remains a pre-hosting gate; Phase 2 remains unauthorized and real student data remains prohibited under D-014. The active design is `TENANT_ISOLATION_DESIGN.md`; the active test catalog is `TENANT_ISOLATION_TEST_CONTRACTS.md`.
 
 ---
 

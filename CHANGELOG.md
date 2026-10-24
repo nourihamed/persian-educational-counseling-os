@@ -4,6 +4,12 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-10-24 — Final Alt-5 traceability and consistency follow-up
+`docs(security/test):` Independent follow-up review found that the category-level tenant-path inventory still referenced retired Option C/legacy TI-CTX/TI-CONN/TI-REPO/TI-RPT/TI-EXP/TI-PLAT/TI-FK/TI-BYP/TI-CFG contracts. Aligned the inventory with active Alt-5 contracts; updated the retention draft and target-environment load plan to use current cell/lifecycle contracts; corrected active Q-014/Q-016/Q-017/Q-018 dependencies; clarified D-017's recorded pool-size-1 baseline as unmeasured under Alt-5; and marked pre-D-020/D-024 architecture recommendations/reviews as historical.
+
+Added four explicit specifications: TI-API-14 (tenant-scoped audit-log reads), TI-FILE-03 (tenant-safe uploads), TI-JOB-04 (platform aggregate-job boundaries), and TI-CODE-01 (static guard for unreviewed privileged/raw-SQL access paths). The active catalog now has 51 unique specifications; the 41-row inventory covers 40 active Alt-5 paths (39 mapped, one blocked by Q-007) and explicitly excludes the historical Option D row; 0 specifications implemented, 0 executed, 0 passing. This is documentation and contract work only. No runtime code, migration, infrastructure, or executable test was created or run. Phase 1 remains APPROVED for design/documentation only under D-024; Q-023 remains a hard pre-hosting gate, Phase 2 remains unauthorized, and real student data remains prohibited under D-014.
+
+
 ### 2026-10-23 — Phase 1 corrective alignment (design only)
 `docs:` Corrected the Option A / Option C contradiction: Option C's normative contract now uses per-tenant PostgreSQL login roles, a narrowly allowlisted tenant-mapping helper, and direct per-tenant pools. Marked legacy GUC-dependent TI-CTX contracts as SPEC-ONLY, revised direct-pool lifecycle contracts, defined tenant-by-tenant data-migration rules under FORCE RLS, aligned Q-016 with D-017, and added Q-021 for explicit Product Owner disposition of broad-credential/owner-role compromise residuals.
 

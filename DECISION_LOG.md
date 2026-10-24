@@ -249,7 +249,7 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 ### بند ۱ — حالت اتصال (Q-016)
 1. برای پایلوت از **اتصال مستقیم PostgreSQL با pool محدود** استفاده می‌شود.
 2. اندازه‌ی pool هر تنانت در هر فرایند **۱** است (ESTIMATE تاریخیِ topology قبلی: با ۱۰ تنانت، ۶ فرایند و pool ۱، حدود ۷۰ اتصال؛ با pool ۲ حدود ۱۳۰ اتصال که از سقف پیش‌فرض ۱۰۰ بیشتر است). این اعداد **ظرفیت Alt-5 نیستند** و نباید برای هر cell یا کل سامانه به‌عنوان ظرفیت تأییدشده استفاده شوند. پس از انتخاب topology در Q-023، تعداد worker/process و poolها، اتصال‌های migration/admin/monitoring/recovery و سقف حافظه/اتصال باید برای هر PostgreSQL instance جداگانه محاسبه و در محیط هدف اندازه‌گیری شود. افزایش pool فقط پس از اندازه‌گیری و تأیید جداگانه مجاز است.
-3. **Transaction Pooling** (مثلاً PgBouncer) فعلاً پیش‌شرط پایلوت نیست. پذیرش آن بعداً فقط پس از تعریف و قبولی آزمون‌های سازگاریِ مخصوص transaction pooling و تصمیم جداگانه‌ی مالک محصول ممکن است. قراردادهای TI-CONN-04 و TI-CTX-11/12 پس از اصلاح، بررسی چرخه‌ی اتصال مستقیم در پایلوت هستند و به‌تنهایی سازگاری transaction pooling را اثبات نمی‌کنند.
+3. **Transaction Pooling** (مثلاً PgBouncer) فعلاً پیش‌شرط پایلوت نیست. پذیرش آن بعداً فقط پس از تعریف و قبولی آزمون‌های سازگاریِ مخصوص transaction pooling و تصمیم جداگانه‌ی مالک محصول ممکن است. شناسه‌های قدیمی TI-CONN-04 و TI-CTX-11/12 متعلق به کاتالوگ پیش از Alt-5 هستند و معیار پذیرش فعال محسوب نمی‌شوند؛ قرارداد فعال TI-CELL-15 فقط لغو اعتبارنامه و پایان نشست/اتصال‌های pool را پوشش می‌دهد و سازگاری transaction pooling را اثبات نمی‌کند.
 4. اگر prepared statements در حالت Transaction استفاده شوند، باید صراحتاً آزموده شوند؛ در غیر این صورت غیرفعال هستند.
 
 ### بند ۲ — نگهداری داده و حذف نقش (Q-020)
@@ -326,7 +326,7 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 1. Existing Option C remains a historical/preferred prior direction only; it is not approved as sufficient for the newly stated risk tolerance.
 2. D-009's shared-database MVP mechanism is reopened for architecture evaluation. Its underlying non-negotiable requirement—no counselor may access another tenant's data—remains unchanged.
 3. No implementation, migration, infrastructure change, Phase 2 work, or real-data pilot is authorized by D-019.
-4. Phase 1 remains NOT READY until the revised design is independently reviewed and the gate is explicitly changed.
+4. **Historical gate status (superseded by D-024, 2026-10-24):** when D-019 was recorded, Phase 1 remained NOT READY pending independent review of the revised design. D-020 subsequently selected Alt-5, and D-024 later approved the provider-neutral design/documentation gate only.
 
 **Reason:** The Product Owner prefers not to accept a design whose stated compromise paths can expose multiple tenants. Stronger isolation must be assessed honestly against process, credential, privileged-role, operational, and cost boundaries; merely splitting databases without addressing shared credentials/administrators is not sufficient.
 
@@ -350,7 +350,7 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 
 **Residual-risk statement:** If all valid tenant credentials are independently stolen and usable from an attacker-controlled network, or a global host/cloud administrator controlling every cell and key is compromised, the architecture cannot guarantee zero broad exposure. Controls must prevent a single routine worker, secret-distribution policy, or migration identity from becoming a universal access path. Global-root risk remains subject to explicit pre-pilot risk review; this decision does not silently accept it.
 
-**Consequences:** Q-022 is resolved as an architecture direction, not as proof of implementation or capacity. Phase 1 remains NOT READY pending independent review. No code, migration, infrastructure, Phase 2 work, or real-data pilot is authorized. D-014 remains in force.
+**Historical gate status (superseded by D-024, 2026-10-24):** at the time D-020 was recorded, Q-022 was resolved as an architecture direction, not as proof of implementation or capacity, and Phase 1 remained NOT READY pending independent review. D-024 later approved the provider-neutral Phase 1 design/documentation gate only. No code, migration, infrastructure, Phase 2 work, or real-data pilot is authorized by D-020; D-014 remains in force.
 
 **Affected artifacts:** `OPEN_QUESTIONS.md`, `docs/phase1/TENANT_ISOLATION_DESIGN.md`, `docs/phase1/AUTHORIZATION_CONTRACT.md`, `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`, `PROJECT_STATE.md`, `ROADMAP.md`, `docs/phase1/PHASE1_REPORT.md`.
 

@@ -88,7 +88,7 @@ Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written,
 **Status:** OPEN (recommended: 404 with body identical to a nonexistent object).
 **Decision needed from owner:** the exact status code for cross-tenant and nonexistent objects, and whether 403 is ever used for objects the caller can see but may not act on.
 **Why it matters:** existence of records in other tenants must not be revealed.
-**Dependency:** the test contracts (TI-API-01, TI-API-15, TI-REPO-02, TI-RPT-02, TI-FILE-01, TI-VER-01/05) are written so they pass under any choice, as long as the cross-tenant response equals the nonexistent-object response.
+**Active contract dependency:** TI-API-01 requires cross-tenant and nonexistent-object responses to be indistinguishable without fixing the final numeric status code; TI-API-03 covers forged referenced-object IDs, TI-FILE-01 covers cross-tenant file access, and TI-VER-01 covers version-linkage boundaries. These specifications remain NOT-RUN until implemented. Historical TI-API-15/TI-REPO/TI-RPT identifiers are not active acceptance contracts.
 **Must be resolved before:** Phase 4 endpoint implementation.
 **Blocks Phase 1 approval:** No.
 
@@ -99,9 +99,9 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Status (2026-10-17): DECIDED by Product Owner — D-017.** Pilot uses direct PostgreSQL connections with bounded per-tenant pool (size 1 per tenant per process). Transaction pooling (PgBouncer) is deferred and requires passing compatibility tests and a separate decision. Earlier proposal text follows for history: Proposal: PgBouncer in transaction pooling mode, with explicit per-mode limits, conditional on validation. Conditions proposed: (1) tenant identity and per-request security context are not carried over from a previous request on a recycled connection; (2) prepared statements, session variables and RLS (where still used) are tested explicitly under the chosen mode; (3) if compatibility is not demonstrated, the transaction mode is not used and pooling is limited until the issue is resolved; security is not traded for connection savings. Owner acceptance required; recorded in DECISION_LOG only after acceptance.
 **HISTORICAL (Revision 9; superseded by D-017):** the earlier draft said pooler mode remained OPEN and proposed transaction pooling. Current rule: direct PostgreSQL connections with pool size 1 per tenant per process; transaction pooling is deferred.
 **HISTORICAL (superseded by D-017; not current):** Status was OPEN (recommended: transaction pooling only if TI-CTX-11, TI-CTX-12 and TI-PLAT-05 pass in the chosen configuration; otherwise direct connections for the pilot).
-**Decision needed from owner:** pooler mode for the pilot. Owner may also choose to defer pooling altogether.
+**Decision needed from owner:** no change is needed for the current D-017 pilot baseline. If transaction pooling or a different pool size is proposed, obtain a separate Product Owner decision after topology-specific compatibility and capacity evidence.
 **Why it matters:** a pooled connection carrying one tenant's context into another tenant's request is a direct cross-tenant leak.
-**Dependency:** TI-CTX-11, TI-CTX-12, TI-PLAT-05 (ENV:pooler).
+**Active dependency:** TI-CELL-15 covers revocation and termination of active sessions/pools; it does not test transaction-pooling compatibility. Before any transaction-pooling proposal is accepted, define and execute separate mode-specific compatibility contracts in the implementation phase. Historical TI-CTX/TI-PLAT identifiers are not current acceptance evidence.
 **Must be resolved before:** Phase 3 infrastructure configuration.
 **Blocks Phase 1 approval:** No.
 
@@ -109,7 +109,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Status:** OPEN (recommended: one tenant per job run with payload-bound tenant_id; platform jobs restricted to aggregates; failure leaves no context set).
 **Decision needed from owner:** per-tenant job model versus one global job with per-row checks (not recommended).
 **Why it matters:** jobs and retries are a common cross-tenant path.
-**Dependency:** TI-JOB-01 to TI-JOB-05 (TI-JOB-05 is ENV:worker).
+**Active contract dependency:** TI-JOB-01, TI-JOB-02, TI-JOB-03 and TI-JOB-04 cover forged/stale tenant context, delayed jobs, cross-cell exports, and platform aggregate-job scope. The exact queue/worker model remains open; TI-JOB-05 is a retired identifier, not an active contract.
 **Must be resolved before:** Phase 3 queue design; Phase 17–18 scheduling.
 **Blocks Phase 1 approval:** No.
 
@@ -117,7 +117,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Status:** OPEN (recommended: S3-compatible object storage on the pilot host with `tenants/{tenant_id}/` namespacing, server-side authorization before signing, short TTL; no public buckets).
 **Decision needed from owner:** storage provider and hosting location (must be checked against D-011 for reachability), and maximum link lifetime.
 **Why it matters:** files are a direct cross-tenant read path if keys or links are guessable.
-**Dependency:** TI-FILE-01 to TI-FILE-07.
+**Active contract dependency:** TI-FILE-01, TI-FILE-02 and TI-FILE-03 cover tenant-scoped file access, URL revocation, and upload ownership/routing. Storage provider, URL lifetime and provider-specific controls remain open for the first file feature; retired TI-FILE-04..07 identifiers are not active contracts.
 **Must be resolved before:** the first file feature.
 **Blocks Phase 1 approval:** No.
 
@@ -128,7 +128,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 - Each cell has a separate PostgreSQL cluster/instance and network boundary.
 - Each tenant within a cell has its own database and tenant-specific runtime credential; an ordinary tenant credential must not access the other tenant in the same cell.
 - Worker/secret access, migration identities, backup permissions/keys, and recovery actions are scoped and audited; no routine global data-capable migrator/owner is allowed.
-- The active authorization contract and active 47-contract catalog define the current planned controls. All tests remain NOT-RUN; no security property is verified.
+- The active authorization contract and active 51-contract catalog define the current planned controls. All tests remain NOT-RUN; no security property is verified.
 - The initial pilot proposal remains capped at 10 tenants and at most two tenants per cell, subject to measured capacity/cost and separate written pilot approval.
 
 **Residual risks:** independent theft of all usable credentials and global host/cloud/root compromise can still create broad exposure. Topology alone does not eliminate these risks. D-014 continues to prohibit real student data until all pilot gates pass.
@@ -201,7 +201,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 ## Q-015 — Platform-admin cross-tenant access mechanism (RESOLVED 2026-10-15)
 **Decision (owner):** Option A — read-only, audited access through explicit Application paths, no `BYPASSRLS` role, no platform write operations in MVP.
 **Record:** DECISION_LOG D-013.
-**Effect on documents:** `TENANT_ISOLATION_DESIGN.md` §8 and §5.1; `TENANT_ISOLATION_TEST_CONTRACTS.md` TI-PLAT-06, 08, 09, 10 (TI-PLAT-06 no longer blocked); `TENANT_PATH_INVENTORY.md` P-25, P-26.
+**Effect on documents:** `TENANT_ISOLATION_DESIGN.md` §8 and §5.1; `TENANT_ISOLATION_TEST_CONTRACTS.md` TI-API-09 and TI-API-14; `TENANT_PATH_INVENTORY.md` P-25, P-26.
 **Note:** this resolves the product decision only. Implementation, and the test runs that prove it, are not done.
 
 

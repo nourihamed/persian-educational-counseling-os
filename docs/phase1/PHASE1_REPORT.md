@@ -2,10 +2,11 @@
 
 This entry supersedes earlier Phase 1 current-status addenda where they conflict. Historical review records remain below for traceability.
 
-- **Gate:** APPROVED — documentation/architecture design only, after post-merge independent re-review of `main` under D-024 and correction of the verified documentation inconsistencies.
-- **Reviewed scope:** Alt-5 isolation-cell design; threat/trust boundaries and residuals; D-023 Level 3 production and Level 4 critical-backup requirements; authorization contract; active test-contract coverage; consistency with decision log, open questions, security/test plan, roadmap and project state.
+- **Gate:** Phase 1 was APPROVED for documentation/architecture design only under D-024. This follow-up branch records additional traceability corrections found during a later independent pass; these proposed edits are not in `main` until their correction PR is merged.
+- **Reviewed scope:** Alt-5 isolation-cell design; threat/trust boundaries and residuals; D-023 Level 3 production and Level 4 critical-backup requirements; authorization contract; active test-contract coverage; tenant-path traceability inventory; retention/lifecycle draft; target-environment test plan; consistency with decision log, open questions, security/test plan, roadmap and project state.
 - **Q-023:** remains OPEN, but is no longer a Phase 1 design blocker under D-024. Provider/account topology selection, provider capability evidence, cost/capacity measurement and environment-only tests are mandatory before hosted deployment.
-- **Tests:** 47 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. This accurately reflects design-only scope and is not runtime proof.
+- **Tests:** 51 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. This accurately reflects design-only scope and is not runtime proof.
+- **Traceability follow-up:** 41 inventory rows: 40 active Alt-5 paths, 39 mapped, one BLOCKED by Q-007, one excluded historical Option D row. A static cross-check confirms every active contract ID maps to at least one active path row and every active path-row contract reference exists in the 51-contract catalog. Endpoint/record-level coverage is deferred to Phase 2/4 implementation work.
 - **PR #3:** squash-merged into main on 2026-10-24, merge commit b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa. The approved design documentation is now in the source of truth.
 - **Phase 2:** NOT STARTED / NOT AUTHORIZED; no automatic transition. Real student data remains prohibited under D-014 until all required implementation, security, operational, capacity, incident-drill, independent-review and explicit written Product Owner approval gates pass.
 - **Scope boundary:** no application code, migrations, database roles/grants/policies, infrastructure or executable tests were created/run as part of this design review.

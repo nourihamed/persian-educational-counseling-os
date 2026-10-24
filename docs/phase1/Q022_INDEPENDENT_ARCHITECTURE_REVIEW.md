@@ -1,4 +1,4 @@
-> **Decision update — 2026-10-23:** The Product Owner subsequently selected Q-022 option A; D-020 records Alt-5 hybrid isolation cells, with Alt-4 as the security reference and a proposed maximum of two tenants per cell for the initial pilot, subject to measured cost/capacity. This document's earlier A/B/C text is a pre-decision proposal and is superseded by D-020. The active normative design is `docs/phase1/TENANT_ISOLATION_DESIGN.md`; active tests are `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`. The within-cell design now requires a separate database and tenant-specific runtime credential per tenant. Q-022 is resolved as a direction only; Phase 1 remains NOT READY, and no implementation or real-data pilot is authorized.
+> **HISTORICAL REVIEW — NOT THE CURRENT GATE:** This review was written before D-020 and D-024. The Product Owner selected Alt-5 under D-020; the active normative design and active acceptance catalog are `docs/phase1/TENANT_ISOLATION_DESIGN.md` and `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`. Statements below that Phase 1 was NOT READY reflect the review-time state and are superseded by D-024's Phase 1 design/documentation-only APPROVED gate (2026-10-24). Q-023 remains a hard pre-hosting gate; Phase 2 remains unauthorized and real student data remains prohibited under D-014.
 
 ---
 
@@ -126,6 +126,6 @@ A single global owner or migrator with effective access to every tenant defeats 
 6. Revisit target-host architecture, connection/capacity estimates, backup/restore plan, emergency stop, monitoring, and on-call responsibilities. Measure capacity on the actual target environment; the provisional ten-tenant cap is not proof.
 7. Independently review the full resulting diff and trace each threat → control → contract → evidence → pass criterion before changing the Phase 1 gate.
 
-## 8. Current gate
+## 8. Historical gate disposition at the time of this review (superseded by D-024)
 
-**NOT READY / NOT APPROVED.** This is a recommendation, not a Product Owner decision. Q-022 remains OPEN until the owner chooses A/B/C or requests a different proposal. Phase 2 remains unauthorized. No code, migration, infrastructure, runtime test, or real-data pilot is authorized.
+**Historical status only: NOT READY / NOT APPROVED (2026-10-23).** This was a recommendation, not a Product Owner decision. Q-022 was subsequently resolved by D-020, and D-024 later approved the provider-neutral Phase 1 design/documentation gate on 2026-10-24. The current gate is recorded at the top of `PROJECT_STATE.md`, `docs/phase1/PHASE1_REPORT.md`, and `SUPERVISOR_REVIEW.md`. Phase 2 remains unauthorized; no code, migration, infrastructure, runtime test, or real-data pilot is authorized by this historical review.
