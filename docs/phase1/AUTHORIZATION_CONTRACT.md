@@ -1,7 +1,7 @@
 # AUTHORIZATION_CONTRACT.md — Alt-5 Hybrid Isolation Cells
 
 **Phase:** 1 — Architecture & Multi-Tenancy (design only)  
-**Status:** DRAFT aligned to D-020/Q-022 and D-023; pending independent review. No endpoint exists and no behavior is test-verified.  
+**Status:** DESIGN CONTRACT — reviewed for Phase 1 design readiness under D-024. No endpoint exists and no behavior is implemented or test-verified. Q-023 provider-specific validation remains a pre-hosting gate.  
 **Normative architecture:** `docs/phase1/TENANT_ISOLATION_DESIGN.md`; security targets D-020/D-023 apply. Historical pre-Q-022 contract versions are not normative.
 
 ## 1. Purpose and mandatory rule
