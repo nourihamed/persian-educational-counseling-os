@@ -88,7 +88,7 @@ Status legend: **OPEN** = no decision. **RECOMMENDED** = recommendation written,
 **Status:** OPEN (recommended: 404 with body identical to a nonexistent object).
 **Decision needed from owner:** the exact status code for cross-tenant and nonexistent objects, and whether 403 is ever used for objects the caller can see but may not act on.
 **Why it matters:** existence of records in other tenants must not be revealed.
-**Dependency:** the test contracts (TI-API-01, TI-API-15, TI-REPO-02, TI-RPT-02, TI-FILE-01, TI-VER-01/05) are written so they pass under any choice, as long as the cross-tenant response equals the nonexistent-object response.
+**Active contract dependency:** TI-API-01 requires cross-tenant and nonexistent-object responses to be indistinguishable without fixing the final numeric status code; TI-API-03 covers forged referenced-object IDs, TI-FILE-01 covers cross-tenant file access, and TI-VER-01 covers version-linkage boundaries. These specifications remain NOT-RUN until implemented. Historical TI-API-15/TI-REPO/TI-RPT identifiers are not active acceptance contracts.
 **Must be resolved before:** Phase 4 endpoint implementation.
 **Blocks Phase 1 approval:** No.
 
@@ -99,9 +99,9 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Status (2026-10-17): DECIDED by Product Owner — D-017.** Pilot uses direct PostgreSQL connections with bounded per-tenant pool (size 1 per tenant per process). Transaction pooling (PgBouncer) is deferred and requires passing compatibility tests and a separate decision. Earlier proposal text follows for history: Proposal: PgBouncer in transaction pooling mode, with explicit per-mode limits, conditional on validation. Conditions proposed: (1) tenant identity and per-request security context are not carried over from a previous request on a recycled connection; (2) prepared statements, session variables and RLS (where still used) are tested explicitly under the chosen mode; (3) if compatibility is not demonstrated, the transaction mode is not used and pooling is limited until the issue is resolved; security is not traded for connection savings. Owner acceptance required; recorded in DECISION_LOG only after acceptance.
 **HISTORICAL (Revision 9; superseded by D-017):** the earlier draft said pooler mode remained OPEN and proposed transaction pooling. Current rule: direct PostgreSQL connections with pool size 1 per tenant per process; transaction pooling is deferred.
 **HISTORICAL (superseded by D-017; not current):** Status was OPEN (recommended: transaction pooling only if TI-CTX-11, TI-CTX-12 and TI-PLAT-05 pass in the chosen configuration; otherwise direct connections for the pilot).
-**Decision needed from owner:** pooler mode for the pilot. Owner may also choose to defer pooling altogether.
+**Decision needed from owner:** no change is needed for the current D-017 pilot baseline. If transaction pooling or a different pool size is proposed, obtain a separate Product Owner decision after topology-specific compatibility and capacity evidence.
 **Why it matters:** a pooled connection carrying one tenant's context into another tenant's request is a direct cross-tenant leak.
-**Dependency:** TI-CTX-11, TI-CTX-12, TI-PLAT-05 (ENV:pooler).
+**Active dependency:** TI-CELL-15 covers revocation and termination of active sessions/pools; it does not test transaction-pooling compatibility. Before any transaction-pooling proposal is accepted, define and execute separate mode-specific compatibility contracts in the implementation phase. Historical TI-CTX/TI-PLAT identifiers are not current acceptance evidence.
 **Must be resolved before:** Phase 3 infrastructure configuration.
 **Blocks Phase 1 approval:** No.
 
