@@ -5,8 +5,9 @@
 - **Architecture:** D-020 Alt-5 hybrid isolation cells. D-023 Level 3 production-cell independence and Level 4 independent critical-backup control remain mandatory.
 - **Q-023:** OPEN as a hard pre-hosting deployment gate, not a Phase 1 design blocker. Provider/account topology, provider capability evidence, cost/capacity and environment-only tests are unselected/unverified and must be completed before hosted deployment. D-014 remains a hard real-data gate.
 - **Tests:** 51 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. No runtime test, migration, infrastructure or application code is claimed.
-- **Traceability (proposed follow-up branch):** 41 category-level path rows; 40 active Alt-5 paths, 39 mapped, one BLOCKED by Q-007 and one excluded Option D row. All 51 active contract IDs map to at least one active path row; endpoint-level coverage remains deferred.
-- **PR #3:** Merged into main by squash on 2026-10-24, merge commit b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa. The approved Phase 1 design documents are now in the source-of-truth branch.
+- **Traceability:** 41 category-level path rows; 40 active Alt-5 paths, 39 mapped, one BLOCKED by Q-007 and one excluded Option D row. All 51 active contract IDs map to at least one active path row; endpoint-level coverage remains deferred.
+- **PR #3:** Merged into main by squash on 2026-10-24, merge commit b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa.
+- **PR #6:** Merged into main by squash on 2026-10-24, merge commit fb16219d506998c9e074971927b55e322f32c21d. The 51-contract catalog and corrected 41-row path inventory are now in the source-of-truth branch.
 - **Phase 2:** NOT STARTED / NOT AUTHORIZED. Phase progression requires separate Product Owner authorization. Real student data remains prohibited under D-014.
 - **Historical material below:** older status snapshots and operational notes are retained for traceability. Where they conflict with the current summary above, the dated current summary and D-024 control; do not use older sections as the live gate.
 
