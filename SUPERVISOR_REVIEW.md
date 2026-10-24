@@ -31,7 +31,7 @@ The provider-neutral design documentation has passed independent review for Phas
 - No executable tests, migrations, infrastructure or runtime security evidence exist. This is consistent with the design-only scope, not a passed security test.
 
 ### LOW
-- PR #3 remains open and unmerged. GitHub currently reports mergeable=false; mergeability is repository metadata, not a substitute for this review or Product Owner merge decision.
+- PR #3 was squash-merged into main on 2026-10-24 (b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa) after the design-only gate was approved. The merge does not authorize Phase 2 or real student data.
 - Historical report/review sections retain prior gate snapshots for traceability; the dated current sections supersede them.
 
 ## Architecture
@@ -59,7 +59,7 @@ The current normative design and supporting documents consistently distinguish P
 4. Do not begin Phase 2 automatically; obtain the separate Product Owner authorization required by the project workflow.
 
 ## Recommendation
-Approve Phase 1 for provider-neutral architecture and documentation readiness only. Keep Q-023 open as a deployment gate; preserve the D-014 real-data prohibition. PR #3 is not merged, and this review does not merge it on the Product Owner's behalf.
+Approve Phase 1 for provider-neutral architecture and documentation readiness only. Keep Q-023 open as a deployment gate; preserve the D-014 real-data prohibition. PR #3 has now been merged; this does not authorize Phase 2 or real student data.
 
 ## Gate Status
 **APPROVED — Phase 1 design/documentation only.** This is not runtime-security approval, provider approval, hosted-deployment authorization, Phase 2 authorization, or real-data approval.
