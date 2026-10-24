@@ -1,28 +1,17 @@
-# CURRENT SUPERVISOR ADDENDUM — PHASE 1 DOCUMENTATION CORRECTIONS AND LIVE STATUS (2026-10-23)
-
-- Independently re-read the current Phase 1 design, authorization contract, active test catalog, hosting review, decision log, open questions, test plan, security baseline, roadmap and state report.
-- Corrected `TENANT_ISOLATION_DESIGN.md` to explicitly encode D-023 Level 3 cell infrastructure/administrative independence and Level 4 independent control of critical backup administration, keys, deletion/retention and restore.
-- Corrected `ARCHITECTURE.md`, `DATABASE.md`, `PRODUCT_REQUIREMENTS.md`, `PROJECT_SCOPE.md`, `SECURITY.md` and `TEST_PLAN.md` so D-009's former shared-database mechanism is historical, not the active Phase 1 topology; RLS/tenant_id remain defense-in-depth where applicable.
-- Corrected `AUTHORIZATION_CONTRACT.md` and active contract TI-CELL-11 to require evidence of independent backup administration and to reject a separate bucket/service name as sufficient proof.
-- Corrected `PRE_PILOT_RECOMMENDATIONS.md`, `TARGET_ENV_LOAD_TEST_PLAN.md`, `EMERGENCY_STOP_AND_ROLLBACK_RUNBOOK.md` and `DATA_RETENTION_SCHEDULE_DRAFT.md` to remove a single-host recommendation and encode D-023 backup independence/restore requirements.
-- Provider comparison/selection is deferred as directed by the Product Owner; no provider, topology, cost or capacity is claimed selected/verified. This does not silently amend D-023: Q-023 remains OPEN and Phase 1 gate-blocking until the independent review and candidate-compatibility requirement recorded in D-023 are satisfied.
-- Active Alt-5 test catalog: 46 specifications; 0 implemented, 0 executed, 0 passing. The archived 123-contract catalog is historical and does not count as active acceptance evidence.
-- PR #3 remains open/unmerged. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 is NOT STARTED / NOT AUTHORIZED; real student data remains prohibited under D-014. No application code, migration, infrastructure or executable test was created/run by this correction pass.
-
 # CURRENT PROJECT STATE — PHASE 1 DESIGN GATE (2026-10-24)
 
 - **Phase 0:** CLOSED by Product Owner on 2026-10-14; PR #1 merged.
-- **Phase 1:** Independent documentation/architecture review is complete and the design-only gate is **APPROVED** under D-024. The approved scope is provider-neutral Alt-5 architecture, trust boundaries/residual risks, authorization contract, and planned acceptance-test specifications. This is not runtime-security approval.
-- **Architecture:** D-020 Alt-5 hybrid isolation cells; D-023 Level 3 production-cell independence and Level 4 independent critical-backup control remain mandatory. D-024 separates design approval from provider-specific deployment validation.
-- **Q-023:** OPEN as a hard pre-hosting deployment gate. Provider, account topology, cost/capacity and environment-only evidence remain unselected/unverified and must be completed before hosted deployment; D-014 remains a hard real-data gate.
-- **Test state:** 46 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. No runtime test, migration, infrastructure or application code is claimed.
-- **PR #3:** Open and unmerged at the time of this update. Approval is recorded on the design branch; do not treat it as merged into main.
-- **Phase 2:** NOT STARTED / NOT AUTHORIZED. Phase progression remains a separate Product Owner decision. Real student data remains prohibited under D-014.
-- **Historical notes below:** earlier addenda and status lines that say Phase 1 is NOT READY predate D-024 and are retained as history, not the current gate.
+- **Phase 1:** **APPROVED — design/documentation only** after independent review under D-024. Approved scope: provider-neutral Alt-5 architecture, trust boundaries/residual risks, authorization contract, and planned acceptance-test specifications. This is not runtime-security approval.
+- **Architecture:** D-020 Alt-5 hybrid isolation cells. D-023 Level 3 production-cell independence and Level 4 independent critical-backup control remain mandatory.
+- **Q-023:** OPEN as a hard pre-hosting deployment gate, not a Phase 1 design blocker. Provider/account topology, provider capability evidence, cost/capacity and environment-only tests are unselected/unverified and must be completed before hosted deployment. D-014 remains a hard real-data gate.
+- **Tests:** 46 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. No runtime test, migration, infrastructure or application code is claimed.
+- **PR #3:** Open and unmerged at the time of this update. The approval applies to the reviewed design branch; changes are not yet in main.
+- **Phase 2:** NOT STARTED / NOT AUTHORIZED. Phase progression requires separate Product Owner authorization. Real student data remains prohibited under D-014.
+- **Historical addenda below:** earlier NOT READY status snapshots predate D-024 and are retained for traceability, not as the current gate.
 
 ---
 
-# CURRENT SUPERVISOR ADDENDUM — D-023 PRODUCTION / BACKUP INDEPENDENCE TARGET (2026-10-23)
+# HISTORICAL ADDENDUM — D-023 PRODUCTION / BACKUP INDEPENDENCE TARGET (superseded by D-024) (2026-10-23)
 
 - **Product Owner decision:** target Level 3 infrastructure and administrative independence for production cells, plus Level 4 independent administrative/control boundary for critical backups and recovery. See DECISION_LOG.md D-023.
 - **Meaning:** the levels are project-specific targets, not evidence that any provider or deployment meets them. A shared host/account with multiple VMs or Compose stacks is not by itself sufficient. Backup data, keys and deletion/retention controls must be outside ordinary production-account control.
