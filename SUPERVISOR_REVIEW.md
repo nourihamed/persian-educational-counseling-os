@@ -4,7 +4,7 @@
 Phase 1 — Architecture & Multi-Tenancy (design/documentation only)
 
 ## Scope Reviewed
-Independent follow-up review of proposed branch `docs/phase1-final-traceability-review`, based on `main` at `aef0848d63cad6443ee870dbe8f9f287397e7d60` after PR #3 merge `b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa`; reviewed Alt-5 design, authorization contract, active acceptance catalog, tenant-path inventory, retention/lifecycle draft, target-environment plan, D-020/D-023/D-024, Q-023, project state, roadmap, security/test plan, hosting compatibility review, restore/offboarding requirements and changelog. The follow-up branch contains documentation corrections proposed for merge; runtime controls remain unimplemented.
+Independent follow-up review was performed on `docs/phase1-final-traceability-review`, based on `main` at `aef0848d63cad6443ee870dbe8f9f287397e7d60` after PR #3 merge `b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa`. The corrections were squash-merged via PR #6 into `main` at `fb16219d506998c9e074971927b55e322f32c21d`; a post-merge read verified the current source-of-truth files. Reviewed Alt-5 design, authorization contract, active acceptance catalog, tenant-path inventory, retention/lifecycle draft, target-environment plan, D-020/D-023/D-024, Q-023, project state, roadmap, security/test plan, hosting compatibility review, restore/offboarding requirements and changelog. Runtime controls remain unimplemented.
 
 ## Summary
 The independent follow-up review found that `TENANT_PATH_INVENTORY.md` still mapped active paths to retired TI-CTX/TI-CONN/TI-REPO/TI-RPT/TI-EXP/TI-PLAT/TI-FK/TI-BYP/TI-CFG identifiers and described Option C as the selected path; this broke threat/control/contract traceability. It also found stale Option C/TI-CONN references in the retention draft, a stale TI-CONN reference in the load-test plan, obsolete active dependencies for Q-014/Q-016/Q-017/Q-018, an unmarked D-020 review-time gate statement, and ambiguous old gate statements in historical design reviews. The correction pass aligned these records to Alt-5/D-020/D-023/D-024, added explicit active contracts for audit-log reads, file uploads, platform aggregate jobs and privileged/raw-SQL path scanning, and recounted the catalog to 51 unique IDs. These remain specifications only: 0 implemented, 0 executed, 0 passing. D-024 defers provider comparison until hosted-deployment planning; Q-023 remains OPEN and mandatory before hosted deployment. No provider or runtime control is represented as verified. Approval is limited to architecture/design readiness and does not authorize Phase 2, hosting, or real student data.
@@ -33,7 +33,8 @@ The independent follow-up review found that `TENANT_PATH_INVENTORY.md` still map
 - No executable tests, migrations, infrastructure or runtime security evidence exist. This is consistent with the design-only scope, not a passed security test.
 
 ### LOW
-- PR #3 was squash-merged into main on 2026-10-24 (b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa) after the design-only gate was approved. The merge does not authorize Phase 2 or real student data.
+- PR #3 was squash-merged into main on 2026-10-24 (b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa) after the design-only gate was approved; PR #6's documentation-only follow-up was squash-merged at fb16219d506998c9e074971927b55e322f32c21d. Neither merge authorizes Phase 2 or real student data.
+- GitHub reported no workflow runs or commit statuses for the PR #6 head; static checks in this review are not a CI run or runtime security test.
 - Historical report/review sections retain prior gate snapshots for traceability; the dated current sections supersede them.
 
 ## Architecture
@@ -52,7 +53,7 @@ Design requirements are explicit; implementation is unverified. Critical backups
 Active inventory: 51 unique specifications; 0 implemented, 0 executed, 0 passing. Environment-only checks require a representative target and remain mandatory before hosted deployment/pilot. No CI pass or runtime security proof is claimed.
 
 ## Documentation
-The current normative design and supporting documents distinguish Phase 1 design readiness from Q-023 candidate-specific validation and D-014 real-data authorization. This follow-up branch corrects the path-to-contract mapping and active references; its proposed changes are not yet part of `main` until the correction PR is merged. Historical records are retained but explicitly marked non-normative where needed.
+The current normative design and supporting documents distinguish Phase 1 design readiness from Q-023 candidate-specific validation and D-014 real-data authorization. PR #6 is merged, so the corrected path-to-contract mapping and active references are now in `main`. Historical records are retained but explicitly marked non-normative where needed.
 
 ## Required Changes
 1. **Before hosted deployment:** select a provider/topology and close Q-023 with evidence for Level 3 cell boundaries and Level 4 backup independence.
@@ -61,10 +62,10 @@ The current normative design and supporting documents distinguish Phase 1 design
 4. Do not begin Phase 2 automatically; obtain the separate Product Owner authorization required by the project workflow.
 
 ## Recommendation
-The Phase 1 design/documentation gate remains APPROVED under D-024. The follow-up correction branch is ready for PR review after final verification. Keep Q-023 open as a deployment gate; preserve the D-014 real-data prohibition. PR #3 is merged; this does not authorize Phase 2 or real student data.
+The Phase 1 design/documentation gate remains APPROVED under D-024. The follow-up traceability corrections are merged in PR #6; post-merge static verification passed. Keep Q-023 open as a deployment gate; preserve the D-014 real-data prohibition. PR #3 and PR #6 are merged; this does not authorize Phase 2 or real student data.
 
 ## Gate Status
-**APPROVED — Phase 1 design/documentation only; follow-up traceability correction reviewed on the proposed branch.** The correction PR must be merged for these document fixes to become part of `main`. This is not runtime-security approval, provider approval, hosted-deployment authorization, Phase 2 authorization, or real-data approval.
+**APPROVED — Phase 1 design/documentation only; traceability corrections merged and verified on `main` at `fb16219d506998c9e074971927b55e322f32c21d`.** This is not runtime-security approval, provider approval, hosted-deployment authorization, Phase 2 authorization, or real-data approval.
 
 ---
 
