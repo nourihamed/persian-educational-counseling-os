@@ -28,9 +28,9 @@ This inventory is a denominator for category-level paths, not proof that endpoin
 | P-16 | Reports (student and multi-student) | Read | Authorized tenant-scoped report query | TI-API-05, TI-JOB-03 | Mapped |
 | P-17 | Exports (CSV, Excel, PDF) | Read | Authorized tenant-scoped query and tenant-bound output artifact | TI-API-05, TI-JOB-03 | Mapped |
 | P-18 | File upload | Write | Server-authorized owning record; server-derived cell and object key | TI-FILE-03 | Mapped |
-| P-19 | File download and signed URL | Read | Record ownership, server authorization and scoped storage access | TI-FILE-01, TI-FILE-02 | Mapped |
+| P-19 | File download and signed URL | Read | Record ownership, server authorization and scoped storage access | TI-API-06, TI-FILE-01, TI-FILE-02 | Mapped |
 | P-20 | Notification creation | Write | Server-validated recipient and recipient tenant | TI-NOTIF-01 | Mapped |
-| P-21 | Notification delivery, retry and dead-letter handling | Read/Write | Trusted delivery row; revalidate tenant and recipient at send time | TI-NOTIF-01, TI-JOB-01, TI-JOB-02 | Mapped |
+| P-21 | Notification delivery, retry and dead-letter handling | Read/Write | Trusted delivery row; revalidate tenant and recipient at send time | TI-API-07, TI-NOTIF-01, TI-JOB-01, TI-JOB-02 | Mapped |
 | P-22 | Telegram/SMS adapter calls (outbound) | Outbound | Authorized notification row and validated recipient; provider credentials never exposed to tenant | TI-NOTIF-01 | Mapped (tenant scope only; provider-specific controls are later work) |
 | P-23 | Tenant-bound background jobs | Read/Write | Job identity is re-resolved from trusted registry/lifecycle state; payload identifiers are not authority | TI-JOB-01, TI-JOB-02, TI-JOB-03 | Mapped |
 | P-24 | Platform aggregate jobs | Read (approved aggregates only) | Explicit platform job identity and aggregate-only allowlist | TI-JOB-04 | Mapped |
@@ -47,7 +47,7 @@ This inventory is a denominator for category-level paths, not proof that endpoin
 ## Notes and gate boundaries
 
 - The active acceptance catalog is `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`. Every ID used in the active rows above is required to exist in that catalog. Old TI-CTX/TI-CONN/TI-REPO/TI-RPT/TI-EXP/TI-PLAT/TI-FK/TI-BYP/TI-CFG references are historical and must not be presented as active tests.
-- TI-CELL-01/02 cover trusted routing; TI-CELL-03/06/08/22 cover cell/network/database/credential boundaries; TI-CELL-09/10 cover migration and owner scope; TI-CELL-11/12 cover backup and restore; TI-CELL-15 covers revocation/session/pool closure; TI-CELL-16 covers the cell occupancy ceiling.
+- TI-CELL-01/02 cover trusted routing; TI-CELL-03/06/08/22 cover cell/network/database/credential boundaries; TI-CELL-04/05/17 cover worker/secret scope and worker-compromise blast radius; TI-CELL-09/10 cover migration and owner scope; TI-CELL-11/12 cover backup and restore; TI-CELL-13/14 cover deployment and break-glass; TI-CELL-15 covers revocation/session/pool closure; TI-CELL-16/20/21 cover occupancy, moves and lifecycle; TI-CELL-18/23 cover global-root and all-credentials-compromised residual exercises; TI-OPS-01/02/03 cover operations, capacity and break-glass verification.
 - TI-API-05 and TI-API-08 are category-level controls for reports/exports/aggregates and search/cache/logging respectively. Phase 2/4 must add endpoint- and record-specific rows; this inventory does not claim such endpoints already exist.
 - TI-API-14 is an explicit tenant-scoped audit-read contract. TI-FILE-03 covers upload ownership/routing; it does not replace later file-content validation, malware scanning, size limits, or storage-provider security tests.
 - TI-JOB-04 constrains platform aggregate jobs to approved aggregate fields and prohibits routine tenant-content access.
@@ -58,12 +58,12 @@ This inventory is a denominator for category-level paths, not proof that endpoin
 
 ## Summary
 
-- Inventory rows: 33.
-- Active Alt-5 paths: 32 (P-01–P-31 and P-33).
-- Mapped active paths: 31; P-09 is representative-only and P-30/P-31 depend on a planned static guard, all NOT-RUN until implementation.
+- Inventory rows: 41.
+- Active Alt-5 paths: 40 (P-01–P-31 and P-33–P-41).
+- Mapped active paths: 39; P-09 is representative-only and P-30/P-31 depend on a planned static guard, all NOT-RUN until implementation.
 - BLOCKED active paths: 1 (P-27, Q-007); not counted as covered.
 - Excluded from active architecture: 1 (P-32, Option D).
-- Unmapped active paths: 0 at category level; endpoint/record-level coverage is NOT MEASURABLE until implementation phases.
+- Unmapped active paths: 0 at category level; every active contract ID is mapped to at least one path row. Endpoint/record-level coverage is NOT MEASURABLE until implementation phases.
 - Tests implemented/executed/passing: 0 / 0 / 0. This inventory does not claim runtime security.
 
-Recount command (run from repository root): `grep -cE "^\\| P-[0-9]+ " docs/phase1/TENANT_PATH_INVENTORY.md` should print 33.
+Recount command (run from repository root): `grep -cE "^\\| P-[0-9]+ " docs/phase1/TENANT_PATH_INVENTORY.md` should print 41.
