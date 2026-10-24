@@ -13,7 +13,7 @@ This entry supersedes earlier Phase 1 current-status addenda where they conflict
 # HISTORICAL CORRECTION PASS — 2026-10-23 (superseded by D-024)
 ---
 
-# CURRENT STATUS ADDENDUM — D-023 LEVEL 3 PRODUCTION / LEVEL 4 BACKUP TARGET (2026-10-23)
+# HISTORICAL STATUS ADDENDUM (superseded by D-024) — D-023 LEVEL 3 PRODUCTION / LEVEL 4 BACKUP TARGET (2026-10-23)
 
 - **Product Owner decision:** production architecture target is Level 3 infrastructure/administrative independence for cells, paired with Level 4 independent administrative control of critical backups/recovery. The project-specific requirements are in DECISION_LOG.md D-023.
 - **Interpretation:** this sets a target, not a provider selection or proof of implementation. Multiple VMs/Compose stacks in one shared root/admin boundary are not sufficient by themselves. Critical backups and their keys/deletion controls must be outside ordinary production-account control.
@@ -22,7 +22,7 @@ This entry supersedes earlier Phase 1 current-status addenda where they conflict
 
 ---
 
-# CURRENT STATUS ADDENDUM — D-022 Q-023 DEFERRAL (2026-10-23)
+# HISTORICAL STATUS ADDENDUM (superseded by D-024) — D-022 Q-023 DEFERRAL (2026-10-23)
 
 - The Product Owner has deferred the final hosted topology/provider decision until hosted deployment planning. This records a schedule choice, not a topology selection or security waiver.
 - The exact vendor, instance sizes, prices and target-environment capacity measurements may be deferred until that planning stage. The Phase 1 architecture must still define and independently justify Alt-5's cell host/network boundaries, shared control-plane privileges, global administrator/root compromise residual, and scoped credentials/backup/key access.
@@ -32,7 +32,7 @@ This entry supersedes earlier Phase 1 current-status addenda where they conflict
 
 ---
 
-# CURRENT STATUS ADDENDUM — 2026-10-23 (Revision 11, D-020/Q-022)
+# HISTORICAL STATUS ADDENDUM (superseded by D-024) — 2026-10-23 (Revision 11, D-020/Q-022)
 
 This addendum supersedes conflicting earlier status text below; older revision history is retained for traceability only.
 
@@ -56,7 +56,7 @@ D-017's prior connection arithmetic is not an Alt-5 capacity result. Connection 
 
 **Gate:** Phase 1 remains NOT READY / NOT APPROVED pending independent review, hosting/capacity/cost analysis and required corrections. Phase 2 remains NOT STARTED / NOT AUTHORIZED. No code, migration, infrastructure, runtime test, or real student data was introduced or authorized.
 
-# CURRENT STATUS ADDENDUM — 2026-10-23 (Revision 10)
+# HISTORICAL STATUS ADDENDUM (superseded by D-024) — 2026-10-23 (Revision 10)
 
 This addendum is authoritative for the current state. The revision history below is retained for traceability; statements in earlier revision sections that conflict with this addendum are historical, not current operational guidance.
 
