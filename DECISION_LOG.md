@@ -369,7 +369,7 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 **Scope:** This decision records a development strategy only. It does not authorize Phase 2, create infrastructure or code, approve Phase 1, or authorize real student data. See `docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md`.
 
 
-## D-022 — Q-023 deferral: local development first, hosting decision later
+## D-022 — Q-023 deferral: local development first, hosting decision later (historical gate wording superseded by D-024)
 **Status: ACCEPTED — explicit Product Owner decision, 2026-10-23.**
 
 **Decision:** Defer selection of the eventual hosted topology/provider until hosted deployment planning. Continue only the local-development strategy under D-021, using synthetic data and local-only services. Q-023 remains OPEN; this decision does not select Q-023 topology option B/C/Alt-4 and does not amend D-020's Alt-5 security requirements.
@@ -378,12 +378,12 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 
 **Unchanged constraints:** D-020 remains normative; each cell needs its own PostgreSQL cluster/instance and network boundary; no shared-host container arrangement may be represented as independent against host/root compromise. The proposed maximum of two tenants per cell and ten tenants total remains provisional pending measured cost/capacity. D-014 remains in force: no real student data until all applicable security, implementation, operational, capacity, independent-review and written-approval gates pass.
 
-**Consequences:** local development may proceed only when separately authorized by the phase plan; this decision does not approve Phase 1, authorize Phase 2, authorize implementation beyond the approved phase, approve hosting, or authorize real student data. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains NOT STARTED / NOT AUTHORIZED.
+**Consequences as recorded on 2026-10-23 (historical gate status, superseded by D-024):** local development may proceed only when separately authorized by the phase plan. At that time Phase 1 remained NOT READY / NOT APPROVED. D-024 subsequently approved only the provider-neutral design/documentation gate; Phase 2 remains NOT STARTED / NOT AUTHORIZED, hosting is not approved, and real student data remains prohibited.
 
 **Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, docs/phase1/PHASE1_REPORT.md, SUPERVISOR_REVIEW.md, docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md.
 
 
-## D-023 — Production isolation target: Level 3 cells with Level 4 independent critical backups
+## D-023 — Production isolation target: Level 3 cells with Level 4 independent critical backups (historical gate status superseded by D-024)
 **Status: ACCEPTED — explicit Product Owner decision, 2026-10-23.**
 
 **Decision:** The target for the production architecture is **Level 3 administrative and infrastructure independence for production isolation cells**, combined with **Level 4 independence for critical backups/recovery**. These labels are project-specific security targets, not a claim that a provider or deployment already satisfies them.
@@ -403,7 +403,7 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 
 **Scope and unresolved work:** This decision sets the required security target, not the final provider, vendor, plan, price, account topology, or implementation. Q-023 remains OPEN until the hosting compatibility review establishes that a real candidate can meet the target and the architecture-level trust boundaries/residuals are independently reviewed. Exact pricing and measured capacity may remain deferred until hosted deployment planning; no security condition is waived.
 
-**Unchanged constraints:** D-020 Alt-5 remains the selected isolation direction; D-014 continues to prohibit real student data until required implementation, security, operations, capacity and independent-review gates pass and the Product Owner gives explicit written approval. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains NOT STARTED / NOT AUTHORIZED. No code, infrastructure, migration or executable test is authorized or claimed by this decision.
+**Unchanged constraints as recorded on 2026-10-23 (historical gate status, superseded by D-024):** D-020 Alt-5 remains the selected isolation direction; D-014 continues to prohibit real student data until required implementation, security, operations, capacity and independent-review gates pass and the Product Owner gives explicit written approval. At that time Phase 1 remained NOT READY / NOT APPROVED. D-024 later approved the provider-neutral design/documentation gate only; Phase 2 remains NOT STARTED / NOT AUTHORIZED. No code, infrastructure, migration or executable test is authorized or claimed by this decision.
 
 **Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, ROADMAP.md, SECURITY.md, TEST_PLAN.md, docs/phase1/PHASE1_REPORT.md, SUPERVISOR_REVIEW.md, docs/phase1/TENANT_ISOLATION_DESIGN.md, docs/phase1/AUTHORIZATION_CONTRACT.md, docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md, docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md, CHANGELOG.md.
 
