@@ -12,7 +12,8 @@ Counselor Feedback → Plan Adjustment → Repeat
 
 ## Project Status
 
-**Phase 0 — Product & Business Model Foundation — CLOSED (Product Owner, 2026-10-14).** PR #1 was merged into `main` on 2026-10-14. Phase 1 is not authorized.
+**Phase 0 — Product & Business Model Foundation — CLOSED (Product Owner, 2026-10-14).** PR #1 was merged into `main` on 2026-10-14.
+**Phase 1 — Architecture & Multi-Tenancy — APPROVED for design/documentation only (D-024, 2026-10-24).** PR #3 was merged into `main` on 2026-10-24. This does not verify runtime security or authorize Phase 2, hosted deployment, or real student data. Phase 2 remains NOT STARTED / NOT AUTHORIZED pending separate Product Owner approval; D-014's real-data prohibition remains in force.
 No backend, frontend, database, authentication, billing, Telegram, SMS, or AI functionality exists yet. This repository currently contains documentation only. See `PROJECT_STATE.md` for the authoritative current status.
 
 ## Start Here

@@ -7,7 +7,7 @@
 - **Tests:** 47 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. No runtime test, migration, infrastructure or application code is claimed.
 - **PR #3:** Merged into main by squash on 2026-10-24, merge commit b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa. The approved Phase 1 design documents are now in the source-of-truth branch.
 - **Phase 2:** NOT STARTED / NOT AUTHORIZED. Phase progression requires separate Product Owner authorization. Real student data remains prohibited under D-014.
-- **Historical addenda below:** earlier NOT READY status snapshots predate D-024 and are retained for traceability, not as the current gate.
+- **Historical material below:** older status snapshots and operational notes are retained for traceability. Where they conflict with the current summary above, the dated current summary and D-024 control; do not use older sections as the live gate.
 
 ---
 
@@ -45,7 +45,7 @@ D-011's original hosting objective remains a product objective, but a single sha
 D-017's previous global connection arithmetic is an estimate from the earlier topology, not capacity evidence for Alt-5. Per-cell connection and cost budgets remain unmeasured. No vendor, price, host topology, capacity, implementation, infrastructure, or test execution is claimed. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 and real student data remain prohibited.
 
 
-### Current Verified Operational Status
+### HISTORICAL SNAPSHOT — SUPERSEDED BY CURRENT SUMMARY ABOVE (2026-10-24)
 
 **Phase 0 — Product & Business Model Foundation:** recorded as approved by the Product Owner on 2026-10-14 and merged via PR #1. This is a historical project decision; this update does not re-audit the full Phase 0 history.
 
@@ -74,12 +74,15 @@ D-017's previous global connection arithmetic is an estimate from the earlier to
 - D-017: direct per-tenant connections and size-1 pools for pilot; 10-tenant cap provisional.
 - D-018: emergency stop/rollback runbook remains draft and must be exercised before pilot.
 
-### Required next action
+### Historical next-action snapshot (superseded by the current Phase 1 gate above)
 
-Product Owner selected Alt-5 under D-020/Q-022. Independently review the rewritten Alt-5 design, authorization contract and 46-contract active catalog; specifically verify tenant-specific database/credential isolation within each two-tenant cell. Reconcile D-011 hosting and D-017 pool/capacity assumptions. No Phase 2 or real data before approval.
+The former pending action was to independently review the Alt-5 design and test catalog. That design-only review was subsequently completed and recorded under D-024; the current active catalog contains 47 specifications. Q-023 remains a pre-hosting gate, Phase 2 requires separate Product Owner authorization, and real student data remains prohibited under D-014.
 
 ---
-### Current Phase
+
+> **Historical-record boundary:** Sections below this point preserve earlier phase snapshots, checklists and process notes. They are not the live project status and may contain statements that were accurate at the time but are now superseded. Use the current summary at the top of this file for present status.
+
+### Historical phase snapshot (Phase 0, as recorded at the time)
 **PHASE 0 — Product & Business Model Foundation — FORMALLY CLOSED by Product Owner on 2026-10-14; PR #1 merged on 2026-10-14**
 
 Authorized by: project owner.

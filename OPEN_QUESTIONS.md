@@ -149,7 +149,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 
 **Important boundary:** This decision selects the requirement to redesign, not a final topology. It does not accept the residual risks, approve Option C, or select database-per-tenant/shared cluster, separate clusters, or a hybrid. See Q-022 and `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md`.
 
-**Consequences:** Phase 1 remains NOT READY; Phase 2 is NOT STARTED and NOT AUTHORIZED; no implementation or real-data pilot is authorized. D-014 remains in force.
+**Historical consequence at decision time (2026-10-23; superseded for the design-only gate by D-024 on 2026-10-24):** Phase 1 was NOT READY pending architecture selection and review. The current provider-neutral Phase 1 design/documentation gate is now APPROVED under D-024; this does not authorize Phase 2, hosting, implementation, or real student data. Q-023 remains a hard pre-hosting gate, and D-014 remains in force.
 
 **Resolution evidence:** explicit Product Owner instruction in conversation on 2026-10-23; recorded in D-019.
 
