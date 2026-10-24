@@ -2,7 +2,7 @@
 
 Status: DRAFT prepared by the technical lead (implementation agent). NOT APPROVED. Not a legal opinion.
 Owner: Product Owner (approval). Legal, tax and privacy review: REQUIRED before approval; responsible reviewer NOT YET ASSIGNED by the Product Owner.
-Decision context: D-017 accepted the principle (no automatic role deletion; five-step lifecycle). The retention durations below are NOT set. Every duration marked NEEDS-DECISION must be decided by the Product Owner after review. No legal or tax duration is assumed in this draft.
+Decision context: D-017 accepted the principle (no automatic role deletion; five-step lifecycle). Active architecture is D-020 Alt-5; old Option C role/connection references are not normative. The retention durations below are NOT set. Every duration marked NEEDS-DECISION must be decided by the Product Owner after review. No legal or tax duration is assumed in this draft.
 
 Legend for durations:
 - NEEDS-DECISION: no valid basis yet; owner and reviewers must set it.
@@ -21,7 +21,7 @@ Legend for durations:
 | R6 | Files and exports | uploaded files, generated reports and exports | Student, counselor | Service delivery | Counselor of record |
 | R7 | Backups and snapshots | full database backups, file backups, point-in-time logs | All of the above | Disaster recovery | Platform operator |
 | R8 | Operational logs | application and infrastructure logs (must exclude secrets, tokens, passwords) | Users (indirect) | Operations, incident review | Platform operator |
-| R9 | Tenant database roles and grants | role metadata, grant and mapping records (Option C) | Counselor (indirect) | Access isolation | Platform operator |
+| R9 | Tenant database roles, grants and cell/tenant routing metadata | tenant-specific database role/credential metadata, cell-scoped migration identities, tenant-to-cell mapping and lifecycle records (Alt-5) | Counselor (indirect) | Access isolation, revocation and auditability | Platform operator |
 
 ## 2. Retention schedule per category
 
@@ -48,10 +48,10 @@ Legend for durations:
 ## 4. Tenant role deletion checklist (aligned with D-017 and Q-020)
 
 Roles are deleted only when every item is complete and recorded:
-1. Login disabled immediately on suspension or offboarding (done and verified on the target environment; NOT-RUN).
+1. Required action: disable login immediately on suspension or offboarding. Verification status: NOT-RUN until evidence is recorded on the selected target environment.
 2. Privileges on tenant objects revoked.
-3. Sessions terminated and pooled connections cleared (TI-CONN-04 scope; NOT-RUN).
-4. Ownership check: role owns no shared application object (TI-CONN-05; NOT-RUN).
+3. Sessions terminated and pooled connections cleared (TI-CELL-15; NOT-RUN).
+4. Ownership/dependency check: tenant and cell roles own no unintended shared application objects; routine migration identity cannot cross cells (TI-CELL-09, TI-CELL-10; NOT-RUN).
 5. Dependency check: no grants, policies or mapping rows reference the role, except those being removed in the same step.
 6. Audit records retained per R3 (NEEDS-DECISION).
 7. Retention obligations for R1, R4 and R7 confirmed (NEEDS-DECISION / LEGAL-REVIEW).
