@@ -885,9 +885,9 @@ No executable tests were run in this documentation-only reconciliation. No workf
 
 ---
 
-# TEMPORARY SECTION — Phase 1 Pending Supervisor Review (revision 5)
+# HISTORICAL REVIEW SNAPSHOT — Phase 1 Pending Supervisor Review (revision 5; superseded by the dated 2026-10-24 gate above)
 
-> **Temporary status marker.** Phase 1 is under independent review. The latest reviewer-stated gate is **NOT READY** (PR #3 review). This section is NOT a verdict and NOT an approval. It stays until a final dated entry replaces it in a separate commit after reviewer approval and owner acceptance.
+> **Historical status marker — superseded.** The statements in this section record the earlier review state before D-020/D-023/D-024 and before PR #3 was merged. They are retained for traceability only; do not use them as current gate status. The current verdict is the dated 2026-10-24 review at the top of this file.
 
 ## Phase
 PHASE 1 — Architecture & Multi-Tenancy (design and documentation only)
