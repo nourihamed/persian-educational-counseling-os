@@ -406,3 +406,15 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 **Unchanged constraints:** D-020 Alt-5 remains the selected isolation direction; D-014 continues to prohibit real student data until required implementation, security, operations, capacity and independent-review gates pass and the Product Owner gives explicit written approval. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains NOT STARTED / NOT AUTHORIZED. No code, infrastructure, migration or executable test is authorized or claimed by this decision.
 
 **Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, ROADMAP.md, SECURITY.md, TEST_PLAN.md, docs/phase1/PHASE1_REPORT.md, SUPERVISOR_REVIEW.md, docs/phase1/TENANT_ISOLATION_DESIGN.md, docs/phase1/AUTHORIZATION_CONTRACT.md, docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md, docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md, CHANGELOG.md.
+
+
+## D-024 — Separate Phase 1 design approval from provider-specific deployment validation
+**Status: ACCEPTED — Product Owner direction recorded from the explicit instruction to defer hosting-provider comparison, 2026-10-24.**
+
+**Decision:** Phase 1 is a documentation/design phase. Its gate evaluates whether the provider-neutral Alt-5 architecture, trust boundaries, residual risks, authorization contract, and planned acceptance contracts are sufficiently specified and independently reviewed. Selecting a hosting provider, proving a provider's account/admin capabilities, pricing, capacity measurements, and running environment-only tests are deferred to hosted-deployment planning and are not prerequisites to approving the Phase 1 design documentation.
+
+**Hard deployment/pilot gate:** Q-023 remains OPEN. Before any hosted deployment, the selected candidate and topology must be checked against D-020/D-023; Level 3 cell infrastructure/administrative independence and Level 4 independent critical-backup administration must be evidenced; cost/capacity and restore/failure-containment tests must be completed. Before any real student data, all D-014 implementation, security, operational, capacity, incident-drill, independent-review, and written Product Owner approval conditions remain mandatory.
+
+**Security boundary unchanged:** this decision does not select a provider/topology, waive Q-023 for deployment, weaken D-020/D-023, claim that the architecture is implemented, treat planned tests as passed, authorize Phase 2 automatically, or permit real student data. The current phase may receive a design-only APPROVED verdict only after the independent documentation review finds no remaining Phase 1 design blocker.
+
+**Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, ROADMAP.md, docs/phase1/TENANT_ISOLATION_DESIGN.md, docs/phase1/AUTHORIZATION_CONTRACT.md, docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md, docs/phase1/PHASE1_REPORT.md, docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md, SUPERVISOR_REVIEW.md, CHANGELOG.md.
