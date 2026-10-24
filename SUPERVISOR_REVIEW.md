@@ -4,10 +4,10 @@
 Phase 1 — Architecture & Multi-Tenancy (design/documentation only)
 
 ## Scope Reviewed
-Post-merge independent review of `main` after PR #3 merge `b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa` and corrective commits through `8724ec3368998e3bff3f04af6c544e115d79d04e`; current Alt-5 design, authorization contract, active acceptance catalog, D-020/D-023/D-024, Q-023, project state, roadmap, security/test plan, hosting compatibility review, target-environment plan, restore/offboarding requirements and changelog.
+Post-merge independent review of `main` after PR #3 merge `b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa` and corrective commits through `8724ec3368998e3bff3f04af6c544e115d79d04e`; current Alt-5 design, authorization contract, active acceptance catalog, tenant-path inventory, retention/lifecycle draft, target-environment plan, D-020/D-023/D-024, Q-023, project state, roadmap, security/test plan, hosting compatibility review, restore/offboarding requirements and changelog.
 
 ## Summary
-The post-merge re-review of `main` found and corrected stale status text in `ROADMAP.md` and the Q-019 section of `OPEN_QUESTIONS.md`, aligned generic RLS wording in `SECURITY.md` with Alt-5, and added an explicit K-L-N all-credentials-compromised tabletop contract. A further consistency pass found stale pre-D-024 status wording in `README.md`, the legacy status snapshot in `PROJECT_STATE.md`, and historical consequences under D-022/D-023 and Q-021; this correction pass explicitly labels those statements as historical and aligns the current README with the approved design-only gate. The provider-neutral design gate is consistent across the current status documents. D-024 defers provider comparison until hosted-deployment planning; Q-023 remains OPEN and mandatory before hosted deployment. No provider or runtime control is represented as verified. Approval is limited to architecture/design readiness and does not authorize Phase 2, hosting, or real student data.
+The independent follow-up review found that `TENANT_PATH_INVENTORY.md` still mapped active paths to retired TI-CTX/TI-CONN/TI-REPO/TI-RPT/TI-EXP/TI-PLAT/TI-FK/TI-BYP/TI-CFG identifiers and described Option C as the selected path; this broke threat/control/contract traceability. It also found stale Option C/TI-CONN references in the retention draft, a stale TI-CONN reference in the load-test plan, obsolete active dependencies for Q-014/Q-016/Q-017/Q-018, an unmarked D-020 review-time gate statement, and ambiguous old gate statements in historical design reviews. The correction pass aligned these records to Alt-5/D-020/D-023/D-024, added explicit active contracts for audit-log reads, file uploads, platform aggregate jobs and privileged/raw-SQL path scanning, and recounted the catalog to 51 unique IDs. These remain specifications only: 0 implemented, 0 executed, 0 passing. D-024 defers provider comparison until hosted-deployment planning; Q-023 remains OPEN and mandatory before hosted deployment. No provider or runtime control is represented as verified. Approval is limited to architecture/design readiness and does not authorize Phase 2, hosting, or real student data.
 
 ## Passed
 - Alt-5 hybrid isolation cells are the active design; each cell has its own host/VM and network boundary, PostgreSQL cluster/instance, and each tenant has a separate database and runtime credential.
@@ -15,8 +15,8 @@ The post-merge re-review of `main` found and corrected stale status text in `ROA
 - D-023 Level 3 production-cell and Level 4 independent critical-backup requirements are explicit, including key/deletion/retention controls and preservation of tenant lifecycle state during restore.
 - Global/root/provider control-plane compromise and all-credentials-compromised scenarios are explicitly treated as residual risks, not claimed eliminated.
 - Authorization contract rejects request-controlled tenant/cell routing and covers object-level access plus files, exports, reports, jobs, notifications, cache/search and audit paths.
-- Static recount of the active catalog found 47 unique active contract IDs and no duplicates. TI-CELL-23 now explicitly covers the K-L-N broad credential-compromise residual through a tabletop/containment exercise. All 47 remain specifications only: 0 implemented, 0 executed, 0 passing.
-- D-024, Q-023, design status, project state, roadmap, phase report and hosting review have been aligned to distinguish design approval from deployment validation.
+- Static recount of the active catalog found 51 unique active contract IDs and no duplicates. TI-CELL-23 explicitly covers the K-L-N broad credential-compromise residual; TI-API-14, TI-FILE-03, TI-JOB-04 and TI-CODE-01 close the identified category-level traceability gaps. All 51 remain specifications only: 0 implemented, 0 executed, 0 passing.
+- D-024, Q-023, design status, tenant-path inventory, retention/lifecycle draft, target-environment plan, project state, roadmap, phase report and hosting review have been aligned to distinguish design approval from deployment validation.
 - The stale Roadmap Phase 0 snapshot is explicitly historical; Q-019's old Phase 1 blocker note is superseded by D-024; SECURITY.md no longer treats RLS as the primary Alt-5 isolation boundary.
 
 ## Findings
@@ -48,7 +48,7 @@ The contract requires server-verified tenant membership, trusted cell mapping, o
 Design requirements are explicit; implementation is unverified. Critical backups must have independent administration, keys and deletion/retention controls outside ordinary production-account control. A separate bucket/service name alone is insufficient evidence.
 
 ## Testing
-Active inventory: 47 unique specifications; 0 implemented, 0 executed, 0 passing. Environment-only checks require a representative target and remain mandatory before hosted deployment/pilot. No CI pass or runtime security proof is claimed.
+Active inventory: 51 unique specifications; 0 implemented, 0 executed, 0 passing. Environment-only checks require a representative target and remain mandatory before hosted deployment/pilot. No CI pass or runtime security proof is claimed.
 
 ## Documentation
 The current normative design and supporting documents consistently distinguish Phase 1 design readiness from Q-023 candidate-specific validation and D-014 real-data authorization. Historical records are retained but superseded by this dated review and D-024.
