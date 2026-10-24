@@ -173,21 +173,23 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Blocks Phase 1 approval:** No.
 
 ## Q-023 — سازگاری میزبانی سرور با Alt-5 و هدف استقلال سطح ۳/۴
-**Status: OPEN — security target selected by D-023; provider/topology compatibility and independent gate review remain unresolved.**
+**Status: OPEN — provider/topology compatibility remains a mandatory pre-hosting deployment gate; it is not a blocker for the Phase 1 design-only gate under D-024.**
 
-**Product Owner decision D-023 (2026-10-23):** Target Level 3 infrastructure and administrative independence for production cells, combined with Level 4 independence for critical backups/recovery. These are project-specific target levels, not proof that any provider or deployment satisfies them. See DECISION_LOG.md D-023.
+**Product Owner decisions:** D-023 (2026-10-23) sets the security target: Level 3 infrastructure/administrative independence for production cells and Level 4 independent administration/control of critical backups/recovery. D-024 (2026-10-24) defers provider-specific comparison and validation until hosted-deployment planning while allowing Phase 1 to be reviewed on provider-neutral design criteria. Neither decision proves that any provider or deployment meets the target.
 
-**Required target:**
-- Each production cell must have a distinct host/VM and network boundary, its own PostgreSQL cluster/instance, tenant-specific databases/runtime credentials, and cell-scoped workers, secrets and migration identities.
-- A routine administrator/credential for one cell must not automatically administer other cells. Separate cloud accounts/projects or a demonstrably equivalent independent administrative boundary must be evaluated. Multiple VMs/Compose stacks under one shared root/admin boundary do not alone meet this target.
-- Critical backups must be outside ordinary production-account administrative control, with independent backup administration, encryption keys and deletion/retention controls. Production-account compromise alone should not allow all recovery copies to be destroyed.
-- Provider-wide control-plane compromise remains an explicit residual; no absolute immunity is claimed.
+**Provider-neutral design requirements reviewed in Phase 1:**
+- Each production cell requires a distinct host/VM and network boundary, its own PostgreSQL cluster/instance, tenant-specific databases/runtime credentials, and cell-scoped workers, secrets, and migration identities.
+- Routine administrators/credentials for one cell must not automatically administer other cells. Separate cloud accounts/projects or a demonstrably equivalent administrative boundary must be evaluated. Multiple VMs/Compose stacks under one unrestricted shared root/admin boundary are not sufficient.
+- Critical backups must be outside ordinary production-account administrative control, with independent backup administration, encryption keys, and deletion/retention controls. Production-account compromise alone must not be able to destroy all critical recovery copies.
+- Provider-wide control-plane compromise and compromise of a genuinely global organization/root identity remain explicit residual risks; no absolute-immunity claim is made.
+- The architecture and active test contracts must explicitly cover these boundaries and residuals. The current Phase 1 documents do so as design requirements only; no runtime proof is claimed.
 
-**Why still OPEN / gate impact:** The target has now been selected, but the current repository has not verified which Iranian hosting candidate can implement it, whether account/project controls are truly independent, or whether the backup separation is effective. The architecture-level trust boundary and residual must be documented and independently reviewed before Phase 1 approval. Therefore Q-023 remains a Phase 1 gate item until that review closes the design gap; exact vendor, pricing and measured capacity may be deferred to hosted deployment planning.
+**Why Q-023 remains OPEN:** no actual hosting candidate, account topology, provider capability, price, or capacity has been selected or verified. These are intentionally deferred and must be resolved before hosted deployment. The open question tracks this future validation; it no longer blocks approval of the provider-neutral Phase 1 design documentation under D-024.
 
-**Deferred until hosted deployment planning:** select provider and exact topology; verify account/organization admin behavior, private networking and scoped identities; itemize cost; recalculate per-cell resource/connection budgets; and validate provisioning, monitoring, credential rotation, failure containment, backup immutability/retention and restore drills on the target environment.
+**Deferred until hosted-deployment planning:** select the provider and exact topology; verify organization/account administrators, private networking and scoped identities; itemize cost; recalculate per-cell resource/connection budgets; and validate provisioning, monitoring, credential rotation, failure containment, backup immutability/retention, and restore drills on the actual target environment.
 
-**Unchanged constraints:** D-020 Alt-5 remains normative; the proposed maximum of two tenants per cell and ten tenants total is provisional, not measured capacity. D-014 prohibits real student data until all applicable implementation, security-test, operational, capacity and independent-review gates pass and the Product Owner gives explicit written approval. Local development does not prove Alt-5 isolation. No executable tests have been run and no runtime security is proven. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains unauthorized.
+**Hard gates:** Q-023 must be resolved with evidence before any hosted deployment. D-014 remains in force: no real student data until all applicable implementation, security-test, operational, capacity, incident-drill, and independent-review gates pass and the Product Owner gives explicit written approval. The proposed maximum of two tenants per cell and ten tenants total remains provisional, not measured capacity. Local development does not prove Alt-5 isolation. Phase 1 design approval does not authorize Phase 2 automatically or authorize real student data.
+
 
 ## بخش Resolved / Closed
 
