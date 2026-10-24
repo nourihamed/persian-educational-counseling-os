@@ -128,7 +128,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 - Each cell has a separate PostgreSQL cluster/instance and network boundary.
 - Each tenant within a cell has its own database and tenant-specific runtime credential; an ordinary tenant credential must not access the other tenant in the same cell.
 - Worker/secret access, migration identities, backup permissions/keys, and recovery actions are scoped and audited; no routine global data-capable migrator/owner is allowed.
-- The active authorization contract and active 46-contract catalog define the current planned controls. All tests remain NOT-RUN; no security property is verified.
+- The active authorization contract and active 47-contract catalog define the current planned controls. All tests remain NOT-RUN; no security property is verified.
 - The initial pilot proposal remains capped at 10 tenants and at most two tenants per cell, subject to measured capacity/cost and separate written pilot approval.
 
 **Residual risks:** independent theft of all usable credentials and global host/cloud/root compromise can still create broad exposure. Topology alone does not eliminate these risks. D-014 continues to prohibit real student data until all pilot gates pass.
