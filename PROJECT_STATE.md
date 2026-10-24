@@ -20,7 +20,7 @@
 
 ---
 
-# CURRENT SUPERVISOR ADDENDUM — D-022 Q-023 DEFERRAL (2026-10-23)
+# HISTORICAL SUPERVISOR ADDENDUM (superseded by D-024) — D-022 Q-023 DEFERRAL (2026-10-23)
 
 - **Product Owner decision:** final hosted topology/provider selection is deferred until hosted deployment planning. Continue local-first development only under D-021's restrictions (synthetic data, local-only services, no production secrets).
 - **Independent gate impact:** this deferral is not a security waiver. Q-023 remains OPEN and remains a Phase 1 blocker because the Alt-5 cell hosting and administrative compromise boundaries are not yet sufficiently resolved and independently accepted. The exact vendor/pricing/capacity may be deferred; the architecture-level trust boundary may not be silently dropped.
