@@ -28,8 +28,8 @@
 
 ---
 
-# PROJECT_STATE.md
-## Operational Memory — authoritative current status
+# HISTORICAL PROJECT-STATE SNAPSHOT — superseded by the current status at the top of this file
+## Operational Memory — historical snapshot; not authoritative current status
 
 Last Updated: 2026-10-23 (D-021 local-first development direction recorded; Q-023 server topology remains open)
 ### Current development strategy — D-021
