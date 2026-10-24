@@ -66,7 +66,7 @@ Approve Phase 1 for provider-neutral architecture and documentation readiness on
 
 ---
 
-# CURRENT INDEPENDENT REVIEW ADDENDUM — D-023 TARGET RECORDED; VERIFICATION STILL REQUIRED (2026-10-23)
+# HISTORICAL INDEPENDENT REVIEW ADDENDUM (superseded by 2026-10-24 review) — D-023 TARGET RECORDED; VERIFICATION STILL REQUIRED (2026-10-23)
 
 ## Decision reviewed
 The Product Owner selected a project security target: Level 3 infrastructure/administrative independence for production cells, paired with Level 4 independent control of critical backups/recovery. The normative details are recorded in DECISION_LOG.md D-023.
@@ -84,7 +84,7 @@ D-020 Alt-5 and D-014's real-student-data prohibition remain unchanged. Phase 1 
 
 ---
 
-# CURRENT INDEPENDENT REVIEW ADDENDUM — D-022 / Q-023 DEFERRAL (2026-10-23)
+# HISTORICAL INDEPENDENT REVIEW ADDENDUM (superseded by 2026-10-24 review) — D-022 / Q-023 DEFERRAL (2026-10-23)
 
 ## Decision reviewed
 The Product Owner selected Q-023 option A in the sense of deferring the final hosted topology/provider decision until hosted deployment planning, while continuing local-first development under D-021.
