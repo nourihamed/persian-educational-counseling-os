@@ -4,7 +4,7 @@
 - **Phase 1:** **APPROVED — design/documentation only** after independent review under D-024. Approved scope: provider-neutral Alt-5 architecture, trust boundaries/residual risks, authorization contract, and planned acceptance-test specifications. This is not runtime-security approval.
 - **Architecture:** D-020 Alt-5 hybrid isolation cells. D-023 Level 3 production-cell independence and Level 4 independent critical-backup control remain mandatory.
 - **Q-023:** OPEN as a hard pre-hosting deployment gate, not a Phase 1 design blocker. Provider/account topology, provider capability evidence, cost/capacity and environment-only tests are unselected/unverified and must be completed before hosted deployment. D-014 remains a hard real-data gate.
-- **Tests:** 47 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. No runtime test, migration, infrastructure or application code is claimed.
+- **Tests:** 51 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. No runtime test, migration, infrastructure or application code is claimed.
 - **PR #3:** Merged into main by squash on 2026-10-24, merge commit b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa. The approved Phase 1 design documents are now in the source-of-truth branch.
 - **Phase 2:** NOT STARTED / NOT AUTHORIZED. Phase progression requires separate Product Owner authorization. Real student data remains prohibited under D-014.
 - **Historical material below:** older status snapshots and operational notes are retained for traceability. Where they conflict with the current summary above, the dated current summary and D-024 control; do not use older sections as the live gate.
@@ -76,7 +76,7 @@ D-017's previous global connection arithmetic is an estimate from the earlier to
 
 ### Historical next-action snapshot (superseded by the current Phase 1 gate above)
 
-The former pending action was to independently review the Alt-5 design and test catalog. That design-only review was subsequently completed and recorded under D-024; the current active catalog contains 47 specifications. Q-023 remains a pre-hosting gate, Phase 2 requires separate Product Owner authorization, and real student data remains prohibited under D-014.
+The former pending action was to independently review the Alt-5 design and test catalog. That design-only review was subsequently completed and recorded under D-024; the current active catalog contains 51 specifications. Q-023 remains a pre-hosting gate, Phase 2 requires separate Product Owner authorization, and real student data remains prohibited under D-014.
 
 ---
 
