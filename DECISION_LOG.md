@@ -350,7 +350,7 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 
 **Residual-risk statement:** If all valid tenant credentials are independently stolen and usable from an attacker-controlled network, or a global host/cloud administrator controlling every cell and key is compromised, the architecture cannot guarantee zero broad exposure. Controls must prevent a single routine worker, secret-distribution policy, or migration identity from becoming a universal access path. Global-root risk remains subject to explicit pre-pilot risk review; this decision does not silently accept it.
 
-**Consequences:** Q-022 is resolved as an architecture direction, not as proof of implementation or capacity. Phase 1 remains NOT READY pending independent review. No code, migration, infrastructure, Phase 2 work, or real-data pilot is authorized. D-014 remains in force.
+**Historical gate status (superseded by D-024, 2026-10-24):** at the time D-020 was recorded, Q-022 was resolved as an architecture direction, not as proof of implementation or capacity, and Phase 1 remained NOT READY pending independent review. D-024 later approved the provider-neutral Phase 1 design/documentation gate only. No code, migration, infrastructure, Phase 2 work, or real-data pilot is authorized by D-020; D-014 remains in force.
 
 **Affected artifacts:** `OPEN_QUESTIONS.md`, `docs/phase1/TENANT_ISOLATION_DESIGN.md`, `docs/phase1/AUTHORIZATION_CONTRACT.md`, `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`, `PROJECT_STATE.md`, `ROADMAP.md`, `docs/phase1/PHASE1_REPORT.md`.
 
