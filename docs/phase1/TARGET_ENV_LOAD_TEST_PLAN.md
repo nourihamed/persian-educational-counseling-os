@@ -5,8 +5,8 @@ Gate: pilot-validation criteria (D-015, D-014 condition 3). Not a prerequisite f
 
 ## 1. Objectives
 - Measure, not estimate, tenant count capacity, connection usage, memory, CPU, latency and error behaviour on the target host.
-- Verify the D-017 configuration: direct PostgreSQL connections, pool size 1 per tenant per process.
-- Verify the active Alt-5 acceptance catalog under load and in the target environment, including per-tenant database/credential boundaries, cross-cell network denial, trusted routing, revocation, backup independence and restore lifecycle. The active catalog is `TENANT_ISOLATION_TEST_CONTRACTS.md`; historical TI-CONN/TI-CTX identifiers are not current acceptance evidence unless explicitly mapped.
+- Verify the D-017 recorded baseline: direct PostgreSQL connections, pool size 1 per tenant per process. This is not capacity evidence for Alt-5 until measured per PostgreSQL instance; any change requires a separate Product Owner decision. Transaction pooling remains deferred and requires separate compatibility contracts/tests and a separate decision.
+- Verify the active Alt-5 acceptance catalog under load and in the target environment, including per-tenant database/credential boundaries, cross-cell network denial, trusted routing, revocation, backup independence and restore lifecycle. The active catalog is `TENANT_ISOLATION_TEST_CONTRACTS.md`; historical TI-CONN/TI-CTX identifiers are not current acceptance evidence unless explicitly mapped. TI-CELL-15 covers revocation/session/pool closure; it does not prove transaction-pooling compatibility.
 - Verify recovery after failure and the emergency stop procedure.
 
 ## 2. Preconditions (each must be recorded; if not met the test is BLOCKED)
@@ -30,7 +30,7 @@ Gate: pilot-validation criteria (D-015, D-014 condition 3). Not a prerequisite f
 | L-05 | Burst test: maximum allowed concurrency for 10 minutes | burst | No crash; graceful queueing or refusal | NOT-RUN |
 | L-06 | Failure injection: kill one application process | process failure | Connections released; service recovers; no cross-tenant data | NOT-RUN |
 | L-07 | Failure injection: database restart | DB restart | Recovery within documented time; no stale context | NOT-RUN |
-| L-08 | Tenant suspension during load | suspension | Login refused immediately; sessions terminated (TI-CONN-04) | NOT-RUN |
+| L-08 | Tenant suspension during load | suspension | Login refused immediately; active sessions/pools terminated within the documented target and evidence recorded (TI-CELL-15) | NOT-RUN |
 | L-09 | Isolation under load: tenant A requests never return tenant B rows | parallel tenants | Zero cross-tenant rows in all responses | NOT-RUN |
 | L-10 | Restore-from-independent-backup test (R7) on SYNTHETIC data: restore must re-apply tenant suspensions/deletions decided after the restore point and demonstrate independent backup administration/key/deletion controls | backup restore | Suspended tenant stays suspended after restore; no cross-tenant data; checksums match the evidence copy; production credentials cannot delete all critical copies or decrypt all backups | BLOCKED: target backup boundary and restore re-application mechanism not implemented/verified (Phase 2 or later). Does NOT depend on Q-020 duration decisions; retention policy is a separate pre-pilot gate |
 | L-11 | Exercise the emergency stop and rollback runbook (EMERGENCY_STOP_AND_ROLLBACK_RUNBOOK.md) with recorded timing | incident drill | All steps executed in order; timings recorded; no tenant re-enabled before reopen criteria are met | NOT-RUN |
