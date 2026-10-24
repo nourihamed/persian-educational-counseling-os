@@ -58,7 +58,7 @@ D-017's prior connection arithmetic is not an Alt-5 capacity result. Connection 
 
 # HISTORICAL STATUS ADDENDUM (superseded by D-024) — 2026-10-23 (Revision 10)
 
-This addendum is authoritative for the current state. The revision history below is retained for traceability; statements in earlier revision sections that conflict with this addendum are historical, not current operational guidance.
+This is a historical status snapshot, superseded by the current Phase 1 report at the top of this file (2026-10-24, D-024). The revision history below is retained for traceability; statements in this snapshot and earlier revisions that conflict with the current report are historical, not current operational guidance.
 
 - The latest independently reviewed pre-correction head was `4715e3d168d3f680ab98b682688980f845a24d45`; corrective changes are now committed to PR #3 on `docs/phase1-tenant-isolation-design`. Re-fetch the current live head before recording the final review verdict.
 - The review found that §6 prescribed Option A's `set_config/current_setting` mechanism despite the then-current D-016 Option C direction. A later Product Owner decision D-019 (2026-10-23) requires stronger architecture; the prior Option C normative contract is now superseded pending Q-022 and a new independent design review.
