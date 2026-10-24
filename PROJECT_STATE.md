@@ -9,6 +9,17 @@
 - Active Alt-5 test catalog: 46 specifications; 0 implemented, 0 executed, 0 passing. The archived 123-contract catalog is historical and does not count as active acceptance evidence.
 - PR #3 remains open/unmerged. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 is NOT STARTED / NOT AUTHORIZED; real student data remains prohibited under D-014. No application code, migration, infrastructure or executable test was created/run by this correction pass.
 
+# CURRENT PROJECT STATE — PHASE 1 DESIGN GATE (2026-10-24)
+
+- **Phase 0:** CLOSED by Product Owner on 2026-10-14; PR #1 merged.
+- **Phase 1:** Independent documentation/architecture review is complete and the design-only gate is **APPROVED** under D-024. The approved scope is provider-neutral Alt-5 architecture, trust boundaries/residual risks, authorization contract, and planned acceptance-test specifications. This is not runtime-security approval.
+- **Architecture:** D-020 Alt-5 hybrid isolation cells; D-023 Level 3 production-cell independence and Level 4 independent critical-backup control remain mandatory. D-024 separates design approval from provider-specific deployment validation.
+- **Q-023:** OPEN as a hard pre-hosting deployment gate. Provider, account topology, cost/capacity and environment-only evidence remain unselected/unverified and must be completed before hosted deployment; D-014 remains a hard real-data gate.
+- **Test state:** 46 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. No runtime test, migration, infrastructure or application code is claimed.
+- **PR #3:** Open and unmerged at the time of this update. Approval is recorded on the design branch; do not treat it as merged into main.
+- **Phase 2:** NOT STARTED / NOT AUTHORIZED. Phase progression remains a separate Product Owner decision. Real student data remains prohibited under D-014.
+- **Historical notes below:** earlier addenda and status lines that say Phase 1 is NOT READY predate D-024 and are retained as history, not the current gate.
+
 ---
 
 # CURRENT SUPERVISOR ADDENDUM — D-023 PRODUCTION / BACKUP INDEPENDENCE TARGET (2026-10-23)
