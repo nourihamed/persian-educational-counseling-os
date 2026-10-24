@@ -326,7 +326,7 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 1. Existing Option C remains a historical/preferred prior direction only; it is not approved as sufficient for the newly stated risk tolerance.
 2. D-009's shared-database MVP mechanism is reopened for architecture evaluation. Its underlying non-negotiable requirement—no counselor may access another tenant's data—remains unchanged.
 3. No implementation, migration, infrastructure change, Phase 2 work, or real-data pilot is authorized by D-019.
-4. Phase 1 remains NOT READY until the revised design is independently reviewed and the gate is explicitly changed.
+4. **Historical gate status (superseded by D-024, 2026-10-24):** when D-019 was recorded, Phase 1 remained NOT READY pending independent review of the revised design. D-020 subsequently selected Alt-5, and D-024 later approved the provider-neutral design/documentation gate only.
 
 **Reason:** The Product Owner prefers not to accept a design whose stated compromise paths can expose multiple tenants. Stronger isolation must be assessed honestly against process, credential, privileged-role, operational, and cost boundaries; merely splitting databases without addressing shared credentials/administrators is not sufficient.
 
