@@ -392,3 +392,15 @@ Updated current-state, roadmap, phase report and supervisor review after PR #3 w
 - Aligned `SECURITY.md` with D-020/Alt-5: application/object authorization plus tenant-specific database/credentials and cell host/network boundaries are the required layers; RLS is supplemental if implemented, not the primary cell boundary.
 - Added active contract `TI-CELL-23` for the K-L-N all-tenant-credentials-compromised tabletop/containment scenario. It records the catastrophic residual and requires evidence for detection, bulk revocation/rotation, session termination, containment and recovery without claiming topology guarantees prevention.
 - Recounted the active catalog at 47 unique contracts; 0 implemented, 0 executed, 0 passing. No runtime code, migration, infrastructure or executable test was created or run.
+
+
+## 2026-10-24 — Final Phase 1 status-consistency follow-up (D-024)
+
+`docs(review):` Corrected stale status language found during the post-merge supervisor recheck so the repository's visible current state matches D-024 without rewriting historical decisions.
+
+- `README.md` now reports Phase 1 APPROVED for design/documentation only, PR #3 merged, and Phase 2 / hosting / real-data use still gated.
+- `PROJECT_STATE.md` labels the older pending-review snapshot and subsequent legacy phase notes as historical; the top current-state summary remains authoritative.
+- `OPEN_QUESTIONS.md` Q-021 and `DECISION_LOG.md` D-022/D-023 label their at-the-time NOT READY consequences as historical and superseded by D-024 for the design-only gate.
+- `SUPERVISOR_REVIEW.md` records this follow-up finding and correction.
+
+Verification boundary: documentation-only. Alt-5 acceptance catalog remains 47 specifications, 0 implemented, 0 executed, 0 passing. Q-023 remains a mandatory pre-hosting deployment gate; D-014's real-student-data prohibition remains unchanged. No application code, migrations, infrastructure, executable tests, Phase 2 work, or hosting approval was added or implied.
