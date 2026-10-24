@@ -211,7 +211,7 @@ The active contracts cover:
 - API object authorization and every derived-data path;
 - audit, break-glass, incident containment, capacity, cost, and emergency stop.
 
-Before Phase 1 approval, every threat in `TENANT_ISOLATION_DESIGN.md` must map to at least one active contract, and every active contract must map to a stated threat/control. No threat is closed by a specification alone.
+For Phase 1 design approval, every threat in `TENANT_ISOLATION_DESIGN.md` must map to at least one active contract, and every active contract must map to a stated threat/control. This catalog's threat/control traceability is a design artifact, not evidence of control effectiveness. No threat is closed for implementation or pilot merely because a specification exists.
 
 ## 6. CI vs environment-only evidence
 
@@ -222,4 +222,4 @@ Before Phase 1 approval, every threat in `TENANT_ISOLATION_DESIGN.md` must map t
 
 ## 7. Current gate
 
-**NOT READY / NOT APPROVED.** These contracts do not authorize implementation, migrations, infrastructure, Phase 2, or a real-data pilot. The architecture must be independently reviewed, including its residual global-root and all-credentials-compromised scenarios.
+**Design status:** this catalog defines 46 active Alt-5 acceptance specifications; 0 are implemented, 0 executed, and 0 passing. Under D-024, NOT-RUN status does not by itself block the documentation-only Phase 1 gate. Actual implementation, environment-only security tests, backup/restore evidence, capacity, and incident drills remain hard pre-hosting/pre-pilot gates under Q-023 and D-014. This catalog does not authorize implementation, migrations, infrastructure, Phase 2 automatically, or real student data. The global-root and all-credentials-compromised residuals must remain explicit.
