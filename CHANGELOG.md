@@ -4,6 +4,10 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-10-24 — Merge of Phase 1 traceability follow-up (PR #6)
+`docs:` PR #6 was squash-merged into `main` at `fb16219d506998c9e074971927b55e322f32c21d`. Post-merge verification confirmed 51 unique active Alt-5 acceptance specifications with no duplicates and 41 path-inventory rows; all active contract IDs are mapped to at least one active path row and all active row references exist in the catalog. No code, migration, infrastructure, or executable test was added or run. Phase 1 remains approved for design/documentation only under D-024; Q-023 remains a pre-hosting gate, Phase 2 remains unauthorized, and real student data remains prohibited under D-014.
+
+
 ### 2026-10-24 — Final Alt-5 traceability and consistency follow-up
 `docs(security/test):` Independent follow-up review found that the category-level tenant-path inventory still referenced retired Option C/legacy TI-CTX/TI-CONN/TI-REPO/TI-RPT/TI-EXP/TI-PLAT/TI-FK/TI-BYP/TI-CFG contracts. Aligned the inventory with active Alt-5 contracts; updated the retention draft and target-environment load plan to use current cell/lifecycle contracts; corrected active Q-014/Q-016/Q-017/Q-018 dependencies; clarified D-017's recorded pool-size-1 baseline as unmeasured under Alt-5; and marked pre-D-020/D-024 architecture recommendations/reviews as historical.
 
