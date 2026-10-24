@@ -3,7 +3,7 @@
 **Phase:** 1 — Architecture & Multi-Tenancy (design only)  
 **Status:** APPROVED — provider-neutral design only, after independent supervisor review under D-024 (2026-10-24). Provider-specific compatibility remains an OPEN pre-hosting gate under Q-023.  
 **Scope boundary:** architecture and contracts only. No code, migrations, roles, grants, policies, infrastructure, or runtime tests are authorized or claimed to exist.  
-**Decision source:** `DECISION_LOG.md` D-020 and D-023; `OPEN_QUESTIONS.md` Q-022 and Q-023.  
+**Decision source:** `DECISION_LOG.md` D-020, D-023 and D-024; `OPEN_QUESTIONS.md` Q-022 and Q-023.  
 **Historical material:** the former shared-database/Option C design is archived in Git history and is not normative. Any contradictory historical references elsewhere are superseded by this document and D-020.
 
 ## 1. Architecture decision and invariants
