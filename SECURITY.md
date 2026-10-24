@@ -6,7 +6,7 @@ Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-
 
 **معماری فعال Phase 1 (D-020 / D-023; طراحی‌شده، نه پیاده‌سازی یا آزمون‌شده):** Alt-5 hybrid isolation cells؛ هر cell باید host/VM و مرز شبکه مستقل، PostgreSQL cluster/instance جدا، و برای هر Tenant دیتابیس و credential مستقل داشته باشد. هدف Level 3 استقلال زیرساختی/اداری برای cellها و Level 4 مرز مدیریتی مستقل برای backup/recovery حیاتی است. جزئیات الزامی و residualها در `docs/phase1/TENANT_ISOLATION_DESIGN.md` و `DECISION_LOG.md` ثبت شده‌اند. D-009/Q-001 مکانیزم تاریخی Phase 0 است و معماری فعال Phase 1 را تعیین نمی‌کند. RLS در صورت استفاده فقط دفاع تکمیلی است؛ مرز cell یا دفاع در برابر host/root compromise نیست. هیچ‌یک از این کنترل‌ها هنوز runtime-verified نیست.
 1. **Tenant Isolation امنیتی است، نه فقط معماری.** هر نشتی داده بین Counselorها یک Security Incident محسوب می‌شود.
-2. **Defense in Depth**: Authorization در Application layer + محدودیت در DB layer (RLS) هم‌زمان، نه فقط یکی.
+2. **Defense in Depth در معماری فعال Alt-5**: کنترل object-level در Application باید همراه با جداسازی دیتابیس/اعتبارنامه هر Tenant و مرز شبکه/میزبان هر cell اعمال شود. RLS، در صورت استفاده، لایه دفاعی تکمیلی است؛ جایگزین جداسازی Alt-5 نیست و الزام عمومی برای انتخاب RLS به‌عنوان مرز اصلی Phase 1 محسوب نمی‌شود.
 3. **Least Privilege**: هر Role فقط به چیزی که لازم دارد دسترسی دارد؛ Parent و Student هرگز به یادداشت خصوصی مشاور دسترسی پیش‌فرض ندارند.
 
 ## الزامات امنیتی (بخش ۴۸)
@@ -40,7 +40,7 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 ## Threat Model اولیه (خلاصه)
 | تهدید | ریسک | کنترل |
 |---|---|---|
-| نشت داده بین Tenantها | بحرانی | RLS + Application-level filter + تست اجباری |
+| نشت داده بین Tenantها | بحرانی | object-level authorization در Application + دیتابیس و credential اختصاصی هر Tenant + مرز شبکه/میزبان cell + تست‌های اجباری Alt-5؛ RLS در صورت پیاده‌سازی، به‌عنوان دفاع تکمیلی جداگانه آزموده شود |
 | دستکاری ID در API برای دسترسی به داده دیگران (IDOR) | بالا | Authorization check روی هر resource، نه فقط authentication |
 | پرداخت تکراری/Webhook replay | بالا | Idempotency key + unique constraint |
 | نشت Token/Secret در لاگ | متوسط-بالا | Log scrubbing، review قبل از هر PR |
