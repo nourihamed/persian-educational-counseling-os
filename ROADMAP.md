@@ -49,11 +49,8 @@ Status (updated 2026-10-24): Phase 0 closed by Product Owner on 2026-10-14; PR #
 - **Phase 22:** اتصال درگاه واقعی؛ خارج از MVP. `Q-004` درباره انتخاب ارائه‌دهنده واقعی برای زمان مناسب همچنان باز است.
 - این یادداشت مرزهای موجود را هماهنگ می‌کند و دامنه جدیدی را تصویب نمی‌کند. هر گسترش MVP نیازمند تصمیم صریح مالک محصول است.
 
-## وضعیت فعلی
-**Phase 0 — CLOSED by Product Owner (2026-10-14) — Supervisor documentation gate: APPROVED.** PR #1 was merged into `main` on 2026-10-14 (squash commit `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b`). Phase 1 remains unauthorized. Runtime implementation/security has not been verified.
+## سابقه وضعیت Phase 0 (snapshot تاریخی — نه وضعیت جاری فاز 1)
 
-آخرین Commit تأییدشده روی `main` که در این سند به‌عنوان snapshot تاریخی ثبت شده، `994d4529c20c4a330bd843bd3ca1a7c9ed1f75ec` است. برای وضعیت زنده `main` و HEAD شاخه اصلاحات، مستقیماً به GitHub مراجعه کنید؛ این فایل مرجع HEAD جاری نیست.
+Phase 0 توسط Product Owner در 2026-10-14 بسته شد و PR #1 در همان تاریخ در `main` ادغام شد (squash commit `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b`). این بخش فقط سابقه بسته‌شدن Phase 0 را حفظ می‌کند و مرجع وضعیت جاری Phase 1 نیست.
 
-بازبینی رسمی Supervisor در `SUPERVISOR_REVIEW.md` ثبت شده و Gate فعلی برای مستندات Phase 0 برابر `APPROVED` است؛ این تأیید فقط آمادگی مستندات/معماری را پوشش می‌دهد، نه امنیت زمان اجرا. اصلاحات شاخه `docs/phase0-correction-pass-3` از طریق PR #1 در `main` ادغام شده‌اند. جزئیات تاریخی اصلاحات در `CHANGELOG.md` آمده است.
-
-**تصمیم‌های Q-001، Q-002 و Q-010 در 2026-10-12 ثبت و در `OPEN_QUESTIONS.md` به Resolved منتقل شده‌اند.** Phase 0 در 2026-10-14 توسط Product Owner بسته شد و PR #1 نیز ادغام شده است. **Phase 1 شروع نشده و همچنان نیازمند تأیید صریح و جداگانه Product Owner است.**
+**وضعیت جاری پروژه فقط از ابتدای این فایل و `PROJECT_STATE.md`، `docs/phase1/PHASE1_REPORT.md` و `SUPERVISOR_REVIEW.md` خوانده شود.** طبق وضعیت ثبت‌شده در 2026-10-24 تحت D-024، گیت مستندات/طراحی Phase 1 تأیید شده است؛ Q-023 همچنان گیت اجباری پیش از استقرار میزبانی‌شده است؛ Phase 2 هنوز شروع نشده و مجوز ندارد. تأیید طراحی به معنی تأیید امنیت زمان اجرا نیست.
