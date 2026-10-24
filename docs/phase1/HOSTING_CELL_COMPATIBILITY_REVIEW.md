@@ -3,8 +3,8 @@
 **Date:** 2026-10-23  
 **Repository:** nourihamed/persian-educational-counseling-os  
 **Decision context:** D-011 (hosting objective), D-017 (connection/pool assumptions), D-020 (Alt-5 hybrid isolation cells), D-023 (Level 3 production / Level 4 critical-backup target)  
-**Status:** D-023 target security level accepted by Product Owner; concrete provider/topology compatibility remains OPEN.  
-**Gate:** Phase 1 remains NOT READY / NOT APPROVED.
+**Status:** D-023 target accepted; concrete provider/topology compatibility remains OPEN as a pre-hosting deployment gate under D-024.  
+**Gate:** Phase 1 provider-neutral design gate APPROVED; this review does not approve a provider, hosted deployment, or real-data pilot.
 
 ## 1. Executive finding
 
@@ -96,6 +96,6 @@ The target is specified normatively in DECISION_LOG.md D-023. It does not mean O
 - No code, migration, infrastructure, secrets, database roles, grants, policies, or executable tests were created by this review.
 - No vendor or price has been selected or verified.
 - No capacity has been measured and no test is claimed as executed or passed.
-- Phase 1 remains NOT READY / NOT APPROVED. Provider comparisons are deferred as requested, but Q-023 remains open under D-023 until candidate compatibility and the independent gate review are completed; this document does not waive that requirement.
+- Phase 1 design-only gate is APPROVED under D-024 after independent review of provider-neutral requirements and residual risks. Provider comparisons are deferred as requested; Q-023 remains OPEN and must be closed with candidate compatibility evidence before hosted deployment. This does not waive D-023 or D-014.
 - PR #3 must remain open and unmerged pending independent review.
 - Phase 2 and real student data remain prohibited under D-014.
