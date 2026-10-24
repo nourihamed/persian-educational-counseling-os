@@ -212,6 +212,7 @@ The active contracts cover:
 - independent PostgreSQL/network boundary;
 - worker identity, secret distribution, and runtime credentials;
 - cell-scoped migration, owner, backup, restore, and deployment privileges, including D-023 Level 3 administrative independence and Level 4 backup/key/deletion-control independence;
+- tenant-scoped audit-log reads, server-derived file-upload ownership, platform aggregate-job restrictions, and a static guard for unreviewed privileged/raw-SQL access paths;
 - cell occupancy limit, cell migration, suspension, credential rotation, and revocation;
 - API object authorization and every derived-data path;
 - audit, break-glass, incident containment, capacity, cost, and emergency stop.
