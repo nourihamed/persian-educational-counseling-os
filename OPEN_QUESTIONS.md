@@ -135,7 +135,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 
 **Historical decision trace:** D-014 established the pre-pilot security gate; D-016 preferred Option C at that time; D-019 rejected that prior residual-risk posture as sufficient; D-020 subsequently selected Alt-5. D-016's Option C mechanism is no longer normative.
 
-**Blocks Phase 1 approval:** independent review of the current Alt-5 design/contracts, reconciliation of D-011/D-017, and explicit evidence for the design's trust boundaries are still required.
+**Historical gate note (superseded by D-024, 2026-10-24):** this requirement described the pre-approval state. The Phase 1 provider-neutral design/documentation gate is now APPROVED; this does not verify runtime controls. Q-023 remains a mandatory pre-hosting deployment gate, and D-014 continues to prohibit real student data until all required implementation, security, operational, capacity, incident-drill, independent-review and written Product Owner approval conditions pass.
 
 
 ## Q-007 — Gate impact (Phase 1 review)
