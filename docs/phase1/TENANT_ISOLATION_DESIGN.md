@@ -1,7 +1,7 @@
 # TENANT_ISOLATION_DESIGN.md — Alt-5 Hybrid Isolation Cells
 
 **Phase:** 1 — Architecture & Multi-Tenancy (design only)  
-**Status:** DRAFT — aligned to Product Owner decisions D-020 / Q-022 and D-023 (2026-10-23); pending independent review and Phase 1 gate.  
+**Status:** DESIGN REVIEWED — aligned to D-020, D-023 and D-024 (2026-10-24); provider-neutral Phase 1 design gate may be approved after final supervisor review. Provider-specific compatibility remains an OPEN pre-hosting gate under Q-023.  
 **Scope boundary:** architecture and contracts only. No code, migrations, roles, grants, policies, infrastructure, or runtime tests are authorized or claimed to exist.  
 **Decision source:** `DECISION_LOG.md` D-020 and D-023; `OPEN_QUESTIONS.md` Q-022 and Q-023.  
 **Historical material:** the former shared-database/Option C design is archived in Git history and is not normative. Any contradictory historical references elsewhere are superseded by this document and D-020.
@@ -166,4 +166,4 @@ All contracts remain NOT-RUN until executed with evidence. Threat/control/test m
 
 ## 11. Current gate
 
-**NOT READY / NOT APPROVED.** Alt-5 is the selected design direction and the provider-neutral Level 3/Level 4 security requirements are now explicit, but Q-023 remains open: no actual hosting candidate has been verified against those requirements, and the trust boundary/residuals still require independent gate review. Cost/capacity, implementation, operations and runtime-test evidence remain future hosted-deployment/pilot gates. Phase 2 is not authorized. No code, migration, infrastructure, runtime test, or real-data pilot is authorized.
+**Phase 1 design gate: eligible for APPROVED after final independent review.** The provider-neutral Alt-5 trust boundaries, Level 3/Level 4 requirements, and global-admin/provider compromise residuals are specified here. Q-023 remains OPEN for candidate-specific validation and is a hard gate before hosted deployment, not a blocker to this documentation-only phase under D-024. Cost/capacity, implementation, operational controls, and runtime-test evidence remain future hosted-deployment/pilot gates. This document does not authorize Phase 2 automatically or any real-data pilot. No code, migration, infrastructure, runtime test, or real-data pilot is claimed.
