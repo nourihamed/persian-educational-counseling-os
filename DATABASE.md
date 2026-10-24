@@ -1,6 +1,6 @@
 # DATABASE.md
 
-Status: DRAFT — Phase 0 — Conceptual model only. No migrations exist yet.
+Status: conceptual domain model only; no migrations exist. Current tenant-isolation topology is governed by D-020/D-023 and Phase 1 design docs.
 
 Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual production schema changes — every change is a migration.
 
@@ -43,7 +43,7 @@ Fields (conceptual, not implemented):
 - `PlanVersion` (`id`, `plan_id`, `version_number`, `created_by` (actor attribution), `created_at`, `activated_at`, `program_version_id` nullable FK recording which `ProgramVersion`, if any, informed this plan version; immutable once superseded — a later version never overwrites an earlier published one, consistent with D-008's "no silent overwrite" requirement)
 - `PlanItem` (a scheduled activity instance within a specific plan version)
 - Which `Plan` states are directly editable in place versus which require creating a new `PlanVersion`, and how an existing plan behaves when its source `ProgramVersion` is later updated, are open schema decisions for Phase 2 — not decided here (see D-008 points 5 and 7). D-008's acceptance (Q-012 Resolved) settles that these questions *must* have an answer before implementation, not what that answer is.
-- **Tenant-column contract (conceptual design for the accepted Q-001 mechanism; no migration exists):** To keep this model consistent with `ARCHITECTURE.md` §2 and §3, each tenant-scoped table in this planning group — `Plan`, `PlanVersion`, and `PlanItem` — is expected to have its own direct `tenant_id` column, indexed and `NOT NULL`; tenant scope is not represented only by joining through a parent. The mechanism (shared PostgreSQL + direct tenant_id + application authorization + RLS) is accepted under Q-001; detailed policies, constraints, and executable tests remain to be designed before implementation. When the schema is designed, constraints or equivalent safeguards must ensure a child row's `tenant_id` agrees with its parent `Plan`/`PlanVersion`, so a valid tenant identifier cannot be paired with another tenant's parent record. All three entities remain subject to tenant-and-student-scoped authorization, with no version-specific exception. **This statement applies only to `Plan`/`PlanVersion`/`PlanItem`, not `ProgramVersion`**, whose MVP ownership is tenant-scoped under D-012 and must match its source `ProgramTemplate`. `ProgramTemplate` is not a parent of `Plan` and does not supply the tenant identifier for these rows.
+- **Tenant-column contract (conceptual; no migration exists):** `Plan`, `PlanVersion`, and `PlanItem` are expected to carry direct, indexed, `NOT NULL` `tenant_id` columns for explicit ownership and defense in depth, with constraints ensuring child and parent tenant identifiers agree. Under active D-020 Alt-5, each tenant has its own database and tenant-specific runtime credential within its cell; `tenant_id` and application authorization do not replace the cell's host/network/credential boundary. All three entities remain subject to tenant-and-student-scoped authorization. **This statement applies only to `Plan`/`PlanVersion`/`PlanItem`, not `ProgramVersion`**, whose MVP ownership is tenant-scoped under D-012 and must match its source `ProgramTemplate`. `ProgramTemplate` is not a parent of `Plan` and does not supply the tenant identifier for these rows.
 
 ### Activities & Records (§21–§28)
 - `Activity` (polymorphic-ish base: type = Study/Test/TestAnalysis/Review/Exam/Quiz/SchoolAssignment/OnlineClass/InPersonClass/Exercise/ProblemSolving/Summary/Flashcards/Remediation/Project/OverdueWork/RoutineTest/Custom)
@@ -84,18 +84,18 @@ Fields (conceptual, not implemented):
 ## 4. Explicitly Deferred
 - Full column-level types, constraints, and indexes → Phase 2.
 - Actual ERD diagram (image) and Alembic migrations → Phase 2.
-- Detailed RLS policy definitions, runtime role, trusted tenant context, and executable isolation tests → Phase 1/2; Q-001's mechanism is accepted, but implementation details remain to be designed and tested.
+- Detailed tenant schema/constraints, least-privilege runtime identities, cell routing, network/credential boundaries, backup independence and executable isolation tests → design contracts in Phase 1 and implementation in authorized later phases. D-009/Q-001's former shared-database mechanism is historical; active topology is D-020/D-023.
 - Final column-level design of `ProgramVersion`/`PlanVersion` (exact fields beyond the conceptual ones listed above, editable-vs-new-version state rules, template-update-vs-existing-plan behavior) → Phase 2. The MVP Versioning *policy* itself is no longer pending (`DECISION_LOG.md` D-008 — Accepted, `OPEN_QUESTIONS.md` Q-012 Resolved); what remains pending is ordinary Phase 2 schema design work, not a Product Owner decision. Nothing describing `ProgramVersion`/`PlanVersion` in this document has been implemented as a migration, table, or endpoint.
 
 
-## Tenant Isolation — Accepted MVP Mechanism (2026-10-12)
+## Tenant Isolation — Current Alt-5 Direction (D-020 / D-023; design only)
 
-Per `DECISION_LOG.md` D-009 and resolved `OPEN_QUESTIONS.md` Q-001, the selected MVP design is a shared PostgreSQL database/schema, with a direct indexed `tenant_id NOT NULL` on every tenant-scoped row, application-level authorization, and PostgreSQL RLS as defense in depth. This is a design decision only; no migrations or executable policies exist yet.
+The former D-009/Q-001 shared-database mechanism is retained as historical decision context, not the active isolation topology. The active design is Alt-5 hybrid isolation cells: each cell has a distinct host/VM and network boundary and its own PostgreSQL cluster/instance; each tenant has a separate database and tenant-specific runtime credential within that cell. D-023 requires Level 3 infrastructure/administrative independence for production cells and Level 4 independent administrative control for critical backups/recovery. Q-023 remains open; no provider, hosted topology, cost or capacity is verified.
 
-- For tenant-owned relationships, use composite foreign keys/unique constraints or equivalent safeguards so a child row cannot reference a parent from another tenant.
-- The runtime database role must be least-privileged and must not own tenant tables or have RLS-bypass privileges. Review table-owner and privileged-role behavior; apply forced RLS or an equivalent control where appropriate.
-- RLS policies must use a trusted tenant context established by the authenticated application request, not a caller-supplied tenant ID.
-- Add database and integration tests for cross-tenant reads, writes, joins, and invalid cross-tenant relationships. Also test jobs, reports/exports, files, and notifications.
-- RLS supplements, but does not replace, object-level authorization and application tenant filters.
+- Tenant-owned relationships must use composite foreign keys/unique constraints or equivalent safeguards so a child row cannot reference a parent from another tenant.
+- Runtime credentials must be least-privileged; ordinary tenant identities cannot access another tenant database or another cell.
+- RLS may be applied as defense in depth within a tenant database, but it is not the cell boundary and does not protect against host/root compromise.
+- Trusted tenant membership and cell mapping are resolved server-side; request-supplied tenant/cell IDs are never authoritative.
+- Test API/object authorization, direct database credentials, network reach, jobs, reports/exports, files, notifications, backup administration/keys, restore lifecycle, revocation and privileged access.
 
-Schema-per-tenant and database-per-tenant are not selected for MVP. Any future change requires a recorded architecture decision and migration/backup impact review.
+This is a design decision only; no migrations, roles, policies or executable tests exist yet.

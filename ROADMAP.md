@@ -1,15 +1,15 @@
 # ROADMAP.md
 
-Status: Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged on 2026-10-14; Phase 1 not authorized
+Status (updated 2026-10-24): Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged. Phase 1 provider-neutral design/documentation gate APPROVED under D-024 on the reviewed PR #3 branch; PR #3 is still open/unmerged, so these changes are not yet in main. D-020 selects Alt-5 hybrid isolation cells; D-023's Level 3 production-cell and Level 4 independent critical-backup targets remain mandatory. Q-023 remains OPEN as a hard pre-hosting deployment gate, not a Phase 1 design blocker: provider/account topology, capability evidence, cost/capacity, and environment-only security/backup tests must be completed before hosted deployment. Active Alt-5 catalog: 46 specifications, 0 implemented, 0 executed, 0 passing. Phase 2 remains NOT STARTED / NOT AUTHORIZED pending a separate Product Owner decision; real student data remains prohibited under D-014. Local setup is not an isolation boundary.
 
 قانون: هر فاز طبق `Mandatory Development Workflow` (بخش ۷۶ Master Prompt) اجرا می‌شود و بعد از اتمام، **خودکار به فاز بعد نمی‌رویم** — منتظر تأیید می‌مانیم.
 
 | # | فاز | خروجی کلیدی |
 |---|---|---|
 | 0 | Product & Business Model | مجموعه اسناد پایه — تکمیل و تأیید شده؛ Phase 0 در 2026-10-14 بسته شد |
-| 1 | Architecture & Multi-Tenancy (design only) | اسناد طراحی اجرای shared PostgreSQL + tenant_id + RLS، قراردادهای authorization و طراحی تست‌های tenant isolation؛ بدون کد برنامه، migration یا پیاده‌سازی infrastructure. هر تغییر این مرز نیازمند تصمیم صریح Product Owner پیش از شروع است. |
+| 1 | Architecture & Multi-Tenancy (design only) | انتخاب معماری جداسازی تنانت طبق Q-022؛ تعیین trust boundaries و residual risks؛ قراردادهای authorization و تست متناسب با معماری انتخاب‌شده. معماری shared PostgreSQL + tenant_id + RLS قبلی صرفاً سابقه است؛ Q-022 با D-020 حل شده و معماری فعال، Alt-5 isolation cells با دیتابیس و اعتبارنامه مجزا برای هر تنانت درون سلول است. بدون کد برنامه، migration یا زیرساخت در این فاز. |
 | 2 | Database & Domain Model | ERD کامل، مدل‌های Core (Counselor, Student, Program, Activity...) |
-| 3 | Infrastructure | FastAPI skeleton، Alembic، Docker Compose برای Pilot روی VPS داخل ایران، CI اولیه؛ Redis فقط در صورت توجیه |
+| 3 | Infrastructure | FastAPI skeleton، Alembic، زیرساخت مطابق توپولوژی cell مصوب در Q-023 (انتخاب نشده؛ Docker Compose فقط ابزار استقرار است، نه مرز امنیتی)، CI اولیه؛ Redis فقط در صورت توجیه |
 | 4 | Authentication & RBAC | Register/Login/Refresh/Reset، Policy engine |
 | 5 | Counselor/Student Relationship | CounselorStudent entity + lifecycle |
 | 6 | Student Profile & Subjects | Profile fields، Default subjects قابل ویرایش |

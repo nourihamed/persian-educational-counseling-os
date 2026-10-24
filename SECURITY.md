@@ -4,7 +4,7 @@ Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-
 
 ## اصول پایه
 
-**مکانیزم MVP مصوب مالک محصول در 2026-10-12 (D-009 / Q-001; accepted mechanism, implementation not yet tested):** PostgreSQL مشترک با `tenant_id` مستقیم و غیرقابل‌تهی، Application/API authorization و RLS به‌عنوان دفاع چندلایه. این تصمیم هنوز پیاده‌سازی یا آزمون نشده است. نقش runtime نباید مالک جدول‌های tenant یا دارای دسترسی bypass به RLS باشد؛ policyها، رفتار owner/privileged roles و tenant context قابل‌اعتماد باید بررسی شوند. تست‌های منفی cross-tenant برای API، دیتابیس و سطوح جانبی (jobs، exports، files و notifications) شرط پذیرش‌اند.
+**معماری فعال Phase 1 (D-020 / D-023; طراحی‌شده، نه پیاده‌سازی یا آزمون‌شده):** Alt-5 hybrid isolation cells؛ هر cell باید host/VM و مرز شبکه مستقل، PostgreSQL cluster/instance جدا، و برای هر Tenant دیتابیس و credential مستقل داشته باشد. هدف Level 3 استقلال زیرساختی/اداری برای cellها و Level 4 مرز مدیریتی مستقل برای backup/recovery حیاتی است. جزئیات الزامی و residualها در `docs/phase1/TENANT_ISOLATION_DESIGN.md` و `DECISION_LOG.md` ثبت شده‌اند. D-009/Q-001 مکانیزم تاریخی Phase 0 است و معماری فعال Phase 1 را تعیین نمی‌کند. RLS در صورت استفاده فقط دفاع تکمیلی است؛ مرز cell یا دفاع در برابر host/root compromise نیست. هیچ‌یک از این کنترل‌ها هنوز runtime-verified نیست.
 1. **Tenant Isolation امنیتی است، نه فقط معماری.** هر نشتی داده بین Counselorها یک Security Incident محسوب می‌شود.
 2. **Defense in Depth**: Authorization در Application layer + محدودیت در DB layer (RLS) هم‌زمان، نه فقط یکی.
 3. **Least Privilege**: هر Role فقط به چیزی که لازم دارد دسترسی دارد؛ Parent و Student هرگز به یادداشت خصوصی مشاور دسترسی پیش‌فرض ندارند.
@@ -20,6 +20,7 @@ Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-
 - Rate Limiting: روی Login، Password Reset، API عمومی (Redis-based)
 - Secure File Upload: محدودیت نوع/حجم فایل، اسکن قبل از ذخیره، نام‌گذاری غیرقابل‌حدس، جداسازی فایل بر اساس tenant_id در مسیر Storage
 - Audit Logs: برای عملیات حساس (تغییر Credit، تغییر Role، حذف دانش‌آموز، ورود Admin به حساب دیگران)
+- **Backup/Recovery (D-023):** backupهای حیاتی، مدیریت backup، کلیدهای رمزنگاری و کنترل‌های حذف/retention باید خارج از کنترل مدیریتی عادی حساب production باشند؛ restore باید وضعیت تعلیق/offboarding تنانت را از مرجع معتبر بازیابی کند. تفاوت نام bucket/service به‌تنهایی اثبات استقلال نیست.
 - Secrets Management: هیچ secret در کد/Git؛ از `.env` + Secret Manager (Vault/Cloud secret store) در Production
 
 ## موارد ممنوع در Log (بخش ۴۸)
@@ -49,3 +50,9 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 
 ## فرآیند قبل از Production (بخش ۷۵)
 چک‌لیست کامل در Master Prompt بخش ۷۵ باید قبل از هر انتشار Production تیک بخورد؛ Security Review و Tenant Isolation test جزو موارد غیرقابل‌حذف هستند.
+
+---
+
+## Pre-pilot security and data-retention items (added 2026-10-17)
+
+Retention draft: `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md` (NEEDS-DECISION / LEGAL-REVIEW; no duration set). Tenant role deletion requires the checklist in that draft (D-017). Active Phase 1 acceptance criteria are in `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`; all remain NOT-RUN. Real student data is prohibited until D-014 conditions are met. This section does not claim any security control is implemented or verified.

@@ -1,3 +1,387 @@
+# SUPERVISOR REVIEW — FINAL PHASE 1 DESIGN GATE (2026-10-24)
+
+## Phase
+Phase 1 — Architecture & Multi-Tenancy (design/documentation only)
+
+## Scope Reviewed
+Live branch docs/phase1-tenant-isolation-design and PR #3; current Alt-5 design; authorization contract; active acceptance catalog; D-020, D-023 and D-024; Q-023; project state, roadmap, security/test plan, hosting compatibility review, target-environment plan, restore/offboarding requirements and changelog.
+
+## Summary
+The provider-neutral design documentation has passed independent review for Phase 1. D-024 records the Product Owner's instruction to defer provider comparisons until hosted-deployment planning and separates that future candidate-specific verification from the current documentation-only gate. Q-023 remains OPEN and mandatory before hosted deployment; no provider or runtime control is represented as verified. This approval is limited to architecture/design readiness and does not authorize Phase 2, hosting, implementation beyond the approved workflow, or real student data.
+
+## Passed
+- Alt-5 hybrid isolation cells are the active design; each cell has its own host/VM and network boundary, PostgreSQL cluster/instance, and each tenant has a separate database and runtime credential.
+- Trust boundaries cover identity/object authorization, registry/routing, workers/secrets, database/network, migration/ownership, backups/restore, deployment/control plane, break-glass, derived data, offboarding and monitoring.
+- D-023 Level 3 production-cell and Level 4 independent critical-backup requirements are explicit, including key/deletion/retention controls and preservation of tenant lifecycle state during restore.
+- Global/root/provider control-plane compromise and all-credentials-compromised scenarios are explicitly treated as residual risks, not claimed eliminated.
+- Authorization contract rejects request-controlled tenant/cell routing and covers object-level access plus files, exports, reports, jobs, notifications, cache/search and audit paths.
+- Static recount of the active catalog found 46 unique active contract IDs and no duplicates. All remain specifications only: 0 implemented, 0 executed, 0 passing.
+- D-024, Q-023, design status, project state, roadmap, phase report and hosting review have been aligned to distinguish design approval from deployment validation.
+
+## Findings
+
+### CRITICAL
+- None identified in the reviewed documentation scope. This is not a runtime security assessment.
+
+### HIGH
+- None remaining that blocks the Phase 1 provider-neutral design/documentation gate.
+
+### MEDIUM
+- Q-023 remains OPEN: provider/account topology, actual administrative separation, backup independence, cost/capacity and environment-only evidence are not yet verified. This is a mandatory pre-hosting deployment gate under D-024 and D-023.
+- No executable tests, migrations, infrastructure or runtime security evidence exist. This is consistent with the design-only scope, not a passed security test.
+
+### LOW
+- PR #3 remains open and unmerged. GitHub currently reports mergeable=false; mergeability is repository metadata, not a substitute for this review or Product Owner merge decision.
+- Historical report/review sections retain prior gate snapshots for traceability; the dated current sections supersede them.
+
+## Architecture
+The selected architecture is coherent at design level subject to the documented cell, tenant database/credential, network, worker, migration, and backup boundaries. The common global control-plane/root residual remains material and must be evaluated against the eventual hosting candidate.
+
+## Database
+No schema or migration exists. Per-tenant database boundaries and tenant-specific credentials are normative. No database implementation, grant configuration or migration safety has been verified.
+
+## API
+The contract requires server-verified tenant membership, trusted cell mapping, object-level authorization, non-disclosing handling of invisible objects, and tenant/cell scope across asynchronous and derived-data paths. Q-014 and other later-phase questions remain open for their designated phases and do not block this design gate.
+
+## Security
+Design requirements are explicit; implementation is unverified. Critical backups must have independent administration, keys and deletion/retention controls outside ordinary production-account control. A separate bucket/service name alone is insufficient evidence.
+
+## Testing
+Active inventory: 46 unique specifications; 0 implemented, 0 executed, 0 passing. Environment-only checks require a representative target and remain mandatory before hosted deployment/pilot. No CI pass or runtime security proof is claimed.
+
+## Documentation
+The current normative design and supporting documents consistently distinguish Phase 1 design readiness from Q-023 candidate-specific validation and D-014 real-data authorization. Historical records are retained but superseded by this dated review and D-024.
+
+## Required Changes
+1. **Before hosted deployment:** select a provider/topology and close Q-023 with evidence for Level 3 cell boundaries and Level 4 backup independence.
+2. **Before hosted deployment/pilot:** measure capacity/cost and execute required cross-cell, privilege, revocation, backup/restore, failure-containment and incident-stop tests in a representative environment.
+3. **Before real student data:** satisfy every D-014 condition and obtain explicit written Product Owner approval.
+4. Do not begin Phase 2 automatically; obtain the separate Product Owner authorization required by the project workflow.
+
+## Recommendation
+Approve Phase 1 for provider-neutral architecture and documentation readiness only. Keep Q-023 open as a deployment gate; preserve the D-014 real-data prohibition. PR #3 is not merged, and this review does not merge it on the Product Owner's behalf.
+
+## Gate Status
+**APPROVED — Phase 1 design/documentation only.** This is not runtime-security approval, provider approval, hosted-deployment authorization, Phase 2 authorization, or real-data approval.
+
+---
+
+# HISTORICAL INDEPENDENT REVIEW ADDENDUM (superseded by 2026-10-24 review) — D-023 TARGET RECORDED; VERIFICATION STILL REQUIRED (2026-10-23)
+
+## Decision reviewed
+The Product Owner selected a project security target: Level 3 infrastructure/administrative independence for production cells, paired with Level 4 independent control of critical backups/recovery. The normative details are recorded in DECISION_LOG.md D-023.
+
+## Independent assessment
+This is a useful and materially clearer target than leaving the required independence level unspecified. It does not prove that ArvanCloud or any other provider/plan can satisfy it. Separate VMs or networks under a common root/organization administrator do not automatically provide independent administrative boundaries. Likewise, a backup stored in another bucket or service is not proven independent if the production account can delete it or control its encryption keys.
+
+## Remaining findings
+- **HIGH:** Q-023 remains OPEN until a concrete hosting candidate's cell/account/admin boundary and provider-global residual are documented and independently reviewed.
+- **HIGH:** Level 4 backup independence is a target only; backup account/provider, key custody, deletion protection, retention/immutability and restore behavior are not verified.
+- **HIGH:** Cost/capacity and target-environment security tests remain NOT MEASURED / NOT RUN.
+
+## Gate and scope
+D-020 Alt-5 and D-014's real-student-data prohibition remain unchanged. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 remains unauthorized. The target decision alone does not authorize hosting, implementation beyond the approved phase, or real student data. No code, infrastructure, migrations or executable tests were created or run by this documentation update.
+
+---
+
+# HISTORICAL INDEPENDENT REVIEW ADDENDUM (superseded by 2026-10-24 review) — D-022 / Q-023 DEFERRAL (2026-10-23)
+
+## Decision reviewed
+The Product Owner selected Q-023 option A in the sense of deferring the final hosted topology/provider decision until hosted deployment planning, while continuing local-first development under D-021.
+
+## Independent finding
+The decision is acceptable as a scheduling decision. It does not, by itself, make the unresolved hosting security boundary safe to defer past Phase 1 approval. The exact vendor, instance sizes, pricing and target-environment capacity measurement can wait until hosted deployment planning; the architecture-level trust boundary cannot be silently waived. Under current D-020, the cell host/network separation and shared/global administrative compromise domain materially affect the Alt-5 security claim. Therefore Q-023 remains OPEN and remains a Phase 1 blocker unless a later explicit, recorded Product Owner decision changes the gate after an independent review demonstrates that no D-020/D-014 security requirement is weakened.
+
+## Findings
+- **HIGH:** Q-023's cell hosting and administrative compromise boundary remains unresolved. A shared host with multiple containers cannot be claimed as independent cell isolation against host/root compromise.
+- **HIGH:** Cost/capacity remains NOT MEASURED; the two-tenants-per-cell and ten-tenant proposal remains provisional.
+- **HIGH:** No runtime implementation or executable security test is evidenced by this documentation decision.
+
+## Required controls and next steps
+1. Continue local development only with synthetic data, local-only services and no production secrets.
+2. Keep D-020 Alt-5 requirements and D-014 real-data prohibition unchanged.
+3. Before Phase 1 approval, specify and independently accept the architecture-level host/network/admin trust boundaries and residuals; the vendor and exact capacity profile may remain deferred if clearly separated from this gate.
+4. Before hosted deployment/pilot, resolve the provider/topology, itemized cost and per-cell capacity, and test provisioning, isolation, backup/restore, credential rotation and failure containment.
+
+**Gate: NOT READY / NOT APPROVED.** Phase 2 remains unauthorized; real student data remains prohibited. No existing security condition is removed by D-022.
+
+---
+
+# CURRENT SUPERVISOR ADDENDUM — D-021 LOCAL-FIRST DEVELOPMENT (2026-10-23)
+
+**Scope:** Review of the Product Owner's direction to develop on their laptop now and consider server deployment when the product is sufficiently demonstrable.  
+**Reviewed prior branch head:** ee49ff899aff80be2489a66a5bd5385a2d82569c.
+
+## Assessment
+
+The direction is reasonable as a development-cost strategy and is compatible with retaining Alt-5 as the intended pilot isolation direction, provided local development is not confused with the eventual hosted architecture.
+
+- D-021 records local laptop development first and later server planning.
+- `docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md` defines local-only services, synthetic data, secret hygiene, and future deployment gates.
+- Q-023 remains open for the eventual hosted topology; local development does not select Option B/C or remove Alt-5's cell requirements.
+- A laptop and its administrator account are one trust boundary. Containers, Compose networks and multiple local databases do not protect against host/root compromise.
+- Local tests may validate application behavior but cannot prove production tenant isolation, per-cell capacity, backup recovery or operational resilience.
+
+## Findings
+
+### CRITICAL
+- None newly introduced by this documentation-only decision. This is not a runtime security approval.
+
+### HIGH
+1. Phase 1 remains NOT READY / NOT APPROVED. D-021 is not authorization to bypass the phase gate.
+2. Q-023 and other Phase 1 target-architecture requirements remain open; the eventual server topology still needs a decision and independent review.
+3. Real student data remains prohibited until D-014's pre-pilot gates are met and the Product Owner explicitly authorizes the pilot.
+
+### MEDIUM
+1. Local setup must bind services to loopback/local interfaces, use synthetic fixtures, keep secrets out of Git/logs and avoid production credential reuse.
+2. When implementation is authorized, reproducible local setup, migrations and tests should be version-controlled; passing local tests must not be described as production proof.
+
+## Recommendation and gate
+
+Proceed with the **local-development planning approach** and use synthetic data. Do not start Phase 2 until Phase 1 is independently approved under the project's mandatory gate. Do not provision a server prematurely. Revisit Q-023 when the hosted topology is needed for target-architecture closure and pilot planning.
+
+**Gate:** Phase 1 remains **NOT READY / NOT APPROVED**. No code, infrastructure, migration or executable test was created by this addendum.
+
+---
+
+# CURRENT INDEPENDENT REVIEW — Q-023 HOSTING / ALT-5 COMPATIBILITY (2026-10-23)
+
+**Repository:** nourihamed/persian-educational-counseling-os  
+**Reviewed branch:** docs/phase1-tenant-isolation-design  
+**Reviewed pre-review-record head:** f03eb0f894fea69cd59965ced43dbc1a95bf0acc  
+**Scope:** D-011/D-017 compatibility with D-020 Alt-5, hosting options, decision documentation and roadmap alignment. Documentation-only review; not a runtime security assessment.
+
+## Summary
+
+The original D-011 product goals (hosting in Iran, portability, low initial complexity and Docker Compose as a starting deployment tool) can be retained, but the prior single-VPS assumption cannot be represented as satisfying Alt-5 cell-host isolation. The new Q-023 review compares four topology patterns and records a recommendation without making the Product Owner's decision.
+
+**Gate remains NOT READY / NOT APPROVED.** Q-023 remains OPEN. No implementation, infrastructure, executable tests, Phase 2 work or real-data pilot is authorized.
+
+## Passed in this review
+
+- D-011 now distinguishes the accepted hosting objective from the unresolved physical/administrative topology; it explicitly states that multiple containers/databases on one shared host do not isolate against host/root compromise.
+- Added docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md with four options, threat-boundary comparison, recommendation, capacity evidence requirements and explicit non-claims.
+- Q-023 records the Product Owner decision required: separate host/VM per cell, separate cloud accounts/projects per cell, Alt-4, or another constraint.
+- D-017's previous connection arithmetic is treated as a historical estimate, not Alt-5 capacity evidence; the new review requires per-cell recalculation from actual worker/pool topology.
+- Final consistency pass at the recorded review head: corrected the PROJECT_STATE update marker and explicitly marked D-017's prior 70/130 connection arithmetic as historical, not Alt-5 capacity.
+- PROJECT_STATE.md, ROADMAP.md, CHANGELOG.md and PHASE1_REPORT.md now surface the unresolved hosting topology and the continuing gate.
+- No provider, price, measured capacity or runtime security is claimed.
+
+## Findings
+
+### CRITICAL
+- None newly identified in the documentation changes reviewed. This is not a statement that the design is runtime-secure.
+
+### HIGH
+1. **Hosting topology is still unselected:** Q-023 blocks Phase 1 approval. The recommended separate host/VM per cell has not been accepted by the Product Owner.
+2. **Cost and capacity remain unmeasured:** no vendor, instance profile, workload profile, price, load result or restore measurement exists in the reviewed evidence.
+3. **Global compromise residual remains:** a global cloud/organization/root administrator or shared control-plane credential could still affect all cells unless permissions and trust boundaries are independently constrained.
+4. **Runtime controls remain unimplemented/unverified:** architecture documents and contracts do not prove isolation.
+
+### MEDIUM
+1. D-017's pool-size-1-per-tenant-per-process constraint must be recalculated per cell once the worker/process topology is defined; do not reuse the former global 70-connection estimate as a measured result.
+2. Cell provisioning, tenant moves, monitoring, secret rotation, backup/restore, failure containment and incident recovery runbooks remain to be specified and tested in their authorized phases.
+3. Phase 3's infrastructure implementation must follow the topology chosen under Q-023; Docker Compose must not be treated as the cell security boundary.
+
+### LOW
+- None newly identified.
+
+## Required next actions
+
+1. Product Owner decides Q-023 (A/B/C/D in OPEN_QUESTIONS.md).
+2. After the decision, update D-011/roadmap/design consistently; do not change D-020 or the two-tenant limit silently.
+3. Select a real target provider/profile and produce an itemized cost and per-cell capacity plan; label estimates versus measurements.
+4. Recalculate PostgreSQL connections/memory per cell from actual worker/pool counts and admin/monitoring/recovery reserves.
+5. Independently review the final topology and maintain D-014's pre-pilot gates.
+
+## Recommendation and gate
+
+**Recommendation:** evaluate Option B (separate host/VM and network boundary per cell, with a narrowly privileged shared control plane); retain Option C as the stronger account/project-boundary alternative if shared administrative compromise cannot be acceptably bounded. This is a recommendation, not an owner decision.
+
+**Gate: NOT READY / NOT APPROVED.** Keep PR #3 open and unmerged. Do not start Phase 2 or use real student data.
+
+---
+
+# FINAL INDEPENDENT DOCUMENT REVIEW — D-020 / Q-022 ALT-5 (2026-10-23)
+
+**Reviewed live PR head:** `8027bd1c6d4002fd7f81a3452b52b48ea6a345d4`  
+**Repository:** `nourihamed/persian-educational-counseling-os`  
+**Review scope:** GitHub source-of-truth document review after explicit Product Owner selection of Q-022 option A. This is not a runtime security assessment.
+
+## Result
+**Gate: NOT READY / NOT APPROVED.** The Q-022 decision is recorded and the active design, authorization contract and test catalog are aligned to Alt-5. The remaining hosting, capacity, cost and security-evidence gates prevent Phase 1 approval.
+
+## Verified source state
+- PR #3 is open and unmerged; branch `docs/phase1-tenant-isolation-design` is 101 commits ahead and 0 behind `main`.
+- GitHub currently reports `mergeable=false`; this is not itself a merge-conflict diagnosis or a security verdict.
+- No PR workflow runs were returned for the reviewed head. This is not a test pass.
+- D-020 records the explicit Product Owner decision: Alt-5 hybrid isolation cells, Alt-4 as the security reference, proposed maximum two tenants per cell and a provisional 10-tenant initial pilot cap subject to measured cost/capacity.
+- Q-022 is RESOLVED as a design direction. Phase 1 is still NOT READY; Phase 2 and real-data use remain prohibited.
+
+## Passed documentation checks
+- D-020 and Q-022 status are present and consistent with the Product Owner's explicit choice.
+- The normative tenant-isolation design and authorization contract now describe Alt-5, trusted tenant-to-cell routing, separate tenant database/credential boundaries within a cell, scoped runtime/migration/backup access, and global-root residual risk.
+- The pre-Q-022 catalog is archived; the active catalog has **46 unique active contract IDs**. All are specifications only: 0 implemented, 0 executed, 0 passing.
+- The active catalog includes an explicit intra-cell test requiring a tenant credential for A to be denied access to tenant B's database in the same cell.
+- Project state, roadmap, changelog and Phase 1 report have current addenda reflecting D-020 and the unresolved approval gate.
+- No application code, migration, infrastructure, executable test, Phase 2 work, or real student data was created or authorized by these changes.
+
+## Findings
+
+### CRITICAL
+- **No critical document contradiction found in the active normative design/auth/test artifacts during this pass.** This does not mean the architecture is runtime-secure.
+
+### HIGH
+1. **Hosting boundary unresolved:** D-011's previous single-VPS/Docker Compose assumption is not reconciled with separate PostgreSQL clusters/instances and network boundaries per cell. Containers or databases on one shared host do not protect against host/root compromise.
+2. **Capacity/cost unmeasured:** the proposed two-tenants-per-cell and ten-tenant cap are not backed by measurements from an actual target environment.
+3. **Global privilege residual:** compromise of all usable tenant credentials or global host/cloud/root controlling cells and keys can still cause broad exposure. This must remain explicit and be included in pre-pilot risk review.
+4. **Runtime security unverified:** no implementation or executable security test has been reviewed or run. The active contracts are not evidence of a working control.
+
+### MEDIUM
+1. D-017's historical pool-size-1-per-tenant-per-process assumption needs recalculation against tenant-scoped workers, per-tenant databases, per-cell cluster limits and the actual connection budget.
+2. Operations must specify cell provisioning, tenant moves, monitoring, backup/restore, credential rotation, incident containment, and recovery ownership before approval.
+3. The prior single-VPS hosting decision D-011 and any other hosting-specific assumptions must be explicitly reconciled in the decision log rather than silently treated as compatible.
+
+### LOW
+- Older Q-019/Option C analysis remains in the repository for history. Current status notices and the active normative files supersede it; future reviewers should not use historical text as an active contract.
+
+## Required changes before gate reconsideration
+1. Reconcile D-011 with the cell topology: specify the intended host/VM/account/network separation and explicitly state which compromise domains remain shared.
+2. Produce a target-environment cost/capacity plan for up to five cells and ten tenants; measure connection limits, CPU/RAM/I/O, latency, deployment, backup/restore, and failure containment. Do not claim capacity before the measurements.
+3. Reconcile D-017 pool assumptions and specify how a request's worker/credential is tenant-scoped inside its assigned cell.
+4. Review the 46 active contracts for complete threat → control → contract → evidence mapping; implement and execute them only after the relevant phase is authorized.
+5. Independently review the resulting design/hosting changes and confirm D-014's separate pilot gates remain enforced.
+
+## Final recommendation
+Keep PR #3 open and unmerged. Do not start Phase 2 or use real student data. Q-022 selection is recorded, but **Phase 1 remains NOT READY / NOT APPROVED** until the required corrections and independent gate review are complete.
+
+---
+
+# CURRENT SUPERVISOR REVIEW — D-020 / Q-022 ALT-5 DOCUMENT ALIGNMENT (2026-10-23)
+
+## Product Owner decision
+Q-022 option A was explicitly selected. D-020 records Alt-5 hybrid isolation cells, Alt-4 as reference, and a proposed maximum of two tenants per cell for the initial pilot, subject to capacity/cost evaluation. Q-022 is resolved as a design direction only; Phase 1 remains NOT READY.
+
+## Work performed
+- Replaced the prior normative design with an Alt-5 cell architecture and explicit trust boundaries, residual risks, lifecycle and capacity gates.
+- Replaced the authorization contract with trusted tenant-to-cell routing and object-level/derived-data rules.
+- Archived the 123 pre-Q-022 test specifications and created an active Alt-5 catalog. The active catalog now contains 46 contracts, all NOT-RUN.
+- Tightened the within-cell model: each tenant has a separate database and tenant-specific runtime credential; a normal tenant credential must not access the other tenant in the same cell. A shared cell/host/root compromise remains a separate residual.
+- Updated Q-022/D-020, project state, roadmap, and Phase 1 status addendum.
+- No application code, migrations, infrastructure, executable tests, Phase 2 work, or real-data use was started.
+
+## Independent findings / blockers
+1. **CRITICAL — Phase 1 is not approved.** The rewritten documents require independent review and evidence. Do not merge PR #3 as a proxy for approval.
+2. **HIGH — Hosting compatibility unresolved.** D-011's single-VPS/Docker Compose assumption may conflict with separate operational cells. Containers on one host do not isolate against host/root compromise.
+3. **HIGH — Capacity/cost unmeasured.** Ten tenants/five cells and two tenants/cell are proposed limits, not measured feasibility.
+4. **HIGH — Global privilege residual.** Global host/cloud/root and compromise of all usable credentials remain catastrophic scenarios.
+5. **HIGH — Runtime controls unverified.** No implementation or test has run; all 46 active contracts remain NOT-RUN.
+6. **HIGH — Within-cell tenant separation must be enforced.** The active design requires separate tenant databases and tenant-specific credentials inside each cell. If the implementation instead shares a tenant-content database or worker identity, it must be reviewed as a design deviation before approval.
+7. **MEDIUM — D-017 pool size 1 per tenant per process must be reconciled with tenant-scoped workers, cell placement, and connection budget.**
+8. **MEDIUM — Historical Option C references survive in old revision/history sections.** Active normative documents and dated addenda must clearly supersede them.
+
+## Gate
+**NOT READY / NOT APPROVED.** Next step is independent review of the rewritten design/contracts and documentary reconciliation of D-011/D-017, target topology, capacity/cost and operations. Phase 2 remains unauthorized; no real student data.
+ 
+---
+
+> **HISTORICAL PRE-DECISION SNAPSHOT:** The following Q-022 recommendation was written before the Product Owner selected option A. It is superseded by D-020 and the current review at the top of this file. Do not interpret the historical 'Q-022 OPEN' statements below as current status.
+
+# HISTORICAL INDEPENDENT ARCHITECTURE REVIEW — Q-022 (pre-D-020, 2026-10-23)
+
+## Result
+**Recommendation only — no owner decision and no Phase 1 approval.** The independent review is documented in `docs/phase1/Q022_INDEPENDENT_ARCHITECTURE_REVIEW.md`.
+
+- Recommended candidate: **Alt-5 hybrid isolation cells**, with Alt-4 as the stronger-isolation reference.
+- Proposed pilot blast-radius bound: at most two tenants per cell for the provisional 10-tenant pilot (up to five cells), subject to explicit cost/capacity review. This is not measured and is not accepted by the owner yet.
+- Every cell needs real separation of database/instance, network, runtime worker, secret access, migration authority, backups, and privileged operations. Different database names or containers on one shared host do not protect against host/root compromise.
+- K-L-N is clarified: if every tenant credential is actually stolen and usable against every database, topology alone cannot prevent broad exposure. Design must prevent a single worker/vault policy from collecting all credentials and explicitly document global-root residual risk.
+- Source review found stale Option C preference text in the existing 123-contract catalog and historical/normative Option C body text in the old design. These are not current acceptance criteria. After the owner selects Q-022, replace the normative design and reclassify all contracts against the chosen topology.
+- Live GitHub at review start: PR #3 open/unmerged, 68 commits ahead and 0 behind `main`; PR metadata `mergeable=true`. No workflow runs returned for the reviewed head. Mergeability is not a quality/security verdict.
+- Current gate remains **NOT READY / NOT APPROVED**. Phase 2 remains unauthorized; no code, migration, infrastructure, runtime test, or real student data authorized.
+
+## Decision requested
+The Product Owner must choose Q-022:
+- **A:** Alt-5 hybrid isolation cells, max two tenants per pilot cell subject to capacity/cost evidence, with mandatory cell-scoped workers/secrets/migrations/backups and audited break-glass.
+- **B:** Alt-4 dedicated operational isolation per tenant, higher expected cost/complexity, still with secret/process/global-admin controls.
+- **C:** Request another design and specify a different cost or blast-radius target.
+
+Do not treat this recommendation as accepted until the Product Owner explicitly chooses. See `OPEN_QUESTIONS.md` Q-022.
+
+---
+
+# CURRENT SUPERVISOR UPDATE — 2026-10-23 (after Product Owner decision D-019)
+
+## Decision recorded
+- The Product Owner explicitly selected **Q-021 option B**: require stronger tenant-isolation architecture before Phase 1 approval.
+- Recorded as **D-019** in `DECISION_LOG.md`; Q-021 is resolved by that choice. **Q-022 is OPEN** because the final architecture/topology has not been selected.
+- This is not acceptance of the K-L-N or K-O residual risks. It is not approval of Option C, database-per-tenant, separate clusters, or a hybrid.
+
+## Work opened
+- Added `docs/phase1/STRONGER_TENANT_ISOLATION_OPTIONS.md` with qualitative comparison of shared DB/per-tenant roles, per-tenant databases on a shared cluster, tenant-scoped runtime credentials, separated clusters, and hybrid groups.
+- Preliminary evaluation recommendation: investigate tenant-scoped credentials with database-per-tenant and hybrid isolation first; use separately operated clusters as the stronger-isolation reference. This is a recommendation for evaluation, not a selected architecture.
+- D-009's shared-database mechanism is reopened for evaluation; the absolute tenant-isolation requirement is not.
+
+## Gate remains
+**NOT READY / NOT APPROVED.** The current Option C design is not accepted as sufficient for the selected risk tolerance. Phase 2 remains NOT STARTED and NOT AUTHORIZED. No code, migration, infrastructure, or runtime tests are authorized by this decision. All 123 existing contracts remain specifications (0 implemented, 0 executed, 0 passing). D-014 continues to prohibit real student data until all pilot conditions are met and written Product Owner approval is recorded.
+
+## Next required steps
+1. Independently review the architecture comparison and threat coverage.
+2. Resolve Q-022 through an explicit Product Owner decision on the final topology and accepted residuals.
+3. Revise the normative Phase 1 design, authorization contract, test contracts, capacity plan, and operational controls to match that decision.
+4. Recount/map all contracts and conduct a fresh independent review of the pushed PR head. Do not merge PR #3 as a proxy for approval.
+
+---
+
+# FINAL INDEPENDENT RE-REVIEW — 2026-10-23
+
+## Reviewed revision
+- Commit reviewed: `e17be4833c7fff0ea070a4b5388b92ef576cba79` on `docs/phase1-tenant-isolation-design`.
+- PR #3: open and unmerged; comparison to `main` reports 52 commits ahead and 0 behind. The PR metadata's `mergeable` field reported false on the same check, inconsistent with the zero-behind comparison; recheck mergeability before any merge.
+- GitHub Actions/workflow runs associated with the reviewed commit: none returned. No CI success is claimed.
+
+## Result
+**Gate: NOT READY.** The prior Option A GUC versus Option C contradiction has been corrected in the normative design and contracts. The 123 contract IDs are unique and the current routing labels sum to 123. All 123 remain NOT-RUN; 0 implemented, 0 executed, 0 passing. No runtime isolation is proven.
+
+## Remaining blocker — Product Owner decision
+Q-021 was added because D-016 prefers Option C but does not explicitly accept two material residuals: (1) theft of all tenant login credentials (K-L-N) can expose multiple tenants, and (2) compromise of the owner/migrator boundary (K-O) can defeat the isolation controls. The contracts and evaluation now label these as expected residuals, not owner-accepted KNOWN-RESIDUAL outcomes. The Product Owner must choose Q-021 option A (explicitly accept the residuals with the required controls) or B (require stronger architecture). I have not made this decision on the owner's behalf.
+
+## Other verified constraints
+- D-017 direct PostgreSQL connections, per-tenant pool size 1, and deferred transaction pooling are aligned across the current design and test contracts.
+- Tenant data migrations are specified to run tenant-by-tenant through the corresponding tenant login/pool under FORCE RLS; exceptional cross-tenant repair requires a separately approved and audited break-glass decision.
+- Q-020 retention durations and named responsibilities remain open but are explicitly pre-pilot deliverables; no automatic role deletion.
+- D-014 remains in force: no real student data until implementation security tests pass, blocking findings are fixed, target-host capacity is measured, independent implementation review is complete, and written Product Owner pilot approval is recorded.
+- Phase 2 remains NOT STARTED and NOT AUTHORIZED. PR #3 must not be merged as a proxy for approval while Q-021 is open.
+
+## Recommendation
+Resolve Q-021 explicitly. After the owner records the decision, re-fetch the latest PR head, inspect the resulting diff and mergeability, and perform the final gate review. No code or runtime test should be added to Phase 1; its approved scope remains design/documentation only.
+
+---
+# CURRENT OPERATIONAL STATUS — 2026-10-23 (supersedes older pending-status snapshots below)
+
+## Phase 1 review status
+
+- Repository: `nourihamed/persian-educational-counseling-os`
+- PR #3: open, unmerged, base `main`, head branch `docs/phase1-tenant-isolation-design`.
+- Latest independently checked pre-correction head: `4715e3d168d3f680ab98b682688980f845a24d45`.
+- Corrective changes have been committed to this PR branch. The current live head must be re-fetched from GitHub after the final status-document update before recording a review verdict.
+- Gate: **NOT READY pending a fresh independent review of the corrected head.** This status section is not an approval.
+- Scope remains design/documentation only. No implementation, migrations, roles, policies, grants, infrastructure, or tests have been created or executed by Phase 1.
+- Test contracts are specifications, not evidence: Current CI-column breakdown (123 rows): PR 91; PR (Phase 2-3) 2; ENV:direct-pool (D-017) 2; ENV:direct-pool (Phase 3) 1; ENV:pooler (Q-016) 1; ENV:worker (Q-017) 1; ENV:security-review (Phase 26) 1; ENV:security-review (Phase 3 and 26) 1; BLOCKED:Q-007 1; BLOCKED:implementation (Option C, D-016) 4; BLOCKED:implementation (Option C, D-016); Option D part SPEC-ONLY 1; SPEC-ONLY (Option A not selected) 12; SPEC-ONLY (Option D not selected, D-016) 5. These are execution routing labels, not results. All 123 remain NOT-RUN; 0 implemented, 0 executed, 0 passing. Option A GUC-based TI-CTX-01..10 and TI-CTX-13..14 are SPEC-ONLY; TI-CTX-11..12 are future direct-pool lifecycle checks.
+- Option C is the Product Owner's preferred design direction (D-016), pending independent design approval. It is not implemented, test-verified, or proof against application-process compromise.
+- D-017 selected direct PostgreSQL connections for pilot with a bounded per-tenant pool size 1 per tenant per process; transaction pooling is deferred. The 10-tenant cap remains provisional and capacity is NOT measured.
+- Option D remains not selected and NOT SELECTION-READY. Q-020 retention durations and responsible persons remain unresolved. Q-021 (explicit disposition of K-L-N and K-O residual risks) is OPEN and blocks Phase 1 design approval until the Product Owner decides.
+- D-014 remains absolute: no real student data until required implementation security tests pass, blocking findings are fixed, independent implementation review and target-host capacity validation complete, and the Product Owner gives written pilot approval.
+- No Phase 2 start authorization is implied. Phase 1 approval requires a separate final independent review and owner acceptance.
+
+## Corrective work completed in this revision
+
+1. Replaced the normative PostgreSQL GUC/current_setting examples with an Option C contract based on dedicated tenant login roles, protected role-to-tenant mapping, current_user, and tenant-specific direct connection pools.
+2. Marked GUC-dependent Option A tests as SPEC-ONLY; updated pool lifecycle contracts to test tenant-bound direct connection routing.
+3. Corrected the claims ledger and background-job routing wording to avoid describing the superseded GUC mechanism as the selected design.
+4. Remaining verification: inspect the complete corrected diff for consistency; reconcile current-state/report/decision documents; recount contract statuses; verify final PR head and workflow evidence. A passing document review cannot establish runtime isolation.
+
+---
 # SUPERVISOR_REVIEW.md
 
 این فایل برای ثبت **بازبینی خارجی (External Supervisor Review)** پروژه رزرو شده است، طبق بخش ۵۵ Master Prompt.
@@ -498,3 +882,119 @@ No executable tests were run in this documentation-only reconciliation. No workf
 
 ## Gate Status
 **APPROVED for the Phase 0 documentation foundation only.** This addendum does not approve runtime implementation/security and does not authorize Phase 1.
+
+---
+
+# TEMPORARY SECTION — Phase 1 Pending Supervisor Review (revision 5)
+
+> **Temporary status marker.** Phase 1 is under independent review. The latest reviewer-stated gate is **NOT READY** (PR #3 review). This section is NOT a verdict and NOT an approval. It stays until a final dated entry replaces it in a separate commit after reviewer approval and owner acceptance.
+
+## Phase
+PHASE 1 — Architecture & Multi-Tenancy (design and documentation only)
+
+## Reviewer-Stated Gate History
+- Revision 2: CONDITIONAL PASS (reviewer-stated).
+- Revision 5 (PR #3): **NOT READY** (reviewer-stated). The reviewer reported PR #3 at commit `10cb7a5`. The developer's current revision is commit `4ea224e`. The next review must state the commit it reviews.
+
+## Current Gate
+NOT READY (reviewer-stated). Re-review PENDING. NOT APPROVED.
+
+## Owner Decisions Recorded (D-016, 2026-10-17) — for supervisor review
+- Option C selected as the preferred design direction, subject to design review. Not runtime security. Not pilot authorization.
+- Option D not selected; NOT SELECTION-READY until seven points are resolved and independently reviewed.
+- Provisional cap of 10 tenants (A1), subject to capacity analysis and owner confirmation.
+- HISTORICAL (superseded by D-017): bounded, lazy, per-tenant pools; pooler mode not yet selected (Q-016). Current pilot mode is direct PostgreSQL connections, pool size 1 per tenant per process; transaction pooling is deferred.
+- Tenant role lifecycle specified (design §5.5); contracts TI-CONN-04, 05, 06 added.
+- Shared-role fallback prohibited.
+- Capacity rule accepted as a constraint; measurement required before any real-data pilot.
+- D-014 unchanged. Phase 1 unapproved. Gate NOT READY until the supervisor re-reviews the corrected commit.
+
+## Current Review Entry (for commit 61aed53adfde65504c97177667a425f02e717ab2)
+- Reviewer-stated gate: **NOT READY** (reviewer comment 5625838668 on PR #3; recorded as a COMMENT, not a formal REQUEST_CHANGES review).
+- Open reviewer findings for this commit: H-05 (capacity assumption alignment with D-017), H-06 (stale Q-016 and Q-019 text, now labelled historical), M-06 (load-scenario order and L-10 dependency), M-07 (named responsibilities, now a readiness checklist with NOT ASSIGNED placeholders), M-08 (operational status, now updated with this entry).
+- This entry does NOT approve Phase 1. Phase 2 has not started.
+
+## Revision 8 Response to Review ID 5573172802 (NOT READY)
+- H-01: credential-class analysis made equivalent (common scenarios K-L-1 and K-L-N; Option D no-token case explicit) — Q019 §4.4.
+- H-02: Option D classified NOT SELECTION-READY with seven open points and owners — Q019 §6.3; criterion 1 of §6.1 not met for D.
+- M-01: Option C capacity ESTIMATE — NOT MEASURED with assumptions and arithmetic — Q019 §6.2, PHASE1_REPORT §19.1.
+- M-02: contract counts reconciled (120; groups and CI categories sum to 120) — PHASE1_REPORT §3, §19.2.
+- Gate: NOT READY remains. Re-review of the new commit required. Phase 1 not approved.
+
+## Owner Acceptance Recorded (2026-10-17)
+- The separation of design-selection criteria and pilot-validation criteria (Q019 evaluation §6.1) is ACCEPTED by the Product Owner as D-015. Test execution belonging to later phases is not a precondition for design decisions or for starting those phases.
+- This acceptance does NOT approve Phase 1, does NOT select a Q-019 mechanism, and does NOT change D-014.
+- The reviewer must still re-review the new commit (1c36dc5) and record a verdict. The owner must still decide Q-019 and the capacity rule (§6.2).
+
+## Revision 7 Response to the Re-Review (NOT READY, commit cc4b576)
+- C-01 (deadlock): design-selection criteria separated from pilot-validation criteria (Q019 evaluation §6.1). Proposed; reviewer and owner to accept or reject.
+- H-01 (credential classes): analysed separately for login, token, signing key and owner role (Q019 evaluation §4.4).
+- H-02 (TI-ADV-02): same attacker assumption and object for every option; TI-ADV-04 and 05 added.
+- M-01 (capacity fallback): rule defined in Q019 evaluation §6.2; measurement is a pilot criterion.
+
+## Revision 6 Response to the Latest Review Instructions
+- Q-019: technical evaluation of A, C and D against AM1 to AM5 provided (`Q019_MECHANISM_EVALUATION.md`). The mechanism is NOT selected; the recommendation is for independent review and owner decision.
+- Test contracts: result vocabulary added (PASS, FAIL, KNOWN-RESIDUAL, BLOCKED, NOT-RUN, SPEC-ONLY). TI-ADV-01 and 02 state expected results per option. Under Option A the result is KNOWN-RESIDUAL, never PASS.
+- Security docs: §1.3 precedes §1.4; claims ledger assigns one status per claim; no document states RLS alone isolates tenants.
+- Status alignment: OPEN_QUESTIONS, DECISION_LOG, PROJECT_STATE, ROADMAP and PHASE1_REPORT describe the same state.
+
+## Owner Decisions Applied
+- Q-015: RESOLVED — Option A (D-013): read-only, audited platform-admin access; no BYPASSRLS role; no platform writes in MVP.
+- Q-019 (historical, 2026-10-15 state): D-014 recorded the strengthening direction and the real-data pilot gate. Mechanism direction was later decided by D-016 (Option C preferred, subject to design review); D-014 does not select a mechanism.
+- Pilot rule (D-014): no real student data until independent security review, required security tests passing, blocking findings fixed, and written owner approval.
+
+## Reviewer Findings and Response
+
+| ID | Finding | Response |
+|---|---|---|
+| C-01 | T4 combined three threats; Option C claim overstated | Decomposed into T4a, T4b, T4c (design §1.2, §1.4); Option C limits stated (§2.4); claims ledger split (§2.5); TI-ADV-01 to 03 added. Mechanism still OPEN, so C-01 is addressed in documentation but NOT closed as a decision |
+| H-01 | Endpoint inventory contradiction | Clarified: endpoint inventory is a Phase 2 and Phase 4 deliverable; not a Phase 1 approval criterion; no endpoint coverage claimed |
+| H-02 | Option C claim must match its limits | Addressed in design §1.4 and §2.4 |
+| M-01 | Q-007 gate | Reviewer confirmed: TI-API-09 blocks Phase 23 closure, not Phase 1 approval, provided parent access is not implemented in Phase 1. Recorded here. Q-007 product question remains OPEN |
+| M-02 | D-001 to D-006 status | Corrected: D-004 Accepted (2026-10-12); D-001, D-002, D-003, D-005 Proposed; D-006 Proposed, requires Phase 2 confirmation |
+| M-03 | PROJECT_STATE vs PR status | PROJECT_STATE updated: design submitted for review; not authorized or approved |
+
+## Scope Under Review
+- `docs/phase1/TENANT_ISOLATION_DESIGN.md`
+- `docs/phase1/AUTHORIZATION_CONTRACT.md`
+- `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` (123 contracts: 105 PR; 4 ENV:pooler; 1 ENV:worker; 2 ENV:security-review; 1 BLOCKED:Q-007; 5 BLOCKED:implementation; 5 SPEC-ONLY). Specified 123; implemented 0; executed 0; passing 0.
+- `docs/phase1/Q019_MECHANISM_EVALUATION.md` (new; technical evaluation, not a decision)
+- `docs/phase1/TENANT_PATH_INVENTORY.md` (33 paths: 30 mapped, 3 blocked, 0 unmapped)
+- `docs/phase1/PHASE1_REPORT.md`
+- `OPEN_QUESTIONS.md`, `DECISION_LOG.md` (D-013, D-014), `PROJECT_STATE.md`
+
+## Explicitly Out of Review Scope
+- No code, migration, role, policy, grant, or infrastructure exists or was created.
+- No test has been executed. All contracts are specifications.
+- No CI status is claimed. The reviewer found no CI status in the information reviewed; absence of status is not success.
+- No runtime, production, or T4 security is claimed.
+- D-009 unchanged.
+- Phase 2 not started and not authorized.
+
+## Items Blocking Approval
+- Q-019: direction decided (D-016, Option C preferred, subject to design review). Design review of this document is the gate (a) item. Implementation evidence is gate (b); real-data pilot is gate (c) (D-014).
+- Reviewer re-review of the commit that is actually pushed.
+
+## Items Not Blocking Phase 1 Design Approval
+- Endpoint-level inventory (Phase 2 and Phase 4).
+- Q-007 product decision (gate already confirmed by the reviewer).
+- Q-014, Q-016, Q-017, Q-018 (owning phases).
+- Process isolation for T4b (Phase 3 and Phase 26).
+
+## Supervisor Verdict
+**Reviewer-stated (PR #3): NOT READY.** Final verdict: **[PENDING — reviewer re-review of the pushed commit]**
+
+Allowed values: `NOT READY` / `CONDITIONAL PASS` / `APPROVED`
+
+## Product Owner Acceptance
+**Q-015: DECIDED (D-013). Q-019: strengthening direction (D-014) and mechanism direction (D-016, Option C preferred, subject to design review); Option D not selected. Phase 1 acceptance: [PENDING].**
+
+## Final Gate Status
+**PENDING.** No approval is recorded. Phase 2 is not authorized.
+
+## Finalization Procedure
+1. The developer pushes the revision and states its commit hash.
+2. The reviewer re-reviews that commit and records a verdict.
+3. If the verdict is not `APPROVED`, the listed fixes are made and this section is updated again.
+4. If `APPROVED`, the owner records acceptance (Q-019 direction is already recorded in D-016); then a separate commit replaces this section with a dated final entry.
+5. The independent reviewer records APPROVED only when the gate criteria are satisfied; the Product Owner retains PR-merge and next-phase authorization.

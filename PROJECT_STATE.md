@@ -1,10 +1,84 @@
-# PROJECT_STATE.md
-## Operational Memory — Single Source of Truth for "Where are we now"
+# CURRENT PROJECT STATE — PHASE 1 DESIGN GATE (2026-10-24)
 
-Last Updated: 2026-10-14
+- **Phase 0:** CLOSED by Product Owner on 2026-10-14; PR #1 merged.
+- **Phase 1:** **APPROVED — design/documentation only** after independent review under D-024. Approved scope: provider-neutral Alt-5 architecture, trust boundaries/residual risks, authorization contract, and planned acceptance-test specifications. This is not runtime-security approval.
+- **Architecture:** D-020 Alt-5 hybrid isolation cells. D-023 Level 3 production-cell independence and Level 4 independent critical-backup control remain mandatory.
+- **Q-023:** OPEN as a hard pre-hosting deployment gate, not a Phase 1 design blocker. Provider/account topology, provider capability evidence, cost/capacity and environment-only tests are unselected/unverified and must be completed before hosted deployment. D-014 remains a hard real-data gate.
+- **Tests:** 46 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. No runtime test, migration, infrastructure or application code is claimed.
+- **PR #3:** Open and unmerged at the time of this update. The approval applies to the reviewed design branch; changes are not yet in main.
+- **Phase 2:** NOT STARTED / NOT AUTHORIZED. Phase progression requires separate Product Owner authorization. Real student data remains prohibited under D-014.
+- **Historical addenda below:** earlier NOT READY status snapshots predate D-024 and are retained for traceability, not as the current gate.
 
 ---
 
+# HISTORICAL ADDENDUM — D-023 PRODUCTION / BACKUP INDEPENDENCE TARGET (superseded by D-024) (2026-10-23)
+
+- **Product Owner decision:** target Level 3 infrastructure and administrative independence for production cells, plus Level 4 independent administrative/control boundary for critical backups and recovery. See DECISION_LOG.md D-023.
+- **Meaning:** the levels are project-specific targets, not evidence that any provider or deployment meets them. A shared host/account with multiple VMs or Compose stacks is not by itself sufficient. Backup data, keys and deletion/retention controls must be outside ordinary production-account control.
+- **Remaining work:** Q-023 remains OPEN until a real hosting candidate is shown to meet this target and the architecture-level host/network/admin trust boundary and provider-global residual are independently reviewed. Vendor, price and capacity measurements may be deferred; the security target may not.
+- **Unchanged:** D-020 Alt-5, D-014 prohibition on real student data, Phase 1 NOT READY / NOT APPROVED, Phase 2 NOT STARTED / NOT AUTHORIZED. No code, infrastructure or tests are claimed as created or run.
+
+---
+
+# HISTORICAL SUPERVISOR ADDENDUM (superseded by D-024) — D-022 Q-023 DEFERRAL (2026-10-23)
+
+- **Product Owner decision:** final hosted topology/provider selection is deferred until hosted deployment planning. Continue local-first development only under D-021's restrictions (synthetic data, local-only services, no production secrets).
+- **Independent gate impact:** this deferral is not a security waiver. Q-023 remains OPEN and remains a Phase 1 blocker because the Alt-5 cell hosting and administrative compromise boundaries are not yet sufficiently resolved and independently accepted. The exact vendor/pricing/capacity may be deferred; the architecture-level trust boundary may not be silently dropped.
+- **Unchanged:** D-020 Alt-5 cell requirements; D-014 real-student-data prohibition; Phase 1 NOT READY / NOT APPROVED; Phase 2 NOT STARTED / NOT AUTHORIZED. No code, infrastructure, or tests are claimed as created or run by this decision.
+
+---
+
+# PROJECT_STATE.md
+## Operational Memory — authoritative current status
+
+Last Updated: 2026-10-23 (D-021 local-first development direction recorded; Q-023 server topology remains open)
+### Current development strategy — D-021
+
+The Product Owner has chosen local development on their own laptop first, with server deployment to be considered when the product reaches an agreed demonstrable stage. See `docs/phase1/LOCAL_DEVELOPMENT_AND_LATER_DEPLOYMENT.md`. Local development should use synthetic data, keep services local-only, protect secrets, and must not be treated as proof of Alt-5 tenant isolation or production readiness.
+
+This does **not** waive phase gates: Phase 1 remains NOT APPROVED / NOT READY, Phase 2 is not authorized until Phase 1 is approved, and real student data remains prohibited under D-014. Q-023 remains open for the eventual server topology; it need not be prematurely chosen just to document the local development workflow, but it remains a target-architecture gap for Phase 1/pilot readiness.
+
+### Current hosting/cell compatibility finding (Q-023)
+
+D-011's original hosting objective remains a product objective, but a single shared VPS must not be treated as an adequate Alt-5 cell boundary against host/root compromise. D-020 requires a separate PostgreSQL cluster/instance and network boundary per cell; D-023 additionally requires Level 3 administrative independence and Level 4 independently controlled critical backups. Provider comparison/selection is deferred until hosted deployment planning as directed by the Product Owner. Q-023 remains OPEN under D-023; see `docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md`.
+
+D-017's previous global connection arithmetic is an estimate from the earlier topology, not capacity evidence for Alt-5. Per-cell connection and cost budgets remain unmeasured. No vendor, price, host topology, capacity, implementation, infrastructure, or test execution is claimed. Phase 1 remains NOT READY / NOT APPROVED; Phase 2 and real student data remain prohibited.
+
+
+### Current Verified Operational Status
+
+**Phase 0 — Product & Business Model Foundation:** recorded as approved by the Product Owner on 2026-10-14 and merged via PR #1. This is a historical project decision; this update does not re-audit the full Phase 0 history.
+
+**Phase 1 — Architecture & Multi-Tenancy:** **NOT APPROVED; supervisor re-review required.** PR #3 (`docs/phase1-tenant-isolation-design` → `main`) remains the delivery vehicle and must be checked live for current head/status. The prior independent review snapshots are historical; current live HEAD must be re-fetched for each review. D-020 has since changed the design, test contracts, and status documentation. No approval is implied by those edits.
+
+- **Current gate:** NOT READY / NOT APPROVED. Q-022 is RESOLVED by D-020: Alt-5 hybrid isolation cells selected, with proposed max two tenants/cell for initial pilot, subject to measured capacity/cost. The normative design, authorization contract, and active test catalog have been rewritten for Alt-5 and require independent re-review. The design now requires a separate database and tenant-specific credential per tenant within each cell; shared cell-level compromise remains a distinct residual. Do not merge PR #3 as if approved.
+- **Scope:** design/documentation only. No Phase 1 application code, migrations, database roles, grants, RLS policies, infrastructure, or tests have been created or executed.
+- **Prior Option C design:** no longer accepted as sufficient for the selected risk tolerance. D-019 requires a stronger architecture; Q-022 is resolved by D-020 (Alt-5 hybrid cells; maximum two tenants/cell proposed, capacity/cost unmeasured). The prior design is retained for comparison only and must not be implemented unless superseded by a new explicit decision.
+- **Prior Option A/GUC and Option C mechanisms:** historical comparison only; neither is the current selected architecture. Q-022 is resolved; the new Alt-5 normative design supersedes the old mechanism.
+- **Option D:** not selected and NOT SELECTION-READY.
+- **D-017 / Q-016:** pilot uses direct PostgreSQL connections, bounded pool size 1 per tenant per application process; transaction pooling deferred pending a separate decision and compatibility validation.
+- **A1 cap:** 10 tenants is provisional, not capacity evidence. Capacity remains ESTIMATE — NOT MEASURED.
+- **Q-020:** retention duration and named responsible persons remain unresolved; no automatic tenant-role deletion.
+- **Q-021 / D-019:** Product Owner selected option B on 2026-10-23: require stronger architecture; no acceptance of K-L-N/K-O residual risks. Q-022 was subsequently resolved by D-020 (Alt-5). D-009's shared-database mechanism is historical and not the active topology, while the tenant-isolation requirement remains mandatory.
+- **Active Alt-5 test contracts:** 46 specifications; 0 implemented; 0 executed; 0 passing. The prior 123-contract catalog is archived for historical traceability and is not current acceptance evidence. All active contracts remain NOT-RUN; environment-only evidence remains unavailable until the relevant implementation/target environment exists.
+- **CI:** no successful run has been established as evidence for the current corrected head. Absence of a run is not success.
+- **D-014 real-data gate:** real student data remains PROHIBITED until required implementation security tests pass, blocking findings are fixed, capacity and pool limits are measured on the target host, independent implementation review is complete, and the Product Owner gives written approval.
+- **Phase 2:** NOT STARTED and NOT AUTHORIZED.
+
+### Decisions affecting Phase 1
+
+- D-013: platform-admin access in MVP is limited, audited, read-only; no BYPASSRLS role and no platform writes.
+- D-014: no real student data until the full pilot gate is met.
+- D-015: design-selection and pilot-validation criteria are separate; later-phase execution evidence is not a substitute for design review.
+- D-016: historical prior direction was Option C; D-019 required stronger architecture and D-020 selected Alt-5. Option D remains unselected; no shared-role fallback is authorized.
+- D-017: direct per-tenant connections and size-1 pools for pilot; 10-tenant cap provisional.
+- D-018: emergency stop/rollback runbook remains draft and must be exercised before pilot.
+
+### Required next action
+
+Product Owner selected Alt-5 under D-020/Q-022. Independently review the rewritten Alt-5 design, authorization contract and 46-contract active catalog; specifically verify tenant-specific database/credential isolation within each two-tenant cell. Reconcile D-011 hosting and D-017 pool/capacity assumptions. No Phase 2 or real data before approval.
+
+---
 ### Current Phase
 **PHASE 0 — Product & Business Model Foundation — FORMALLY CLOSED by Product Owner on 2026-10-14; PR #1 merged on 2026-10-14**
 
@@ -63,7 +137,7 @@ Implementation: 0% (by design — no application code exists).
 - No active merge blocker remains for PR #1; GitHub confirms it is merged and closed.
 - Phase 0 was formally closed by the Product Owner on 2026-10-14. The merge does not authorize Phase 1.
 - Cross-session reliability of the Supervisor's connected GitHub access is not yet established. Read/Write succeeded in the 2026-10-12 session; verify access at the start of future sessions until repeated success establishes reliability. Historical Claude-environment results remain separate (see Q-011).
-- Phase 1 (Architecture & Multi-Tenancy design) is explicitly **not started and not authorized**. Under the current `ROADMAP.md`, Phase 1 is limited to architecture/design artifacts and tenant-isolation test contracts; it does not authorize application code, database migrations, or infrastructure implementation. If the Product Owner wants implementation moved into Phase 1, that scope change must be explicitly decided and recorded before work starts. The latest Supervisor Review records `APPROVED` for documentation readiness, and the Product Owner confirmed Phase 0 closure on 2026-10-14. Phase 1 remains unauthorized until the Product Owner separately authorizes it and the required PR/review workflow is completed. Q-001, Q-002, and Q-010 were decided on 2026-10-12 and are recorded in `DECISION_LOG.md` / `OPEN_QUESTIONS.md`. Q-012 (MVP Versioning Policy, D-008) is resolved.
+- Historical Phase 1 record: Phase 1 remains NOT APPROVED until the independent review of the actual pushed PR head and Product Owner acceptance. No later document-readiness statement overrides the current gate above. Phase 2 is not started or authorized. Q-001, Q-002, Q-010, and Q-012 decisions remain recorded in `DECISION_LOG.md` / `OPEN_QUESTIONS.md`.
 
 ### Known Bugs
 — None (no application code exists)
