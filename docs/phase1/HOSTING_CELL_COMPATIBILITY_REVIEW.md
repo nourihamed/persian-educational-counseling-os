@@ -97,5 +97,5 @@ The target is specified normatively in DECISION_LOG.md D-023. It does not mean O
 - No vendor or price has been selected or verified.
 - No capacity has been measured and no test is claimed as executed or passed.
 - Phase 1 design-only gate is APPROVED under D-024 after independent review of provider-neutral requirements and residual risks. Provider comparisons are deferred as requested; Q-023 remains OPEN and must be closed with candidate compatibility evidence before hosted deployment. This does not waive D-023 or D-014.
-- PR #3 must remain open and unmerged pending independent review.
+- Historical note corrected 2026-10-24: PR #3 was squash-merged into `main` at `b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa`. The current design-only gate is APPROVED under D-024; this merge does not close Q-023 or authorize hosting, Phase 2, or real student data.
 - Phase 2 and real student data remain prohibited under D-014.
