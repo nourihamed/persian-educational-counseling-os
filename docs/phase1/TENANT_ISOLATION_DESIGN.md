@@ -158,7 +158,7 @@ All contracts remain NOT-RUN until executed with evidence. Threat/control/test m
 
 ## 10. Explicit non-goals and open dependencies
 
-- This is not a choice of host/provider, exact cloud account topology, secret-manager product, or implementation framework. The provider-neutral Level 3/Level 4 requirements in D-023 are mandatory; a real candidate must be verified against them before hosted deployment and the Q-023 gate can close.
+- This is not a choice of host/provider, exact cloud account topology, secret-manager product, or implementation framework. The provider-neutral Level 3/Level 4 requirements in D-023 are mandatory; a real candidate must be verified against them before hosted deployment and Q-023 can close. Under D-024, candidate-specific verification is not a prerequisite for the Phase 1 design-only gate.
 - It does not resolve Q-007 parent access, Q-014 exact response status, Q-017 job execution model, Q-018 file storage provider, retention durations, named incident roles, or legal/tax requirements.
 - D-011 hosting and D-017 pool assumptions must be re-evaluated for cell compatibility; this document does not silently change those business decisions.
 - It does not authorize implementation, migration, infrastructure, Phase 2, real student data, or a pilot.
