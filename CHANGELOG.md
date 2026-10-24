@@ -375,3 +375,8 @@ Product Owner selected local laptop development now, with server deployment to b
 - Recounted the active catalog: 46 unique IDs, 0 implemented, 0 executed, 0 passing. A consistency scan passed for the active D-020/D-023 references and restore step ordering.
 - Provider comparison remains deferred by the Product Owner; Q-023 remains OPEN and Phase 1 NOT READY under the current D-023 gate. PR #3 remains open/unmerged. The connector summary reported mergeable: false, while a fresh direct GitHub API read reported mergeable: true / clean; no merge, code, migration, infrastructure or executable test was performed.
 
+### 2026-10-24 — Phase 1 design gate finalized; hosting validation deferred (D-024)
+
+Recorded D-024 to separate the provider-neutral Phase 1 design gate from provider-specific hosted-deployment validation, following the Product Owner's direction to compare hosting providers later. Reclassified Q-023 as OPEN and mandatory before hosted deployment, but not a blocker to the documentation-only Phase 1 design gate. Updated the active design, authorization contract, test-contract gate wording, project state, phase report, roadmap and hosting compatibility review.
+
+Independent review outcome: Phase 1 design/documentation gate APPROVED only. Active Alt-5 catalog remains 46 specifications, 0 implemented, 0 executed, 0 passing. PR #3 remains open/unmerged at the time of this entry; Phase 2 remains unauthorized; D-014's real-student-data prohibition remains in force. No provider, cost, capacity, implementation, infrastructure or runtime test is claimed selected, measured, created or passed.
