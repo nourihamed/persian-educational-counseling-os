@@ -384,3 +384,10 @@ Independent review outcome: Phase 1 design/documentation gate APPROVED only. Act
 ### 2026-10-24 — Post-merge state reconciliation
 
 Updated current-state, roadmap, phase report and supervisor review after PR #3 was squash-merged into main at b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa. Phase 1 remains approved for design/documentation only; Q-023 remains a hard pre-hosting gate, Phase 2 is not authorized, and D-014 continues to prohibit real student data until all pilot gates and explicit written Product Owner approval are complete.
+
+### 2026-10-24 — Post-merge independent consistency recheck
+
+- Corrected the stale Phase 0 status block in `ROADMAP.md` so it is explicitly historical and cannot contradict the current Phase 1 gate.
+- Aligned `SECURITY.md` with D-020/Alt-5: application/object authorization plus tenant-specific database/credentials and cell host/network boundaries are the required layers; RLS is supplemental if implemented, not the primary cell boundary.
+- Added active contract `TI-CELL-23` for the K-L-N all-tenant-credentials-compromised tabletop/containment scenario. It records the catastrophic residual and requires evidence for detection, bulk revocation/rotation, session termination, containment and recovery without claiming topology guarantees prevention.
+- Recounted the active catalog at 47 unique contracts; 0 implemented, 0 executed, 0 passing. No runtime code, migration, infrastructure or executable test was created or run.
