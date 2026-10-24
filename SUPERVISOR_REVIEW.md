@@ -4,7 +4,7 @@
 Phase 1 — Architecture & Multi-Tenancy (design/documentation only)
 
 ## Scope Reviewed
-Live branch docs/phase1-tenant-isolation-design and PR #3; current Alt-5 design; authorization contract; active acceptance catalog; D-020, D-023 and D-024; Q-023; project state, roadmap, security/test plan, hosting compatibility review, target-environment plan, restore/offboarding requirements and changelog.
+Post-merge independent review of `main` after PR #3 merge `b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa` and corrective commits through `8724ec3368998e3bff3f04af6c544e115d79d04e`; current Alt-5 design, authorization contract, active acceptance catalog, D-020/D-023/D-024, Q-023, project state, roadmap, security/test plan, hosting compatibility review, target-environment plan, restore/offboarding requirements and changelog.
 
 ## Summary
 The provider-neutral design documentation has passed independent review for Phase 1. D-024 records the Product Owner's instruction to defer provider comparisons until hosted-deployment planning and separates that future candidate-specific verification from the current documentation-only gate. Q-023 remains OPEN and mandatory before hosted deployment; no provider or runtime control is represented as verified. This approval is limited to architecture/design readiness and does not authorize Phase 2, hosting, implementation beyond the approved workflow, or real student data.
