@@ -109,7 +109,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Status:** OPEN (recommended: one tenant per job run with payload-bound tenant_id; platform jobs restricted to aggregates; failure leaves no context set).
 **Decision needed from owner:** per-tenant job model versus one global job with per-row checks (not recommended).
 **Why it matters:** jobs and retries are a common cross-tenant path.
-**Dependency:** TI-JOB-01 to TI-JOB-05 (TI-JOB-05 is ENV:worker).
+**Active contract dependency:** TI-JOB-01, TI-JOB-02, TI-JOB-03 and TI-JOB-04 cover forged/stale tenant context, delayed jobs, cross-cell exports, and platform aggregate-job scope. The exact queue/worker model remains open; TI-JOB-05 is a retired identifier, not an active contract.
 **Must be resolved before:** Phase 3 queue design; Phase 17–18 scheduling.
 **Blocks Phase 1 approval:** No.
 
@@ -117,7 +117,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 **Status:** OPEN (recommended: S3-compatible object storage on the pilot host with `tenants/{tenant_id}/` namespacing, server-side authorization before signing, short TTL; no public buckets).
 **Decision needed from owner:** storage provider and hosting location (must be checked against D-011 for reachability), and maximum link lifetime.
 **Why it matters:** files are a direct cross-tenant read path if keys or links are guessable.
-**Dependency:** TI-FILE-01 to TI-FILE-07.
+**Active contract dependency:** TI-FILE-01, TI-FILE-02 and TI-FILE-03 cover tenant-scoped file access, URL revocation, and upload ownership/routing. Storage provider, URL lifetime and provider-specific controls remain open for the first file feature; retired TI-FILE-04..07 identifiers are not active contracts.
 **Must be resolved before:** the first file feature.
 **Blocks Phase 1 approval:** No.
 
@@ -128,7 +128,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 - Each cell has a separate PostgreSQL cluster/instance and network boundary.
 - Each tenant within a cell has its own database and tenant-specific runtime credential; an ordinary tenant credential must not access the other tenant in the same cell.
 - Worker/secret access, migration identities, backup permissions/keys, and recovery actions are scoped and audited; no routine global data-capable migrator/owner is allowed.
-- The active authorization contract and active 47-contract catalog define the current planned controls. All tests remain NOT-RUN; no security property is verified.
+- The active authorization contract and active 51-contract catalog define the current planned controls. All tests remain NOT-RUN; no security property is verified.
 - The initial pilot proposal remains capped at 10 tenants and at most two tenants per cell, subject to measured capacity/cost and separate written pilot approval.
 
 **Residual risks:** independent theft of all usable credentials and global host/cloud/root compromise can still create broad exposure. Topology alone does not eliminate these risks. D-014 continues to prohibit real student data until all pilot gates pass.
@@ -201,7 +201,7 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 ## Q-015 — Platform-admin cross-tenant access mechanism (RESOLVED 2026-10-15)
 **Decision (owner):** Option A — read-only, audited access through explicit Application paths, no `BYPASSRLS` role, no platform write operations in MVP.
 **Record:** DECISION_LOG D-013.
-**Effect on documents:** `TENANT_ISOLATION_DESIGN.md` §8 and §5.1; `TENANT_ISOLATION_TEST_CONTRACTS.md` TI-PLAT-06, 08, 09, 10 (TI-PLAT-06 no longer blocked); `TENANT_PATH_INVENTORY.md` P-25, P-26.
+**Effect on documents:** `TENANT_ISOLATION_DESIGN.md` §8 and §5.1; `TENANT_ISOLATION_TEST_CONTRACTS.md` TI-API-09 and TI-API-14; `TENANT_PATH_INVENTORY.md` P-25, P-26.
 **Note:** this resolves the product decision only. Implementation, and the test runs that prove it, are not done.
 
 
