@@ -44,6 +44,15 @@ This inventory is a denominator for category-level paths, not proof that endpoin
 | P-32 | Option D signed-token/context-function mechanism | Privileged | None — Option D is not selected and is not part of the active architecture | None | EXCLUDED from active Alt-5 inventory; historical reference only |
 | P-33 | Alt-5 cell routing, tenant database/credential boundary and lifecycle/revocation | Connection/routing | Authenticated membership plus trusted registry; tenant-specific DB credential; cell network boundary | TI-CELL-01, TI-CELL-02, TI-CELL-03, TI-CELL-08, TI-CELL-15, TI-CELL-16 | Mapped |
 
+| P-34 | Worker identity, secret distribution and worker-compromise boundary | Privileged/read | Workload identity scoped to tenant/cell; no ordinary secret enumeration across cells | TI-CELL-04, TI-CELL-05, TI-CELL-17 | Mapped |
+| P-35 | Cell database, network and within-cell tenant database/credential boundary | Read/Write | Separate PostgreSQL instance/network per cell and tenant-specific database/credential | TI-CELL-06, TI-CELL-07, TI-CELL-22 | Mapped |
+| P-36 | Backup, encryption-key custody, restore and lifecycle reconciliation | Privileged read/write | Independent Level 4 backup administration, key and deletion/retention controls; authoritative tenant lifecycle state | TI-CELL-11, TI-CELL-12 | Mapped |
+| P-37 | Deployment controller and release authority | Privileged | Deployment identity separated from tenant-data and backup-decryption authority | TI-CELL-13 | Mapped |
+| P-38 | Support and cross-cell break-glass | Privileged read | Explicit scope, dual approval, time limit, ticket, immutable audit and revocation | TI-CELL-14, TI-OPS-03 | Mapped |
+| P-39 | Global administrator and all-tenant-credential compromise response | Privileged/incident | Explicit residual-risk statement, detection, bulk revocation, containment and recovery ownership | TI-CELL-18, TI-CELL-23 | Mapped (tabletop/containment; not proof of prevention) |
+| P-40 | Tenant move, suspension, revocation and cell lifecycle transitions | Read/Write | Approved freeze/cutover; stale jobs/sessions cannot restore old access; cell occupancy enforced | TI-CELL-16, TI-CELL-20, TI-CELL-21 | Mapped |
+| P-41 | Cell failure, capacity, recovery and emergency-stop operations | Operational | Measured target-environment evidence; runbook exercised; no cross-cell failure or unauthorized reopening | TI-OPS-01, TI-OPS-02 | Mapped; TI-OPS-03 is also mapped to P-38 |
+
 ## Notes and gate boundaries
 
 - The active acceptance catalog is `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`. Every ID used in the active rows above is required to exist in that catalog. Old TI-CTX/TI-CONN/TI-REPO/TI-RPT/TI-EXP/TI-PLAT/TI-FK/TI-BYP/TI-CFG references are historical and must not be presented as active tests.
