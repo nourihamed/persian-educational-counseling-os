@@ -1,6 +1,8 @@
-# Pre-Pilot Recommendations for Remaining Items (best-option proposals)
+# Pre-Pilot Recommendations for Remaining Items (historical best-option proposals)
 
-Status: RECOMMENDATIONS ONLY. None of the items below is a decision. Decisions belong to the Product Owner (D-013 to D-017 are the decisions on record). Legal, tax and privacy determinations belong to qualified reviewers. Nothing here asserts a legal duration, a legal requirement, or that any control is implemented or tested.
+> **HISTORICAL / NON-NORMATIVE (2026-10-17):** This recommendation set predates D-019 through D-024 and was written before Alt-5 was selected. Do not use its old topology recommendations or its historical NOT READY gate statement as current instructions. Current architecture and gate are defined by D-020/D-023/D-024, `TENANT_ISOLATION_DESIGN.md`, `TENANT_ISOLATION_TEST_CONTRACTS.md`, and the current entries in `PROJECT_STATE.md` / `SUPERVISOR_REVIEW.md`.
+
+Status: HISTORICAL RECOMMENDATIONS ONLY. None of the items below is a decision. Decisions belong to the Product Owner (D-013 to D-017 are the decisions on record). Legal, tax and privacy determinations belong to qualified reviewers. Nothing here asserts a legal duration, a legal requirement, or that any control is implemented or tested.
 
 Date: 2026-10-17. Prepared by: technical lead (implementation agent).
 
