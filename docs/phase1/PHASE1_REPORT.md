@@ -2,7 +2,7 @@
 
 This entry supersedes earlier Phase 1 current-status addenda where they conflict. Historical review records remain below for traceability.
 
-- **Gate:** Phase 1 was APPROVED for documentation/architecture design only under D-024. This follow-up branch records additional traceability corrections found during a later independent pass; these proposed edits are not in `main` until their correction PR is merged.
+- **Gate:** Phase 1 is APPROVED for documentation/architecture design only under D-024. The follow-up traceability corrections were squash-merged via PR #6 into `main` at `fb16219d506998c9e074971927b55e322f32c21d` and verified after merge.
 - **Reviewed scope:** Alt-5 isolation-cell design; threat/trust boundaries and residuals; D-023 Level 3 production and Level 4 critical-backup requirements; authorization contract; active test-contract coverage; tenant-path traceability inventory; retention/lifecycle draft; target-environment test plan; consistency with decision log, open questions, security/test plan, roadmap and project state.
 - **Q-023:** remains OPEN, but is no longer a Phase 1 design blocker under D-024. Provider/account topology selection, provider capability evidence, cost/capacity measurement and environment-only tests are mandatory before hosted deployment.
 - **Tests:** 51 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. This accurately reflects design-only scope and is not runtime proof.
