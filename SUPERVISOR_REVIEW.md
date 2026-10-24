@@ -15,7 +15,7 @@ The provider-neutral design documentation has passed independent review for Phas
 - D-023 Level 3 production-cell and Level 4 independent critical-backup requirements are explicit, including key/deletion/retention controls and preservation of tenant lifecycle state during restore.
 - Global/root/provider control-plane compromise and all-credentials-compromised scenarios are explicitly treated as residual risks, not claimed eliminated.
 - Authorization contract rejects request-controlled tenant/cell routing and covers object-level access plus files, exports, reports, jobs, notifications, cache/search and audit paths.
-- Static recount of the active catalog found 46 unique active contract IDs and no duplicates. All remain specifications only: 0 implemented, 0 executed, 0 passing.
+- Static recount of the active catalog found 47 unique active contract IDs and no duplicates. All remain specifications only: 0 implemented, 0 executed, 0 passing.
 - D-024, Q-023, design status, project state, roadmap, phase report and hosting review have been aligned to distinguish design approval from deployment validation.
 
 ## Findings
@@ -47,7 +47,7 @@ The contract requires server-verified tenant membership, trusted cell mapping, o
 Design requirements are explicit; implementation is unverified. Critical backups must have independent administration, keys and deletion/retention controls outside ordinary production-account control. A separate bucket/service name alone is insufficient evidence.
 
 ## Testing
-Active inventory: 46 unique specifications; 0 implemented, 0 executed, 0 passing. Environment-only checks require a representative target and remain mandatory before hosted deployment/pilot. No CI pass or runtime security proof is claimed.
+Active inventory: 47 unique specifications; 0 implemented, 0 executed, 0 passing. Environment-only checks require a representative target and remain mandatory before hosted deployment/pilot. No CI pass or runtime security proof is claimed.
 
 ## Documentation
 The current normative design and supporting documents consistently distinguish Phase 1 design readiness from Q-023 candidate-specific validation and D-014 real-data authorization. Historical records are retained but superseded by this dated review and D-024.
