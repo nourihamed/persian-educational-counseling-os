@@ -1,33 +1,39 @@
-## Phase 2 — Database & Domain Model (draft for independent review)
+## Phase 2 — Database & Domain Model: remediation of supervisor findings (draft for independent re-review)
 
-Authorized by Issue #7. **Not approved. Do not merge by the author.**
+Authorized by Issue #7. **Not approved. Not to be merged by the author.** Phase 3 is not started.
 
-### Scope completed
-- Domain model and tenant ownership rules (`docs/PHASE2_DOMAIN_MODEL.md`).
-- ERD and entity specifications, including keys, constraints, nullability, lifecycle and indexes.
-- Versioning for `ProgramTemplate`/`ProgramVersion` and `Plan`/`PlanVersion` (D-008, D-012).
-- Credit ledger design: append-only `credit_transactions`, cached balance with `balance >= 0`, idempotency key, sign rules.
-- DDL draft (`docs/phase2/schema/phase2_schema_draft.sql`) — **not a migration**.
-- Constraint test suite (`docs/phase2/schema/phase2_constraint_tests.sql`) and its run evidence.
+### What changed
+- Credit ledger: single atomic write path `post_credit_transaction()`; runtime role cannot write ledger or balance directly; reconciliation view; append-only incl. TRUNCATE (P2-H01, P2-H05).
+- Program versions: identity immutable in every state; enforced transition table; superseded is terminal (P2-H02).
+- Plan versions and items: frozen after activation; ownership immutable (P2-H03).
+- Added curriculum_nodes, study_sessions, error_records, exams, exam_results, class_sessions, assignments (P2-H04).
+- Domain document reconciled with DDL, with a mismatch table and explicit deferrals (P2-M03).
+- Audit scope made explicit: platform vs tenant (P2-M04).
+- Corrected test T2-VER-01c and the test helper, which now asserts SQLSTATE and reason (P2-M01).
+- Evidence separated into seven categories; v1 evidence marked superseded (P2-M05). Index policy documented (P2-L01). O-9 kept as a proposal (P2-L02).
+- Concurrency checks added and executed with parallel sessions: T2-CR-04, T2-CR-04b, T2-VER-02 (plus sequential T2-CR-03).
 
-### Verification actually run
-- PostgreSQL 16 fresh database; DDL applied with `ON_ERROR_STOP=1`.
-- Constraint suite: **32 PASS, 0 FAIL**, exit 0. Log: `docs/phase2/evidence/test_run_2026-10-25.txt`.
-- Synthetic data only (D-014).
+### Verification actually run (author-reported; not yet independently reproduced)
+- Environment: PostgreSQL 16.15, fresh databases, synthetic data only (D-014).
+- One full run: `docs/phase2/run_all.sh` → **exit 0**. Log: `docs/phase2/evidence/test_run_v2_2026-10-25.txt`.
+- Suite: 87 PASS notices (includes 2 fixture lines), 0 FAIL. Concurrency: 3 PASS.
 
 ### Not executed (explicit)
-- Concurrent credit activation (T2-CR-04), end-to-end activation rollback (T2-CR-03), property-based balance reconciliation, concurrent publish (T2-VER-02), all API/app-layer authorization tests.
-- No runtime security claim. Alt-5 cell isolation, RLS and hosting are unchanged and unverified. Q-023 remains open.
+- Lock-removal mutation test for T2-CR-04; property test over more than one seed; owner-level prevention (deployment); RLS; application/API authorization; migrations; production roles; backup/restore; Alt-5 cells; hosting.
 
-### Open decisions and dependencies
-- **Q-007 (Parent access model) is open.** The parent access grant table is intentionally not modelled. Parent-specific visibility is blocked until the Product Owner decides.
-- O-1 to O-9 are proposals in the design document. None is accepted.
-- D-006 (BillingPlan naming) is still proposed.
+### Boundaries
+- The table owner or superuser can bypass triggers. Reconciliation **detects** tampering; it does not prevent it. Labelled UNVERIFIED — deployment-dependent.
+- No runtime security claim. Q-023 remains open. D-014 unchanged.
 
-### Requested review focus
-- Composite tenant FKs and whether any tenant-owned table is missing one.
-- Immutability trigger for published `program_versions` and the status-transition rule.
-- Credit ledger invariants and the choice of cached balance (O-2).
-- Whether O-9 (one active enrollment per student) is the intended product rule.
+### Open decisions (not decided by this PR)
+- **Q-007** parent access model: open; parent grant table not modelled.
+- **O-1..O-9** are proposals. O-2 (cached vs derived balance) and O-9 (one active enrollment per student) need Product Owner decisions.
+- **D-006** naming; **access_level** and **importance** value sets undefined; **Q-020/O-8** retention.
 
-Phase 2 gate: **PENDING independent review.** This PR does not declare Phase 2 approved.
+### Review focus
+- `phase2_schema_draft.sql`: triggers `program_versions_guard`, `plan_versions_guard`, `plan_items_guard`, `post_credit_transaction`, and the REVOKE/GRANT block.
+- `phase2_constraint_tests.sql`: whether each negative test fails for the stated reason.
+- `concurrency/`: whether the parallel-session results support T2-CR-04, 04b and T2-VER-02.
+- `REMEDIATION_REPORT.md` §1: finding-by-finding status.
+
+Phase 2 gate: **PENDING independent review.**

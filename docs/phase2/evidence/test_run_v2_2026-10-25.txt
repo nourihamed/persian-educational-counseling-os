@@ -1,0 +1,114 @@
+PostgreSQL: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-p
+Date: 2026-10-25T19:00:09Z
+=== [1] DDL + constraint suite (fresh DB p2_suite) ===
+NOTICE:  database "p2_suite" does not exist, skipping
+roles exit=0
+schema exit=0
+suite psql exit=0
+PASS notices: 87
+FAIL lines:   0
+--- PASS list ---
+PASS fixture: draft -> published transition accepted
+PASS fixture: valid positive rows accepted across Phase 2 entities
+PASS T2-TI-01 cross-tenant counselor reference rejected (SQLSTATE 23503, reason verified)
+PASS T2-TI-02 enrollment to another tenant program_version rejected (SQLSTATE 23514, reason verified)
+PASS T2-TI-03 plan_version referencing another tenant program_version rejected (SQLSTATE 23503, reason verified)
+PASS T2-TI-04 NULL tenant_id rejected on tenant-owned table (SQLSTATE 23502, reason verified)
+PASS T2-TI-05 program_version cannot reference another tenant template (SQLSTATE 23503, reason verified)
+PASS T2-TI-06 curriculum parent from another tenant rejected (SQLSTATE 23503, reason verified)
+PASS T2-TI-07 exam_result for another tenant student rejected (SQLSTATE 23503, reason verified)
+PASS T2-TI-08 credit transaction for tenant without account rejected (owner insert) (SQLSTATE 23503, reason verified)
+PASS T2-VER-01a published payload is immutable (SQLSTATE 23514, reason verified)
+PASS T2-VER-01b published version cannot be deleted (SQLSTATE 23514, reason verified)
+PASS T2-VER-01c status-only illegal transition published -> draft (published_at unchanged) (SQLSTATE 23514, reason verified)
+PASS T2-VER-01d illegal draft -> superseded (skips publication) (SQLSTATE 23514, reason verified)
+PASS T2-VER-02a identity mutation of published version (id) rejected (SQLSTATE 23514, reason verified)
+PASS T2-VER-02b identity mutation of draft version (id) rejected (SQLSTATE 23514, reason verified)
+PASS T2-VER-03 tenant reassignment of a version rejected (SQLSTATE 23514, reason verified)
+PASS T2-VER-04 template reassignment of a version rejected (SQLSTATE 23514, reason verified)
+PASS T2-VER-05 published_at rewrite of a published version rejected (SQLSTATE 23514, reason verified)
+PASS T2-VER-06 duplicate version_number for same template rejected (SQLSTATE 23505, reason verified)
+PASS T2-VER-07 enrollment to a draft version rejected (SQLSTATE 23514, reason verified)
+PASS T2-VER-08 TRUNCATE of program_versions rejected (FK-referenced table) (SQLSTATE 0A000, reason verified)
+PASS T2-VER-09 draft version may be edited while draft (accepted)
+PASS T2-VER-10 draft -> published with publisher attribution (accepted)
+PASS T2-VER-11 published -> superseded (status-only) (accepted)
+PASS T2-VER-12 superseded is terminal (superseded -> published rejected) (SQLSTATE 23514, reason verified)
+PASS T2-VER-13a draft version (to be deleted) accepted (accepted)
+PASS T2-VER-13b draft version may be deleted (accepted)
+PASS T2-VER-14 enrollment remains pinned to its version after new versions
+PASS T2-PLAN-01 plan_version identity/origin change rejected (SQLSTATE 23514, reason verified)
+PASS T2-PLAN-02 draft plan_version activation accepted (accepted)
+PASS T2-PLAN-03 insert plan_item into activated version rejected (SQLSTATE 23514, reason verified)
+PASS T2-PLAN-04 update plan_item of activated version rejected (SQLSTATE 23514, reason verified)
+PASS T2-PLAN-05 delete plan_item of activated version rejected (SQLSTATE 23514, reason verified)
+PASS T2-PLAN-06 activation time rewrite rejected (SQLSTATE 23514, reason verified)
+PASS T2-PLAN-07 delete of activated plan_version rejected (SQLSTATE 23514, reason verified)
+PASS T2-PLAN-08a draft plan_version with a draft item (fixture) (accepted)
+PASS T2-PLAN-08b draft item created under draft version (fixture) (accepted)
+PASS T2-PLAN-08 draft item ownership reassignment rejected (identity rule) (SQLSTATE 23514, reason verified)
+PASS T2-PLAN-09 supersession set once after activation (accepted)
+PASS T2-PLAN-10 supersession cannot be rewritten (SQLSTATE 23514, reason verified)
+PASS T2-PLAN-11 a new version may be activated after the previous is superseded (accepted)
+PASS T2-PLAN-12 second concurrently-active version for a plan rejected (SQLSTATE 23505, reason verified)
+PASS T2-PLAN-13 TRUNCATE of plan_items rejected by trigger (no inbound FK) (SQLSTATE 23514, reason verified)
+PASS T2-TEST-00 test activity for sum-rule test accepted (accepted)
+PASS T2-TEST-01 correct+wrong+unanswered != question_count rejected (SQLSTATE 23514, reason verified)
+PASS T2-TEST-02 test_record cannot attach to a study activity (SQLSTATE 23503, reason verified)
+PASS T2-STUDY-00 study activity accepted (accepted)
+PASS T2-STUDY-01 study_sessions time order enforced (SQLSTATE 23514, reason verified)
+PASS T2-ERR-01 custom error_type without label rejected (SQLSTATE 23514, reason verified)
+PASS T2-ERR-02 error_record must reference a test record (SQLSTATE 23503, reason verified)
+PASS T2-REV-01 duplicate review for same activity and offset rejected (SQLSTATE 23505, reason verified)
+PASS T2-EXAM-01 duplicate exam result with NULL subject rejected (NULLS NOT DISTINCT) (SQLSTATE 23505, reason verified)
+PASS T2-CLS-01 class ends before it starts rejected (SQLSTATE 23514, reason verified)
+PASS T2-CLS-02 recurring class requires a recurrence rule (SQLSTATE 23514, reason verified)
+PASS T2-ASG-01 valid assignment accepted (accepted)
+PASS T2-ASG-02 invalid assignment status rejected (SQLSTATE 23514, reason verified)
+PASS T2-CURR-01 invalid curriculum level rejected (SQLSTATE 23514, reason verified)
+PASS T2-AUD-01 platform event with NULL tenant accepted (accepted)
+PASS T2-AUD-02 platform-scope event carrying a tenant rejected (SQLSTATE 23514, reason verified)
+PASS T2-AUD-03 tenant-scope event without tenant rejected (SQLSTATE 23514, reason verified)
+PASS T2-AUD-04 audit row UPDATE rejected (SQLSTATE 23514, reason verified)
+PASS T2-AUD-05 audit row DELETE rejected (SQLSTATE 23514, reason verified)
+PASS T2-CR-01 zero-amount ledger row rejected (direct) (SQLSTATE 23514, reason verified)
+PASS T2-CR-06 negative cached balance rejected (direct owner write) (SQLSTATE 23514, reason verified)
+PASS T2-CR-07 purchase +5 via post_credit_transaction (accepted)
+PASS T2-CR-08 consume -1 for S1 via post_credit_transaction (accepted)
+PASS T2-CR-08b balance is 4 after purchase 5 and consume 1
+PASS T2-CR-09 idempotent replay returns same id; single effect
+PASS T2-CR-10 same key with different payload rejected (SQLSTATE 23505, reason verified)
+PASS T2-CR-11 overspend rejected by function (insufficient credit) (SQLSTATE 23514, reason verified)
+PASS T2-CR-11b rejected overspend left balance unchanged
+PASS T2-CR-03 activation rollback restored balance and ledger
+PASS T2-CR-05 reconciliation drift = 0 after 60 randomized operations (seed 0.42)
+PASS T2-CR-12 reconciliation detects owner-level balance tampering (probe rolled back)
+PASS T2-CR-12b probe fully rolled back (drift 0)
+PASS T2-CR-13 owner-level TRUNCATE of credit_transactions rejected by trigger (SQLSTATE 23514, reason verified)
+PASS T2-AUD-06 owner-level TRUNCATE of audit_logs rejected by trigger (SQLSTATE 23514, reason verified)
+PASS T2-PRIV-01 runtime role cannot INSERT ledger rows directly (SQLSTATE 42501, reason verified)
+PASS T2-PRIV-02 runtime role cannot UPDATE the cached balance (SQLSTATE 42501, reason verified)
+PASS T2-PRIV-03 runtime role cannot DELETE ledger rows (SQLSTATE 42501, reason verified)
+PASS T2-PRIV-04 runtime role cannot TRUNCATE the ledger (SQLSTATE 42501, reason verified)
+PASS T2-PRIV-05 runtime role cannot disable the ledger trigger (SQLSTATE 42501, reason verified)
+PASS T2-PRIV-06 runtime role may read the reconciliation view (accepted)
+PASS T2-PRIV-07 runtime role may post a credit through the atomic function (accepted)
+PASS T2-PRIV-08 runtime role overspend through the function rejected (SQLSTATE 23514, reason verified)
+PASS T2-PRIV-09 reconciliation drift = 0 after runtime-role operations
+=== [2] Concurrency (fresh DB p2_conc) ===
+NOTICE:  database "p2_conc" does not exist, skipping
+fixtures ready: T9 balance=1 (2 contenders), T10 balance=1 (idempotency race)
+== T2-CR-04 concurrent activation, one credit, two students ==
+session A exit=0 ; session B exit=3
+session B message: psql:/mnt/user-data/outputs/phase2_remediation/repo/docs/phase2/concurrency/session_credit.sql:5: ERROR:  insufficient credit: balance 0, requested -1
+successes=1 (expected 1) balance=0 (expected 0) consume_rows=1 (expected 1) drift=0 (expected 0)
+PASS T2-CR-04
+== T2-CR-04b concurrent identical idempotency key ==
+exit C=0 D=0 ; ledger rows for key=1 (expected 1) ; balance=0 (expected 0)
+PASS T2-CR-04b
+== T2-VER-02 concurrent publication of the same version number ==
+exit E=0 F=3 ; F message: psql:/mnt/user-data/outputs/phase2_remediation/repo/docs/phase2/concurrency/session_publish.sql:7: ERROR:  duplicate key value violates unique constraint "program_versions_tenant_id_program_template_id_version_numb_key"
+PASS T2-VER-02 (one winner, loser rejected by unique constraint, rows=1)
+== concurrency summary: ALL_PASS ==
+concurrency exit=0
+=== RESULT: ALL_EXECUTED_CHECKS_PASSED (exit 0) ===
