@@ -1,278 +1,152 @@
-# PHASE 2 DRAFT — Database & Domain Model
+# PHASE 2 — Database & Domain Model (v2)
 
-Status: **DRAFT — NOT COMMITTED, NOT REVIEWED, NOT APPROVED.**
-Source: Issue #7 (Phase 2 authorization), `DATABASE.md` (conceptual model), D-008, D-012, D-014, D-020, D-023, Q-007, Q-023.
-Verification: design only. No migration, schema, or test has been created or executed. Nothing here is runtime evidence.
+**Status: DESIGN DRAFT — NOT APPROVED. Pending independent review (PR #8).**
+This document describes intent. The authoritative *executed* evidence is in
+`docs/phase2/evidence/test_run_v2_2026-10-25.txt`, and only for the scope listed in §9.
+No runtime security (Alt-5 cells, RLS, hosting) is established by anything here (D-020/D-023, Q-023).
+Synthetic data only (D-014).
 
----
-
-## 1. Scope of this draft
-
-In scope: domain entities, tenant ownership, keys and constraints, nullability, deletion/lifecycle, indexes (key ones), versioning for `ProgramTemplate`/`ProgramVersion` and `Plan`/`PlanVersion`, the `StudentCredit`/`CreditTransaction` ledger, and test specifications.
-
-Out of scope: migrations, Alembic, runtime infrastructure, authentication, payment gateway, Phase 3+ work, real student data (D-014).
+Sources: Issue #7; `DATABASE.md`; D-008 (version policy), D-012 (tenant-owned templates),
+D-014, D-020, D-023; Q-007 (parent access, open); Q-023 (hosting gate, open).
 
 ---
 
-## 2. Tenant model
+## 1. Tenancy
 
-- **Tenant = one Counselor account.** `tenants` is the root. Every tenant-owned table carries `tenant_id UUID NOT NULL`.
-- **Composite foreign keys.** Any child row referencing a tenant-owned parent uses `(tenant_id, parent_id)` referencing `parent(tenant_id, id)`. This makes a cross-tenant reference impossible at the database level, not only in application code.
-- **Cell boundary (D-020/D-023).** `tenant_id` is not the isolation boundary. Each tenant lives in its own database within a cell, with a tenant-specific credential. This draft does not change that topology.
-- **Platform catalog out of MVP (D-012).** `program_templates` and `program_versions` have `tenant_id NOT NULL`. There are no nullable-tenant or shared catalog rows.
-- **Server-side tenant resolution.** Tenant ID comes from the trusted membership, never from request input.
+- **Tenant** = one counselor account (`tenants`). Every tenant-owned table has `tenant_id NOT NULL`.
+- Cross-tenant references use composite foreign keys `(tenant_id, id)`, so a child cannot point at another tenant's parent. Enforced in the DDL and tested (T2-TI-01..08).
+- Platform catalog is out of MVP (D-012): no nullable-tenant template or version rows.
+- Tenant identity is resolved server-side (application concern, Phase 4). The DDL does not implement authorization.
 
----
+## 2. Entities (mapped to DDL tables)
 
-## 3. ERD (core entities)
+| Group | Tables | Key rules |
+|---|---|---|
+| Tenancy | `tenants`, `counselors`, `students`, `student_profiles`, `counselor_students` | At most one *active* counselor relationship per student per tenant (partial unique). |
+| Curriculum | `subjects`, `curriculum_nodes` | Node level ∈ grade/book/chapter/topic/subtopic; parent must be same tenant. |
+| Programs (D-008/D-012) | `program_templates`, `program_versions`, `student_program_enrollments` | Versions immutable once published (§4.1). Enrollments reference a published/superseded version only. |
+| Planning (D-008) | `plans`, `plan_versions`, `plan_items` | Activated versions and their items are frozen (§4.2). |
+| Activities | `activities` (base) + `study_sessions`, `test_records`, `review_schedules` (type tables), `error_records` | Type tables bind to the base row by `(tenant_id, id, activity_type)`. Test sum rule `correct + wrong + unanswered = question_count`. |
+| Exams & school | `exams`, `exam_results`, `class_sessions`, `assignments` | Result uniqueness per (exam, student, subject) including NULL subject. |
+| Credit ledger (§45) | `student_credit_accounts`, `credit_transactions`, view `credit_reconciliation` | Single write path `post_credit_transaction()` (§5). |
+| Audit | `audit_logs` | `scope` = platform (tenant NULL) or tenant (tenant set) — §6. |
 
-```mermaid
-erDiagram
-    TENANT ||--o{ COUNSELOR : has
-    TENANT ||--o{ STUDENT_CREDIT_ACCOUNT : has
-    TENANT ||--o{ CREDIT_TRANSACTION : records
-    COUNSELOR ||--o{ COUNSELOR_STUDENT : manages
-    STUDENT ||--o{ COUNSELOR_STUDENT : assigned_via
-    STUDENT ||--|| STUDENT_PROFILE : has
-    STUDENT ||--o{ STUDENT_PROGRAM_ENROLLMENT : enrolled_in
-    PROGRAM_TEMPLATE ||--o{ PROGRAM_VERSION : versions
-    PROGRAM_VERSION ||--o{ STUDENT_PROGRAM_ENROLLMENT : applied_as
-    STUDENT ||--o{ PLAN : owns
-    PLAN ||--o{ PLAN_VERSION : versions
-    PLAN_VERSION ||--o{ PLAN_ITEM : contains
-    PROGRAM_VERSION |o--o{ PLAN_VERSION : informs
-    SUBJECT ||--o{ CURRICULUM_NODE : organizes
-    CURRICULUM_NODE ||--o{ CURRICULUM_NODE : parent_of
-    STUDENT ||--o{ ACTIVITY : performs
-    ACTIVITY ||--o| STUDY_SESSION : specializes
-    ACTIVITY ||--o| TEST_RECORD : specializes
-    TEST_RECORD ||--o{ ERROR_RECORD : has
-    ACTIVITY ||--o{ REVIEW_SCHEDULE : spawns
-    STUDENT ||--o{ EXAM_RESULT : receives
-    EXAM ||--o{ EXAM_RESULT : produces
-    STUDENT ||--o{ CLASS_SESSION : attends
-    STUDENT ||--o{ ASSIGNMENT : has
-    STUDENT ||--o{ AUDIT_LOG : subject_of
-    STUDENT_CREDIT_ACCOUNT ||--o{ CREDIT_TRANSACTION : ledger
-```
+## 3. Reconciliation of domain document and DDL (P2-M03)
 
-Entities with a `tenant_id` column (all of them except `TENANT`) are tenant-owned. `PARENT` and `PARENT_STUDENT_LINK` are intentionally left out of the ERD until Q-007 is resolved (see §10).
+Every mismatch found in v1 and how it was resolved. "Contract" means the DDL and this document now agree.
 
----
-
-## 4. Entity specifications
-
-Notation: PK = primary key; FK = foreign key; UQ = unique; CK = check constraint; `tenant_id` is `NOT NULL` on every row unless marked.
-
-### 4.1 Identity and tenancy
-
-| Table | Key columns | Constraints | Deletion / lifecycle |
+| Item | v1 state | Resolution in v2 | Rationale |
 |---|---|---|---|
-| `tenants` | `id` PK, `status` | status enum | Soft (suspended/closed). Never hard-deleted while data exists. |
-| `counselors` | `id` PK, `tenant_id` FK, `user_id` FK→users | UQ(`tenant_id`,`id`); UQ(`user_id`) | Soft (`deactivated_at`). |
-| `students` | `id` PK, `tenant_id` FK, `user_id` FK→users NULL | UQ(`tenant_id`,`id`) | Soft (`archived`). `user_id` NULL until the student activates an account. |
-| `counselor_students` | `id` PK, `tenant_id`, `counselor_id`, `student_id` | FK(`tenant_id`,`counselor_id`)→counselors; FK(`tenant_id`,`student_id`)→students; UQ(`tenant_id`,`student_id`) WHERE status='active' (partial unique); CK status IN (active, paused, archived, ended); CK `ended_at IS NULL OR ended_at >= started_at` | Status transitions only; history preserved. Rows are not deleted. |
+| `counselors.user_id`, `students.user_id` | Missing in DDL | Added as nullable `uuid`, **no FK** | Users/auth table is Phase 4. Deferred FK is explicit. |
+| Subject `category`, `importance`, `sort_order` | Missing | `category` (nullable text) and `sort_order` added. **`importance` deferred** | Values for `importance` are not defined by any requirement; inventing them is out of scope. |
+| Template status | Doc said draft/active/archived; DDL said active/archived | **Contract: `active` / `archived`** | A template is not versioned by a draft state; drafts are `program_versions` rows. Doc updated. |
+| `created_by`, `published_by`, `enrolled_by` | Missing in DDL | Added to the relevant tables (nullable, no FK until Phase 4) | Actor attribution required by D-008. |
+| `payload` vs `payload_json` | Mismatch | **Contract: `payload_json`** | Matches doc. |
+| `curriculum_node_id` on plan items | Missing | Added (nullable, composite FK) | Matches §4.4. |
+| `rationale` vs `rationale_json` | Mismatch | **Contract: `rationale_json`** | Matches doc; explainability §68. |
+| Review schedule fields | Partial | Added `method`, `mastery_before/after`, `result`, `notes` | Matches doc. |
+| Credit `order_id`, `actor_id` | Missing | Added as nullable `uuid`, **no FK** | No orders/payments tables in Phase 2 (billing deferred). |
+| `activity_type` on plan_items | Free text | CHECK enum including `custom` | Doc §21 lists the types; `custom` is in §21. |
+| `counselor_students.access_level` | Documented, missing | **Deferred** | Value set is not defined in the authoritative sources. Adding it would invent a permission model; related to Q-007. |
+| `audit_logs.tenant_id` nullable meaning | Implicit | Explicit `scope` column + CHECK (§6) | P2-M04. |
+| `activities` types | Doc listed 18 types | DDL base supports `study`, `test`, `review` only | Other activity types become type tables in later phases; Phase 2 covers the entities required by the supervisor list. |
 
-Note on `users`: identity table outside the tenant scope (no `tenant_id`). Its design belongs to Phase 4 (Auth/RBAC). Phase 2 only references it through nullable FKs.
+Entities **not** in the DDL and deferred (with reason):
 
-### 4.2 Student profile and curriculum
+- `users`, `roles`, `permissions`, `parents`, `parent_student_links`: Phase 4 / Q-007.
+- `orders`, `payments`, `invoices`, `products`, `subscriptions`, `coupons`, `promotions`: billing and payment phases; D-010 limits MVP billing depth.
+- `billing_plans` (D-006 naming): proposal, not accepted.
+- `market_segments`, `program_template_segments`: MVP segment model not decided.
+- `progress_snapshots`, `risk_assessments`: derived analytics; formulas and inputs require their own decision (Master §35, §38).
+- `notifications`, `notification_deliveries`, `telegram_*`, `sms_*`: later phases.
+- `coupons`, `promotions`: later billing phase.
 
-| Table | Key columns | Constraints | Lifecycle |
-|---|---|---|---|
-| `student_profiles` | `student_id` PK+FK, `tenant_id` | FK(`tenant_id`,`student_id`); most profile fields nullable (not known at intake) | Updated in place; changes audited. |
-| `subjects` | `id`, `tenant_id`, `name`, `category`, `importance`, `is_active`, `sort_order` | UQ(`tenant_id`,`name`) among active rows | Deactivate, not delete (referenced by history). |
-| `curriculum_nodes` | `id`, `tenant_id`, `subject_id`, `parent_id` NULL, `level` (grade/book/chapter/topic/subtopic), `name` | FK(`tenant_id`,`subject_id`); self FK(`tenant_id`,`parent_id`) NULL; CK level enum | Soft (`is_active`). |
+## 4. Lifecycle rules (enforced in DDL)
 
-### 4.3 Programs (versioned, D-008 / D-012)
+### 4.1 Program versions (P2-H02)
 
-**`program_templates`**
-- Columns: `id` PK, `tenant_id NOT NULL`, `name`, `status` (draft/active/archived), `created_by`, `created_at`.
-- Stable identity; outlives every version.
-- UQ(`tenant_id`,`id`) for composite references.
-- Archived, never hard-deleted once any version exists.
+| From → To | Allowed | Notes |
+|---|---|---|
+| draft → draft | Yes | Payload may change. |
+| draft → published | Yes | Requires `published_by` and `published_at` (CHECK). |
+| published → superseded | Yes | Status only; payload, publisher, and time frozen. |
+| published → draft / published → published (with change) | **No** | Illegal transition / content immutable. |
+| draft → superseded | **No** | Skips publication. |
+| superseded → any | **No** | Terminal. |
+| DELETE | Draft only | Published/superseded rows never deleted. |
+| Identity (`id`, `tenant_id`, `program_template_id`, `version_number`, `created_by`, `created_at`) | **Immutable in every state** | Enforced by trigger; no reliance on FK for identity. |
+| TRUNCATE | **No** | FK-referenced table: PostgreSQL refuses (0A000). |
 
-**`program_versions`**
-- Columns: `id` PK, `tenant_id NOT NULL`, `program_template_id`, `version_number INT NOT NULL`, `status` (draft/published/superseded), `payload_json` (immutable snapshot of subjects, weekly rules, study/review/test rules), `created_by`, `created_at`, `published_by`, `published_at`.
-- FK(`tenant_id`,`program_template_id`) → `program_templates(tenant_id,id)`. This is the composite FK required by D-012 point 2.
-- UQ(`tenant_id`,`program_template_id`,`version_number`).
-- CK: `published_at IS NOT NULL` when `status` ∈ {published, superseded}.
-- **Immutability after publish:** no UPDATE to `payload_json`, `version_number`, `published_at`, or `program_template_id`. Enforced at the application layer and by a DB trigger that rejects updates to published rows (the trigger is a Phase 2 test specification, not yet implemented). Only `status` may change, published → superseded.
-- Edits create a new `draft` row with `version_number = max + 1`.
+New template edits never change existing enrollments (T2-VER-14). Moving a student to a new version is an explicit new enrollment (O-6, still a proposal).
 
-**`student_program_enrollments`**
-- Columns: `id`, `tenant_id`, `student_id`, `program_version_id`, `enrolled_by`, `enrolled_at`, `ended_at` NULL.
-- FK(`tenant_id`,`student_id`)→students; FK(`tenant_id`,`program_version_id`)→program_versions.
-- Enrollment references a **specific version**, not the template. A later template version does not change existing enrollments; the counselor must explicitly move the student to a new version (see §5.3).
+### 4.2 Plan versions and items (P2-H03)
 
-**`market_segments` and `program_template_segments`** — tenant-owned, same composite FK pattern. Details deferred; they are not needed for the core versioning or ledger invariants.
+- `plan_versions`: identity and origin (`id, tenant_id, plan_id, version_number, program_version_id, created_by, created_at`) immutable.
+- Draft (`activated_at` NULL): items may change; version may be deleted.
+- Activated (`activated_at` set): `activated_at` frozen; **items frozen** (no insert/update/delete); no delete.
+- Supersession: `superseded_at` may be set once after activation, then frozen.
+- At most one active (activated, not superseded) version per plan (partial unique).
+- `plan_items`: `(id, tenant_id, plan_version_id)` immutable; writable only while the parent is not activated.
 
-### 4.4 Planning (versioned, D-008)
+## 5. Credit ledger (P2-H01, P2-H05)
 
-**`plans`** (student study plan; not the billing plan — see D-006)
-- Columns: `id`, `tenant_id`, `student_id`, `scope` (daily/weekly/monthly/exam/review/recovery), `period_start`, `period_end`, `created_by`, `created_at`.
-- FK(`tenant_id`,`student_id`)→students.
-- CK `period_end >= period_start`.
-- Stable identity across versions.
+- `credit_transactions` is append-only: UPDATE, DELETE, and TRUNCATE are forbidden by trigger (tested for owner and runtime role).
+- `student_credit_accounts.balance` is a **cache** of `SUM(amount)` with `balance >= 0` (CHECK).
+- **Single write path:** `post_credit_transaction()` (SECURITY DEFINER). In one transaction it: locks the tenant's account row (`FOR UPDATE`), replays an identical idempotent request with no second effect, rejects a reused key with a different payload, rejects overspend, and writes ledger and balance together. The caller's transaction controls atomicity with other work (e.g., creating a student).
+- The runtime role has **no** INSERT/UPDATE/DELETE/TRUNCATE on either table and cannot disable triggers (tested, T2-PRIV-01..05).
+- `credit_reconciliation` view exposes `drift = cached − ledger_sum`. It **detects** owner-level tampering (T2-CR-12); it does not **prevent** it.
+- **Guarantee boundary:** the owner (superuser/table owner) can still bypass triggers and write directly. Preventing that requires deployment controls (separate owner role, no superuser in the app path) that are **not** implemented or verified here. Marked **UNVERIFIED — deployment-dependent**.
+- **O-2 (cached vs derived balance) is NOT decided.** The cache is used because the atomic function keeps it consistent and the reconciliation view checks it. A derived-only design would remove the cache and is an open alternative.
 
-**`plan_versions`**
-- Columns: `id`, `tenant_id`, `plan_id`, `version_number`, `program_version_id` NULL (the version that informed this plan, if any), `created_by`, `created_at`, `activated_at` NULL, `superseded_at` NULL.
-- FK(`tenant_id`,`plan_id`)→plans; FK(`tenant_id`,`program_version_id`)→program_versions NULL.
-- UQ(`tenant_id`,`plan_id`,`version_number`).
-- Partial unique: at most one active version per plan (`activated_at IS NOT NULL AND superseded_at IS NULL`).
-- Immutability: content of a version is never updated after activation. Changes produce a new version.
+## 6. Audit (P2-M04)
 
-**`plan_items`**
-- Columns: `id`, `tenant_id`, `plan_version_id`, `activity_type`, `subject_id` NULL, `curriculum_node_id` NULL, `scheduled_start`, `scheduled_end`, `rationale_json` (explainability, §68).
-- FK(`tenant_id`,`plan_version_id`)→plan_versions. Subject and curriculum FKs are composite as well.
-- CK `scheduled_end > scheduled_start`.
-- Plan items inherit immutability from their version.
+- `audit_logs.scope ∈ {platform, tenant}`.
+- CHECK: `(scope = 'platform') = (tenant_id IS NULL)`. A NULL tenant is valid only with platform scope; tenant scope must name its tenant.
+- Append-only (UPDATE, DELETE, TRUNCATE forbidden).
+- Who may write platform-scope events is an authorization decision (Phase 4). This schema does not expand platform-admin permissions (D-013).
 
-### 4.5 Activities and records (§21–§28)
+## 7. Indexes (P2-L01)
 
-Design choice (proposed, see §10 open decision O-4): a **single `activities` base table** with a `type` enum and **one-to-one type tables** (`study_sessions`, `test_records`, `exam_results`, `class_sessions`, `assignments`). This avoids a polymorphic table with many nullable columns and keeps type-specific constraints enforceable.
+**Mandatory now (created by constraints):** every tenant-owned unique key `(tenant_id, id)`; uniqueness keys for versions, one-active-version, one-active-counselor, review duplicates, idempotency, and results with NULLS NOT DISTINCT.
 
-- `activities`: `id`, `tenant_id`, `student_id`, `type`, `subject_id` NULL, `curriculum_node_id` NULL, `occurred_on`, `created_at`. FK(`tenant_id`,`student_id`). Index (`tenant_id`,`student_id`,`occurred_on`).
-- `study_sessions`: `activity_id` PK+FK, `tenant_id`, `started_at`, `ended_at`, `duration_minutes` (derived or checked against start/end), `goal`, `result`, `mastery_before`, `mastery_after` (0–100, nullable). CK `ended_at > started_at`.
-- `test_records`: `activity_id` PK+FK, `tenant_id`, `question_count`, `correct`, `wrong`, `unanswered`, `duration_minutes`. CK: `correct >= 0 AND wrong >= 0 AND unanswered >= 0`; CK `correct + wrong + unanswered = question_count` (per §23; an explicit override flag is a separate open item, O-5).
-- `error_records`: `id`, `tenant_id`, `test_record_id` FK(`tenant_id`,…), `error_type` enum with `custom` text for user-defined types. Index (`tenant_id`,`error_type`,`created_at`) for pattern queries.
-- `review_schedules`: `id`, `tenant_id`, `original_activity_id`, `review_offset_days` (1/3/7/…), `review_date`, `method`, `mastery_before/after`, `result`. **UQ(`tenant_id`,`original_activity_id`,`review_offset_days`)** — the DB-level duplicate-prevention rule required by DATABASE.md.
-- `exams`, `exam_results` (per subject), `class_sessions`, `assignments`: tenant-owned, composite FKs, status enums per §27, lifecycle soft-only.
+**Created now (justified):** `credit_transactions(tenant_id, created_at)` for ledger history reads.
 
-### 4.6 Billing and credits (§10, §45) — ledger design
+**Deferred until query patterns and measurements exist:** student timelines on `activities(tenant_id, student_id, occurred_on)`, dashboard aggregates, foreign-key child-side indexes for deletes, and any index for counselor list filters (Master §34). Each adds write and storage cost; none is added speculatively.
 
-**`student_credit_accounts`**
-- `tenant_id` PK, `balance INT NOT NULL`, `updated_at`, `version INT` (optimistic lock).
-- CK `balance >= 0`.
-- The balance is a **cache** of the ledger sum, maintained in the same DB transaction as each ledger insert. It is never written independently.
+## 8. Open decisions (all remain PROPOSALS unless stated)
 
-**`credit_transactions`** (append-only)
-- Columns: `id`, `tenant_id NOT NULL`, `amount INT NOT NULL`, `kind` (purchase, activation_consume, refund, cancellation_release, adjustment), `student_id` NULL, `order_id` NULL, `idempotency_key TEXT NOT NULL`, `actor_id`, `reason`, `created_at`.
-- CK `amount <> 0`; CK sign rule per kind (purchase/refund/cancellation_release > 0; activation_consume < 0; adjustment non-zero either sign with `reason` NOT NULL).
-- **UQ(`tenant_id`,`idempotency_key`)** — duplicate submissions and webhook replays cannot double-apply.
-- App-layer grants: INSERT and SELECT only. No UPDATE, no DELETE. Corrections are new compensating rows.
+| ID | Question | Status |
+|---|---|---|
+| Q-007 | Parent access model | **OPEN — Product Owner.** Blocks parent grant table and parent visibility. |
+| O-1 | Tenant = counselor account 1:1? | Proposal. |
+| O-2 | Cached balance vs derived-only | Open. Current draft uses cache + atomic function + reconciliation. |
+| O-3 | Consume immediately vs reserve/confirm | Proposal: consume in the same transaction as student creation. |
+| O-4 | Activity base + type tables vs single polymorphic table | Proposal implemented (base + type tables). |
+| O-5 | Allow test-record sum override? | Open. Strict in DDL; no override modelled. |
+| O-6 | Template update vs existing plans | Proposal: explicit re-enrollment only. |
+| O-7 / D-006 | Rename commercial `Plan` → `BillingPlan` | Proposal, not accepted. |
+| O-8 / Q-020 | Retention duration and responsible persons | Open; pre-pilot gate. |
+| O-9 | One active program enrollment per student | **Proposal, enforced by partial unique index.** A constraint does not prove the business rule is accepted. |
+| Q-023 | Hosting topology / provider gate | Open; hard pre-hosting gate. Unchanged. |
 
-**Invariants (must hold in every committed state):**
-1. `student_credit_accounts.balance = SUM(credit_transactions.amount)` for the tenant.
-2. `balance >= 0`.
-3. Each student activation consumes exactly one credit, in one transaction with the student creation, or the whole operation is rejected (Master Prompt §12).
-4. Activation and cancellation are idempotent per `idempotency_key`.
-5. A `purchase` is recorded only after provider confirmation; Phase 2 models the state, not the gateway (Phase 22).
+## 9. Execution status (P2-M05)
 
-**Concurrency:** activation takes `SELECT … FOR UPDATE` on the tenant's credit account row, then checks balance, inserts the ledger row, and updates the balance. Two concurrent activations cannot both pass with one remaining credit.
+Seven categories, kept separate:
 
-### 4.7 Audit
+1. **Design specified:** this document, §§1–8.
+2. **SQL draft authored:** `phase2_schema_draft.sql` (v2), `phase2_roles_setup.sql` (test-only role).
+3. **SQL actually executed:** yes, on local PostgreSQL 16.15 (fresh database), `ON_ERROR_STOP=1`, exit 0.
+4. **Tests actually executed:** 87 PASS notices (including 2 fixture lines), 0 FAIL; 3 concurrency checks PASS (two parallel sessions each). Evidence: `docs/phase2/evidence/test_run_v2_2026-10-25.txt`.
+5. **Author-reported evidence:** the above, produced by the author in a sandbox. Not independently reproduced.
+6. **Independently reproduced evidence:** **none yet.** Pending independent reviewer.
+7. **Runtime security not implemented or verified:** cell isolation (D-020/D-023), RLS, hosting, production role provisioning, backups/restore, owner-level prevention, and all application/API authorization.
 
-**`audit_logs`**: `id`, `tenant_id` NULL (only for platform-level actions), `actor_id`, `action`, `entity_type`, `entity_id`, `before_json` NULL, `after_json` NULL, `created_at`. Append-only, no UPDATE or DELETE grants. Retention is open (Q-020).
+**Not executed:** RLS; API/app authorization; migrations (Alembic); production roles; backup/restore; concurrent tests beyond the three listed; a mutation/negative control that proves the concurrency test fails when the lock is removed (not run); a property-based test beyond one seeded sequence.
 
----
+The earlier v1 evidence (32 PASS) is superseded by v2 and is kept only as history; it does not describe the current DDL.
 
-## 5. Versioning rules (summary)
+## 10. Phase gates
 
-1. **Template edit** → new `program_versions` row in `draft`; publish → `published`; previous published → `superseded`. Old rows are never rewritten.
-2. **Existing enrollments do not change** when a template changes. Moving a student to a new version is an explicit action that creates a new enrollment row and ends the old one.
-3. **Plan edit** → new `plan_versions` row. The previous version is superseded and kept. `plan_versions.program_version_id` records the origin.
-4. **Explainability:** "What was planned, what changed, why, what happened" is answered by joining `plan_versions` → `plan_items` → `activities` and the `rationale_json`.
-
----
-
-## 6. Indexes (key ones)
-
-- Every tenant-owned table: index leading with `tenant_id`.
-- `counselor_students`: partial unique on `(tenant_id, student_id) WHERE status='active'`.
-- `activities`: `(tenant_id, student_id, occurred_on)`.
-- `credit_transactions`: `(tenant_id, created_at)`; UQ `(tenant_id, idempotency_key)`.
-- `review_schedules`: UQ `(tenant_id, original_activity_id, review_offset_days)`; `(tenant_id, review_date)` for the daily queue.
-- `plan_versions`: UQ `(tenant_id, plan_id, version_number)`; partial unique for one active version.
-- Dashboard/list queries (counselor filters in Master Prompt §34) need an index review once real query shapes are fixed. Not done in this draft.
-
----
-
-## 7. Deletion and retention summary
-
-| Data | Policy |
-|---|---|
-| Tenant data | Soft-close; no hard delete while in retention. Retention duration is open (Q-020). |
-| Students, counselor relations | Status change; never hard-deleted if records exist. |
-| Program/Plan versions | Never deleted once published. |
-| Credit ledger, audit log | Append-only; never deleted by application. |
-| Activities and records | Soft-delete only where reporting value exists. |
-
----
-
-## 8. Test specifications (Phase 2, NOT implemented, NOT executed)
-
-Each is a contract for later implementation. None is PASS.
-
-- **T2-TI-01** Composite FK rejects a `counselor_students` row whose `counselor_id` belongs to another tenant.
-- **T2-TI-02** Composite FK rejects a `student_program_enrollments` row referencing a `program_version` of another tenant.
-- **T2-TI-03** Composite FK rejects a `plan_versions` row whose `program_version_id` belongs to another tenant.
-- **T2-TI-04** Every tenant-owned table rejects `tenant_id = NULL`.
-- **T2-VER-01** Published `program_versions` payload cannot be updated.
-- **T2-VER-02** `(tenant_id, program_template_id, version_number)` uniqueness holds under concurrent publish.
-- **T2-VER-03** Changing a template does not alter existing enrollments.
-- **T2-VER-04** At most one active `plan_versions` row per plan.
-- **T2-CR-01** Ledger insert with `amount = 0` is rejected.
-- **T2-CR-02** Duplicate `idempotency_key` does not double-apply.
-- **T2-CR-03** Activation with balance 0 is rejected and no student row is created.
-- **T2-CR-04** Two concurrent activations with balance 1 → exactly one succeeds.
-- **T2-CR-05** `balance = SUM(ledger)` after a random sequence of operations (property test).
-- **T2-CR-06** `balance < 0` is rejected at the DB level.
-- **T2-CR-07** UPDATE and DELETE on `credit_transactions` and `audit_logs` are denied for the application role.
-- **T2-TEST-01** `correct + wrong + unanswered = question_count` is enforced; the override path is separately specified after O-5.
-- **T2-REV-01** Duplicate review generation for the same activity and offset is rejected.
-
-All of the above use **synthetic data only** (D-014).
-
----
-
-## 9. Phase 2 gates and dependencies
-
-- Phase 2 does not satisfy Q-023. Hosting remains blocked until Q-023 is closed.
-- Phase 2 does not unblock real student data (D-014).
-- Phase 2 is not approved until independent review. This draft is not an approval.
-
----
-
-## 10. Open decisions and dependencies
-
-| ID | Question | Why it matters | Recommended option | Alternatives | Impact |
-|---|---|---|---|---|---|
-| **Q-007** | Parent access model (default level, visible fields, counselor-note visibility) | `parent_student_links` access columns and the query surface depend on it | Leave `parent_student_links` out of Phase 2 until resolved, or model link only with no access grants | Product Owner specifies the access matrix now | **BLOCKED** for the parent access portion only; everything else proceeds |
-| O-1 | Confirm tenant = one Counselor account (1:1) | Determines whether `tenants` and `counselors` can merge | Keep separate (room for multi-user counselor offices later) | Merge into one table | Low |
-| O-2 | Credit balance: cached column vs derived only | Affects concurrency design | Cached column maintained in-transaction, reconciled by the invariant test | Derived only (simpler, slower under load) | Medium |
-| O-3 | Activation: consume immediately vs reserve | Affects failed-creation behavior | Consume in the same transaction as student creation | Two-phase reserve/confirm | Medium |
-| O-4 | Activity: single base table + type tables vs polymorphic single table | Constraint enforcement and query shape | Base + type tables (as drafted) | Single table with nullable columns | Medium |
-| O-5 | Can a test record override `correct+wrong+unanswered = question_count`? | DATABASE.md allows override only if "explicitly configured" | Override as an explicit flag with reason; default strict | Always strict | Low |
-| O-6 | Template update vs existing plans | Product behavior | Explicit re-enrollment only (as drafted) | Automatic propagation to draft plans | Medium (product) |
-| O-7 | D-006: rename commercial `Plan` to `BillingPlan` | Naming collision | Approve D-006 | Keep both as `plan` with schema prefixes | Low |
-| O-8 | Retention duration and responsible persons (Q-020) | Deletion/retention schema | Defer to pre-pilot gate | — | Low for Phase 2 |
-
----
-
-## 11. Risks and technical debt
-
-- The DDL is not written. Column types, exact enums, and index choices are provisional.
-- The payload snapshot of `program_versions` is a JSON blob. This is simpler but makes querying weak rules harder; a normalized alternative needs a decision.
-- The append-only controls are an application grant plus a trigger spec. Against a DB owner or host compromise they are not sufficient; that residual is covered by the Alt-5 cell model, not by this draft.
-- Nothing in this draft is executed or verified.
-
----
-
-## 12. Required next steps (when GitHub write access is available)
-
-1. Create branch `docs/phase2-database-domain-model` from `main`.
-2. Commit this draft as `docs/PHASE2_DOMAIN_MODEL.md` (or the agreed path).
-3. Update `DATABASE.md`, `DECISION_LOG.md` (O-1 to O-8 as proposals), `OPEN_QUESTIONS.md` (Q-007 dependency), `TEST_PLAN.md` (T2 specifications), `PROJECT_STATE.md`, `CHANGELOG.md`.
-4. Open a PR for independent review. Do not merge it and do not declare Phase 2 approved.
-
----
-
-## 13. Execution status (added in this revision)
-
-- DDL draft `docs/phase2/schema/phase2_schema_draft.sql` was applied to a fresh PostgreSQL 16 database with `ON_ERROR_STOP=1`. It loads without error.
-- Constraint suite `docs/phase2/schema/phase2_constraint_tests.sql` ran once on a fresh database: **32 PASS, 0 FAIL, exit 0**. Evidence: `docs/phase2/evidence/test_run_2026-10-25.txt`.
-- Rules verified by execution: composite cross-tenant FKs (T2-TI-01/02/03/05), NULL tenant rejection, published-version immutability and transition rules (T2-VER-01), duplicate version numbers, at most one active plan version, test-record sum rule, review duplicate prevention, ledger zero-amount, sign rules, idempotency uniqueness, non-negative balance, append-only ledger and audit log, and role-level denial of UPDATE/DELETE for a runtime role.
-- **Not executed:** T2-CR-04 (concurrent activation), T2-CR-03 (end-to-end activation rollback), property-based balance reconciliation (T2-CR-05 beyond one case), T2-VER-02 under concurrent publish, and every application/API-level authorization test. These remain specifications.
-- Execution is local and synthetic. It is **not** runtime security evidence for Alt-5 cells, RLS, or hosting. Q-023 and D-014 gates are unchanged.
-- Added open decision **O-9 (proposed):** one active `student_program_enrollments` row per student at a time. Implemented as a partial unique index in the draft; requires Product Owner confirmation.
 - Phase 2 is **not approved**. Independent review is pending.
+- Phase 3 is **not** started or authorized.
+- Real student data remains prohibited (D-014). Q-023 remains a hard pre-hosting gate.
