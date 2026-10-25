@@ -1,0 +1,42 @@
+PHASE 2 CONSTRAINT TEST RUN — EVIDENCE (single run, fresh database)
+Date: 2026-10-25 (sandbox clock)
+Engine: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.
+Data: synthetic only (D-014)
+Command: psql -v ON_ERROR_STOP=1 -d p2evidence -f phase2_constraint_tests.sql
+psql exit code: 0
+PASS count: 32
+FAIL count: 0
+NOT EXECUTED: T2-CR-04 concurrency, T2-CR-03 end-to-end activation, T2-CR-05 property test over random sequences, T2-VER-02 under concurrent publish, any API/app-layer authorization test.
+----- PASS LIST -----
+PASS positive baseline: valid counselor_students row accepted
+PASS T2-TI-01 cross-tenant counselor reference rejected  (SQLSTATE 23503)
+PASS T2-TI-02 enrollment referencing another tenant program_version rejected  (SQLSTATE 23503)
+PASS T2-TI-03 plan_version referencing another tenant program_version rejected  (SQLSTATE 23503)
+PASS T2-TI-04 NULL tenant_id rejected on tenant-owned table  (SQLSTATE 23502)
+PASS T2-TI-05 program_template cannot reference another tenant (composite FK)  (SQLSTATE 23503)
+PASS T2-VER-01 published program_version payload is immutable  (SQLSTATE 23514)
+PASS T2-VER-01b published program_version cannot be deleted  (SQLSTATE 23514)
+PASS T2-VER-01c illegal status transition published -> draft  (SQLSTATE 23514)
+PASS T2-VER-02 duplicate version_number for same template rejected  (SQLSTATE 23505)
+PASS T2-VER-03 enrollment pinned to its version after new draft
+PASS draft->published->superseded lifecycle accepted
+PASS T2-VER-04 second active plan_version for same plan rejected  (SQLSTATE 23505)
+PASS plan_version superseded before activated rejected  (SQLSTATE 23514)
+PASS plan period_end before period_start rejected  (SQLSTATE 23514)
+PASS T2-TEST positive: 7+2+1=10 accepted
+PASS T2-TEST-01 correct+wrong+unanswered != question_count rejected  (SQLSTATE 23514)
+PASS test_record cannot attach to a non-test activity (type-key FK)  (SQLSTATE 23503)
+PASS T2-REV-01 duplicate review for same activity and offset rejected  (SQLSTATE 23505)
+PASS T2-CR-05 balance (9) equals ledger sum (9)
+PASS T2-CR-02 duplicate idempotency_key rejected  (SQLSTATE 23505)
+PASS T2-CR-01 zero-amount ledger row rejected  (SQLSTATE 23514)
+PASS sign rule: activation_consume with positive amount rejected  (SQLSTATE 23514)
+PASS sign rule: adjustment without reason rejected  (SQLSTATE 23514)
+PASS T2-CR-06 negative balance rejected at DB level  (SQLSTATE 23514)
+PASS T2-CR-07 ledger UPDATE rejected (append-only trigger)  (SQLSTATE 23514)
+PASS T2-CR-07b ledger DELETE rejected (append-only trigger)  (SQLSTATE 23514)
+PASS T2-CR-07c audit_logs UPDATE rejected (append-only trigger)  (SQLSTATE 23514)
+PASS T2-CR-07f audit_logs DELETE rejected (append-only trigger)  (SQLSTATE 23514)
+PASS T2-CR-07d app role without UPDATE grant cannot update ledger  (SQLSTATE 42501)
+PASS T2-CR-07e app role without DELETE grant cannot delete ledger  (SQLSTATE 42501)
+PASS T2-TI-06 credit transaction for tenant without account rejected  (SQLSTATE 23503)
