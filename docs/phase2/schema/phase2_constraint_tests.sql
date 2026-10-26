@@ -38,6 +38,21 @@ INSERT INTO tenants (id, status) VALUES
   ('00000000-0000-0000-0000-000000000001', 'active'),
   ('00000000-0000-0000-0000-000000000002', 'active');
 
+-- Test-environment authorization seed (NOT production configuration). Synthetic only.
+INSERT INTO credit_role_permissions (role_name, kind) VALUES
+  ('app_t1', 'activation_consume'), ('app_t2', 'activation_consume'),
+  ('issuer_rt', 'purchase'),
+  ('adjuster_rt', 'refund'), ('adjuster_rt', 'cancellation_release'), ('adjuster_rt', 'adjustment'),
+  ('postgres', 'purchase'), ('postgres', 'activation_consume'), ('postgres', 'refund'),
+  ('postgres', 'cancellation_release'), ('postgres', 'adjustment');
+INSERT INTO tenant_role_bindings (role_name, tenant_id) VALUES
+  ('app_t1', '00000000-0000-0000-0000-000000000001'),
+  ('app_t2', '00000000-0000-0000-0000-000000000002'),
+  ('issuer_rt', '00000000-0000-0000-0000-000000000001'),
+  ('adjuster_rt', '00000000-0000-0000-0000-000000000001'),
+  ('postgres', '00000000-0000-0000-0000-000000000001'),
+  ('postgres', '00000000-0000-0000-0000-000000000002');
+
 INSERT INTO counselors (id, tenant_id, display_name) VALUES
   ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Synthetic Counselor A'),
   ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'Synthetic Counselor B');
@@ -432,7 +447,7 @@ END $$;
 
 SELECT expect_error('T2-CR-10 same key with different payload rejected',
   $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'activation_consume', -2,
-       '20000000-0000-0000-0000-000000000001', NULL, 'activate-s1', NULL, NULL)$q$, '23505', 'different payload');
+       '20000000-0000-0000-0000-000000000001', NULL, 'activate-s1', NULL, NULL)$q$, '23505', 'different canonical payload');
 
 SELECT expect_error('T2-CR-11 overspend rejected by function (insufficient credit)',
   $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'activation_consume', -10,
@@ -505,34 +520,177 @@ SELECT expect_error('T2-CR-13 owner-level TRUNCATE of credit_transactions reject
 SELECT expect_error('T2-AUD-06 owner-level TRUNCATE of audit_logs rejected by trigger',
   $q$TRUNCATE audit_logs$q$, '23514', 'forbidden');
 
--- =========================================== T2-PRIV runtime-role boundary ==
--- Runs as the runtime role app_rt (non-owner). The owner-level guarantees above
--- are NOT claimed for app_rt; these tests check what app_rt can and cannot do.
-SET ROLE app_rt;
-SELECT expect_error('T2-PRIV-01 runtime role cannot INSERT ledger rows directly',
-  $q$INSERT INTO credit_transactions (id, tenant_id, amount, kind, idempotency_key, reason)
-     VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000001', 1, 'adjustment', 'direct-1', 'x')$q$, '42501');
-SELECT expect_error('T2-PRIV-02 runtime role cannot UPDATE the cached balance',
-  $q$UPDATE student_credit_accounts SET balance = 999 WHERE tenant_id = '00000000-0000-0000-0000-000000000001'$q$, '42501');
-SELECT expect_error('T2-PRIV-03 runtime role cannot DELETE ledger rows',
-  $q$DELETE FROM credit_transactions WHERE tenant_id = '00000000-0000-0000-0000-000000000001'$q$, '42501');
-SELECT expect_error('T2-PRIV-04 runtime role cannot TRUNCATE the ledger',
-  $q$TRUNCATE credit_transactions$q$, '42501');
-SELECT expect_error('T2-PRIV-05 runtime role cannot disable the ledger trigger',
-  $q$ALTER TABLE credit_transactions DISABLE TRIGGER credit_transactions_append_only$q$, '42501');
-SELECT expect_ok('T2-PRIV-06 runtime role may read the reconciliation view',
-  $q$SELECT drift FROM credit_reconciliation$q$);
-SELECT expect_ok('T2-PRIV-07 runtime role may post a credit through the atomic function',
-  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 2, NULL, NULL, 'app-buy-1', NULL, NULL)$q$);
-SELECT expect_error('T2-PRIV-08 runtime role overspend through the function rejected',
-  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'activation_consume', -999,
-       '20000000-0000-0000-0000-000000000003', NULL, 'app-overspend', NULL, NULL)$q$, '23514', 'insufficient credit');
-RESET ROLE;
+-- ==================================== T2-AUTHZ / R01 authorization matrix ==
+-- Identity is switched with SET SESSION AUTHORIZATION; the function reads session_user.
+-- Baseline funding by the trusted owner (purchase path) so runtime consumes can succeed.
+SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 10, NULL,
+       '70000000-0000-0000-0000-0000000000a1', 'r00-fund', '90000000-0000-0000-0000-00000000aaaa', 'baseline');
 
-DO $$ DECLARE d int; BEGIN
-  SELECT drift INTO d FROM credit_reconciliation WHERE tenant_id = '00000000-0000-0000-0000-000000000001';
-  IF d <> 0 THEN RAISE EXCEPTION 'FAIL T2-PRIV-09: drift % after runtime-role operations', d; END IF;
-  RAISE NOTICE 'PASS T2-PRIV-09 reconciliation drift = 0 after runtime-role operations';
+SET SESSION AUTHORIZATION app_t1;
+SELECT expect_ok('T2-R01-01 app_t1 consumes credit for its own tenant (authorized)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'activation_consume', -1,
+       '20000000-0000-0000-0000-000000000003', NULL, 'r01-app-consume', NULL, NULL)$q$);
+SELECT expect_error('T2-R01-02 app_t1 cannot issue purchase credit (no purchase path)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 100, NULL, NULL,
+       'r01-app-purchase', NULL, NULL)$q$, '42501', 'may not perform purchase');
+SELECT expect_error('T2-R01-03 app_t1 cannot issue a refund',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'refund', 5, NULL,
+       '70000000-0000-0000-0000-0000000000a1', 'r01-app-refund', NULL, 'x')$q$, '42501', 'may not perform refund');
+SELECT expect_error('T2-R01-04 app_t1 cannot post an adjustment (even with a reason)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'adjustment', 50, NULL, NULL,
+       'r01-app-adjust', NULL, 'self-granted')$q$, '42501', 'may not perform adjustment');
+SELECT expect_error('T2-R01-05 app_t1 cannot release a cancellation credit',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'cancellation_release', 1, NULL,
+       NULL, 'r01-app-cancel', NULL, NULL)$q$, '42501', 'may not perform cancellation_release');
+SELECT expect_error('T2-R01-06 app_t1 cannot operate on tenant 2 by substituting tenant_id',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000002', 'activation_consume', -1,
+       NULL, NULL, 'r01-substitute', NULL, NULL)$q$, '42501', 'is not bound to tenant');
+SELECT expect_error('T2-R01-07 app_t1 cannot write ledger rows by direct INSERT',
+  $q$INSERT INTO credit_transactions (id, tenant_id, amount, kind, idempotency_key, reason)
+     VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000001', 1000, 'adjustment', 'r01-direct', 'x')$q$, '42501');
+SELECT expect_error('T2-R01-08 app_t1 cannot set the cached balance directly',
+  $q$UPDATE student_credit_accounts SET balance = 999999 WHERE tenant_id = '00000000-0000-0000-0000-000000000001'$q$, '42501');
+SELECT expect_error('T2-R01-09 app_t1 cannot read the ledger (no cross-tenant read by grant)',
+  $q$SELECT count(*) FROM credit_transactions$q$, '42501');
+SELECT expect_error('T2-R01-10 app_t1 cannot read the reconciliation view (all tenants)',
+  $q$SELECT drift FROM credit_reconciliation$q$, '42501');
+SELECT expect_error('T2-R01-11 app_t1 cannot self-grant a purchase permission',
+  $q$INSERT INTO credit_role_permissions (role_name, kind) VALUES ('app_t1', 'purchase')$q$, '42501');
+SELECT expect_error('T2-R01-12 app_t1 cannot self-bind to tenant 2',
+  $q$INSERT INTO tenant_role_bindings (role_name, tenant_id) VALUES ('app_t1', '00000000-0000-0000-0000-000000000002')$q$, '42501');
+RESET SESSION AUTHORIZATION;
+
+SET SESSION AUTHORIZATION app_t2;
+SELECT expect_error('T2-R01-13 app_t2 cannot consume tenant 1 credit (not bound)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'activation_consume', -1,
+       NULL, NULL, 'r01-t2-on-t1', NULL, NULL)$q$, '42501', 'is not bound to tenant');
+RESET SESSION AUTHORIZATION;
+
+SET SESSION AUTHORIZATION issuer_rt;
+SELECT expect_ok('T2-R01-14 issuer_rt issues purchase credit on its bound tenant (authorized path)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 2, NULL,
+       '70000000-0000-0000-0000-0000000000a2', 'r01-issuer-purchase', NULL, 'verified-payment-stub')$q$);
+SELECT expect_error('T2-R01-15 issuer_rt cannot consume credit (wrong operation)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'activation_consume', -1,
+       NULL, NULL, 'r01-issuer-consume', NULL, NULL)$q$, '42501', 'may not perform activation_consume');
+RESET SESSION AUTHORIZATION;
+
+SET SESSION AUTHORIZATION adjuster_rt;
+SELECT expect_ok('T2-R01-16 adjuster_rt posts an adjustment with reason (authorized path)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'adjustment', 1, NULL, NULL,
+       'r01-adjuster-adjust', NULL, 'synthetic correction')$q$);
+SELECT expect_error('T2-R01-17 adjuster_rt cannot issue purchase credit',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 1, NULL, NULL,
+       'r01-adjuster-purchase', NULL, NULL)$q$, '42501', 'may not perform purchase');
+RESET SESSION AUTHORIZATION;
+
+SET SESSION AUTHORIZATION nogrant_rt;
+SELECT expect_error('T2-R01-18 role without EXECUTE grant is denied (default-deny)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'activation_consume', -1,
+       NULL, NULL, 'r01-nogrant', NULL, NULL)$q$, '42501', 'permission denied for function');
+RESET SESSION AUTHORIZATION;
+
+-- ----------------------------------------- R03 SECURITY DEFINER hardening ----
+DO $$ BEGIN
+  IF has_function_privilege('public', 'post_credit_transaction(uuid,text,integer,uuid,uuid,text,uuid,text)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL T2-R03-01: PUBLIC has EXECUTE on post_credit_transaction';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('app_t1','app_t2','issuer_rt','adjuster_rt','nogrant_rt') AND rolsuper) THEN
+    RAISE EXCEPTION 'FAIL T2-R03-01b: a runtime role is a superuser';
+  END IF;
+  RAISE NOTICE 'PASS T2-R03-01 PUBLIC has no EXECUTE; runtime roles are not superusers';
 END $$;
 
-DO $$ BEGIN RAISE NOTICE '=== PHASE 2 CONSTRAINT SUITE v2 COMPLETED (synthetic data) ==='; END $$;
+SET SESSION AUTHORIZATION app_t1;
+SELECT expect_error('T2-R03-02 app_t1 cannot create a schema (no database CREATE)',
+  $q$CREATE SCHEMA r03_attacker$q$, '42501');
+SELECT expect_error('T2-R03-03 app_t1 cannot create objects in public',
+  $q$CREATE FUNCTION public.r03_evil() RETURNS int LANGUAGE sql AS $f$ SELECT 1 $f$$q$, '42501');
+SELECT expect_error('T2-R03-04 app_t1 cannot replace the credit function',
+  $q$CREATE OR REPLACE FUNCTION public.post_credit_transaction(uuid,text,integer,uuid,uuid,text,uuid,text)
+     RETURNS uuid LANGUAGE sql AS $f$ SELECT gen_random_uuid() $f$$q$, '42501');
+SELECT expect_error('T2-R03-05 app_t1 cannot alter a credit table',
+  $q$ALTER TABLE student_credit_accounts ADD COLUMN r03_x int$q$, '42501');
+SELECT expect_error('T2-R03-06 app_t1 cannot drop the authorization table',
+  $q$DROP TABLE tenant_role_bindings$q$, '42501');
+RESET SESSION AUTHORIZATION;
+
+-- Hostile object resolution: a schema placed FIRST on the caller's search_path holds a
+-- fake gen_random_uuid() and a fake ledger/account table. The pinned, qualified function must ignore both.
+CREATE SCHEMA hostile;
+CREATE FUNCTION hostile.gen_random_uuid() RETURNS uuid LANGUAGE sql AS $f$ SELECT '99999999-9999-9999-9999-999999999999'::uuid $f$;
+CREATE TABLE hostile.student_credit_accounts (tenant_id uuid, balance int, version int, updated_at timestamptz);
+INSERT INTO hostile.student_credit_accounts VALUES ('00000000-0000-0000-0000-000000000001', 1000000, 0, now());
+GRANT USAGE ON SCHEMA hostile TO app_t1;
+GRANT EXECUTE ON FUNCTION hostile.gen_random_uuid() TO app_t1;
+
+SET SESSION AUTHORIZATION app_t1;
+SET search_path = hostile, public;
+DO $$ DECLARE v_id uuid; BEGIN
+  v_id := post_credit_transaction('00000000-0000-0000-0000-000000000001', 'activation_consume', -1,
+            '20000000-0000-0000-0000-000000000003', NULL, 'r03-hostile-path', NULL, NULL);
+  IF v_id = '99999999-9999-9999-9999-999999999999' THEN
+    RAISE EXCEPTION 'FAIL T2-R03-07: hostile gen_random_uuid() was resolved by the definer function';
+  END IF;
+  RAISE NOTICE 'PASS T2-R03-07 hostile search_path did not redirect the definer function (id is not the hostile constant)';
+END $$;
+RESET search_path;
+RESET SESSION AUTHORIZATION;
+
+DO $$ DECLARE hb int; pb int; BEGIN
+  SELECT balance INTO hb FROM hostile.student_credit_accounts WHERE tenant_id = '00000000-0000-0000-0000-000000000001';
+  SELECT balance INTO pb FROM public.student_credit_accounts WHERE tenant_id = '00000000-0000-0000-0000-000000000001';
+  IF hb <> 1000000 THEN RAISE EXCEPTION 'FAIL T2-R03-08: hostile table was modified (%)', hb; END IF;
+  RAISE NOTICE 'PASS T2-R03-08 hostile table untouched; public balance is % (authorized consume applied)', pb;
+END $$;
+
+-- ================================================ R02 idempotency payload ==
+-- Base canonical payload, then one mutation per field. Every mutated replay must be
+-- rejected with unique_violation and leave no second ledger row or balance change.
+DO $$ DECLARE v_base uuid; BEGIN
+  v_base := post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 1,
+            NULL, '70000000-0000-0000-0000-0000000000b1', 'r02-key', '90000000-0000-0000-0000-00000000aaaa', 'base');
+  IF post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 1,
+       NULL, '70000000-0000-0000-0000-0000000000b1', 'r02-key', '90000000-0000-0000-0000-00000000aaaa', 'base') <> v_base
+  THEN RAISE EXCEPTION 'FAIL T2-R02-00: identical canonical replay returned a different id'; END IF;
+  IF (SELECT count(*) FROM credit_transactions WHERE idempotency_key = 'r02-key') <> 1
+  THEN RAISE EXCEPTION 'FAIL T2-R02-00b: identical replay created a second ledger row'; END IF;
+  RAISE NOTICE 'PASS T2-R02-00 identical canonical payload replays to the same id with one effect';
+END $$;
+
+SELECT expect_error('T2-R02-01 differing kind rejected',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'adjustment', 1, NULL,
+       '70000000-0000-0000-0000-0000000000b1', 'r02-key', '90000000-0000-0000-0000-00000000aaaa', 'base')$q$,
+  '23505', 'different canonical payload');
+SELECT expect_error('T2-R02-02 differing amount rejected',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 2, NULL,
+       '70000000-0000-0000-0000-0000000000b1', 'r02-key', '90000000-0000-0000-0000-00000000aaaa', 'base')$q$,
+  '23505', 'different canonical payload');
+SELECT expect_error('T2-R02-03 differing student_id rejected (NULL vs value)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 1,
+       '20000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-0000000000b1', 'r02-key',
+       '90000000-0000-0000-0000-00000000aaaa', 'base')$q$, '23505', 'different canonical payload');
+SELECT expect_error('T2-R02-04 differing order_id rejected',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 1, NULL,
+       '70000000-0000-0000-0000-0000000000b2', 'r02-key', '90000000-0000-0000-0000-00000000aaaa', 'base')$q$,
+  '23505', 'different canonical payload');
+SELECT expect_error('T2-R02-05 differing actor_id rejected',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 1, NULL,
+       '70000000-0000-0000-0000-0000000000b1', 'r02-key', '90000000-0000-0000-0000-00000000bbbb', 'base')$q$,
+  '23505', 'different canonical payload');
+SELECT expect_error('T2-R02-06 differing reason rejected',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 1, NULL,
+       '70000000-0000-0000-0000-0000000000b1', 'r02-key', '90000000-0000-0000-0000-00000000aaaa', 'other')$q$,
+  '23505', 'different canonical payload');
+SELECT expect_error('T2-R02-07 actor NULL vs value rejected (NULL-safe comparison)',
+  $q$SELECT post_credit_transaction('00000000-0000-0000-0000-000000000001', 'purchase', 1, NULL,
+       '70000000-0000-0000-0000-0000000000b1', 'r02-key', NULL, 'base')$q$,
+  '23505', 'different canonical payload');
+
+DO $$ DECLARE n int; BEGIN
+  SELECT count(*) INTO n FROM credit_transactions WHERE idempotency_key = 'r02-key';
+  IF n <> 1 THEN RAISE EXCEPTION 'FAIL T2-R02-08: rejected replays left % rows', n; END IF;
+  RAISE NOTICE 'PASS T2-R02-08 seven rejected replays left exactly one ledger row';
+END $$;
+
+DO $$ BEGIN RAISE NOTICE '=== PHASE 2 CONSTRAINT SUITE v3 COMPLETED (synthetic data) ==='; END $$;

@@ -568,9 +568,37 @@ CREATE TRIGGER credit_transactions_no_truncate
     BEFORE TRUNCATE ON credit_transactions
     FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
 
--- Single atomic write path. Caller's transaction controls atomicity with other work
--- (e.g. student creation). Locks the account row (serialises spend per tenant),
--- replays idempotent requests, rejects overspend, and writes ledger + balance together.
+-- ------------------------------------------- authorization model (P2-R01) ----
+-- Who may do what is DATA, owned by the table owner and not writable by runtime roles.
+-- Authorization uses session_user (the login/session identity). Inside a SECURITY
+-- DEFINER function current_user becomes the owner, so current_user must NOT be used.
+-- Caller-supplied p_actor / p_reason are recorded for audit only and never grant rights.
+CREATE TABLE tenant_role_bindings (
+    role_name  name NOT NULL,
+    tenant_id  uuid NOT NULL REFERENCES tenants (id),
+    PRIMARY KEY (role_name, tenant_id)
+);
+
+CREATE TABLE credit_role_permissions (
+    role_name  name NOT NULL,
+    kind       text NOT NULL CHECK (kind IN
+                 ('purchase', 'activation_consume', 'refund', 'cancellation_release', 'adjustment')),
+    PRIMARY KEY (role_name, kind)
+);
+-- Matrix (test environment; the product owner must confirm, see REMEDIATION_REPORT §4):
+--   purchase              -> issuer role only (verified-payment path; DB cannot verify payment itself)
+--   activation_consume    -> tenant runtime roles
+--   refund / cancellation_release / adjustment -> adjuster role only
+-- Owner is trusted and holds all kinds via explicit seed rows (not via a bypass).
+
+-- ------------------------------------------- atomic credit write path (P2-H01/R01-R03) ----
+-- SECURITY DEFINER runs as the table owner, so:
+--   * search_path is pinned to pg_catalog, pg_temp and every object is schema-qualified;
+--     an attacker-controlled schema on a caller's search_path cannot be resolved;
+--   * EXECUTE is revoked from PUBLIC and granted only to roles that need it;
+--   * the function checks the caller (session_user) against the authorization data first.
+-- Idempotency (P2-R02): the canonical payload is (kind, amount, student_id, order_id,
+-- actor_id, reason). A replay is accepted only if ALL six match exactly (NULL-safe).
 CREATE FUNCTION post_credit_transaction(
     p_tenant          uuid,
     p_kind            text,
@@ -581,45 +609,67 @@ CREATE FUNCTION post_credit_transaction(
     p_actor           uuid,
     p_reason          text
 ) RETURNS uuid
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE
     v_balance  integer;
     v_existing record;
     v_id       uuid;
 BEGIN
+    -- 1. Authorization (before any lock or write).
+    IF NOT EXISTS (SELECT 1 FROM public.tenant_role_bindings b
+                    WHERE b.role_name = session_user AND b.tenant_id = p_tenant) THEN
+        RAISE EXCEPTION 'role % is not bound to tenant %', session_user, p_tenant
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.credit_role_permissions p
+                    WHERE p.role_name = session_user AND p.kind = p_kind) THEN
+        RAISE EXCEPTION 'role % may not perform % credit operations', session_user, p_kind
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
     IF p_idempotency_key IS NULL OR length(p_idempotency_key) = 0 THEN
         RAISE EXCEPTION 'idempotency_key is required' USING ERRCODE = 'check_violation';
     END IF;
 
-    SELECT balance INTO v_balance FROM student_credit_accounts
+    -- 2. Serialise per tenant (P2-R04 target): row lock on the account.
+    SELECT balance INTO v_balance FROM public.student_credit_accounts
      WHERE tenant_id = p_tenant FOR UPDATE;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'no credit account for tenant %', p_tenant USING ERRCODE = 'foreign_key_violation';
     END IF;
 
-    SELECT id, kind, amount, student_id INTO v_existing FROM credit_transactions
+    -- 3. Idempotent replay: full canonical payload must match.
+    SELECT id, kind, amount, student_id, order_id, actor_id, reason
+      INTO v_existing
+      FROM public.credit_transactions
      WHERE tenant_id = p_tenant AND idempotency_key = p_idempotency_key;
     IF FOUND THEN
-        IF v_existing.kind = p_kind AND v_existing.amount = p_amount
-           AND v_existing.student_id IS NOT DISTINCT FROM p_student THEN
-            RETURN v_existing.id;                -- idempotent replay: no second effect
+        IF v_existing.kind = p_kind
+           AND v_existing.amount = p_amount
+           AND v_existing.student_id IS NOT DISTINCT FROM p_student
+           AND v_existing.order_id   IS NOT DISTINCT FROM p_order
+           AND v_existing.actor_id   IS NOT DISTINCT FROM p_actor
+           AND v_existing.reason     IS NOT DISTINCT FROM p_reason THEN
+            RETURN v_existing.id;                -- identical canonical payload: no second effect
         END IF;
-        RAISE EXCEPTION 'idempotency_key reused with a different payload'
+        RAISE EXCEPTION 'idempotency_key reused with a different canonical payload'
             USING ERRCODE = 'unique_violation';
     END IF;
 
+    -- 4. Overspend.
     IF v_balance + p_amount < 0 THEN
         RAISE EXCEPTION 'insufficient credit: balance %, requested %', v_balance, p_amount
             USING ERRCODE = 'check_violation';
     END IF;
 
-    INSERT INTO credit_transactions
+    -- 5. Ledger row and cached balance, in the caller's transaction.
+    INSERT INTO public.credit_transactions
         (id, tenant_id, amount, kind, student_id, order_id, actor_id, idempotency_key, reason)
     VALUES
         (gen_random_uuid(), p_tenant, p_amount, p_kind, p_student, p_order, p_actor, p_idempotency_key, p_reason)
     RETURNING id INTO v_id;
 
-    UPDATE student_credit_accounts
+    UPDATE public.student_credit_accounts
        SET balance = balance + p_amount, version = version + 1, updated_at = now()
      WHERE tenant_id = p_tenant;
 
@@ -660,13 +710,21 @@ CREATE TRIGGER audit_logs_no_truncate
     BEFORE TRUNCATE ON audit_logs
     FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
 
--- ------------------------------------------- privileges (P2-H05, test env) ----
--- Runtime role: may read, and may call the single credit write function.
--- It may NOT write ledger/balance tables directly, truncate, or alter triggers.
+-- ------------------------------------------- privileges (P2-R03, default-deny) ----
+-- Default-deny: nothing is granted to PUBLIC. Schema creation is removed from PUBLIC.
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public TO app_rt;
-GRANT SELECT ON student_credit_accounts, credit_transactions, credit_reconciliation TO app_rt;
-GRANT EXECUTE ON FUNCTION post_credit_transaction(uuid, text, integer, uuid, uuid, text, uuid, text) TO app_rt;
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+
+-- Authorization data: never readable or writable by runtime roles.
+REVOKE ALL ON tenant_role_bindings, credit_role_permissions FROM PUBLIC;
+
+-- Runtime roles: USAGE on the schema plus EXECUTE on the single credit function.
+-- No table privileges: cross-tenant reads are NOT provided by database grants
+-- (row-level isolation is out of Phase 2 scope; see REMEDIATION_REPORT §4).
+GRANT USAGE ON SCHEMA public TO app_t1, app_t2, issuer_rt, adjuster_rt, nogrant_rt;
+GRANT EXECUTE ON FUNCTION post_credit_transaction(uuid, text, integer, uuid, uuid, text, uuid, text)
+  TO app_t1, app_t2, issuer_rt, adjuster_rt;
+-- nogrant_rt deliberately receives no EXECUTE grant (default-deny test).
 
 COMMIT;

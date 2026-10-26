@@ -150,3 +150,16 @@ The earlier v1 evidence (32 PASS) is superseded by v2 and is kept only as histor
 - Phase 2 is **not approved**. Independent review is pending.
 - Phase 3 is **not** started or authorized.
 - Real student data remains prohibited (D-014). Q-023 remains a hard pre-hosting gate.
+
+---
+
+## 11. Targeted security remediation P2-R01..R04 (supersedes §5 where they differ)
+
+Full report: `docs/phase2/SECURITY_REMEDIATION_R01_R04.md`.
+
+- **Authorization (P2-R01):** a credit operation requires that `session_user` is bound to the tenant (`tenant_role_bindings`) and holds the permission for the `kind` (`credit_role_permissions`). Both are checked before any lock or write. Caller-supplied `actor_id` and `reason` are audit data only.
+- **Idempotency (P2-R02):** the canonical payload is `(kind, amount, student_id, order_id, actor_id, reason)`, compared NULL-safe. Any difference is rejected with `unique_violation`.
+- **SECURITY DEFINER (P2-R03):** `search_path = pg_catalog, pg_temp`; all objects schema-qualified; no PUBLIC EXECUTE; EXECUTE only for runtime roles that need it; runtime roles are not superusers. The owner is trusted in the test environment; production owner separation is not verified.
+- **Concurrency (P2-R04):** lock removal is detected by the harness, which checks the exact failure reason. Overspend is still prevented by the `CHECK (balance >= 0)` constraint; the lock governs error semantics and idempotent replay.
+- **Reads:** runtime roles have no table or view read grants. Cross-tenant read protection beyond this is deferred (RLS or API scoping).
+- The statements in §§1–10 above that describe v2 behaviour are superseded for v3.
