@@ -136,7 +136,7 @@ Observed result on the mutant (`docs/phase2/evidence/test_run_v3_2026-10-25.txt`
 - Application/API authorization, identity provider, session management (Phase 4).
 - Production roles, credentials, owner separation, backup/restore, Alt-5 cell isolation, hosting (Q-023 remains a hard pre-hosting gate).
 - Migrations (Alembic); none exist.
-- Mutants for the authorization check and for each idempotency comparison field (not yet built; §10).
+- Mutants for the authorization check and the idempotency fields are built and run (v4, §11); they are not a proof of general security.
 - Property-based tests over multiple seeds (one seeded sequence, T2-CR-05).
 - Independent reproduction by a reviewer.
 
@@ -193,4 +193,33 @@ All test data is **synthetic**: fixed UUIDs (`…0000-0000-…`), names prefixed
 | Synthetic data only | Yes | §8 |
 | Phase 2 remains pending; no runtime security claimed | Yes | §§1, 6 |
 
-Self-review of weaknesses: the mutation test shows the lock matters for error semantics and idempotency, but not for the balance invariant (the CHECK covers that). I have not tested a mutation of the authorization check, nor of the idempotency comparison fields individually (T2-R02 tests the fields on the canonical code, not against mutants). Those are the next mutation candidates.
+Self-review of weaknesses: the lock mutation shows the lock matters for error semantics and idempotency, not for the balance invariant (the CHECK covers that). Mutants for the authorization check and for each idempotency field are now run (§11), but a reviewer should confirm that the mutant set is representative. Rejection tests cover only the listed payload fields; the authorization model still depends on the test-role bindings being correct.
+
+---
+
+## 11. Mutation and property evidence (v4, 2026-10-25)
+
+Evidence: `docs/phase2/evidence/test_run_v4_2026-10-25.txt` (one full run of `run_all.sh`, exit 0).
+Runners: `docs/phase2/mutation/run_mutants.sh`, `docs/phase2/mutation/run_property_seeds.sh`, `docs/phase2/concurrency/run_mutation.sh`.
+
+| Mutant | Weakened invariant | First failing test (suite stops at first failure) | Result |
+|---|---|---|---|
+| AUTH-1 | tenant binding check disabled | T2-R01-06 | DETECTED |
+| AUTH-2 | permission check disabled | T2-R01-02 | DETECTED |
+| AUTH-3 | identity uses `current_user` (owner) for tenant binding | T2-R01-06 | DETECTED |
+| AUTH-4 | identity uses `current_user` for permission | T2-R01-02 | DETECTED |
+| IDEM-kind | replay ignores `kind` | T2-R02-01 | DETECTED |
+| IDEM-amount | replay ignores `amount` | T2-CR-10 | DETECTED |
+| IDEM-student | replay ignores `student_id` | T2-R02-03 | DETECTED |
+| IDEM-order | replay ignores `order_id` | T2-R02-04 | DETECTED |
+| IDEM-actor | replay ignores `actor_id` | T2-R02-05 | DETECTED |
+| IDEM-reason | replay ignores `reason` | T2-R02-06 | DETECTED |
+| LOCK (§5) | account row lock removed | T2-CR-04 | DETECTED (by reason and idempotency, not by balance) |
+
+Restoration: the canonical schema hash is unchanged after every mutation, and the full canonical suite passes again.
+
+Property test, 12 explicit seeds (`setseed` accepts [-1, 1]): 0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88, 0.12, 0.23, 0.34, 0.45. Each seed uses its own synthetic tenant and 80 randomized operations. Result: **12 PASS, 0 failures**, balance never negative, drift 0 for every seed. Seed 0.42 (single run, §6) is not part of this list.
+
+Runner reliability: `run_all.sh` aggregates every step, uses per-run temporary files, and exits 1 on any failed step. A controlled fault (an intentionally wrong expected SQLSTATE in a copied suite) produced exit 1.
+
+Not run: independent reproduction by a reviewer; mutants for the constraint-level checks (non-null tenant, transition table); mutants for authorization of `adjuster_rt` and `issuer_rt` bindings; any test on a real PostgreSQL cluster outside this sandbox.

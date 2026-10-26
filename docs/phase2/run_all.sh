@@ -4,7 +4,8 @@
 #   sudo -u postgres bash docs/phase2/run_all.sh docs/phase2 > run.log 2>&1; echo "exit=$?"
 set -u
 P2="${1:?usage: run_all.sh <path-to-docs/phase2>}"
-S="$P2/schema"; C="$P2/concurrency"
+S="$P2/schema"; C="$P2/concurrency"; MU="$P2/mutation"
+WORK="$(mktemp -d)" || { echo "mktemp failed"; exit 2; }
 rc=0
 fresh(){ psql -X -q -d postgres -c "DROP DATABASE IF EXISTS $1;" -c "CREATE DATABASE $1;" >/dev/null || { echo "cannot create $1"; exit 2; }; }
 sha(){ sha256sum "$1" | cut -d' ' -f1; }
@@ -18,12 +19,12 @@ echo "=== [1] Roles + DDL + constraint/authorization suite (fresh DB p3_suite) =
 fresh p3_suite
 psql -X -v ON_ERROR_STOP=1 -q -d p3_suite -f "$S/phase2_roles_setup.sql";  echo "roles exit=$?"
 psql -X -v ON_ERROR_STOP=1 -q -d p3_suite -f "$S/phase2_schema_draft.sql"; echo "schema exit=$?"
-psql -X -v ON_ERROR_STOP=1 -d p3_suite -f "$S/phase2_constraint_tests.sql" > /tmp/p3_suite.log 2>&1; s=$?
+psql -X -v ON_ERROR_STOP=1 -d p3_suite -f "$S/phase2_constraint_tests.sql" > $WORK/p3_suite.log 2>&1; s=$?
 echo "suite psql exit=$s"
-echo "PASS notices: $(grep -c 'NOTICE:  PASS' /tmp/p3_suite.log)"
-echo "FAIL lines:   $(grep -c 'FAIL' /tmp/p3_suite.log)"
+echo "PASS notices: $(grep -c 'NOTICE:  PASS' $WORK/p3_suite.log)"
+echo "FAIL lines:   $(grep -c 'FAIL' $WORK/p3_suite.log)"
 [ $s -eq 0 ] || rc=1
-echo "--- suite log (unedited) ---"; cat /tmp/p3_suite.log
+echo "--- suite log (unedited) ---"; cat $WORK/p3_suite.log
 
 echo "=== [2] Concurrency, canonical schema (fresh DB p3_conc) ==="
 fresh p3_conc
@@ -45,9 +46,20 @@ echo "canonical schema sha256 (after):  $after_sha"
 fresh p3_restore
 psql -X -v ON_ERROR_STOP=1 -q -d p3_restore -f "$S/phase2_roles_setup.sql"
 psql -X -v ON_ERROR_STOP=1 -q -d p3_restore -f "$S/phase2_schema_draft.sql"
-bash "$C/run_concurrency.sh" p3_restore "$C" > /tmp/p3_restore.log 2>&1; rr=$?
-echo "restored concurrency exit=$rr"; tail -1 /tmp/p3_restore.log
+bash "$C/run_concurrency.sh" p3_restore "$C" > $WORK/p3_restore.log 2>&1; rr=$?
+echo "restored concurrency exit=$rr"; tail -1 $WORK/p3_restore.log
 [ $rr -eq 0 ] || rc=1
 
+echo "=== [5] Authorization and idempotency mutants (each must be DETECTED; canonical must restore) ==="
+bash "$MU/run_mutants.sh" "$P2"; mu=$?
+echo "mutants exit=$mu  (0 = every mutant detected and canonical suite restored)"
+[ $mu -eq 0 ] || rc=1
+
+echo "=== [6] Property test under 12 explicit seeds (fresh DB p3_prop) ==="
+bash "$MU/run_property_seeds.sh" "$P2"; pp=$?
+echo "property exit=$pp"
+[ $pp -eq 0 ] || rc=1
+
+rm -rf "$WORK"
 echo "=== RESULT: $([ $rc -eq 0 ] && echo ALL_EXECUTED_CHECKS_PASSED || echo FAILURES_PRESENT) (exit $rc) ==="
 exit $rc
