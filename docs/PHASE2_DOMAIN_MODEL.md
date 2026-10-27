@@ -88,13 +88,15 @@ New template edits never change existing enrollments (T2-VER-14). Moving a stude
 - At most one active (activated, not superseded) version per plan (partial unique).
 - `plan_items`: `(id, tenant_id, plan_version_id)` immutable; writable only while the parent is not activated.
 
-### 4.3 Counselor transfer — Product Owner decision D-026 (2026-10-27; implementation pending)
+### 4.3 Counselor transfer — Product Owner decision D-026 (2026-10-27; implementation blocker)
 
 - The platform administrator or the student's registered parent/guardian supervisor may initiate a transfer to a new counselor.
 - Transfer is blocked until the previous counselor personally records, from their authenticated account, confirmation that their fee/honorarium was received. Neither administrator nor parent/guardian may bypass this prerequisite.
 - Store an auditable confirmation event bound to the exact student and prior enrollment, including confirming counselor identity and timestamp. The event is the counselor's assertion, not independent proof of payment, and cannot authorize a different enrollment's transfer.
 - Preserve the prior enrollment history. Termination of the old enrollment and creation of the new enrollment must be atomic and concurrency-safe.
-- This is a product contract only; DDL and constraint tests must be updated and independently reviewed. It does not resolve the general parent access model (Q-007), authorize real student data, production deployment, migrations, or Phase 3.
+- **Not implemented in the current DDL:** confirmation-event storage, authenticated-principal binding, transfer initiation authorization, and the atomic transfer operation.
+- **Phase boundary:** the Phase 2 model intentionally has no authoritative users/authentication principal table (deferred to Phase 4). Therefore a database row or function parameter containing a counselor/user UUID cannot prove that the caller is that counselor. Do not implement a transfer function that trusts a caller-supplied UUID. Before enabling transfer, Phase 4 must define a trusted authenticated-principal mapping and an authorization-controlled transaction that checks the exact prior enrollment confirmation, closes the prior relationship and creates the new relationship atomically, with positive, negative, replay and concurrency tests.
+- This does not resolve the general parent access model (Q-007), authorize real student data, production deployment, migrations, or Phase 3.
 
 ## 5. Credit ledger (P2-H01, P2-H05)
 
@@ -134,24 +136,24 @@ New template edits never change existing enrollments (T2-VER-14). Moving a stude
 | O-6 | Template update vs existing plans | Proposal: explicit re-enrollment only. |
 | O-7 / D-006 | Rename commercial `Plan` → `BillingPlan` | Proposal, not accepted. |
 | O-8 / Q-020 | Retention duration and responsible persons | Open; pre-pilot gate. |
-| O-9 / D-025 | One active enrollment per normalized mobile + academic grade across the platform | **RESOLVED by Product Owner (2026-10-27).** At most one active counselor enrollment for each normalized mobile + grade combination; a second counselor in the same grade requires a different mobile. The DDL and tests must implement and verify this invariant under concurrency. |
+| O-9 / D-025 | One active enrollment per normalized mobile + academic grade across the platform | **Product decision RESOLVED (2026-10-27).** Draft DDL now uses canonical E.164-like mobile and canonical grade key fields on students plus a platform-wide registry primary key (mobile, grade) populated by a counselor-enrollment trigger. Regression cases added; neither execution nor concurrency verification has been performed. |
 | Q-023 | Hosting topology / provider gate | Open; hard pre-hosting gate. Unchanged. |
 
 ## 9. Execution status (P2-M05)
 
-Seven categories, kept separate:
+Keep design, author execution, independent execution, and runtime security distinct.
 
 1. **Design specified:** this document, §§1–8.
-2. **SQL draft authored:** `phase2_schema_draft.sql` (v2), `phase2_roles_setup.sql` (test-only role).
-3. **SQL actually executed:** yes, on local PostgreSQL 16.15 (fresh database), `ON_ERROR_STOP=1`, exit 0.
-4. **Tests actually executed:** 87 PASS notices (including 2 fixture lines), 0 FAIL; 3 concurrency checks PASS (two parallel sessions each). Evidence: `docs/phase2/evidence/test_run_v2_2026-10-25.txt`.
-5. **Author-reported evidence:** the above, produced by the author in a sandbox. Not independently reproduced.
-6. **Independently reproduced evidence:** **none yet.** Pending independent reviewer.
-7. **Runtime security not implemented or verified:** cell isolation (D-020/D-023), RLS, hosting, production role provisioning, backups/restore, owner-level prevention, and all application/API authorization.
+2. **SQL draft authored:** phase2_schema_draft.sql and phase2_roles_setup.sql (test-only roles). The DDL is still a draft, not a migration.
+3. **Historical author execution:** the v5 evidence file reports a PostgreSQL 16.15 run with exit 0 and 111 PASS notices plus 2 fixture confirmations, plus concurrency, mutation, property and controlled-fault checks. That run predates the latest D-025 and version-guard edits.
+4. **Current D-025 and version-guard changes:** authored in the current branch; **NOT RUN** against PostgreSQL as of 2026-10-27. Syntax, fixture behavior, unique-conflict reason, and concurrency are unverified.
+5. **Independently reproduced evidence:** **none**. Do not treat author-reported logs as independent verification.
+6. **D-026 transfer:** decision recorded; end-to-end implementation is blocked until the trusted authenticated-principal model and authorization boundary are available. Do not trust caller-supplied IDs.
+7. **Runtime security not implemented or verified:** cell isolation (D-020/D-023), RLS, hosting, production role provisioning, backups/restore, owner-level prevention, and application/API authorization.
 
-**Not executed:** RLS; API/app authorization; migrations (Alembic); production roles; backup/restore; concurrent tests beyond the three listed; a mutation/negative control that proves the concurrency test fails when the lock is removed (not run); a property-based test beyond one seeded sequence.
+**Required next execution:** run docs/phase2/run_all.sh against a fresh disposable PostgreSQL 15+ database with ON_ERROR_STOP=1; add a two-session cross-tenant race for the D-025 registry and prove the loser fails on the expected unique constraint; then update evidence from actual output. If no PostgreSQL environment is available, status must remain NOT RUN.
 
-The earlier v1 evidence (32 PASS) is superseded by v2 and is kept only as history; it does not describe the current DDL.
+The earlier v1/v2 evidence remains historical and does not describe or validate the latest DDL.
 
 ## 10. Phase gates
 
