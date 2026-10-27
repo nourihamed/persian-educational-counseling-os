@@ -1,7 +1,7 @@
-# Phase 2 test mapping (status per ID, as of evidence v5, 2026-10-26)
+# Phase 2 test mapping (historical v5 results plus current remediation status, 2026-10-27)
 
 Status key: PASS = executed and passed in the cited evidence. FAIL = executed and failed. KNOWN-RESIDUAL = executed; a limitation remains. BLOCKED = cannot run here. NOT RUN = not executed. SPEC-ONLY = specification without an executable test.
-Evidence file: `docs/phase2/evidence/test_run_v5_2026-10-26.txt` (author-executed). "Independently reproduced" is **not** claimed for any row.
+Historical evidence file: `docs/phase2/evidence/test_run_v5_2026-10-26.txt` (author-executed before current edits). It does not validate D-025/D-026/current version-guard changes. "Independently reproduced" is **not** claimed for any row.
 
 | Test family | Invariant | Where | Status (v5) | Limitation |
 |---|---|---|---|---|
@@ -23,6 +23,11 @@ Evidence file: `docs/phase2/evidence/test_run_v5_2026-10-26.txt` (author-execute
 | IDEM-kind..reason mutants | Each canonical field detected | same | DETECTED ×6 | Targeted, not exhaustive. |
 | Property, 12 seeds | No negative balance; drift 0 | `mutation/run_property_seeds.sh` | PASS ×12 | One property; not an exhaustive model. |
 | Controlled faults ×3 | Runner returns non-zero and never reports success | evidence `controlled_fault_*_v5` | PASS (runner behaviour) | Copies of the suite only. |
+| T2-ENR-025-00a/b | Canonical E.164 mobile shape and allowed grade key | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Current DDL/tests not executed. |
+| T2-ENR-025-01/02 | Global mobile+grade uniqueness across tenants; same mobile in different grade allowed | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Current DDL/tests not executed. |
+| T2-ENR-025-03 | Two-session race for same global mobile+grade key | `concurrency/run_concurrency.sh`, `session_enrollment.sql` | NOT RUN (added 2026-10-27) | Current concurrency harness not executed. |
+| T2-VER-07b | Existing enrollment cannot be reassigned to a draft program version | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Current DDL/tests not executed. |
+| T2-TR-026-01..04 | Fee-confirmation event must match prior enrollment/counselor account, require receipt assertion, and not duplicate | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Does not prove the actual caller is authenticated; transfer operation remains unimplemented. |
 | Independent reproduction | Same results by another reviewer | — | NOT RUN | Pending reviewer. |
 | Owner/superuser bypass | Cannot bypass | — | KNOWN-RESIDUAL / BLOCKED | Deployment-dependent. |
 | RLS, API/app authorization, production roles, migrations, backup/restore, Alt-5, hosting | — | — | NOT RUN / SPEC-ONLY | Out of Phase 2 scope. |
