@@ -3,7 +3,7 @@
 - **Phase 0:** CLOSED by Product Owner on 2026-10-14; PR #1 merged.
 - **Phase 1:** **APPROVED — design/documentation only** under D-024. This is not runtime-security approval.
 - **Phase 2:** Documentation, draft DDL, and synthetic constraint-test work were authorized by Product Owner through Issue #7. PR #8 is **OPEN, DRAFT, UNMERGED**. **Independent Phase 2 gate: NOT READY / pending remediation and fresh independent execution.**
-- **Current Phase 2 remediation:** D-025's platform-wide active counselor enrollment key (canonical mobile + grade) and the program-version reassignment guard have been added to the draft DDL and regression tests. These edits are **not yet executed or independently verified**.
+- **Current Phase 2 remediation:** D-025's platform-wide active counselor enrollment key (canonical E.164 mobile + grade_10/grade_11/grade_12), its regression cases and a two-session race scenario, plus the program-version reassignment guard, have been added to the draft DDL/tests. These edits are **not yet executed or independently verified**.
 - **D-026 transfer:** an append-only fee-confirmation evidence table and negative tests have been added to the draft. End-to-end transfer remains **incomplete**: the schema cannot prove the actual caller is the previous counselor; the user/authentication model is deferred to Phase 4. Transfer authorization and atomic old-to-new enrollment operation remain unimplemented. Do not treat a caller-supplied counselor/user ID as authentication.
 - **Phase 3:** NOT STARTED / NOT AUTHORIZED.
 - **Real student data:** PROHIBITED under D-014 until all applicable implementation, security, operational, and independent-review gates pass and the Product Owner explicitly authorizes it.
