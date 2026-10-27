@@ -418,3 +418,24 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 **Security boundary unchanged:** this decision does not select a provider/topology, waive Q-023 for deployment, weaken D-020/D-023, claim that the architecture is implemented, treat planned tests as passed, authorize Phase 2 automatically, or permit real student data. The current phase may receive a design-only APPROVED verdict only after the independent documentation review finds no remaining Phase 1 design blocker.
 
 **Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, ROADMAP.md, docs/phase1/TENANT_ISOLATION_DESIGN.md, docs/phase1/AUTHORIZATION_CONTRACT.md, docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md, docs/phase1/PHASE1_REPORT.md, docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md, SUPERVISOR_REVIEW.md, CHANGELOG.md.
+
+
+## D-025 — Unicidad de inscripción activa por móvil normalizado y grado
+**Estado: ACCEPTED — decisión explícita del Product Owner, 2026-10-27 (O-9).**
+
+**Decisión:** Para cada combinación de número de móvil normalizado del estudiante y grado académico, puede existir como máximo una inscripción activa de estudiante con un único consejero en toda la plataforma. El número de móvil del estudiante es el identificador principal para esta regla. Si el estudiante quiere trabajar con un segundo consejero en el mismo grado, debe registrarse con otro número de móvil y gestionar ambas cuentas de forma independiente. El mismo número puede utilizarse en otro grado, sujeto a las demás reglas del producto.
+
+**Requisitos de implementación:** definir una normalización canónica del móvil y una clave de grado académico precisa; no tratar formatos de presentación diferentes como números distintos. La invariancia debe imponerse en la base de datos y resistir solicitudes concurrentes. Actualizar el modelo de dominio, el DDL y las pruebas de restricciones de forma consistente.
+
+**Límites:** esta decisión no autoriza datos reales de estudiantes, migraciones, producción ni Phase 3. PR #8 permanece Draft y sin fusionar hasta la revisión independiente y la resolución de los hallazgos.
+
+## D-026 — Transferencia de estudiante condicionada a la confirmación de honorarios del consejero anterior
+**Estado: ACCEPTED — decisión explícita del Product Owner, 2026-10-27.**
+
+**Decisión:** El administrador de la plataforma o el padre/madre/tutor registrado como supervisor del estudiante puede iniciar la transferencia de un estudiante desde el consejero anterior a un nuevo consejero. La transferencia solo se permite después de que el consejero anterior haya registrado personalmente, desde su cuenta autenticada, la confirmación de que recibió sus honorarios. Ni el administrador ni el padre/madre/tutor pueden omitir esta condición.
+
+**Registro auditable obligatorio:** guardar la identidad del consejero que confirma, la marca temporal de la confirmación, el estudiante y la inscripción anterior específica; conservar el evento en el historial de auditoría. La confirmación representa la declaración registrada por el consejero, no una verificación independiente del pago. No puede reutilizarse para otro estudiante o inscripción.
+
+**Integridad y autorización:** conservar el historial de la inscripción anterior; no eliminarlo físicamente como mecanismo de transferencia. La finalización de la inscripción anterior y la creación de la nueva deben ser atómicas y resistentes a operaciones concurrentes. El actor que inicia la transferencia debe estar autorizado para ese estudiante.
+
+**Límites:** esta decisión establece una regla de producto, no prueba su implementación. No autoriza datos reales de estudiantes, migraciones, despliegue de producción ni Phase 3. Q-007 permanece abierto respecto al modelo general de acceso de los padres; esta decisión solo determina el permiso específico de transferencia. PR #8 permanece Draft y sin fusionar hasta la revisión independiente.
