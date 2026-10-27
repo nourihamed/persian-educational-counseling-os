@@ -116,11 +116,11 @@ CREATE TABLE active_student_counselor_registry (
 );
 
 CREATE FUNCTION sync_active_student_counselor_registry() RETURNS trigger
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $
 DECLARE v_mobile text; v_grade text;
 BEGIN
     IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-        DELETE FROM active_student_counselor_registry
+        DELETE FROM public.active_student_counselor_registry
          WHERE tenant_id = OLD.tenant_id AND counselor_student_id = OLD.id;
     END IF;
     IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
@@ -128,13 +128,14 @@ BEGIN
     IF NEW.status = 'active' THEN
         SELECT mobile_normalized, academic_grade_key
           INTO v_mobile, v_grade
-          FROM students
-         WHERE tenant_id = NEW.tenant_id AND id = NEW.student_id;
+          FROM public.students
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.student_id
+         FOR UPDATE;
         IF v_mobile IS NULL OR v_grade IS NULL THEN
             RAISE EXCEPTION 'active counselor enrollment requires canonical mobile and academic grade'
                 USING ERRCODE = 'check_violation';
         END IF;
-        INSERT INTO active_student_counselor_registry
+        INSERT INTO public.active_student_counselor_registry
             (normalized_mobile, academic_grade_key, tenant_id, counselor_student_id, student_id)
         VALUES (v_mobile, v_grade, NEW.tenant_id, NEW.id, NEW.student_id);
     END IF;
@@ -147,11 +148,11 @@ CREATE TRIGGER sync_active_student_counselor_registry_trg
 
 -- Identity keys cannot change while an active counselor enrollment exists.
 CREATE FUNCTION guard_student_identity_key_change() RETURNS trigger
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $
 BEGIN
     IF (NEW.mobile_normalized, NEW.academic_grade_key)
        IS DISTINCT FROM (OLD.mobile_normalized, OLD.academic_grade_key)
-       AND EXISTS (SELECT 1 FROM active_student_counselor_registry r
+       AND EXISTS (SELECT 1 FROM public.active_student_counselor_registry r
                     WHERE r.tenant_id = OLD.tenant_id AND r.student_id = OLD.id) THEN
         RAISE EXCEPTION 'mobile and academic grade are immutable while counselor enrollment is active'
             USING ERRCODE = 'check_violation';
@@ -186,12 +187,12 @@ CREATE TABLE counselor_fee_confirmations (
 );
 
 CREATE FUNCTION validate_counselor_fee_confirmation() RETURNS trigger
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $
 DECLARE v_student uuid; v_counselor uuid; v_status text; v_user uuid;
 BEGIN
     SELECT student_id, counselor_id, status
       INTO v_student, v_counselor, v_status
-      FROM counselor_students
+      FROM public.counselor_students
      WHERE tenant_id = NEW.tenant_id AND id = NEW.prior_counselor_student_id;
     IF NOT FOUND OR v_student IS DISTINCT FROM NEW.student_id
        OR v_counselor IS DISTINCT FROM NEW.prior_counselor_id
@@ -199,7 +200,7 @@ BEGIN
         RAISE EXCEPTION 'fee confirmation must match the exact active prior counselor enrollment'
             USING ERRCODE = 'check_violation';
     END IF;
-    SELECT user_id INTO v_user FROM counselors
+    SELECT user_id INTO v_user FROM public.counselors
      WHERE tenant_id = NEW.tenant_id AND id = NEW.prior_counselor_id;
     IF v_user IS NULL OR v_user IS DISTINCT FROM NEW.confirming_user_id THEN
         RAISE EXCEPTION 'fee confirmation user must match the prior counselor account'
