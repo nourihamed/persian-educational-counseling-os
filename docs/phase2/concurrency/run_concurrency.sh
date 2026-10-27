@@ -23,6 +23,12 @@ must "INSERT INTO students (id,tenant_id) VALUES
   ('20000000-0000-0000-0000-0000000000a1','$T9'),('20000000-0000-0000-0000-0000000000a2','$T9'),
   ('20000000-0000-0000-0000-0000000000a3','$T10'),('20000000-0000-0000-0000-0000000000a5','$T11'),
   ('20000000-0000-0000-0000-0000000000a6','$T11');"
+must "INSERT INTO counselors (id,tenant_id,display_name) VALUES
+  ('10000000-0000-0000-0000-0000000000a1','$T9','Synthetic Counselor T9'),
+  ('10000000-0000-0000-0000-0000000000a2','$T10','Synthetic Counselor T10');"
+must "INSERT INTO students (id,tenant_id,mobile_normalized,academic_grade_key) VALUES
+  ('20000000-0000-0000-0000-0000000000a7','$T9','+989133333333','grade_10'),
+  ('20000000-0000-0000-0000-0000000000a8','$T10','+989133333333','grade_10');"
 must "INSERT INTO student_credit_accounts (tenant_id,balance) VALUES ('$T9',0),('$T10',0),('$T11',0);"
 must "INSERT INTO credit_role_permissions (role_name,kind) VALUES
   ('postgres','purchase'),('postgres','activation_consume'),('postgres','refund'),
@@ -90,6 +96,21 @@ nv=$(val "SELECT count(*) FROM program_versions WHERE program_template_id='$TPL'
 echo "exit G=$eg H=$eh ; H error: $(grep -m1 ERROR "$WORK/H.log" | sed 's/.*ERROR:  //' || true) ; rows=$nv"
 if [ "$eg" = "0" ] && [ "$eh" = "3" ] && grep -q 'unique' "$WORK/H.log" && [ "$nv" = "1" ]; then
   echo "PASS T2-VER-02"; else echo "FAIL T2-VER-02"; fail=1; fi
+
+# ---- T2-ENR-025-03: cross-tenant race for one global mobile+grade key ----
+echo "== T2-ENR-025-03 concurrent cross-tenant claim of mobile+grade =="
+run_session J "$DIR/session_enrollment.sql" -v tenant=$T9 -v counselor=10000000-0000-0000-0000-0000000000a1 -v student=20000000-0000-0000-0000-0000000000a7 -v enrollment=81000000-0000-0000-0000-0000000000a7 -v sleep_before=0 -v hold=2
+run_session K "$DIR/session_enrollment.sql" -v tenant=$T10 -v counselor=10000000-0000-0000-0000-0000000000a2 -v student=20000000-0000-0000-0000-0000000000a8 -v enrollment=81000000-0000-0000-0000-0000000000a8 -v sleep_before=0.5 -v hold=0
+wait
+ej=$(cat "$WORK/J.rc"); ek=$(cat "$WORK/K.rc")
+registry=$(val "SELECT count(*) FROM active_student_counselor_registry WHERE normalized_mobile='+989133333333' AND academic_grade_key='grade_10';")
+active=$(val "SELECT count(*) FROM counselor_students WHERE id IN ('81000000-0000-0000-0000-0000000000a7','81000000-0000-0000-0000-0000000000a8') AND status='active';")
+echo "exit J=$ej K=$ek ; registry rows=$registry (exp 1) ; active enrollments=$active (exp 1)"
+echo "K error: $(grep -m1 'duplicate key value violates unique constraint' "$WORK/K.log" | sed 's/.*ERROR:  //' || true)"
+if { [ "$ej" = "0" ] && [ "$ek" = "3" ] && grep -q 'active_student_counselor_registry_pkey' "$WORK/K.log" && [ "$registry" = "1" ] && [ "$active" = "1" ]; } \
+   || { [ "$ek" = "0" ] && [ "$ej" = "3" ] && grep -q 'active_student_counselor_registry_pkey' "$WORK/J.log" && [ "$registry" = "1" ] && [ "$active" = "1" ]; }; then
+  echo "PASS T2-ENR-025-03"
+else echo "FAIL T2-ENR-025-03"; fail=1; fi
 
 echo "== concurrency summary: $([ $fail -eq 0 ] && echo ALL_PASS || echo HAS_FAILURES) =="
 rm -rf "$WORK"
