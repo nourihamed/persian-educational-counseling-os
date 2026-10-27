@@ -86,7 +86,6 @@ CREATE TABLE counselor_students (
     notes        text,
     created_at   timestamptz NOT NULL DEFAULT now(),
     CHECK (ended_at IS NULL OR ended_at >= started_at),
-    CHECK ((status = 'active') = (ended_at IS NULL)),
     UNIQUE (tenant_id, id),
     FOREIGN KEY (tenant_id, counselor_id) REFERENCES counselors (tenant_id, id),
     FOREIGN KEY (tenant_id, student_id)   REFERENCES students (tenant_id, id)
