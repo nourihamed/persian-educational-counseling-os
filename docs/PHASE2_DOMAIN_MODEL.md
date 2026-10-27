@@ -88,6 +88,14 @@ New template edits never change existing enrollments (T2-VER-14). Moving a stude
 - At most one active (activated, not superseded) version per plan (partial unique).
 - `plan_items`: `(id, tenant_id, plan_version_id)` immutable; writable only while the parent is not activated.
 
+### 4.3 Counselor transfer — Product Owner decision D-026 (2026-10-27; implementation pending)
+
+- The platform administrator or the student's registered parent/guardian supervisor may initiate a transfer to a new counselor.
+- Transfer is blocked until the previous counselor personally records, from their authenticated account, confirmation that their fee/honorarium was received. Neither administrator nor parent/guardian may bypass this prerequisite.
+- Store an auditable confirmation event bound to the exact student and prior enrollment, including confirming counselor identity and timestamp. The event is the counselor's assertion, not independent proof of payment, and cannot authorize a different enrollment's transfer.
+- Preserve the prior enrollment history. Termination of the old enrollment and creation of the new enrollment must be atomic and concurrency-safe.
+- This is a product contract only; DDL and constraint tests must be updated and independently reviewed. It does not resolve the general parent access model (Q-007), authorize real student data, production deployment, migrations, or Phase 3.
+
 ## 5. Credit ledger (P2-H01, P2-H05)
 
 - `credit_transactions` is append-only: UPDATE, DELETE, and TRUNCATE are forbidden by trigger (tested for owner and runtime role).
@@ -126,7 +134,7 @@ New template edits never change existing enrollments (T2-VER-14). Moving a stude
 | O-6 | Template update vs existing plans | Proposal: explicit re-enrollment only. |
 | O-7 / D-006 | Rename commercial `Plan` → `BillingPlan` | Proposal, not accepted. |
 | O-8 / Q-020 | Retention duration and responsible persons | Open; pre-pilot gate. |
-| O-9 | One active program enrollment per student | **Proposal, enforced by partial unique index.** A constraint does not prove the business rule is accepted. |
+| O-9 / D-025 | One active enrollment per normalized mobile + academic grade across the platform | **RESOLVED by Product Owner (2026-10-27).** At most one active counselor enrollment for each normalized mobile + grade combination; a second counselor in the same grade requires a different mobile. The DDL and tests must implement and verify this invariant under concurrency. |
 | Q-023 | Hosting topology / provider gate | Open; hard pre-hosting gate. Unchanged. |
 
 ## 9. Execution status (P2-M05)
