@@ -378,6 +378,70 @@ DO $$ BEGIN
   RAISE NOTICE 'PASS T2-VER-14 enrollment remains pinned to its version after new versions';
 END $$;
 
+-- ===== D-025 registry lifecycle: INSERT / end / DELETE / reactivate / student change (no orphans) =====
+-- Fixture: tenant 0e1 and 0e2 share one mobile+grade across tenants (identity lifecycle).
+INSERT INTO tenants (id,status) VALUES ('00000000-0000-0000-0000-0000000000e1','active'),('00000000-0000-0000-0000-0000000000e2','active');
+INSERT INTO counselors (id,tenant_id,display_name) VALUES
+  ('10000000-0000-0000-0000-0000000000e1','00000000-0000-0000-0000-0000000000e1','Synthetic Counselor LC-1'),
+  ('10000000-0000-0000-0000-0000000000e2','00000000-0000-0000-0000-0000000000e2','Synthetic Counselor LC-2');
+INSERT INTO students (id,tenant_id,mobile_normalized,academic_grade_key) VALUES
+  ('20000000-0000-0000-0000-0000000000e1','00000000-0000-0000-0000-0000000000e1','+989166666666','grade_12'),
+  ('20000000-0000-0000-0000-0000000000e2','00000000-0000-0000-0000-0000000000e2','+989166666666','grade_12'),
+  ('20000000-0000-0000-0000-0000000000e3','00000000-0000-0000-0000-0000000000e1','+989177777777','grade_12');
+INSERT INTO counselor_students (id,tenant_id,counselor_id,student_id,status,started_at) VALUES
+  ('81000000-0000-0000-0000-0000000000e1','00000000-0000-0000-0000-0000000000e1','10000000-0000-0000-0000-0000000000e1','20000000-0000-0000-0000-0000000000e1','active',now());
+
+DO $$ DECLARE n int; BEGIN
+  SELECT count(*) INTO n FROM active_student_counselor_registry WHERE normalized_mobile='+989166666666' AND academic_grade_key='grade_12';
+  IF n <> 1 THEN RAISE EXCEPTION 'FAIL ENR-REG-01: expected 1 registry row after activation, got %', n; END IF;
+  RAISE NOTICE 'PASS ENR-REG-01 activation writes exactly one registry row';
+END $$;
+
+SELECT expect_error('ENR-REG-02 second tenant cannot activate the same mobile+grade while the first is active',
+  $q$INSERT INTO counselor_students (id,tenant_id,counselor_id,student_id,status,started_at) VALUES
+     (gen_random_uuid(),'00000000-0000-0000-0000-0000000000e2','10000000-0000-0000-0000-0000000000e2',
+      '20000000-0000-0000-0000-0000000000e2','active',now())$q$, '23505', 'active_student_counselor_registry_pkey');
+
+SELECT expect_ok('ENR-REG-03 ending the enrollment (UPDATE status) releases the platform key',
+  $q$UPDATE counselor_students SET status='ended' WHERE id='81000000-0000-0000-0000-0000000000e1'$q$);
+
+DO $$ DECLARE n int; BEGIN
+  SELECT count(*) INTO n FROM active_student_counselor_registry WHERE normalized_mobile='+989166666666' AND academic_grade_key='grade_12';
+  IF n <> 0 THEN RAISE EXCEPTION 'FAIL ENR-REG-03b: orphan registry row after end (%)', n; END IF;
+  RAISE NOTICE 'PASS ENR-REG-03b no registry row remains after the enrollment ends';
+END $$;
+
+SELECT expect_ok('ENR-REG-04 after release, the second tenant can activate the same mobile+grade',
+  $q$INSERT INTO counselor_students (id,tenant_id,counselor_id,student_id,status,started_at) VALUES
+     ('81000000-0000-0000-0000-0000000000e2','00000000-0000-0000-0000-0000000000e2','10000000-0000-0000-0000-0000000000e2',
+      '20000000-0000-0000-0000-0000000000e2','active',now())$q$);
+
+SELECT expect_error('ENR-REG-05 reactivating the ended enrollment while the key is held by another tenant is rejected',
+  $q$UPDATE counselor_students SET status='active' WHERE id='81000000-0000-0000-0000-0000000000e1'$q$,
+  '23505', 'active_student_counselor_registry_pkey');
+
+SELECT expect_ok('ENR-REG-06 DELETE of an active enrollment removes its registry row (no orphan)',
+  $q$DELETE FROM counselor_students WHERE id='81000000-0000-0000-0000-0000000000e2'$q$);
+
+DO $$ DECLARE n int; BEGIN
+  SELECT count(*) INTO n FROM active_student_counselor_registry WHERE normalized_mobile='+989166666666';
+  IF n <> 0 THEN RAISE EXCEPTION 'FAIL ENR-REG-06b: orphan registry row after delete (%)', n; END IF;
+  RAISE NOTICE 'PASS ENR-REG-06b no registry row remains after DELETE';
+END $$;
+
+-- Student change on an ACTIVE enrollment: registry must follow the enrollment to the new key (no stale row).
+INSERT INTO counselor_students (id,tenant_id,counselor_id,student_id,status,started_at) VALUES
+  ('81000000-0000-0000-0000-0000000000e3','00000000-0000-0000-0000-0000000000e1','10000000-0000-0000-0000-0000000000e1',
+   '20000000-0000-0000-0000-0000000000e1','active',now());
+SELECT expect_ok('ENR-REG-07 active enrollment re-pointed to another student (same tenant) is accepted',
+  $q$UPDATE counselor_students SET student_id='20000000-0000-0000-0000-0000000000e3' WHERE id='81000000-0000-0000-0000-0000000000e3'$q$);
+DO $$ DECLARE old_n int; new_n int; BEGIN
+  SELECT count(*) INTO old_n FROM active_student_counselor_registry WHERE normalized_mobile='+989166666666' AND counselor_student_id='81000000-0000-0000-0000-0000000000e3';
+  SELECT count(*) INTO new_n FROM active_student_counselor_registry WHERE normalized_mobile='+989177777777' AND counselor_student_id='81000000-0000-0000-0000-0000000000e3';
+  IF old_n <> 0 OR new_n <> 1 THEN RAISE EXCEPTION 'FAIL ENR-REG-07b: registry not moved to new key (old=% new=%)', old_n, new_n; END IF;
+  RAISE NOTICE 'PASS ENR-REG-07b registry follows the enrollment to the new mobile+grade (no stale row)';
+END $$;
+
 -- ============================================================ T2-PLAN ==
 SELECT expect_error('T2-PLAN-01 plan_version identity/origin change rejected',
   $q$UPDATE plan_versions SET program_version_id = '50000000-0000-0000-0000-000000000003'

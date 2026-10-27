@@ -12,6 +12,19 @@ P2="${1:?usage: run_mutants.sh <docs/phase2>}"
 S="$P2/schema"; M="$P2/mutation"
 WORK="$(mktemp -d)" || exit 2
 fails=0; total=0
+# BASELINE GATE: mutant results are meaningful only if the canonical suite passes first.
+# Otherwise every mutant would look "DETECTED" for the wrong reason.
+db_fresh p3_m_baseline || { rm -rf "$WORK"; exit 2; }
+req "roles:p3_m_baseline" psql -X -v ON_ERROR_STOP=1 -q -d p3_m_baseline -f "$S/phase2_roles_setup.sql" >/dev/null || { rm -rf "$WORK"; exit 2; }
+req "ddl:p3_m_baseline" psql -X -v ON_ERROR_STOP=1 -q -d p3_m_baseline -f "$S/phase2_schema_draft.sql" >/dev/null || { rm -rf "$WORK"; exit 2; }
+psql -X -v ON_ERROR_STOP=1 -d p3_m_baseline -f "$S/phase2_constraint_tests.sql" > "$WORK/baseline.log" 2>&1; brc=$?
+db_drop p3_m_baseline >/dev/null
+if [ $brc -ne 0 ]; then
+  echo "BASELINE SUITE FAILED (exit $brc, class=$(classify $brc)): mutant results would be invalid; no mutant is evaluated."
+  grep -m1 'ERROR:  FAIL' "$WORK/baseline.log" || true
+  rm -rf "$WORK"; exit 1
+fi
+echo "baseline canonical suite: PASS (exit 0)"
 python3 "$M/mutants.py" "$S/phase2_schema_draft.sql" "$WORK" > "$WORK/list.tsv" 2> "$WORK/gen.err"; gen=$?
 cat "$WORK/gen.err"
 if [ $gen -ne 0 ]; then echo "MUTANT GENERATION FAILED (exit $gen)"; rm -rf "$WORK"; exit 1; fi
@@ -23,8 +36,8 @@ while IFS=$'\t' read -r mid desc path; do
     echo "$mid: mutant DDL did not load (not a valid mutant)"; cat "$WORK/$mid.build.err"; fails=$((fails+1)); continue
   fi
   psql -X -v ON_ERROR_STOP=1 -d "$db" -f "$S/phase2_constraint_tests.sql" > "$WORK/$mid.suite.log" 2>&1; rc=$?
-  first=$(grep -m1 -oE 'FAIL T2-[A-Za-z0-9-]+' "$WORK/$mid.suite.log" || true)
-  if [ $rc -ne 0 ] && [ -n "$first" ]; then
+  first=$(grep -m1 -oE 'ERROR:  FAIL [^:]+' "$WORK/$mid.suite.log" | sed 's/ERROR:  //' || true)
+  if [ $rc -ne 0 ] && [ -n "$first" ]; then  # any labelled FAIL counts (not only T2-*)
     echo "DETECTED  $mid  ($desc)  suite exit=$rc  first failure: $first"
   else
     echo "NOT DETECTED  $mid  ($desc)  suite exit=$rc"; fails=$((fails+1))

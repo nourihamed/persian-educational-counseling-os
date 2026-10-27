@@ -112,6 +112,23 @@ if { [ "$ej" = "0" ] && [ "$ek" = "3" ] && grep -q 'active_student_counselor_reg
   echo "PASS T2-ENR-025-03"
 else echo "FAIL T2-ENR-025-03"; fail=1; fi
 
+# ---- T2-ENR-025-04: identity-key change races an activating enrollment (D-025 guard) ----
+echo "== T2-ENR-025-04 identity-key change vs concurrent activation =="
+must "INSERT INTO tenants (id,status) VALUES ('00000000-0000-0000-0000-00000000000c','active');"
+must "INSERT INTO counselors (id,tenant_id,display_name) VALUES ('10000000-0000-0000-0000-0000000000c9','00000000-0000-0000-0000-00000000000c','Synthetic Counselor RACE-ID');"
+must "INSERT INTO students (id,tenant_id,mobile_normalized,academic_grade_key) VALUES ('20000000-0000-0000-0000-0000000000c9','00000000-0000-0000-0000-00000000000c','+989144444444','grade_11');"
+run_session L "$DIR/session_enrollment.sql" -v tenant=00000000-0000-0000-0000-00000000000c -v counselor=10000000-0000-0000-0000-0000000000c9 -v student=20000000-0000-0000-0000-0000000000c9 -v enrollment=81000000-0000-0000-0000-0000000000c9 -v sleep_before=0 -v hold=2
+run_session M "$DIR/session_identity_change.sql" -v student=20000000-0000-0000-0000-0000000000c9 -v new_mobile=+989155555555 -v sleep_before=0.5
+wait
+el=$(cat "$WORK/L.rc"); em=$(cat "$WORK/M.rc")
+mob=$(val "SELECT mobile_normalized FROM students WHERE id='20000000-0000-0000-0000-0000000000c9';")
+regm=$(val "SELECT normalized_mobile FROM active_student_counselor_registry WHERE student_id='20000000-0000-0000-0000-0000000000c9';")
+echo "exit L(activate)=$el M(change)=$em ; student mobile=$mob (exp +989144444444) ; registry mobile=$regm (exp same)"
+echo "M error: $(grep -m1 ERROR "$WORK/M.log" | sed 's/.*ERROR:  //' || true)"
+if [ "$el" = "0" ] && [ "$em" = "3" ] && grep -q 'immutable while counselor enrollment is active' "$WORK/M.log" \
+   && [ "$mob" = "+989144444444" ] && [ "$regm" = "+989144444444" ]; then
+  echo "PASS T2-ENR-025-04"; else echo "FAIL T2-ENR-025-04"; fail=1; fi
+
 echo "== concurrency summary: $([ $fail -eq 0 ] && echo ALL_PASS || echo HAS_FAILURES) =="
 rm -rf "$WORK"
 exit $fail

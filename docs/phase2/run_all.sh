@@ -30,8 +30,8 @@ else
   if db_fresh p3_suite && req "roles:p3_suite" psql -X -v ON_ERROR_STOP=1 -q -d p3_suite -f "$S/phase2_roles_setup.sql" && req "ddl:p3_suite" psql -X -v ON_ERROR_STOP=1 -q -d p3_suite -f "$S/phase2_schema_draft.sql"; then
     psql -X -v ON_ERROR_STOP=1 -d p3_suite -f "$S/phase2_constraint_tests.sql" > "$WORK/p3_suite.log" 2>&1; s=$?
     echo "suite psql exit=$s"
-    echo "PASS notices (test cases): $(grep -c 'NOTICE:  PASS T2' "$WORK/p3_suite.log")"
-    echo "PASS notices (fixture acceptance): $(grep -c 'NOTICE:  PASS fixture' "$WORK/p3_suite.log")"
+    tot=$(grep -c 'NOTICE:  PASS' "$WORK/p3_suite.log"); fix=$(grep -c 'NOTICE:  PASS fixture' "$WORK/p3_suite.log")
+    echo "PASS notices (all): $tot ; fixture acceptance: $fix ; test cases (all minus fixture): $((tot-fix))"
     echo "FAIL lines: $(grep -c 'ERROR:  FAIL' "$WORK/p3_suite.log")"
     echo "--- suite log (unedited) ---"; cat "$WORK/p3_suite.log"
     mark "1-suite" $s
@@ -70,7 +70,7 @@ fi
 
 echo "=== [7] Cleanup: drop only the databases this run creates ==="
 cleanup_fail=0
-for d in "${CREATED_DBS[@]}" p3_m_auth_1 p3_m_auth_2 p3_m_auth_3 p3_m_auth_4 p3_m_idem_kind p3_m_idem_amount p3_m_idem_student p3_m_idem_order p3_m_idem_actor p3_m_idem_reason; do
+for d in "${CREATED_DBS[@]}" p3_m_auth_1 p3_m_auth_2 p3_m_auth_3 p3_m_auth_4 p3_m_idem_kind p3_m_idem_amount p3_m_idem_student p3_m_idem_order p3_m_idem_actor p3_m_idem_reason p3_m_h02_insert_only p3_m_baseline; do
   db_drop "$d" || cleanup_fail=$((cleanup_fail+1))
 done
 if [ $cleanup_fail -eq 0 ]; then echo "STAGE 7-cleanup: OK"; else echo "STAGE 7-cleanup: FAILED ($cleanup_fail database(s) not dropped)"; FAILS+=("7-cleanup"); fi

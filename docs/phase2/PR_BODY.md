@@ -30,3 +30,10 @@ The v5 report states PostgreSQL 16.15, 111 test PASS notices plus 2 fixture conf
 RLS, application/API authorization, runtime tenant isolation, production role provisioning, migrations, owner/superuser bypass prevention, Alt-5 cell isolation, hosting, backup/restore, payment verification, and real-data permission are not established by this PR. Q-007 remains open; Q-023 remains a hard pre-hosting gate.
 
 **Phase 2 gate: NOT READY — fresh execution and D-026 authentication-bound transfer design remain blockers.**
+
+## Execution status — author run after the 0cbbce3 review (2026-10-27)
+- Command: `sudo -u postgres bash docs/phase2/run_all.sh docs/phase2` on a fresh local PostgreSQL 16.15 → **exit 0**. Evidence: `docs/phase2/evidence/test_run_head_after_0cbbce3_<date>.txt`.
+- Constraint/authorization/enrollment suite: **133 test cases PASS**, 2 fixture acceptances, **0 FAIL**. This includes D-025 (T2-ENR-025-00a..02), the D-026 event tests (T2-TR-026-01..07, with an accepted control insert), the version-guard UPDATE test (T2-VER-07b), and the registry lifecycle tests (ENR-REG-01..07b).
+- Concurrency (fresh DB): T2-CR-04, 04b, 04c, T2-VER-02, **T2-ENR-025-03** (cross-tenant mobile+grade race: loser fails on `active_student_counselor_registry_pkey`; one registry row and one active enrollment remain) and **T2-ENR-025-04** (identity-key change racing an activating enrollment: change rejected with "immutable while counselor enrollment is active"; registry keeps the original key). Both passed.
+- Sensitivity checks: disabling the identity guard makes T2-ENR-025-04 FAIL; the pre-fix enrollment trigger (INSERT only) makes T2-VER-07b FAIL; 11 of 11 mutants DETECTED; 12 of 12 property seeds PASS; controlled faults exit 1 with no success summary.
+- Not established by this run: independent reproduction; D-026 transfer itself (no transfer function exists; the event table only records an assertion); caller authentication (Phase 4); RLS/API authorization; owner/superuser bypass; migrations; hosting. Gate: NOT READY until independent review.
