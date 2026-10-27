@@ -420,22 +420,23 @@ See `OPEN_QUESTIONS.md` Q-001, Q-002, and Q-010 for the accepted decisions.
 **Affected artifacts:** OPEN_QUESTIONS.md (Q-023), PROJECT_STATE.md, ROADMAP.md, docs/phase1/TENANT_ISOLATION_DESIGN.md, docs/phase1/AUTHORIZATION_CONTRACT.md, docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md, docs/phase1/PHASE1_REPORT.md, docs/phase1/HOSTING_CELL_COMPATIBILITY_REVIEW.md, SUPERVISOR_REVIEW.md, CHANGELOG.md.
 
 
-## D-025 — Unicidad de inscripción activa por móvil normalizado y grado
-**Estado: ACCEPTED — decisión explícita del Product Owner, 2026-10-27 (O-9).**
 
-**Decisión:** Para cada combinación de número de móvil normalizado del estudiante y grado académico, puede existir como máximo una inscripción activa de estudiante con un único consejero en toda la plataforma. El número de móvil del estudiante es el identificador principal para esta regla. Si el estudiante quiere trabajar con un segundo consejero en el mismo grado, debe registrarse con otro número de móvil y gestionar ambas cuentas de forma independiente. El mismo número puede utilizarse en otro grado, sujeto a las demás reglas del producto.
+## D-025 — یکتایی ثبت‌نام فعال بر اساس موبایل نرمال‌شده و پایه تحصیلی
+**وضعیت: ACCEPTED — تصمیم صریح مالک محصول، 2026-10-27 (تعیین تکلیف O-9).**
 
-**Requisitos de implementación:** definir una normalización canónica del móvil y una clave de grado académico precisa; no tratar formatos de presentación diferentes como números distintos. La invariancia debe imponerse en la base de datos y resistir solicitudes concurrentes. Actualizar el modelo de dominio, el DDL y las pruebas de restricciones de forma consistente.
+**تصمیم:** برای هر ترکیب شماره موبایل نرمال‌شده دانش‌آموز و پایه تحصیلی، در کل پلتفرم حداکثر یک ثبت‌نام فعال دانش‌آموز نزد یک مشاور مجاز است. شماره موبایل دانش‌آموز شناسه اصلی این قاعده است. اگر دانش‌آموز در همان پایه به مشاور دوم نیاز داشته باشد، باید با شماره موبایل دیگری ثبت‌نام کند و حساب‌ها را مستقل مدیریت کند. استفاده از همان موبایل در پایه‌ای دیگر، تابع سایر قواعد محصول است.
 
-**Límites:** esta decisión no autoriza datos reales de estudiantes, migraciones, producción ni Phase 3. PR #8 permanece Draft y sin fusionar hasta la revisión independiente y la resolución de los hallazgos.
+**الزامات پیاده‌سازی:** تعریف نرمال‌سازی canonical شماره موبایل و کلید دقیق پایه تحصیلی؛ قالب‌های نمایشی متفاوت نباید به‌عنوان شماره‌های متفاوت شناخته شوند. قاعده باید در سطح پایگاه داده اعمال شود و در برابر درخواست‌های هم‌زمان مقاوم باشد. مدل دامنه، DDL و آزمون‌های محدودیت باید با هم هماهنگ شوند.
 
-## D-026 — Transferencia de estudiante condicionada a la confirmación de honorarios del consejero anterior
-**Estado: ACCEPTED — decisión explícita del Product Owner, 2026-10-27.**
+**محدودیت:** این تصمیم مجوز استفاده از داده واقعی دانش‌آموزان، migration، استقرار تولیدی یا Phase 3 نیست. PR #8 تا رفع یافته‌ها و بازبینی مستقل، Draft و ادغام‌نشده باقی می‌ماند.
 
-**Decisión:** El administrador de la plataforma o el padre/madre/tutor registrado como supervisor del estudiante puede iniciar la transferencia de un estudiante desde el consejero anterior a un nuevo consejero. La transferencia solo se permite después de que el consejero anterior haya registrado personalmente, desde su cuenta autenticada, la confirmación de que recibió sus honorarios. Ni el administrador ni el padre/madre/tutor pueden omitir esta condición.
+## D-026 — انتقال دانش‌آموز مشروط به تأیید دریافت حق‌الزحمه مشاور قبلی
+**وضعیت: ACCEPTED — تصمیم صریح مالک محصول، 2026-10-27.**
 
-**Registro auditable obligatorio:** guardar la identidad del consejero que confirma, la marca temporal de la confirmación, el estudiante y la inscripción anterior específica; conservar el evento en el historial de auditoría. La confirmación representa la declaración registrada por el consejero, no una verificación independiente del pago. No puede reutilizarse para otro estudiante o inscripción.
+**تصمیم:** مدیر سامانه یا ولی/سرپرست ثبت‌شده دانش‌آموز می‌تواند انتقال دانش‌آموز از مشاور قبلی به مشاور جدید را آغاز کند. انتقال فقط پس از آن مجاز است که مشاور قبلی شخصاً و از حساب احراز هویت‌شده خود تأیید دریافت حق‌الزحمه را ثبت کرده باشد. مدیر و ولی/سرپرست نمی‌توانند این شرط را دور بزنند.
 
-**Integridad y autorización:** conservar el historial de la inscripción anterior; no eliminarlo físicamente como mecanismo de transferencia. La finalización de la inscripción anterior y la creación de la nueva deben ser atómicas y resistentes a operaciones concurrentes. El actor que inicia la transferencia debe estar autorizado para ese estudiante.
+**ثبت قابل‌ممیزی الزامی:** هویت مشاور تأییدکننده، زمان تأیید، شناسه دانش‌آموز و ثبت‌نام قبلی مشخص باید ثبت و در تاریخچه حسابرسی حفظ شود. این تأیید اظهار ثبت‌شده مشاور است، نه تأیید مستقل پرداخت. تأیید نمی‌تواند برای انتقال دانش‌آموز یا ثبت‌نام دیگری استفاده شود.
 
-**Límites:** esta decisión establece una regla de producto, no prueba su implementación. No autoriza datos reales de estudiantes, migraciones, despliegue de producción ni Phase 3. Q-007 permanece abierto respecto al modelo general de acceso de los padres; esta decisión solo determina el permiso específico de transferencia. PR #8 permanece Draft y sin fusionar hasta la revisión independiente.
+**یکپارچگی و مجوزها:** سابقه ثبت‌نام قبلی حفظ شود و انتقال با حذف فیزیکی تاریخچه پیاده‌سازی نشود. پایان ثبت‌نام قبلی و ایجاد ثبت‌نام جدید باید اتمیک و در برابر عملیات هم‌زمان ایمن باشد. آغازکننده انتقال باید برای همان دانش‌آموز مجوز داشته باشد.
+
+**محدودیت:** این تصمیم قاعده محصول را تعیین می‌کند، نه اثبات پیاده‌سازی آن را. استفاده از داده واقعی دانش‌آموزان، migration، استقرار تولیدی یا Phase 3 را مجاز نمی‌کند. Q-007 درباره مدل عمومی دسترسی والد همچنان باز است؛ این تصمیم فقط مجوز مشخص انتقال را تعیین می‌کند. PR #8 تا بازبینی مستقل، Draft و ادغام‌نشده باقی می‌ماند.
