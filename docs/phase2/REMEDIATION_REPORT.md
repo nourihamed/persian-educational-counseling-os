@@ -1,3 +1,5 @@
+> **HISTORICAL (v2, 2026-10-25).** Describes the v2 remediation of P2-H01..H05, P2-M01, P2-M03..M05, P2-L01..L02. Its statements about mutation testing, property testing and "remaining weaknesses" are superseded by `SECURITY_REMEDIATION_R01_R04.md` and the v5 evidence (`evidence/test_run_v5_2026-10-26.txt`). Kept for traceability; do not cite its test counts as current.
+
 # Phase 2 — Remediation Report (response to independent supervisor findings on PR #8)
 
 Status: **ready for independent re-review. NOT approved. Do not merge by the author.**

@@ -48,5 +48,10 @@ def make(canonical_path, out_dir):
     return made
 
 if __name__ == "__main__":
-    for mid, desc, path in make(sys.argv[1], sys.argv[2]):
+    made = make(sys.argv[1], sys.argv[2])
+    # Refuse silently-shrunk mutant sets: every defined mutant must be generated.
+    if len(made) != len(MUTANTS):
+        print(f"GENERATION INCOMPLETE: {len(made)} of {len(MUTANTS)} mutants generated", file=sys.stderr)
+        sys.exit(3)
+    for mid, desc, path in made:
         print(f"{mid}\t{desc}\t{path}")

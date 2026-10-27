@@ -1,0 +1,139 @@
+PostgreSQL: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-p
+Date (UTC): 2026-10-26T20:53:53Z
+canonical schema sha256 (before): 13686834d777e58c925b466a8ea1e0e67dc03350cef01c8e2fbb2182d37acfed
+=== [1] Roles + DDL + constraint/authorization suite (fresh DB p3_suite) ===
+NOTICE:  database "p3_suite" does not exist, skipping
+suite psql exit=3
+PASS notices (test cases): 1
+PASS notices (fixture acceptance): 2
+FAIL lines: 1
+--- suite log (unedited) ---
+CREATE FUNCTION
+CREATE FUNCTION
+INSERT 0 2
+INSERT 0 11
+INSERT 0 6
+INSERT 0 2
+INSERT 0 3
+INSERT 0 2
+INSERT 0 2
+INSERT 0 1
+INSERT 0 2
+INSERT 0 2
+UPDATE 2
+psql:/tmp/fa/schema/phase2_constraint_tests.sql:90: NOTICE:  PASS fixture: draft -> published transition accepted
+DO
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 2
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 2
+INSERT 0 1
+psql:/tmp/fa/schema/phase2_constraint_tests.sql:140: NOTICE:  PASS fixture: valid positive rows accepted across Phase 2 entities
+DO
+psql:/tmp/fa/schema/phase2_constraint_tests.sql:147: NOTICE:  PASS T2-TI-01 cross-tenant counselor reference rejected (SQLSTATE 23503, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/tmp/fa/schema/phase2_constraint_tests.sql:153: ERROR:  FAIL T2-TI-02 enrollment to another tenant program_version rejected: got SQLSTATE 23514 (enrollment requires a published program_version (found <NULL>)), expected 23505
+CONTEXT:  PL/pgSQL function expect_error(text,text,text,text) line 7 at RAISE
+STAGE 1-suite: FAILED exit=3 class=SCRIPT_OR_TEST_ERROR
+=== [2] Concurrency, canonical schema (fresh DB p3_conc) ===
+NOTICE:  database "p3_conc" does not exist, skipping
+fixtures ready: T9/T10/T11 each balance=1
+== T2-CR-04 concurrent activation: one credit, two students ==
+exit A=0 B=3 ; balance=0 (exp 0) ; consume_rows=1 (exp 1) ; drift=0 (exp 0)
+B error: insufficient credit: balance 0, requested -1
+PASS T2-CR-04
+== T2-CR-04b concurrent identical canonical payload ==
+exit C=0 D=0 ; ledger rows=1 (exp 1) ; balance=0 (exp 0)
+PASS T2-CR-04b
+== T2-CR-04c concurrent same key, different canonical payload ==
+exit E=0 F=3 ; F error: idempotency_key reused with a different canonical payload
+PASS T2-CR-04c
+== T2-VER-02 concurrent publication of the same version number ==
+exit G=0 H=3 ; H error: duplicate key value violates unique constraint "program_versions_tenant_id_program_template_id_version_numb_key" ; rows=1
+PASS T2-VER-02
+== concurrency summary: ALL_PASS ==
+STAGE 2-concurrency: OK
+=== [3] Lock-removal mutant must be DETECTED (disposable DB p3_mutant) ===
+mutant lock sites remaining: 0  (canonical had: 1)
+NOTICE:  database "p3_mutant" does not exist, skipping
+fixtures ready: T9/T10/T11 each balance=1
+== T2-CR-04 concurrent activation: one credit, two students ==
+exit A=0 B=3 ; balance=0 (exp 0) ; consume_rows=1 (exp 1) ; drift=0 (exp 0)
+B error: new row for relation "student_credit_accounts" violates check constraint "student_credit_accounts_balance_check"
+FAIL T2-CR-04
+== T2-CR-04b concurrent identical canonical payload ==
+exit C=0 D=3 ; ledger rows=1 (exp 1) ; balance=0 (exp 0)
+FAIL T2-CR-04b
+== T2-CR-04c concurrent same key, different canonical payload ==
+exit E=0 F=3 ; F error: duplicate key value violates unique constraint "credit_transactions_tenant_id_idempotency_key_key"
+FAIL T2-CR-04c
+== T2-VER-02 concurrent publication of the same version number ==
+exit G=0 H=3 ; H error: duplicate key value violates unique constraint "program_versions_tenant_id_program_template_id_version_numb_key" ; rows=1
+PASS T2-VER-02
+== concurrency summary: HAS_FAILURES ==
+MUTATION DETECTED: harness exit=1 and T2-CR-04 FAILED on the mutant (expected)
+STAGE 3-lock-mutation: OK
+=== [4] Restoration: canonical schema unchanged and passes again (fresh DB p3_restore) ===
+canonical schema sha256 (after):  13686834d777e58c925b466a8ea1e0e67dc03350cef01c8e2fbb2182d37acfed
+NOTICE:  database "p3_restore" does not exist, skipping
+restored concurrency exit=0
+== concurrency summary: ALL_PASS ==
+STAGE 4-restoration: OK
+=== [5] Authorization and idempotency mutants (each must be DETECTED; canonical must restore) ===
+NOTICE:  database "p3_m_auth_1" does not exist, skipping
+DETECTED  AUTH-1  (binding check disabled (tenant not verified))  suite exit=3  first failure: FAIL T2-TI-02
+NOTICE:  database "p3_m_auth_2" does not exist, skipping
+DETECTED  AUTH-2  (permission check disabled (any role may perform any kind))  suite exit=3  first failure: FAIL T2-TI-02
+NOTICE:  database "p3_m_auth_3" does not exist, skipping
+DETECTED  AUTH-3  (identity uses current_user (owner inside SECURITY DEFINER) instead of session_user)  suite exit=3  first failure: FAIL T2-TI-02
+NOTICE:  database "p3_m_auth_4" does not exist, skipping
+DETECTED  AUTH-4  (permission lookup uses current_user instead of session_user)  suite exit=3  first failure: FAIL T2-TI-02
+NOTICE:  database "p3_m_idem_kind" does not exist, skipping
+DETECTED  IDEM-kind  (replay ignores kind)  suite exit=3  first failure: FAIL T2-TI-02
+NOTICE:  database "p3_m_idem_amount" does not exist, skipping
+DETECTED  IDEM-amount  (replay ignores amount)  suite exit=3  first failure: FAIL T2-TI-02
+NOTICE:  database "p3_m_idem_student" does not exist, skipping
+DETECTED  IDEM-student  (replay ignores student_id)  suite exit=3  first failure: FAIL T2-TI-02
+NOTICE:  database "p3_m_idem_order" does not exist, skipping
+DETECTED  IDEM-order  (replay ignores order_id)  suite exit=3  first failure: FAIL T2-TI-02
+NOTICE:  database "p3_m_idem_actor" does not exist, skipping
+DETECTED  IDEM-actor  (replay ignores actor_id)  suite exit=3  first failure: FAIL T2-TI-02
+NOTICE:  database "p3_m_idem_reason" does not exist, skipping
+DETECTED  IDEM-reason  (replay ignores reason)  suite exit=3  first failure: FAIL T2-TI-02
+mutants run: 10 ; not detected or invalid: 0
+NOTICE:  database "p3_m_restore" does not exist, skipping
+restoration (canonical suite) exit=3  class=SCRIPT_OR_TEST_ERROR
+STAGE 5-auth-idem-mutants: FAILED exit=1 class=FATAL_OR_OTHER
+=== [6] Property test under explicit seeds (fresh DB p3_prop) ===
+NOTICE:  database "p3_prop" does not exist, skipping
+seed list: 0.11 0.22 0.33 0.44 0.55 0.66 0.77 0.88 0.12 0.23 0.34 0.45
+PASS seed=0.11 : seed=0.11 ok=73 rejected=7 final_balance=55 drift=0
+PASS seed=0.22 : seed=0.22 ok=71 rejected=9 final_balance=55 drift=0
+PASS seed=0.33 : seed=0.33 ok=74 rejected=6 final_balance=13 drift=0
+PASS seed=0.44 : seed=0.44 ok=76 rejected=4 final_balance=52 drift=0
+PASS seed=0.55 : seed=0.55 ok=75 rejected=5 final_balance=41 drift=0
+PASS seed=0.66 : seed=0.66 ok=70 rejected=10 final_balance=45 drift=0
+PASS seed=0.77 : seed=0.77 ok=75 rejected=5 final_balance=0 drift=0
+PASS seed=0.88 : seed=0.88 ok=72 rejected=8 final_balance=44 drift=0
+PASS seed=0.12 : seed=0.12 ok=76 rejected=4 final_balance=39 drift=0
+PASS seed=0.23 : seed=0.23 ok=76 rejected=4 final_balance=68 drift=0
+PASS seed=0.34 : seed=0.34 ok=71 rejected=9 final_balance=9 drift=0
+PASS seed=0.45 : seed=0.45 ok=79 rejected=1 final_balance=33 drift=0
+seeds run: 12 of 12 ; failures: 0
+STAGE 6-property-seeds: OK
+=== [7] Cleanup: drop only the databases this run creates ===
+STAGE 7-cleanup: OK
+=== RESULT: FAILURES_PRESENT (exit 1) failed/skipped stages: 1-suite 5-auth-idem-mutants ===

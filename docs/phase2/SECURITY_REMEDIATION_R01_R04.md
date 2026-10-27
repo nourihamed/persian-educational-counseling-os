@@ -126,7 +126,7 @@ Observed result on the mutant (`docs/phase2/evidence/test_run_v3_2026-10-25.txt`
 ## 6. Tests executed, not executed, residual risks
 
 **Executed (one full run of `run_all.sh`, exit 0; PostgreSQL 16.15; fresh databases):**
-- Constraint, privilege and authorization suite: **113 PASS notices** (including fixture acceptance lines), **0 FAIL**, `ON_ERROR_STOP=1`, exit 0.
+- **Latest (v5, `evidence/test_run_v5_2026-10-26.txt`):** constraint, privilege and authorization suite: **111 test-case PASS** plus **2 fixture acceptance PASS**, **0 FAIL**, `ON_ERROR_STOP=1`, exit 0. (The earlier "113 PASS notices" figure from v3/v4 is the same run count, not a separate result.)
 - Concurrency on canonical schema: T2-CR-04, T2-CR-04b, T2-CR-04c, T2-VER-02 PASS.
 - Mutation: lock removal **detected**.
 - Restoration: schema hash unchanged; concurrency PASS again.
@@ -197,7 +197,9 @@ Self-review of weaknesses: the lock mutation shows the lock matters for error se
 
 ---
 
-## 11. Mutation and property evidence (v4, 2026-10-25)
+## 11. Mutation and property evidence (v4 run; re-executed in v5, 2026-10-26)
+
+v5 re-ran every item below via the hardened `run_all.sh` (exit 0). Each mutant result and seed result in v5 matches the table and list below.
 
 Evidence: `docs/phase2/evidence/test_run_v4_2026-10-25.txt` (one full run of `run_all.sh`, exit 0).
 Runners: `docs/phase2/mutation/run_mutants.sh`, `docs/phase2/mutation/run_property_seeds.sh`, `docs/phase2/concurrency/run_mutation.sh`.
@@ -223,3 +225,26 @@ Property test, 12 explicit seeds (`setseed` accepts [-1, 1]): 0.11, 0.22, 0.33, 
 Runner reliability: `run_all.sh` aggregates every step, uses per-run temporary files, and exits 1 on any failed step. A controlled fault (an intentionally wrong expected SQLSTATE in a copied suite) produced exit 1.
 
 Not run: independent reproduction by a reviewer; mutants for the constraint-level checks (non-null tenant, transition table); mutants for authorization of `adjuster_rt` and `issuer_rt` bindings; any test on a real PostgreSQL cluster outside this sandbox.
+
+---
+
+## 12. Runner hardening and controlled-fault evidence (v5, 2026-10-26)
+
+- `run_all.sh` checks every required setup step (roles, DDL, concurrency preparation, restoration) and skips dependent stages when a prerequisite fails. Exit 0 only when every stage passed and cleanup succeeded.
+- psql exit codes are classified: 2 = ENVIRONMENT, 3 = SCRIPT_OR_TEST_ERROR, other = FATAL_OR_OTHER. Shared helpers: `docs/phase2/verify_lib.sh`.
+- The mutant runner fails if any defined mutant is not generated (`GENERATION INCOMPLETE`), so a mutant cannot be dropped silently.
+- Cleanup drops only the databases this runner creates, and reports each failure.
+
+Controlled faults (each run on a copy; canonical schema not modified):
+
+| Fault | Logs | Exit | Result |
+|---|---|---|---|
+| PostgreSQL unreachable (service stopped) | `evidence/controlled_fault_env_down_v5_2026-10-26.txt` | 1 | Stage 0 `ENVIRONMENT`; no success summary; cleanup failures reported for all 16 names. |
+| SQLSTATE expectation changed in a copied suite | `evidence/controlled_fault_sqlstate_v5_2026-10-26.txt` | 1 | Suite classified `SCRIPT_OR_TEST_ERROR`; no success summary. |
+| Mutant definition target removed (canonical untouched) | `evidence/controlled_fault_mutant_target_v5_2026-10-26.txt` | 1 | `GENERATION INCOMPLETE: 9 of 10`; run fails. |
+
+Note on the first attempt at the third fault: the first copy also altered the canonical function, which broke the suite and muddied the result. That attempt was discarded; the result above is from the corrected fault (only the mutant definition changed).
+
+Note on environment: during this work the sandbox PostgreSQL service was observed stopped between command calls, and once during a run (classified ENVIRONMENT by the runner). Results above come from complete runs after the service was restarted, and are reported as observed.
+
+Not run: a reviewer's independent reproduction; mutants for constraint-level checks (non-null tenant, transition table); mutants specific to `issuer_rt`/`adjuster_rt` bindings beyond the generic AUTH mutants.
