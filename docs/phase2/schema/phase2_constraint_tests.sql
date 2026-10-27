@@ -62,6 +62,17 @@ INSERT INTO students (id, tenant_id, mobile_normalized, academic_grade_key) VALU
   ('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', '+989121111111', 'grade_10'),
   ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', '+989121111111', 'grade_11');
 
+-- D-025 canonical input validation: accept only E.164-form mobile values
+-- and the explicit MVP academic-grade keys (grade_10..grade_12).
+SELECT expect_error('T2-ENR-025-00a non-E164 mobile rejected',
+  $q$INSERT INTO students (id, tenant_id, mobile_normalized, academic_grade_key)
+     VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000001', '091211111111', 'grade_10')$q$,
+  '23514');
+SELECT expect_error('T2-ENR-025-00b unknown grade key rejected',
+  $q$INSERT INTO students (id, tenant_id, mobile_normalized, academic_grade_key)
+     VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000001', '+989121234567', 'tenth_grade')$q$,
+  '23514');
+
 -- D-025: same canonical mobile+grade cannot be actively enrolled with
 -- another counselor, even in another tenant. Same mobile in another grade is allowed.
 INSERT INTO counselor_students
