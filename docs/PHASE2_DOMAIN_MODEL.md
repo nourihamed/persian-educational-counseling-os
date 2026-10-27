@@ -151,7 +151,7 @@ Keep design, author execution, independent execution, and runtime security disti
 6. **D-026 transfer:** decision recorded; end-to-end implementation is blocked until the trusted authenticated-principal model and authorization boundary are available. Do not trust caller-supplied IDs.
 7. **Runtime security not implemented or verified:** cell isolation (D-020/D-023), RLS, hosting, production role provisioning, backups/restore, owner-level prevention, and application/API authorization.
 
-**Required next execution:** run docs/phase2/run_all.sh against a fresh disposable PostgreSQL 15+ database with ON_ERROR_STOP=1; add a two-session cross-tenant race for the D-025 registry and prove the loser fails on the expected unique constraint; then update evidence from actual output. If no PostgreSQL environment is available, status must remain NOT RUN.
+**Required next execution:** run docs/phase2/run_all.sh against a fresh disposable PostgreSQL 15+ database with ON_ERROR_STOP=1; execute the newly added two-session cross-tenant race for the D-025 registry and prove the loser fails on the expected unique constraint; then update evidence from actual output. If no PostgreSQL environment is available, status must remain NOT RUN.
 
 The earlier v1/v2 evidence remains historical and does not describe or validate the latest DDL.
 
