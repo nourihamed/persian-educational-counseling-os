@@ -12,6 +12,8 @@
 --              class_sessions, assignments added. Remaining deferrals documented.
 --   P2-M03     column names aligned with the domain document (see report table).
 --   P2-M04     audit_logs.scope makes platform vs tenant events explicit.
+--   D-025      platform-wide active counselor enrollment key (canonical mobile + grade).
+--   D-026      append-only fee-confirmation evidence; actual caller authentication and transfer flow deferred.
 --
 -- Tenant rule: every tenant-owned table has tenant_id NOT NULL; cross-tenant
 -- references use composite foreign keys (tenant_id, id).
