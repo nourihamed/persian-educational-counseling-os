@@ -1,5 +1,8 @@
 # PROJECT_STATE — Dated addendum: Phase 2 targeted security remediation (2026-10-25)
 
+> **Historical snapshot; superseded for current status as of 2026-10-27.** The O-9 proposal language, test counts, and next action below predate D-025/D-026 and the latest DDL/test edits. They are retained as a dated record only. Use the current summary at the top of PROJECT_STATE.md and docs/phase2/PR_BODY.md for the current gate. The current D-025/D-026 changes have not been executed or independently reproduced.
+
+
 Paste below the current dated summary in `PROJECT_STATE.md`. Does not change any gate.
 
 - **Phase 2:** P2-R01..R04 remediation candidate on branch `docs/phase2-database-domain-model` (PR #8). Report: `docs/phase2/SECURITY_REMEDIATION_R01_R04.md`.
