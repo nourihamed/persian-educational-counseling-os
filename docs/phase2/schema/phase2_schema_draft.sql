@@ -1,5 +1,5 @@
 -- =============================================================================
--- PHASE 2 — DDL DRAFT v2 (PostgreSQL 15+)
+-- PHASE 2 — DDL DRAFT v3 (PostgreSQL 15+)
 -- Status: DRAFT. Not a migration. Not approved. Not independently reviewed.
 -- Synthetic data only (D-014). Requires phase2_roles_setup.sql first (test env).
 --
@@ -58,7 +58,7 @@ CREATE TABLE students (
     status                text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
     created_at            timestamptz NOT NULL DEFAULT now(),
     CHECK (mobile_normalized IS NULL OR mobile_normalized ~ '^\+[1-9][0-9]{7,14}$'),
-    CHECK (academic_grade_key IS NULL OR academic_grade_key ~ '^[a-z][a-z0-9_]{1,31}$'),
+    CHECK (academic_grade_key IS NULL OR academic_grade_key IN ('grade_10', 'grade_11', 'grade_12')),
     UNIQUE (tenant_id, id)
 );
 
@@ -74,6 +74,9 @@ CREATE TABLE student_profiles (
     updated_at      timestamptz NOT NULL DEFAULT now(),
     FOREIGN KEY (tenant_id, student_id) REFERENCES students (tenant_id, id)
 );
+
+COMMENT ON COLUMN student_profiles.grade IS
+    'Display label only; students.academic_grade_key is the canonical grade key for D-025 uniqueness.';
 
 CREATE TABLE counselor_students (
     id           uuid PRIMARY KEY,
@@ -97,7 +100,7 @@ CREATE UNIQUE INDEX counselor_students_one_active
 -- derived from canonical identity fields; uniqueness is not tenant-scoped.
 CREATE TABLE active_student_counselor_registry (
     normalized_mobile    text NOT NULL CHECK (normalized_mobile ~ '^\+[1-9][0-9]{7,14}$'),
-    academic_grade_key   text NOT NULL CHECK (academic_grade_key ~ '^[a-z][a-z0-9_]{1,31}$'),
+    academic_grade_key   text NOT NULL CHECK (academic_grade_key IN ('grade_10', 'grade_11', 'grade_12')),
     tenant_id            uuid NOT NULL,
     counselor_student_id uuid NOT NULL,
     student_id           uuid NOT NULL,
