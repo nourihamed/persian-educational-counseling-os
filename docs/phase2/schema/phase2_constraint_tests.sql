@@ -149,6 +149,26 @@ SELECT expect_error('T2-TR-026-04 confirmation cannot be reused for same prior e
        '11000000-0000-0000-0000-000000000001', true)$q$,
   '23505');
 
+SELECT expect_error('T2-TR-026-05 confirmation cannot bind a different student',
+  $q$INSERT INTO counselor_fee_confirmations
+       (id, tenant_id, prior_counselor_student_id, student_id, prior_counselor_id,
+        confirming_user_id, fee_received)
+     VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000001',
+       '81000000-0000-0000-0000-000000000001',
+       '20000000-0000-0000-0000-000000000003',
+       '10000000-0000-0000-0000-000000000001',
+       '11000000-0000-0000-0000-000000000001', true)$q$,
+  '23514', 'exact active prior counselor enrollment');
+SELECT expect_error('T2-TR-026-06 fee confirmation is append-only (UPDATE)',
+  $q$UPDATE counselor_fee_confirmations SET fee_received = true
+     WHERE id = '82000000-0000-0000-0000-000000000001'$q$,
+  '23514', 'forbidden');
+SELECT expect_error('T2-TR-026-07 fee confirmation is append-only (DELETE)',
+  $q$DELETE FROM counselor_fee_confirmations
+     WHERE id = '82000000-0000-0000-0000-000000000001'$q$,
+  '23514', 'forbidden');
+
+
 
 INSERT INTO subjects (id, tenant_id, name) VALUES
   ('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Synthetic Math'),
