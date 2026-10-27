@@ -116,7 +116,7 @@ CREATE TABLE active_student_counselor_registry (
 );
 
 CREATE FUNCTION sync_active_student_counselor_registry() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_mobile text; v_grade text;
 BEGIN
     IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
@@ -148,7 +148,7 @@ CREATE TRIGGER sync_active_student_counselor_registry_trg
 
 -- Identity keys cannot change while an active counselor enrollment exists.
 CREATE FUNCTION guard_student_identity_key_change() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 BEGIN
     IF (NEW.mobile_normalized, NEW.academic_grade_key)
        IS DISTINCT FROM (OLD.mobile_normalized, OLD.academic_grade_key)
@@ -187,7 +187,7 @@ CREATE TABLE counselor_fee_confirmations (
 );
 
 CREATE FUNCTION validate_counselor_fee_confirmation() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_student uuid; v_counselor uuid; v_status text; v_user uuid;
 BEGIN
     SELECT student_id, counselor_id, status
