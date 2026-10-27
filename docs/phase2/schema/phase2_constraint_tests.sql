@@ -57,10 +57,34 @@ INSERT INTO counselors (id, tenant_id, display_name) VALUES
   ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Synthetic Counselor A'),
   ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'Synthetic Counselor B');
 
-INSERT INTO students (id, tenant_id) VALUES
-  ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001'),
-  ('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002'),
-  ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001');
+INSERT INTO students (id, tenant_id, mobile_normalized, academic_grade_key) VALUES
+  ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '+989121111111', 'grade_10'),
+  ('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', '+989121111111', 'grade_10'),
+  ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', '+989121111111', 'grade_11');
+
+-- D-025: same canonical mobile+grade cannot be actively enrolled with
+-- another counselor, even in another tenant. Same mobile in another grade is allowed.
+INSERT INTO counselor_students
+  (id, tenant_id, counselor_id, student_id, status, started_at)
+VALUES
+  ('81000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+   '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
+   'active', now());
+SELECT expect_error('T2-ENR-025-01 global duplicate mobile+grade active enrollment rejected',
+  $q$INSERT INTO counselor_students
+       (id, tenant_id, counselor_id, student_id, status, started_at)
+     VALUES ('81000000-0000-0000-0000-000000000002',
+       '00000000-0000-0000-0000-000000000002',
+       '10000000-0000-0000-0000-000000000002',
+       '20000000-0000-0000-0000-000000000002', 'active', now())$q$,
+  '23505', 'active_student_counselor_registry_pkey');
+SELECT expect_ok('T2-ENR-025-02 same mobile in a different grade may be actively enrolled',
+  $q$INSERT INTO counselor_students
+       (id, tenant_id, counselor_id, student_id, status, started_at)
+     VALUES ('81000000-0000-0000-0000-000000000003',
+       '00000000-0000-0000-0000-000000000001',
+       '10000000-0000-0000-0000-000000000001',
+       '20000000-0000-0000-0000-000000000003', 'active', now())$q$);
 
 INSERT INTO subjects (id, tenant_id, name) VALUES
   ('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Synthetic Math'),
@@ -232,6 +256,11 @@ SELECT expect_error('T2-VER-07 enrollment to a draft version rejected',
   '23514', 'published');
 
 -- program_versions is referenced by FKs, so PostgreSQL rejects TRUNCATE itself (0A000) before any trigger runs.
+SELECT expect_error('T2-VER-07b enrollment cannot be reassigned to a draft program version',
+  $q$UPDATE student_program_enrollments SET program_version_id = '50000000-0000-0000-0000-000000000003'
+     WHERE id = '80000000-0000-0000-0000-000000000001'$q$,
+  '23514', 'published');
+
 SELECT expect_error('T2-VER-08 TRUNCATE of program_versions rejected (FK-referenced table)',
   $q$TRUNCATE program_versions$q$, '0A000', 'foreign key');
 
