@@ -24,7 +24,7 @@ This PR is open and draft. Current branch head is the authoritative GitHub PR he
 4. Reconcile the domain document and test evidence with actual outcomes, then request independent review.
 
 ### Existing evidence (historical, author-reported)
-The v5 report states PostgreSQL 16.15, 111 test PASS notices plus 2 fixture confirmations, 4 concurrency checks PASS, 10/10 targeted authorization/idempotency mutants detected, 12/12 property seeds PASS, controlled faults exiting 1, and overall exit 0. This evidence predates the current D-025 and version-trigger edits and has not been independently reproduced.
+The v5 report states PostgreSQL 16.15, 111 test PASS notices plus 2 fixture confirmations, 4 concurrency checks PASS, 10/10 targeted authorization/idempotency mutants detected, 12/12 property seeds PASS, controlled faults exiting 1, and overall exit 0. This evidence predates the current D-025, D-026 confirmation-event, version-trigger, and D-025 concurrency-test edits and has not been independently reproduced.
 
 ### Out of scope / not established
 RLS, application/API authorization, runtime tenant isolation, production role provisioning, migrations, owner/superuser bypass prevention, Alt-5 cell isolation, hosting, backup/restore, payment verification, and real-data permission are not established by this PR. Q-007 remains open; Q-023 remains a hard pre-hosting gate.
