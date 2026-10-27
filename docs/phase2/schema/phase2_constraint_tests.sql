@@ -53,9 +53,9 @@ INSERT INTO tenant_role_bindings (role_name, tenant_id) VALUES
   ('postgres', '00000000-0000-0000-0000-000000000001'),
   ('postgres', '00000000-0000-0000-0000-000000000002');
 
-INSERT INTO counselors (id, tenant_id, display_name) VALUES
-  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Synthetic Counselor A'),
-  ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'Synthetic Counselor B');
+INSERT INTO counselors (id, tenant_id, user_id, display_name) VALUES
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '11000000-0000-0000-0000-000000000001', 'Synthetic Counselor A'),
+  ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', '11000000-0000-0000-0000-000000000002', 'Synthetic Counselor B');
 
 INSERT INTO students (id, tenant_id, mobile_normalized, academic_grade_key) VALUES
   ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '+989121111111', 'grade_10'),
@@ -96,6 +96,59 @@ SELECT expect_ok('T2-ENR-025-02 same mobile in a different grade may be actively
        '00000000-0000-0000-0000-000000000001',
        '10000000-0000-0000-0000-000000000001',
        '20000000-0000-0000-0000-000000000003', 'active', now())$q$);
+
+-- D-026: the event is bound to the exact prior enrollment and counselor account.
+INSERT INTO counselor_fee_confirmations
+  (id, tenant_id, prior_counselor_student_id, student_id, prior_counselor_id,
+   confirming_user_id, fee_received)
+VALUES
+  ('82000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000001',
+   '81000000-0000-0000-0000-000000000001',
+   '20000000-0000-0000-0000-000000000001',
+   '10000000-0000-0000-0000-000000000001',
+   '11000000-0000-0000-0000-000000000001', true);
+SELECT expect_error('T2-TR-026-01 confirmation cannot name a different counselor',
+  $q$INSERT INTO counselor_fee_confirmations
+       (id, tenant_id, prior_counselor_student_id, student_id, prior_counselor_id,
+        confirming_user_id, fee_received)
+     VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000001',
+       '81000000-0000-0000-0000-000000000001',
+       '20000000-0000-0000-0000-000000000001',
+       '10000000-0000-0000-0000-000000000002',
+       '11000000-0000-0000-0000-000000000002', true)$q$,
+  '23514', 'exact active prior counselor enrollment');
+SELECT expect_error('T2-TR-026-02 confirmation cannot claim a different user',
+  $q$INSERT INTO counselor_fee_confirmations
+       (id, tenant_id, prior_counselor_student_id, student_id, prior_counselor_id,
+        confirming_user_id, fee_received)
+     VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000001',
+       '81000000-0000-0000-0000-000000000001',
+       '20000000-0000-0000-0000-000000000001',
+       '10000000-0000-0000-0000-000000000001',
+       '11000000-0000-0000-0000-000000000002', true)$q$,
+  '23514', 'prior counselor account');
+SELECT expect_error('T2-TR-026-03 confirmation cannot claim fee not received',
+  $q$INSERT INTO counselor_fee_confirmations
+       (id, tenant_id, prior_counselor_student_id, student_id, prior_counselor_id,
+        confirming_user_id, fee_received)
+     VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000001',
+       '81000000-0000-0000-0000-000000000001',
+       '20000000-0000-0000-0000-000000000001',
+       '10000000-0000-0000-0000-000000000001',
+       '11000000-0000-0000-0000-000000000001', false)$q$,
+  '23514');
+SELECT expect_error('T2-TR-026-04 confirmation cannot be reused for same prior enrollment',
+  $q$INSERT INTO counselor_fee_confirmations
+       (id, tenant_id, prior_counselor_student_id, student_id, prior_counselor_id,
+        confirming_user_id, fee_received)
+     VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000001',
+       '81000000-0000-0000-0000-000000000001',
+       '20000000-0000-0000-0000-000000000001',
+       '10000000-0000-0000-0000-000000000001',
+       '11000000-0000-0000-0000-000000000001', true)$q$,
+  '23505');
+
 
 INSERT INTO subjects (id, tenant_id, name) VALUES
   ('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Synthetic Math'),
