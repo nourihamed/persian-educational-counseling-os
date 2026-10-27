@@ -2,6 +2,9 @@
 
 # Phase 2 — Remediation Report (response to independent supervisor findings on PR #8)
 
+> **Historical remediation snapshot; not current status.** This report predates the D-025 global mobile+grade registry, D-026 fee-confirmation event schema, and the latest program-version UPDATE guard. Its historical execution labels/counts do not validate these new changes. Current gate and pending execution are tracked in PROJECT_STATE.md and docs/phase2/PR_BODY.md. Do not merge or infer approval from this report.
+
+
 Status: **ready for independent re-review. NOT approved. Do not merge by the author.**
 Branch: `docs/phase2-database-domain-model` (to be pushed as new commits on top of `267473b`).
 Scope: Phase 2 database/domain model only. No Phase 3 work. No auth, RLS, hosting, or migrations.
