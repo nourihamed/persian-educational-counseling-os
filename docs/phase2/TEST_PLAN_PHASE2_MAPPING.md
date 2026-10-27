@@ -27,7 +27,7 @@ Historical evidence file: `docs/phase2/evidence/test_run_v5_2026-10-26.txt` (aut
 | T2-ENR-025-01/02 | Global mobile+grade uniqueness across tenants; same mobile in different grade allowed | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Current DDL/tests not executed. |
 | T2-ENR-025-03 | Two-session race for same global mobile+grade key | `concurrency/run_concurrency.sh`, `session_enrollment.sql` | NOT RUN (added 2026-10-27) | Current concurrency harness not executed. |
 | T2-VER-07b | Existing enrollment cannot be reassigned to a draft program version | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Current DDL/tests not executed. |
-| T2-TR-026-01..04 | Fee-confirmation event must match prior enrollment/counselor account, require receipt assertion, and not duplicate | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Does not prove the actual caller is authenticated; transfer operation remains unimplemented. |
+| T2-TR-026-01..07 | Fee-confirmation event must match prior enrollment/counselor account, require receipt assertion, and not duplicate | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Does not prove the actual caller is authenticated; transfer operation remains unimplemented. |
 | Independent reproduction | Same results by another reviewer | — | NOT RUN | Pending reviewer. |
 | Owner/superuser bypass | Cannot bypass | — | KNOWN-RESIDUAL / BLOCKED | Deployment-dependent. |
 | RLS, API/app authorization, production roles, migrations, backup/restore, Alt-5, hosting | — | — | NOT RUN / SPEC-ONLY | Out of Phase 2 scope. |
