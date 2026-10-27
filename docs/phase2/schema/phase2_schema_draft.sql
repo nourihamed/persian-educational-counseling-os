@@ -353,10 +353,10 @@ CREATE UNIQUE INDEX enrollments_one_active
 
 -- Only published or superseded versions can be enrolled (not drafts).
 CREATE FUNCTION enrollment_requires_published_version() RETURNS trigger
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_status text;
 BEGIN
-    SELECT status INTO v_status FROM program_versions
+    SELECT status INTO v_status FROM public.program_versions
      WHERE tenant_id = NEW.tenant_id AND id = NEW.program_version_id;
     IF v_status IS NULL OR v_status NOT IN ('published', 'superseded') THEN
         RAISE EXCEPTION 'enrollment requires a published program_version (found %)', v_status
