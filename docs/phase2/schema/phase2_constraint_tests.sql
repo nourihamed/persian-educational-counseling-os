@@ -1,5 +1,5 @@
 -- =============================================================================
--- PHASE 2 — CONSTRAINT TEST SUITE v2
+-- PHASE 2 — CONSTRAINT TEST SUITE v3
 -- Run order: phase2_roles_setup.sql -> phase2_schema_draft.sql -> this file.
 -- Fresh database for every run (fixtures are not idempotent).
 -- Each negative test asserts the exact SQLSTATE and, where the reason matters,
