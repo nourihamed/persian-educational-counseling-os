@@ -6,7 +6,8 @@ This PR is open and draft. Current branch head is the authoritative GitHub PR he
 
 ### Current remediation in this branch
 - D-025: added canonical mobile and academic-grade keys to student records and a platform-wide registry whose primary key is (normalized mobile, grade), populated transactionally by an enrollment trigger. The database unique constraint is the concurrency-safe final gate. Active enrollments require both canonical keys. Keys cannot change while an active counselor enrollment exists.
-- Added D-025 regression cases: cross-tenant duplicate mobile+grade must fail; same mobile with a different grade may succeed.
+- Added D-025 regression cases: cross-tenant duplicate mobile+grade must fail; same mobile with a different grade may succeed; noncanonical mobile and unknown grade keys must fail.
+- Added a two-session D-025 concurrency scenario to the existing runner. It has **not been executed**.
 - Program-version enrollment guard now fires on INSERT and on UPDATE of tenant/version references; regression test attempts to reassign an enrollment to a draft version.
 - Existing credit-ledger, version lifecycle, tenant composite-FK, privilege and test-harness work remains in scope.
 
@@ -18,7 +19,7 @@ This PR is open and draft. Current branch head is the authoritative GitHub PR he
 
 ### Required verification
 1. Run docs/phase2/run_all.sh against a fresh throwaway PostgreSQL 15+ database with ON_ERROR_STOP=1.
-2. Add and execute a two-session concurrency test proving only one insert can claim the same normalized mobile+grade key across tenants; verify the losing session fails for the expected unique-constraint reason.
+2. Execute the newly added two-session concurrency test proving only one insert can claim the same normalized mobile+grade key across tenants; verify the losing session fails for the expected unique-constraint reason.
 3. Add transfer-specific schema/API contracts and negative tests when the authenticated user/principal mapping is available; do not weaken D-026 to accommodate the current schema boundary.
 4. Reconcile the domain document and test evidence with actual outcomes, then request independent review.
 
