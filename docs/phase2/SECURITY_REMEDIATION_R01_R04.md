@@ -1,5 +1,7 @@
 # Phase 2 — Targeted Security Remediation (P2-R01 to P2-R04)
 
+> **Historical report notice (2026-10-27):** This report describes the R01–R04 remediation at the commit/version stated below. It predates the latest D-025 global mobile+grade registry and program-version enrollment UPDATE guard. Its execution results do **not** validate those changes. The current branch's latest changes have not been run against PostgreSQL or independently reproduced. D-026 transfer is not implemented end-to-end because trusted authenticated-principal binding is outside this Phase 2 schema. See PROJECT_STATE.md and docs/phase2/PR_BODY.md for current gate status.
+
 Status: **remediation candidate for independent re-review. NOT approved. Phase 2 remains PENDING independent review.**
 Base: PR #8, reviewed HEAD `5e78384`. Branch `docs/phase2-database-domain-model`.
 Scope: Phase 2 database design and its tests only. No application/API authentication, RLS, production roles,
