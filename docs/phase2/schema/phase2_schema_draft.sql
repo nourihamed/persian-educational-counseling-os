@@ -160,6 +160,62 @@ $$;
 CREATE TRIGGER guard_student_identity_key_change_trg
     BEFORE UPDATE OF mobile_normalized, academic_grade_key ON students
     FOR EACH ROW EXECUTE FUNCTION guard_student_identity_key_change();
+ 
+-- D-026: immutable evidence that the exact previous counselor asserted receipt
+-- of their fee. This table records the assertion; it does NOT authenticate the
+-- database caller. The application must bind confirming_user_id to the verified
+-- session principal before INSERT. No transfer is enabled by this event alone.
+CREATE TABLE counselor_fee_confirmations (
+    id                       uuid PRIMARY KEY,
+    tenant_id                uuid NOT NULL,
+    prior_counselor_student_id uuid NOT NULL,
+    student_id               uuid NOT NULL,
+    prior_counselor_id       uuid NOT NULL,
+    confirming_user_id       uuid NOT NULL,
+    fee_received             boolean NOT NULL CHECK (fee_received),
+    confirmed_at             timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (tenant_id, prior_counselor_student_id),
+    FOREIGN KEY (tenant_id, prior_counselor_student_id)
+        REFERENCES counselor_students (tenant_id, id),
+    FOREIGN KEY (tenant_id, student_id)
+        REFERENCES students (tenant_id, id),
+    FOREIGN KEY (tenant_id, prior_counselor_id)
+        REFERENCES counselors (tenant_id, id)
+);
+
+CREATE FUNCTION validate_counselor_fee_confirmation() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE v_student uuid; v_counselor uuid; v_status text; v_user uuid;
+BEGIN
+    SELECT student_id, counselor_id, status
+      INTO v_student, v_counselor, v_status
+      FROM counselor_students
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.prior_counselor_student_id;
+    IF NOT FOUND OR v_student IS DISTINCT FROM NEW.student_id
+       OR v_counselor IS DISTINCT FROM NEW.prior_counselor_id
+       OR v_status <> 'active' THEN
+        RAISE EXCEPTION 'fee confirmation must match the exact active prior counselor enrollment'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    SELECT user_id INTO v_user FROM counselors
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.prior_counselor_id;
+    IF v_user IS NULL OR v_user IS DISTINCT FROM NEW.confirming_user_id THEN
+        RAISE EXCEPTION 'fee confirmation user must match the prior counselor account'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER validate_counselor_fee_confirmation_trg
+    BEFORE INSERT ON counselor_fee_confirmations
+    FOR EACH ROW EXECUTE FUNCTION validate_counselor_fee_confirmation();
+CREATE TRIGGER counselor_fee_confirmations_append_only
+    BEFORE UPDATE OR DELETE ON counselor_fee_confirmations
+    FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+CREATE TRIGGER counselor_fee_confirmations_no_truncate
+    BEFORE TRUNCATE ON counselor_fee_confirmations
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation();
+
 
 -- --------------------------------------------------------- curriculum ----
 CREATE TABLE subjects (
