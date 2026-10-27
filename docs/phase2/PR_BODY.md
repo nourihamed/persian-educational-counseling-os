@@ -11,8 +11,8 @@ This PR is open and draft. Current branch head is the authoritative GitHub PR he
 - Existing credit-ledger, version lifecycle, tenant composite-FK, privilege and test-harness work remains in scope.
 
 ### Important limits / not yet complete
-- **D-026 transfer is not implemented end-to-end.** The product rule is recorded, but this Phase 2 schema does not authenticate the real caller as the prior counselor. Authentication/user identity is deferred to Phase 4. No function may treat a caller-supplied counselor/user UUID as proof of authentication. Transfer requires a later authenticated operation that checks the prior counselor's own confirmation, binds it to the exact prior enrollment, and atomically ends the old enrollment and creates the new one.
-- The D-025 / version-guard changes above have **not been executed** against PostgreSQL after editing. Syntax, fixture behavior, cross-tenant uniqueness, and concurrency behavior are unverified.
+- **D-026 transfer is not implemented end-to-end.** Draft DDL now has append-only `counselor_fee_confirmations`, bound to the exact prior enrollment, student, counselor and `counselors.user_id`, with negative regression cases. However, this does not prove the real caller is authenticated as that user: authentication/user identity is deferred to Phase 4. No function may treat a caller-supplied counselor/user UUID as proof of authentication. Transfer initiation authorization and the atomic operation that ends the old enrollment and creates the new one remain unimplemented.
+- The D-025, D-026 confirmation-event, and version-guard changes above have **not been executed** against PostgreSQL after editing. Syntax, fixture behavior, cross-tenant uniqueness, and concurrency behavior are unverified.
 - Existing v5 logs are author-reported only; they predate these changes and are not evidence that the current branch passes.
 - No independent fresh PostgreSQL run of the current branch has been completed. No successful run is claimed here.
 
