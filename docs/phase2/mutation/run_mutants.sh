@@ -28,12 +28,17 @@ echo "baseline canonical suite: PASS (exit 0)"
 python3 "$M/mutants.py" "$S/phase2_schema_draft.sql" "$WORK" > "$WORK/list.tsv" 2> "$WORK/gen.err"; gen=$?
 cat "$WORK/gen.err"
 if [ $gen -ne 0 ]; then echo "MUTANT GENERATION FAILED (exit $gen)"; rm -rf "$WORK"; exit 1; fi
+# Every mutant database is dropped on EVERY exit path (including early failures) via this trap.
+CUR_DB=""
+cleanup_cur(){ if [ -n "$CUR_DB" ]; then db_drop "$CUR_DB" >/dev/null 2>&1 || echo "CLEANUP FAILED [trap $CUR_DB]" >&2; fi; }
+trap cleanup_cur EXIT
 while IFS=$'\t' read -r mid desc path; do
-  total=$((total+1)); db="p3_m_$(echo "$mid" | tr 'A-Z-' 'a-z_')"
+  total=$((total+1)); db="p3_m_$(echo "$mid" | tr 'A-Z-' 'a-z_')"; CUR_DB="$db"
   db_fresh "$db" || { echo "$mid: cannot create database (environment)"; rm -rf "$WORK"; exit 2; }
   req "roles:$db" psql -X -v ON_ERROR_STOP=1 -q -d "$db" -f "$S/phase2_roles_setup.sql" >/dev/null || { rm -rf "$WORK"; exit 2; }
   if ! psql -X -v ON_ERROR_STOP=1 -q -d "$db" -f "$path" >/dev/null 2>"$WORK/$mid.build.err"; then
-    echo "$mid: mutant DDL did not load (not a valid mutant)"; cat "$WORK/$mid.build.err"; fails=$((fails+1)); continue
+    echo "$mid: mutant DDL did not load (not a valid mutant)"; cat "$WORK/$mid.build.err"; fails=$((fails+1))
+    db_drop "$db" || fails=$((fails+1)); CUR_DB=""; continue
   fi
   psql -X -v ON_ERROR_STOP=1 -d "$db" -f "$S/phase2_constraint_tests.sql" > "$WORK/$mid.suite.log" 2>&1; rc=$?
   first=$(grep -m1 -oE 'ERROR:  FAIL [^:]+' "$WORK/$mid.suite.log" | sed 's/ERROR:  //' || true)
@@ -43,6 +48,7 @@ while IFS=$'\t' read -r mid desc path; do
     echo "NOT DETECTED  $mid  ($desc)  suite exit=$rc"; fails=$((fails+1))
   fi
   db_drop "$db" || fails=$((fails+1))
+  CUR_DB=""
 done < "$WORK/list.tsv"
 echo "mutants run: $total ; not detected or invalid: $fails"
 [ "$total" -gt 0 ] || { echo "NO MUTANTS RAN"; fails=$((fails+1)); }

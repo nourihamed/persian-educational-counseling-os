@@ -31,3 +31,15 @@ Historical evidence file: `docs/phase2/evidence/test_run_v5_2026-10-26.txt` (aut
 | Independent reproduction | Same results by another reviewer | — | NOT RUN | Pending reviewer. |
 | Owner/superuser bypass | Cannot bypass | — | KNOWN-RESIDUAL / BLOCKED | Deployment-dependent. |
 | RLS, API/app authorization, production roles, migrations, backup/restore, Alt-5, hosting | — | — | NOT RUN / SPEC-ONLY | Out of Phase 2 scope. |
+
+## Harness controlled-fault self-tests (added 2026-10-31)
+| ID | Invariant | Script | Status | Evidence |
+|---|---|---|---|---|
+| S1 | Failing baseline prevents mutant evaluation | `selftest/run_harness_selftest.sh S1` | PASS (exit 1 as designed) | `docs/phase2/evidence/test_run_final_after_d12b26c_2026-10-31T144259Z.txt` |
+| S2 | Surviving mutant reported NOT DETECTED and fails the run | `selftest/run_harness_selftest.sh S2` | PASS | same |
+| S3 | Invalid mutant not counted as DETECTED; fails the run | `selftest/run_harness_selftest.sh S3` | PASS | same |
+| S4 | Failing concurrency stage fails the whole run | `selftest/run_harness_selftest_full.sh S4` | PASS | same |
+| S5 | Real cleanup failure fails the whole run (precondition verified: blocker session present) | `selftest/run_harness_selftest_full.sh S5` | PASS | same |
+
+## Registry lifecycle (D-025) — executed in canonical run
+ENR-REG-01 (activation writes one registry row), ENR-REG-02 (second tenant rejected, pkey), ENR-REG-03/03b (ending releases key; no orphan), ENR-REG-04 (second tenant then activates), ENR-REG-05 (reactivation conflict rejected, pkey), ENR-REG-06/06b (DELETE leaves no orphan), ENR-REG-07/07b (student re-pointed; registry follows): all PASS in the final canonical run.
