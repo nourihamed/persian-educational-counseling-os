@@ -1,0 +1,45 @@
+# Phase 2 test mapping (historical v5 results plus current remediation status, 2026-10-27)
+
+Status key: PASS = executed and passed in the cited evidence. FAIL = executed and failed. KNOWN-RESIDUAL = executed; a limitation remains. BLOCKED = cannot run here. NOT RUN = not executed. SPEC-ONLY = specification without an executable test.
+Historical evidence file: `docs/phase2/evidence/test_run_v5_2026-10-26.txt` (author-executed before current edits). It does not validate D-025/D-026/current version-guard changes. "Independently reproduced" is **not** claimed for any row.
+
+| Test family | Invariant | Where | Status (v5) | Limitation |
+|---|---|---|---|---|
+| T2-TI-01..08 | Cross-tenant references rejected (composite FKs, NULL tenant) | `phase2_constraint_tests.sql` | PASS | Owner can drop constraints (deployment). |
+| T2-VER-01a..14 | Published version immutable; transitions enforced; identity immutable; enrollment pinned | same | PASS | Owner bypass (deployment). |
+| T2-PLAN-01..13 | Plan version/items frozen after activation; one active version per plan | same | PASS | Owner bypass (deployment). |
+| T2-TEST / STUDY / ERR / REV / EXAM / CLS / ASG / CURR / AUD | Sum rule, time order, error labels, duplicate review and exam results, class and assignment rules, audit scope | same | PASS | Semantic rules beyond the DDL are not modelled. |
+| T2-CR-01..13 | Ledger constraints, function-only writes, insufficient credit, reconciliation, rollback, owner-level truncate blocked | same | PASS | Owner tampering detected, not prevented. |
+| T2-R01-01..18 | Authorization matrix; tenant substitution denied; no direct table writes; default-deny | same | PASS | Payment and human identity not verified by the database. |
+| T2-R02-00..08 | Each canonical payload field rejects replay; identical replay one effect | same | PASS | Only the six listed fields. |
+| T2-R03-01..08 | PUBLIC has no EXECUTE; runtime roles not superusers; no CREATE in public or schema; hostile search_path and hostile function ignored | same | PASS | Owner remains trusted by design. |
+| T2-PRIV (retired v2 set) | Superseded by T2-R01 | — | SUPERSEDED | — |
+| T2-CR-04 | Concurrent activation, one credit: one winner, loser reason verified | `concurrency/run_concurrency.sh` | PASS | Two-session race only. |
+| T2-CR-04b | Concurrent identical canonical payload: one row | same | PASS | — |
+| T2-CR-04c | Concurrent same key, different payload: rejected with reason | same | PASS | — |
+| T2-VER-02 | Concurrent same version number: one winner | same | PASS | — |
+| Lock mutant | Lock removal is detected | `concurrency/run_mutation.sh` | DETECTED | Detected by reason and idempotency; balance held by CHECK. |
+| AUTH-1..4 mutants | Binding and permission checks detect weakened identity | `mutation/run_mutants.sh` | DETECTED ×4 | Targeted, not exhaustive. |
+| IDEM-kind..reason mutants | Each canonical field detected | same | DETECTED ×6 | Targeted, not exhaustive. |
+| Property, 12 seeds | No negative balance; drift 0 | `mutation/run_property_seeds.sh` | PASS ×12 | One property; not an exhaustive model. |
+| Controlled faults ×3 | Runner returns non-zero and never reports success | evidence `controlled_fault_*_v5` | PASS (runner behaviour) | Copies of the suite only. |
+| T2-ENR-025-00a/b | Canonical E.164 mobile shape and allowed grade key | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Current DDL/tests not executed. |
+| T2-ENR-025-01/02 | Global mobile+grade uniqueness across tenants; same mobile in different grade allowed | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Current DDL/tests not executed. |
+| T2-ENR-025-03 | Two-session race for same global mobile+grade key | `concurrency/run_concurrency.sh`, `session_enrollment.sql` | NOT RUN (added 2026-10-27) | Current concurrency harness not executed. |
+| T2-VER-07b | Existing enrollment cannot be reassigned to a draft program version | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Current DDL/tests not executed. |
+| T2-TR-026-01..07 | Fee-confirmation event must match prior enrollment/counselor account, require receipt assertion, and not duplicate | `phase2_constraint_tests.sql` | NOT RUN (added 2026-10-27) | Does not prove the actual caller is authenticated; transfer operation remains unimplemented. |
+| Independent reproduction | Same results by another reviewer | — | NOT RUN | Pending reviewer. |
+| Owner/superuser bypass | Cannot bypass | — | KNOWN-RESIDUAL / BLOCKED | Deployment-dependent. |
+| RLS, API/app authorization, production roles, migrations, backup/restore, Alt-5, hosting | — | — | NOT RUN / SPEC-ONLY | Out of Phase 2 scope. |
+
+## Harness controlled-fault self-tests (added 2026-10-31)
+| ID | Invariant | Script | Status | Evidence |
+|---|---|---|---|---|
+| S1 | Failing baseline prevents mutant evaluation | `selftest/run_harness_selftest.sh S1` | PASS (exit 1 as designed) | `docs/phase2/evidence/test_run_final_after_d12b26c_2026-10-31T144259Z.txt` |
+| S2 | Surviving mutant reported NOT DETECTED and fails the run | `selftest/run_harness_selftest.sh S2` | PASS | same |
+| S3 | Invalid mutant not counted as DETECTED; fails the run | `selftest/run_harness_selftest.sh S3` | PASS | same |
+| S4 | Failing concurrency stage fails the whole run | `selftest/run_harness_selftest_full.sh S4` | PASS | same |
+| S5 | Real cleanup failure fails the whole run (precondition verified: blocker session present) | `selftest/run_harness_selftest_full.sh S5` | PASS | same |
+
+## Registry lifecycle (D-025) — executed in canonical run
+ENR-REG-01 (activation writes one registry row), ENR-REG-02 (second tenant rejected, pkey), ENR-REG-03/03b (ending releases key; no orphan), ENR-REG-04 (second tenant then activates), ENR-REG-05 (reactivation conflict rejected, pkey), ENR-REG-06/06b (DELETE leaves no orphan), ENR-REG-07/07b (student re-pointed; registry follows): all PASS in the final canonical run.
