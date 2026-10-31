@@ -11,12 +11,16 @@ D-014, D-020, D-023; Q-007 (parent access, open); Q-023 (hosting gate, open).
 
 ---
 
-## 1. Tenancy
+## 1. Tenancy and counselor-level isolation (Product Owner decision O-1, 2026-10-31)
 
-- **Tenant** = one counselor account (`tenants`). Every tenant-owned table has `tenant_id NOT NULL`.
-- Cross-tenant references use composite foreign keys `(tenant_id, id)`, so a child cannot point at another tenant's parent. Enforced in the DDL and tested (T2-TI-01..08).
+- **Tenant = Organization**, not an individual counselor account. An organization exists even when it has only one counselor (for example, "Dr. X Counseling Institute"); it may also contain multiple counselors.
+- Every counselor belongs to an organization. Every student belongs to that organization and is assigned to one responsible counselor through `counselor_students`.
+- **Strict counselor-level isolation applies inside an organization:** a counselor may access only students explicitly assigned to that counselor. A counselor must not read, modify, export, infer, or otherwise access another counselor's students, even when both counselors belong to the same organization.
+- Organization membership, organization ownership, or an administrative title does not grant student-record access by default. Any exceptional administrative access would require a separate explicit Product Owner decision, narrow authorization, and audit requirements; it is not implied by O-1.
+- Every tenant-owned table retains `tenant_id NOT NULL`; composite foreign keys (`tenant_id, id`) prevent cross-organization parent/child references. The existing DDL has organization-compatible tenant columns and counselor/student relationships, but its authorization model is not implemented.
+- **Draft-to-decision reconciliation still required:** the earlier Phase 2 narrative and schema assumptions treated one tenant as one counselor. The current draft must be reviewed and amended where needed so tenant records represent organizations and the responsible-counselor relationship is enforced consistently. Do not treat the current DDL as proof that O-1 is implemented.
 - Platform catalog is out of MVP (D-012): no nullable-tenant template or version rows.
-- Tenant identity is resolved server-side (application concern, Phase 4). The DDL does not implement authorization.
+- Organization/tenant identity and counselor assignment must be derived from the authenticated server-side principal and database relationships, never from caller-controlled tenant/counselor IDs. Authentication and API authorization are deferred to Phase 4; Phase 2 DDL does not implement them.
 
 ## 2. Entities (mapped to DDL tables)
 
