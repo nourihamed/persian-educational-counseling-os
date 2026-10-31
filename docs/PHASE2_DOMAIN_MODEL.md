@@ -141,19 +141,21 @@ New template edits never change existing enrollments (T2-VER-14). Moving a stude
 
 ## 9. Execution status (P2-M05)
 
-Keep design, author execution, independent execution, and runtime security distinct.
+Keep authored design, author execution, independent execution, and runtime security distinct.
 
 1. **Design specified:** this document, §§1–8.
-2. **SQL draft authored:** phase2_schema_draft.sql and phase2_roles_setup.sql (test-only roles). The DDL is still a draft, not a migration.
-3. **Historical author execution:** the v5 evidence file reports a PostgreSQL 16.15 run with exit 0 and 111 PASS notices plus 2 fixture confirmations, plus concurrency, mutation, property and controlled-fault checks. That run predates the latest D-025 and version-guard edits.
-4. **Current D-025 and version-guard changes:** authored in the current branch; **NOT RUN** against PostgreSQL as of 2026-10-27. Syntax, fixture behavior, unique-conflict reason, and concurrency are unverified.
-5. **Independently reproduced evidence:** **none**. Do not treat author-reported logs as independent verification.
-6. **D-026 transfer:** decision recorded; end-to-end implementation is blocked until the trusted authenticated-principal model and authorization boundary are available. Do not trust caller-supplied IDs.
-7. **Runtime security not implemented or verified:** cell isolation (D-020/D-023), RLS, hosting, production role provisioning, backups/restore, owner-level prevention, and application/API authorization.
+2. **SQL draft authored:** `docs/phase2/schema/phase2_schema_draft.sql` and `phase2_roles_setup.sql` (test-only roles). The DDL is a draft, not a migration.
+3. **Latest author-reported run:** `docs/phase2/evidence/test_run_final_after_d12b26c_2026-10-31T144259Z.txt` reports PostgreSQL 16.15, exit 0, 133 test cases PASS, 2 fixture acceptances, 11/11 mutants detected, 12/12 property seeds PASS, concurrency checks and five harness controlled-fault self-tests. This is author-executed evidence, not independent reproduction.
+4. **Evidence-to-HEAD limitation:** the evidence header identifies base HEAD `d12b26c70abad3295893d6c6051a0889452e241a`. The PR head subsequently advanced to `3186aaa9e7ff0cfbf810afd57cf181eb22218ca7`. The log does not establish that its exact tested working tree equals that later PR HEAD. Do not claim the current PR HEAD passed based on this file.
+5. **Independent reproduction:** none. No independent fresh PostgreSQL execution of the exact current PR HEAD has been completed.
+6. **D-025:** schema, regression cases, registry lifecycle cases and two-session concurrency scenarios are present. The author log reports passing results, but those results are not independently reproduced against the exact current PR HEAD.
+7. **D-026 transfer:** decision recorded; end-to-end transfer is intentionally not implemented. It remains blocked until Phase 4 defines a trusted authenticated-principal mapping and authorization boundary. Do not trust caller-supplied IDs.
+8. **CI:** no GitHub Actions run was found for the reviewed PR head at the time of supervisor review. Absence of a run is not a pass.
+9. **Runtime security not implemented or verified:** cell isolation (D-020/D-023), RLS, hosting, production role provisioning, backups/restore, owner-level prevention, and application/API authorization.
 
-**Required next execution:** run docs/phase2/run_all.sh against a fresh disposable PostgreSQL 15+ database with ON_ERROR_STOP=1; execute the newly added two-session cross-tenant race for the D-025 registry and prove the loser fails on the expected unique constraint; then update evidence from actual output. If no PostgreSQL environment is available, status must remain NOT RUN.
+**Required next execution:** independently check out the exact PR head SHA in a clean environment; run `docs/phase2/run_all.sh` against a fresh disposable PostgreSQL 15+ database with `ON_ERROR_STOP=1`; preserve exact SHA, PostgreSQL version, command, raw output, exit code, concurrency/mutation/property results and cleanup status. If the environment is unavailable, status remains NOT READY.
 
-The earlier v1/v2 evidence remains historical and does not describe or validate the latest DDL.
+The earlier v1/v2/v5 evidence remains historical and does not independently validate the exact current PR head.
 
 ## 10. Phase gates
 
