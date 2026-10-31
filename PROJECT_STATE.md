@@ -1,15 +1,18 @@
-# CURRENT PROJECT STATE — PHASE 2 DOCUMENTATION / DDL DRAFT GATE (2026-10-27)
+# CURRENT PROJECT STATE — PHASE 2 DOCUMENTATION / DDL DRAFT GATE (2026-10-31)
 
 - **Phase 0:** CLOSED by Product Owner on 2026-10-14; PR #1 merged.
 - **Phase 1:** **APPROVED — design/documentation only** under D-024. This is not runtime-security approval.
-- **Phase 2:** Documentation, draft DDL, and synthetic constraint-test work were authorized by Product Owner through Issue #7. PR #8 is **OPEN, DRAFT, UNMERGED**. **Independent Phase 2 gate: NOT READY / pending remediation and fresh independent execution.**
-- **Current Phase 2 remediation:** D-025's platform-wide active counselor enrollment key (canonical E.164 mobile + grade_10/grade_11/grade_12), its regression cases and a two-session race scenario, plus the program-version reassignment guard, have been added to the draft DDL/tests. These edits are **not yet executed or independently verified**.
-- **D-026 transfer:** an append-only fee-confirmation evidence table and negative tests have been added to the draft. End-to-end transfer remains **incomplete**: the schema cannot prove the actual caller is the previous counselor; the user/authentication model is deferred to Phase 4. Transfer authorization and atomic old-to-new enrollment operation remain unimplemented. Do not treat a caller-supplied counselor/user ID as authentication.
+- **Phase 2:** Documentation, draft DDL, and synthetic constraint-test work were authorized through Issue #7. PR #8 is **OPEN, DRAFT, UNMERGED**. Latest independently fetched PR head at this update: `3186aaa9e7ff0cfbf810afd57cf181eb22218ca7`. **Supervisor gate: NOT READY.**
+- **Author-reported execution:** `docs/phase2/evidence/test_run_final_after_d12b26c_2026-10-31T144259Z.txt` reports a successful PostgreSQL 16.15 run (133 test cases, 11/11 mutants, 12/12 property seeds, concurrency and harness fault tests). Its header identifies base HEAD `d12b26c70abad3295893d6c6051a0889452e241a`, not the current PR HEAD. Therefore this evidence does **not** establish that exact current HEAD `3186aaa9...` passed. It is author-executed, not independently reproduced.
+- **Current D-025 state:** platform-wide normalized-mobile + grade registry, lifecycle regression cases, and two-session concurrency scenarios are present in the branch. The author report includes passing results, but the evidence-to-HEAD mismatch prevents treating them as verified on current HEAD. Independent execution remains pending.
+- **D-026 transfer:** append-only fee-confirmation evidence exists in the draft. End-to-end transfer remains incomplete: actual authenticated-caller proof, transfer initiation authorization, and atomic old-to-new enrollment remain unimplemented and are deferred until the trusted principal/authentication model is designed in Phase 4. Never treat caller-supplied IDs as authentication.
+- **CI:** no GitHub Actions workflow run was found for the current HEAD at the time of this review. Absence of a run is not a pass.
 - **Phase 3:** NOT STARTED / NOT AUTHORIZED.
 - **Real student data:** PROHIBITED under D-014 until all applicable implementation, security, operational, and independent-review gates pass and the Product Owner explicitly authorizes it.
 - **Hosting:** Q-023 remains a hard pre-hosting gate. D-020 Alt-5 and D-023 Level 3 production-cell independence plus Level 4 independent backup control remain target requirements, not runtime proof.
-- **Independent execution:** Prior test logs are author-reported. No independent fresh PostgreSQL execution of the current remediation has been performed. Do not infer success from existing evidence.
-- **Historical material below:** older status snapshots and operational notes are retained for traceability. They do not override the current status above.
+- **Open decisions:** Q-007, O-2, O-5, O-8/Q-020, Q-023 and other unresolved items remain open according to their scope; do not close them merely to pass Phase 2.
+- **Next gate evidence required:** independently execute the exact current HEAD in a fresh disposable PostgreSQL 15+ environment using the documented runner; capture exact SHA, PostgreSQL version, command, raw logs, exit status, concurrency, mutation, property-seed results and cleanup. If the environment is unavailable, keep the gate NOT READY.
+- **Historical material below:** older status snapshots and operational notes are retained for traceability. They do not override this current status.
 
 ---
 
