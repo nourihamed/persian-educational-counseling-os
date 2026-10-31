@@ -48,3 +48,10 @@ PR metadata, execution evidence, current DDL draft, constraint tests, concurrenc
 
 ## Gate
 **NOT READY.** This is a documentation/DDL design review only. No production migration, runtime security approval, Phase 3 authorization, hosting approval, or permission to use real student data is granted.
+
+
+## Product Owner decisions received after this review snapshot (2026-10-31)
+
+- **O-1:** organization-centric tenancy; an organization may have one or multiple counselors. Students are assigned to one responsible counselor, and counselors cannot access colleagues' students even within the same organization. Organization management does not imply access to student records. The Phase 2 draft still requires schema/domain reconciliation and authorization contracts; this is not implemented or verified.
+- **D-027:** every counselor-to-counselor transfer requires explicit, auditable consent from the registered parent/legal guardian, in addition to D-026's authenticated previous-counselor fee-received confirmation. Both are cumulative prerequisites. Q-007 remains open for general parent access.
+- These decisions do not change the **NOT READY** gate. The exact current PR head still requires independent PostgreSQL execution, and the O-1 domain/schema alignment plus transfer-consent model require review and tests before Phase 2 can be approved.
