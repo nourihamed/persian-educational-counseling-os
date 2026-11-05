@@ -1,21 +1,27 @@
 # DATABASE.md
 
-Status: conceptual domain model only; no migrations exist. Current tenant-isolation topology is governed by D-020/D-023 and Phase 1 design docs.
+Status: conceptual domain model only; no migrations exist. Normative logical ownership is Workspace-centric as of 2026-11-06: Workspace is the logical Tenant and owner; legacy tenant_id means Workspace ID only. Physical isolation topology is governed by D-020/D-023 and Phase 1 design docs.
 
 Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual production schema changes — every change is a migration.
 
 ## 1. Conceptual Entity Groups
 
-### Identity & Tenancy
-- `User` (base auth identity: email/phone, password hash, status)
-- `Role`, `Permission` (table-driven RBAC, not a fixed enum — per DECISION_LOG D-005)
-- `Counselor` (tenant root; 1:1 with a `User`)
-- `Student` (1:1 with a `User` once activated; belongs to exactly one tenant via `CounselorStudent`)
-- `Parent` (1:1 with a `User`; linked to one or more `Student` via explicit, permissioned relation)
-- `PlatformAdmin` (cross-tenant; no implicit data access without audited action)
+### Identity & Workspace Ownership (normative model as of 2026-11-06)
 
-### Relationship
-- `CounselorStudent` — fields per Master Prompt §13: `id, counselor_id, student_id, status(Active/Paused/Archived/Ended), started_at, ended_at, access_level, notes, created_at, updated_at`
+- `User` is the stable platform identity; a person may have multiple Workspace memberships.
+- `Workspace` is the logical Tenant and authoritative owner of student records, enrollments, Workspace content/settings, permissions and Student Credit wallet.
+- `Workspace.type` is `Organization` or `IndependentCounselor`.
+- `Organization` is the business profile for an Organization Workspace; `Branch` belongs to an Organization Workspace and is not a Tenant.
+- `WorkspaceMembership` links a `User` to a Workspace and carries Workspace-scoped status, role and permissions. Membership and permissions are independent for each Workspace.
+- `CounselorProfile` represents a person/counselor role associated with a User; it is not a tenant root.
+- `WorkspaceCounselorAssignment` (or an equivalently constrained relation) records counselor responsibility for a student enrollment; only one active responsible counselor is permitted per enrollment.
+- `Student` is a platform identity/profile. `StudentEnrollment` links the student to exactly one active Workspace at a time and preserves historical enrollments/transfers.
+- `Parent` is a User with a separately verified parent/legal-guardian relationship and explicit per-child permissions; a phone number or self-asserted relationship is not proof of authority.
+- `PlatformAdmin` has no implicit access to Workspace data; access is explicit, least-privileged and audited.
+
+### Enrollment and Assignment Relationships
+
+The old conceptual `CounselorStudent` relation must not be treated as the Workspace ownership boundary. Replace it in the Phase 2 model with a Workspace-owned enrollment aggregate and separate assignment relations. Final table names, foreign keys, uniqueness rules and transfer transaction must be specified in the Phase 2 domain model and DDL review before implementation. Required invariants include: at most one active Workspace enrollment per student platform-wide; at most one active responsible counselor within an enrollment; at most one primary active branch when the Workspace is an Organization; reassignment within a Workspace is distinct from transfer between Workspaces; all transitions are audited and history-preserving.
 
 ### Student Profile & Curriculum
 - `StudentProfile` (name, birth_date, grade, field, school, academic_year, goal, target, baseline_level, available_study_time, sleep_schedule, school_schedule, fixed_activities)
