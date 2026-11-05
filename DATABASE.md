@@ -1,21 +1,27 @@
 # DATABASE.md
 
-Status: conceptual domain model only; no migrations exist. Current tenant-isolation topology is governed by D-020/D-023 and Phase 1 design docs.
+Status: conceptual domain model only; no migrations exist. Normative logical ownership is Workspace-centric as of 2026-11-06: Workspace is the logical Tenant and owner; legacy tenant_id means Workspace ID only. Physical isolation topology is governed by D-020/D-023 and Phase 1 design docs.
 
 Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual production schema changes — every change is a migration.
 
 ## 1. Conceptual Entity Groups
 
-### Identity & Tenancy
-- `User` (base auth identity: email/phone, password hash, status)
-- `Role`, `Permission` (table-driven RBAC, not a fixed enum — per DECISION_LOG D-005)
-- `Counselor` (tenant root; 1:1 with a `User`)
-- `Student` (1:1 with a `User` once activated; belongs to exactly one tenant via `CounselorStudent`)
-- `Parent` (1:1 with a `User`; linked to one or more `Student` via explicit, permissioned relation)
-- `PlatformAdmin` (cross-tenant; no implicit data access without audited action)
+### Identity & Workspace Ownership (normative model as of 2026-11-06)
 
-### Relationship
-- `CounselorStudent` — fields per Master Prompt §13: `id, counselor_id, student_id, status(Active/Paused/Archived/Ended), started_at, ended_at, access_level, notes, created_at, updated_at`
+- `User` is the stable platform identity; a person may have multiple Workspace memberships.
+- `Workspace` is the logical Tenant and authoritative owner of student records, enrollments, Workspace content/settings, permissions and Student Credit wallet.
+- `Workspace.type` is `Organization` or `IndependentCounselor`.
+- `Organization` is the business profile for an Organization Workspace; `Branch` belongs to an Organization Workspace and is not a Tenant.
+- `WorkspaceMembership` links a `User` to a Workspace and carries Workspace-scoped status, role and permissions. Membership and permissions are independent for each Workspace.
+- `CounselorProfile` represents a person/counselor role associated with a User; it is not a tenant root.
+- `WorkspaceCounselorAssignment` (or an equivalently constrained relation) records counselor responsibility for a student enrollment; only one active responsible counselor is permitted per enrollment.
+- `Student` is a platform identity/profile. `StudentEnrollment` links the student to exactly one active Workspace at a time and preserves historical enrollments/transfers.
+- `Parent` is a User with a separately verified parent/legal-guardian relationship and explicit per-child permissions; a phone number or self-asserted relationship is not proof of authority.
+- `PlatformAdmin` has no implicit access to Workspace data; access is explicit, least-privileged and audited.
+
+### Enrollment and Assignment Relationships
+
+The old conceptual `CounselorStudent` relation must not be treated as the Workspace ownership boundary. Replace it in the Phase 2 model with a Workspace-owned enrollment aggregate and separate assignment relations. Final table names, foreign keys, uniqueness rules and transfer transaction must be specified in the Phase 2 domain model and DDL review before implementation. Required invariants include: at most one active Workspace enrollment per student platform-wide; at most one active responsible counselor within an enrollment; at most one primary active branch when the Workspace is an Organization; reassignment within a Workspace is distinct from transfer between Workspaces; all transitions are audited and history-preserving.
 
 ### Student Profile & Curriculum
 - `StudentProfile` (name, birth_date, grade, field, school, academic_year, goal, target, baseline_level, available_study_time, sleep_schedule, school_schedule, fixed_activities)
@@ -26,8 +32,8 @@ Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual p
 
 **MVP ownership rule (D-012 accepted; Q-013 resolved):**
 
-1. **Tenant-owned `ProgramTemplate`:** every template in MVP belongs to exactly one Counselor Tenant and has `tenant_id NOT NULL`.
-2. **Tenant-owned `ProgramVersion`:** every version in MVP belongs to the same Tenant as its source `ProgramTemplate`. Database foreign-key/unique constraints or equivalent safeguards must prevent a version from linking to a template owned by another Tenant.
+1. **Tenant-owned `ProgramTemplate`:** every template in MVP belongs to exactly one Workspace and has `tenant_id NOT NULL`.
+2. **Tenant-owned `ProgramVersion`:** every version in MVP belongs to the same Workspace as its source `ProgramTemplate`. Database foreign-key/unique constraints or equivalent safeguards must prevent a version from linking to a template owned by another Workspace.
 3. **Platform-owned/shared catalog:** platform-level `ProgramTemplate` and their `ProgramVersion` rows are explicitly out of MVP. Do not implement nullable `tenant_id`, mixed-ownership shared catalog rows, or global read-only access based on the old hypothetical case. If a central catalog is needed later, its ownership, publication, copying, versioning, and authorization model must be decided before implementation.
 4. **Student data remains strictly scoped:** `StudentProgramEnrollment`, `Plan`, and `PlanVersion` always carry tenant/student scope and never become platform-owned or cross-tenant-visible as a result of template/version reuse. Every operation on a template or version requires authorization.
 
@@ -61,7 +67,7 @@ Fields (conceptual, not implemented):
 
 ### Billing (§10, §45)
 - `Product`, `Plan` (commercial plan, distinct from the planning-engine `Plan` above — naming collision noted, see Decision below), `Subscription`, `Order`, `Payment`, `Invoice`
-- `StudentCredit` (tenant-level balance, **derived**, not directly writable)
+- `StudentCredit` (Workspace-level balance, **derived**, not directly writable)
 - `CreditTransaction` (append-only ledger: `+10 purchased`, `-1 activated`, `+1 refunded`, ...)
 - `Coupon`, `Promotion`
 
@@ -76,7 +82,7 @@ Fields (conceptual, not implemented):
 "Plan" is used in Master Prompt both for the **commercial Plan** (billing tier) and the **study Plan** (daily/weekly schedule, now also carrying its own `PlanVersion` per the accepted D-008 policy). This document proposes renaming the commercial one to `BillingPlan` in the actual schema to avoid ambiguity, so that `Plan`/`PlanVersion` unambiguously refer to the educational, student-facing concept. Recorded as a proposal in `DECISION_LOG.md` (D-006); **D-006 itself is still Proposed, not yet approved** — this is a separate, independent decision from D-008. D-008's acceptance on 2026-10-10 settled only the versioning policy; it did not approve or otherwise decide D-006's naming question.
 
 ## 3. Cross-cutting Rules
-- Every **tenant-owned** row/table has a direct `tenant_id` column, indexed and `NOT NULL`. Do not interpret this as requiring `tenant_id` on platform-owned/global catalog rows. MVP does not support platform-owned `ProgramTemplate`/`ProgramVersion` rows (D-012). Do not implement nullable-tenant or mixed-ownership catalog rows. A future platform catalog requires a separate decision before implementation. Regardless of catalog ownership, student enrollments, plans, and all student-facing records remain tenant-owned and isolated.
+- Every **tenant-owned** row/table has a direct `tenant_id` column, indexed and `NOT NULL`. Do not interpret this as requiring `tenant_id` on platform-owned/global catalog rows. MVP does not support platform-owned `ProgramTemplate`/`ProgramVersion` rows (D-012). Do not implement nullable-tenant or mixed-ownership catalog rows. A future platform catalog requires a separate decision before implementation. Regardless of catalog ownership, student enrollments, plans, and all student-facing records remain Workspace-owned and isolated.
 - Append-only tables (`CreditTransaction`, `AuditLog`) have no `UPDATE`/`DELETE` grants at the application layer.
 - Every "versioned" concept (`ProgramVersion`, `PlanVersion`) is immutable once superseded; edits create new rows, never mutate history.
 - Soft-delete (`Archived`/`Ended` status) is preferred over hard delete for anything with historical/reporting value (students, plans, programs).
