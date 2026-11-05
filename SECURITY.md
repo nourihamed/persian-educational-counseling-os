@@ -18,7 +18,7 @@ Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-
 - XSS Protection: sanitize ورودی‌های آزاد متن، CSP در Frontend
 - CSRF: برای session-based endpointها (در صورت استفاده از Cookie)
 - Rate Limiting: روی Login، Password Reset، API عمومی (Redis-based)
-- Secure File Upload: محدودیت نوع/حجم فایل، اسکن قبل از ذخیره، نام‌گذاری غیرقابل‌حدس، جداسازی فایل بر اساس tenant_id در مسیر Storage
+- Secure File Upload: محدودیت نوع/حجم فایل، اسکن قبل از ذخیره، نام‌گذاری غیرقابل‌حدس، جداسازی فایل بر اساس Workspace ID در مسیر Storage
 - Audit Logs: برای عملیات حساس (تغییر Credit، تغییر Role، حذف دانش‌آموز، ورود Admin به حساب دیگران)
 - **Backup/Recovery (D-023):** backupهای حیاتی، مدیریت backup، کلیدهای رمزنگاری و کنترل‌های حذف/retention باید خارج از کنترل مدیریتی عادی حساب production باشند؛ restore باید وضعیت تعلیق/offboarding تنانت را از مرجع معتبر بازیابی کند. تفاوت نام bucket/service به‌تنهایی اثبات استقلال نیست.
 - Secrets Management: هیچ secret در کد/Git؛ از `.env` + Secret Manager (Vault/Cloud secret store) در Production
@@ -30,7 +30,7 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 - **Credit/Billing endpoints**: نیاز به audit log کامل + idempotency key روی تمام عملیات مالی.
 - **Payment Webhooks**: امضا/signature verification الزامی؛ idempotent processing.
 - **Admin impersonation (در صورت وجود)**: باید audit-logged و قابل محدودسازی باشد.
-- **Parent access**: پیش از نمایش هر داده، بررسی صریح Consent/Permission سطح دانش‌آموز+مشاور.
+- **Parent access**: پیش از نمایش هر داده، احراز رابطه و اختیار قانونی متناسب با سن/قانون و بررسی consent، per-child permission، scope، expiry و revocation؛ یادداشت خصوصی مشاور و مکالمات محرمانه به‌صورت پیش‌فرض مخفی‌اند.
 - **File access (گزارش‌ها، PDF)**: لینک‌های دانلود باید Scoped و زمان‌دار (signed URL) باشند، نه public permanent link.
 - **Program/Plan Versioning** (طبق D-008 — Accepted و D-012 — Accepted؛ الزامات مفهومی‌اند و تا پیاده‌سازی و تست در فازهای مجاز، کنترل فنی موجود نیست):
   1. در MVP، فقط `ProgramTemplate` و `ProgramVersion` متعلق به یک Tenant پشتیبانی می‌شوند. هر `ProgramVersion` باید به Template همان Tenant تعلق داشته باشد. قالب‌ها و نسخه‌های متعلق به Platform یا کاتالوگ مشترک خارج از MVP هستند (D-012 / Q-013 — Resolved).
