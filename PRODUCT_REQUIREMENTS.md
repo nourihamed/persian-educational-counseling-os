@@ -28,7 +28,7 @@ Counselor Feedback → Plan Adjustment → Repeat
 
 | Role | توصیف کوتاه |
 |---|---|
-| Platform Admin | مدیریت کل پلتفرم، مشاوران، Billing، تنظیمات سیستم |
+| Platform Admin | مدیریت کنترل‌شده پلتفرم با دسترسی حداقلی، audited و بدون دسترسی ضمنی به داده Workspaceها |
 | Counselor | عضو یک یا چند Workspace؛ مدیریت دانش‌آموزان منتسب به خود و سایر منابع فقط در محدوده مجوز Workspace |
 | Student | اجرای برنامه، ثبت عملکرد، مشاهده پیشرفت |
 | Parent | مشاهده سطح‌بالای پیشرفت فرزند (با مجوز) |
@@ -44,7 +44,7 @@ Counselor Feedback → Plan Adjustment → Repeat
 Platform → Workspace → (Organization with Branches and Counselors | Independent Counselor) → Student Enrollment
 ```
 
-مشاور از پلتفرم خرید می‌کند (Subscription / Student Credit / Package / Trial)، سپس برای هر دانش‌آموز که اضافه می‌کند یک واحد ظرفیت (Credit) مصرف می‌شود.
+Workspace از پلتفرم محصول/اشتراک/اعتبار خریداری می‌کند. Student Credit و ظرفیت دانش‌آموز دو مفهوم مستقل‌اند؛ debit اعتبار فقط پس از activation موفق و به‌صورت atomic/idempotent انجام می‌شود. کیف اعتبار متعلق به Workspace است و بین Workspaceها منتقل یا ادغام نمی‌شود.
 
 مدل‌های Billing که معماری باید از روز اول اجازه‌ی اضافه‌شدن‌شان را بدهد (نه لزوماً همه در MVP پیاده شوند):
 
