@@ -32,8 +32,8 @@ The old conceptual `CounselorStudent` relation must not be treated as the Worksp
 
 **MVP ownership rule (D-012 accepted; Q-013 resolved):**
 
-1. **Tenant-owned `ProgramTemplate`:** every template in MVP belongs to exactly one Counselor Tenant and has `tenant_id NOT NULL`.
-2. **Tenant-owned `ProgramVersion`:** every version in MVP belongs to the same Tenant as its source `ProgramTemplate`. Database foreign-key/unique constraints or equivalent safeguards must prevent a version from linking to a template owned by another Tenant.
+1. **Tenant-owned `ProgramTemplate`:** every template in MVP belongs to exactly one Workspace and has `tenant_id NOT NULL`.
+2. **Tenant-owned `ProgramVersion`:** every version in MVP belongs to the same Workspace as its source `ProgramTemplate`. Database foreign-key/unique constraints or equivalent safeguards must prevent a version from linking to a template owned by another Workspace.
 3. **Platform-owned/shared catalog:** platform-level `ProgramTemplate` and their `ProgramVersion` rows are explicitly out of MVP. Do not implement nullable `tenant_id`, mixed-ownership shared catalog rows, or global read-only access based on the old hypothetical case. If a central catalog is needed later, its ownership, publication, copying, versioning, and authorization model must be decided before implementation.
 4. **Student data remains strictly scoped:** `StudentProgramEnrollment`, `Plan`, and `PlanVersion` always carry tenant/student scope and never become platform-owned or cross-tenant-visible as a result of template/version reuse. Every operation on a template or version requires authorization.
 
@@ -67,7 +67,7 @@ Fields (conceptual, not implemented):
 
 ### Billing (§10, §45)
 - `Product`, `Plan` (commercial plan, distinct from the planning-engine `Plan` above — naming collision noted, see Decision below), `Subscription`, `Order`, `Payment`, `Invoice`
-- `StudentCredit` (tenant-level balance, **derived**, not directly writable)
+- `StudentCredit` (Workspace-level balance, **derived**, not directly writable)
 - `CreditTransaction` (append-only ledger: `+10 purchased`, `-1 activated`, `+1 refunded`, ...)
 - `Coupon`, `Promotion`
 
@@ -82,7 +82,7 @@ Fields (conceptual, not implemented):
 "Plan" is used in Master Prompt both for the **commercial Plan** (billing tier) and the **study Plan** (daily/weekly schedule, now also carrying its own `PlanVersion` per the accepted D-008 policy). This document proposes renaming the commercial one to `BillingPlan` in the actual schema to avoid ambiguity, so that `Plan`/`PlanVersion` unambiguously refer to the educational, student-facing concept. Recorded as a proposal in `DECISION_LOG.md` (D-006); **D-006 itself is still Proposed, not yet approved** — this is a separate, independent decision from D-008. D-008's acceptance on 2026-10-10 settled only the versioning policy; it did not approve or otherwise decide D-006's naming question.
 
 ## 3. Cross-cutting Rules
-- Every **tenant-owned** row/table has a direct `tenant_id` column, indexed and `NOT NULL`. Do not interpret this as requiring `tenant_id` on platform-owned/global catalog rows. MVP does not support platform-owned `ProgramTemplate`/`ProgramVersion` rows (D-012). Do not implement nullable-tenant or mixed-ownership catalog rows. A future platform catalog requires a separate decision before implementation. Regardless of catalog ownership, student enrollments, plans, and all student-facing records remain tenant-owned and isolated.
+- Every **tenant-owned** row/table has a direct `tenant_id` column, indexed and `NOT NULL`. Do not interpret this as requiring `tenant_id` on platform-owned/global catalog rows. MVP does not support platform-owned `ProgramTemplate`/`ProgramVersion` rows (D-012). Do not implement nullable-tenant or mixed-ownership catalog rows. A future platform catalog requires a separate decision before implementation. Regardless of catalog ownership, student enrollments, plans, and all student-facing records remain Workspace-owned and isolated.
 - Append-only tables (`CreditTransaction`, `AuditLog`) have no `UPDATE`/`DELETE` grants at the application layer.
 - Every "versioned" concept (`ProgramVersion`, `PlanVersion`) is immutable once superseded; edits create new rows, never mutate history.
 - Soft-delete (`Archived`/`Ended` status) is preferred over hard delete for anything with historical/reporting value (students, plans, programs).
