@@ -15,13 +15,15 @@ Status: DRAFT — Phase 0 — Strategy only. No endpoints implemented yet.
 ## 3. Planned Resource Groups (names indicative, not final)
 
 ```
-/auth            register, login, logout, refresh, password-reset
-/admin/*         platform admin operations (counselors, plans, programs catalog, reports, audit)
-/counselor/*     counselor-scoped: students, programs, plans, analytics, notes
-/student/*       student-scoped: today, plan, activities, tests, errors, progress
-/parent/*        parent-scoped: high-level progress views
-/billing/*        orders, subscriptions, credits (read + purchase-intent; real payment flow deferred)
-/notifications/* in-app notification feed, preferences
+/auth                         register, login, logout, refresh, password-reset
+/workspaces                   list only the authenticated user's Workspace memberships and select context
+/workspaces/{workspace_id}/*  Workspace-scoped resources after server-side membership/context validation
+/admin/*                      platform-admin operations; explicit, least-privileged and audited
+/counselors/*                 counselor resources constrained by Workspace membership and student assignment
+/students/*                   student resources constrained by active Workspace enrollment and relationship
+/parents/*                    parent resources constrained by verified relationship, consent and per-child permissions
+/billing/*                    Workspace orders, subscriptions and Student Credit ledger
+/notifications/*              in-app feed and preferences, scoped to recipient and Workspace
 ```
 
 Exact routes/payloads are designed in the phase that implements each domain (Phase 4+), not in Phase 0.
