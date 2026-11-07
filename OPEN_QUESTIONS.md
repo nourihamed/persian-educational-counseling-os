@@ -265,3 +265,39 @@ _Q-015 is resolved; see the Resolved section below and DECISION_LOG D-013._
 این تصمیم فقط Q-012 را می‌بندد. Q-001، Q-002 و Q-010 در 2026-10-12 جداگانه با تصمیم صریح مالک محصول بسته شدند؛ Q-011 و سایر پرسش‌های فهرست‌شده در بخش Open همچنان باز می‌مانند. D-008 در `DECISION_LOG.md` وضعیت Accepted دارد؛ جزئیات فنی نهایی Schema همچنان به مراحل طراحی مربوطه تعلق دارد.
 
 _(Q-011 همچنان Open است: دسترسی Read/Write ابزار Supervisor در Session مورخ 2026-10-12 موفق بود، اما پایداری بین Sessionها هنوز تأیید نشده و سیاست عملیاتی بلندمدت نیازمند تعیین تکلیف است.)_
+
+
+---
+
+## Product Owner decisions confirmed 2026-11-07 — resolved direction, remaining details open
+
+The following decision topics have received explicit Product Owner choices. They are recorded here to preserve the distinction between resolved direction and unresolved implementation/legal parameters. See `DECISION_LOG.md` and `docs/PRODUCT_OWNER_DECISIONS_2026-11-07.md` for the full decision record.
+
+- **OQ-A — Platform Admin transfer initiation: RESOLVED (Option A).** Platform Admin cannot initiate transfers; may submit a support/review request only. Eligible initiators: verified parent/legal guardian, current counselor, destination Workspace.
+- **OQ-B — Control Plane mobile storage: RESOLVED (Option K).** Encrypted E.164 mobile plus keyed deterministic HMAC index; Platform Security infrastructure manages keys. Key rotation, recovery, dual-index migration, and operational controls remain open design work.
+- **OQ-C — Decision numbering: RESOLVED (Option A).** Collision-free crosswalk before D-number assignment; individual PO approval; superseded history retained. The crosswalk itself remains a required repository task.
+- **OQ-D — Control Plane topology: RESOLVED (Option A).** Independent infrastructure, primary plus replica, independent encrypted backups and restore drills. RPO/RTO, failover consistency, split-brain prevention, retention, and measured capacity/cost remain OPEN.
+- **OQ-E — Transfer cutover: RESOLVED (Option B).** Controlled source write-freeze plus final snapshot for MVP. Freeze boundary/duration, recovery and acceptance criteria remain OPEN.
+- **OQ-F1 — Legal jurisdiction: RESOLVED (Option A).** Iran-only legal workflow for MVP; extensible architecture. Exact Iranian legal evidence rules remain OPEN pending legal review.
+- **OQ-F2 — Retention: RESOLVED (Option A).** Category-based, versioned retention; durations after legal/contractual/operational review; legal hold and deletion/anonymization. Numeric durations remain OPEN.
+- **OQ-F3 — Capacity: RESOLVED (Option A).** Multi-level configurable capacity; atomic checks; active-only student consumption; separate from credits. Provisional cap of 10 Workspaces total and 2 per cell; actual capacity values remain OPEN pending benchmarks.
+- **Q-007 / OQ-G — Parent access: HIGH-LEVEL POLICY RESOLVED (Option A), DETAILS OPEN.** Per-child/per-permission access; verified relationship and legal authority; scope/expiry/revocation/audit; private counselor notes and confidential communications hidden by default; student rights and law prevail. Detailed age-based matrix, legal evidence, exceptions, and tests remain OPEN.
+
+### Transfer decision reconciliation required
+
+- D-025's global mobile+grade uniqueness rule remains a business rule, but its enforcement must move from any Workspace-local registry to the central Control Plane.
+- D-026's previous-counselor authenticated fee confirmation remains cumulative. Its former Platform Admin initiator allowance is superseded by OQ-A.
+- D-027 guardian consent remains cumulative; destination Workspace acceptance is also required.
+- PR #11's Control Plane registry + durable recoverable Saga direction is accepted; schema, APIs, implementation, and tests remain unapproved.
+
+### Unresolved items deliberately retained
+
+- Control Plane RPO/RTO, failover/split-brain controls, backup retention and restore objectives.
+- HMAC/encryption key rotation, disaster recovery, dual-index migration and access governance.
+- Detailed transfer state machine, freeze protocol, timeouts, recovery, legal hold and manual intervention.
+- Iranian legal evidence requirements by student age/guardian status.
+- Numeric retention durations and named operational owners.
+- Capacity benchmarks and actual Workspace/counselor/branch/concurrency/cell limits.
+- Detailed Q-007 parent permission matrix and legal exceptions.
+- Collision-free D-number crosswalk and reconciliation of PR #8/#9/#10/#11.
+- Control Plane schema and Workspace schema, constraints, API contracts, implementation, and executable acceptance tests.
