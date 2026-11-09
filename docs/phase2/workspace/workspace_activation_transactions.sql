@@ -234,6 +234,20 @@ BEGIN
       USING ERRCODE='check_violation';
   END IF;
 
+  -- The audit record is part of the same transaction; no sensitive student data is copied.
+  INSERT INTO public.audit_events(
+    audit_event_id,actor_membership_id,event_type,target_type,target_id,outcome,correlation_id,metadata
+  ) VALUES (
+    gen_random_uuid(),p_actor_membership_id,'student.activation','enrollment',p_enrollment_id,
+    'success',p_idempotency_key,
+    jsonb_build_object(
+      'wallet_id',p_wallet_id,
+      'credit_unit','CRD',
+      'debit_amount',p_debit_amount,
+      'ownership_generation',p_expected_generation
+    )
+  );
+
   RETURN p_enrollment_id;
 END;
 $$;
