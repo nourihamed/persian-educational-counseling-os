@@ -30,6 +30,7 @@ The initial PR #12 state had material defects in HMAC uniqueness across key vers
 - Wallet-row locking and balance guard reject negative Student Credit; Student Credit unit CRD is distinct from fiat currency.
 - Per-Workspace PostgreSQL role names derive from canonical Workspace UUID; two synthetic databases reject cross-Workspace CONNECT by catalog privilege checks.
 - Control Plane split-owner and Workspace role/privilege catalog suites pass in ephemeral PostgreSQL 16 CI at run #200 / commit `5990bd3`.
+- Workspace UUID immutability and column-scoped row-lock grants are covered by regression/catalog assertions.
 - Workspace schema fixtures cover selected membership, branch, assignment, guardian record, educational domain, versioning, credit ledger, capacity, file, notification, legal-hold and audit constraints.
 
 ## Findings
@@ -63,7 +64,7 @@ The initial PR #12 state had material defects in HMAC uniqueness across key vers
 The high-level Control Plane / Workspace split is appropriate. The global registry is authoritative for owner and generation; Workspace DBs contain local projections. Cross-database atomicity is not claimed. The transfer Saga and fail-closed API behavior still need executable service contracts.
 
 ## Database
-Control Plane schema now includes initial claim admission and HMAC alias coverage. Workspace schema now includes atomic activation/debit/capacity/audit. The split Control Plane function-owner draft remains pending fresh CI and privilege-path review. Workspace lifecycle/retention and some domain entities/constraints remain incomplete. No production migration is approved.
+Control Plane schema now includes initial claim admission and HMAC alias coverage. Workspace schema now includes atomic activation/debit/capacity/audit. The split Control Plane function-owner draft passed synthetic PostgreSQL 16 CI at run #200; production provisioning, credential binding and target-environment privilege-drift verification remain open. Workspace lifecycle/retention and some domain entities/constraints remain incomplete. No production migration is approved.
 
 ## API
 The database functions define operations, not a complete API. Authentication, object-level authorization, principal-bound approvals, idempotent HTTP contracts, rate limits, pagination, errors and API-level tenant isolation tests remain required.
