@@ -128,11 +128,16 @@ SELECT ws_activation_expect_error('WS-ACT-13 no accepted responsible counselor r
   '23514');
 SELECT ws_activation_expect_error('WS-ACT-14 suspended Workspace member cannot activate',
   $q$SELECT activate_student_enrollment('activate-suspended-actor','a8200000-0000-0000-0000-000000000004','c8200000-0000-0000-0000-000000000001',1,10,'b8100000-0000-0000-0000-000000000002')$q$,
-  '23514');
+  '42501');
 
 -- Direct ledger inserts cannot make the wallet balance negative.
 SELECT ws_activation_expect_error('WS-CREDIT-BAL-01 negative balance is rejected',
   $q$INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,reason) VALUES (gen_random_uuid(),'c8200000-0000-0000-0000-000000000001','adjustment',-1000,'negative-balance-attempt','synthetic overdraw')$q$,
+  '23514');
+
+
+SELECT ws_activation_expect_error('WS-ACT-16 direct active enrollment insert is rejected',
+  $q$INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state,started_at) VALUES ('a8200000-0000-0000-0000-000000000099','e8100000-0000-0000-0000-000000000004',1,'active',now())$q$,
   '23514');
 
 SELECT ws_activation_expect_error('WS-ACT-15 activation command log is append-only',
