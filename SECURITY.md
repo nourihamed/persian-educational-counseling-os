@@ -1,5 +1,8 @@
 # SECURITY.md
 
+
+> **CURRENT SECURITY OVERRIDE — 2026-11-09 (PR #12, unmerged):** The tenant is Workspace, not Counselor. Every Workspace has its own database/credential boundary within the selected Alt-5 cell architecture. Membership and permissions are Workspace-scoped; a user in multiple Workspaces receives no implicit cross-Workspace access. Control Plane owns global student ownership/generation and global identity claims. Student-data operations fail closed if current ownership cannot be verified. High-risk roles require MFA. Platform Admin is read-only in MVP and cannot initiate transfer. Transfer approvals must be bound to authenticated principals, verified authority, scope, expiry/revocation and audit. OQ-B requires encrypted E.164 plus keyed HMAC with keys held by Platform Security. The HMAC rotation protocol is specified but not implemented or proven. See the Phase 2 contracts under `docs/phase2/`. No runtime control is claimed.
+
 Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14; security controls are requirements only and runtime implementation remains unverified.
 
 ## اصول پایه
