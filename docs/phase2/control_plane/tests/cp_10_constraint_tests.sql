@@ -50,6 +50,18 @@ INSERT INTO enrollment_claims(claim_id,student_id,workspace_id,grade_key,claim_s
 VALUES ('c0000000-0000-0000-0000-000000000003','b0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000002','grade_11','active',1);
 INSERT INTO enrollment_claim_identity_aliases(claim_id,grade_key,key_version,mobile_hmac,claim_state)
 VALUES ('c0000000-0000-0000-0000-000000000003','grade_11',1,decode(repeat('11',32),'hex'),'active');
+INSERT INTO enrollment_claim_identity_aliases(claim_id,grade_key,key_version,mobile_hmac,claim_state)
+VALUES ('c0000000-0000-0000-0000-000000000003','grade_11',2,decode(repeat('23',32),'hex'),'active');
+
+-- Rotation maintenance gate blocks new claim admission until all active/retiring aliases are verified.
+SELECT begin_identity_hmac_rotation();
+SELECT expect_error('CP-ROT-01 claim mutation denied during HMAC rotation','INSERT INTO enrollment_claims(claim_id,student_id,workspace_id,grade_key,claim_state,ownership_generation) VALUES (gen_random_uuid(),''b0000000-0000-0000-0000-000000000003'',''a0000000-0000-0000-0000-000000000003'',''grade_12'',''active'',1)','55000');
+SELECT complete_identity_hmac_rotation(2);
+DO $ BEGIN
+ IF (SELECT maintenance_mode FROM identity_write_gate WHERE singleton=true) THEN RAISE EXCEPTION 'FAIL CP-ROT-02 rotation gate remained enabled'; END IF;
+ IF (SELECT count(*) FROM mobile_hmac_key_versions WHERE state IN ('active','retiring'))<>2 THEN RAISE EXCEPTION 'FAIL CP-ROT-03 expected two overlap key versions'; END IF;
+ RAISE NOTICE 'PASS CP-ROT-02/03 rotation completion verified and gate reopened';
+END $;
 
 -- Platform Admin cannot initiate a transfer.
 SELECT expect_error('CP-INIT-01 Platform Admin is not an eligible initiator','INSERT INTO transfer_cases(case_id,student_id,source_workspace_id,destination_workspace_id,expected_generation,initiator_kind,state,idempotency_key) VALUES (gen_random_uuid(),''b0000000-0000-0000-0000-000000000002'',''a0000000-0000-0000-0000-000000000002'',''a0000000-0000-0000-0000-000000000001'',1,''platform_admin'',''requested'',''admin-key'')','23514');
