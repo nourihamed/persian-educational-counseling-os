@@ -32,6 +32,15 @@ INSERT INTO student_ownership(student_id,owner_workspace_id,ownership_generation
  ('b0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000002',1,'active'),
  ('b0000000-0000-0000-0000-000000000003','a0000000-0000-0000-0000-000000000003',1,'active');
 
+-- Privacy: no plaintext mobile/phone column in the Control Plane schema.
+DO $privacy$ DECLARE n integer; BEGIN
+ SELECT count(*) INTO n FROM information_schema.columns
+ WHERE table_schema='public' AND column_name ~* '(mobile|phone|msisdn)'
+   AND column_name NOT IN ('mobile_hmac','mobile_ciphertext');
+ IF n<>0 THEN RAISE EXCEPTION 'FAIL CP-PRIV-01 plaintext-like contact columns found: %',n; END IF;
+ RAISE NOTICE 'PASS CP-PRIV-01 no plaintext mobile/phone column';
+END $privacy$;
+
 -- D-025: a claim has aliases for every active/retiring key version during rotation.
 BEGIN;
 INSERT INTO enrollment_claims(claim_id,student_id,workspace_id,grade_key,claim_state,ownership_generation)
