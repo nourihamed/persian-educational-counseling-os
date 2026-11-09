@@ -1,10 +1,19 @@
 # ROADMAP.md
 ## Current Phase 2 status — 2026-11-09 (authoritative addendum)
 
-- Phase 2 remains **NOT READY**; PR #12 is Open/Draft/Unmerged.
-- Workspace-centric architecture and initial Control Plane/Workspace contracts are being reconciled on PR #12. No PR has been merged by this work.
-- Remaining Phase 2 sequence: (1) complete Control Plane invariants and key rotation enforcement; (2) complete Workspace domain schema and constraints; (3) complete transfer/API/security contracts; (4) reconcile PR #8/#10/#11 and canonical docs; (5) run fresh PostgreSQL, authorization, concurrency, crash/recovery and backup/restore tests; (6) independent Supervisor review and PO gate.
-- Phase 3 is not authorized until Phase 2 is independently APPROVED and the Product Owner authorizes progression.
+- Phase 2 remains **NOT READY**; PR #12 is Open/Draft/Unmerged. No changes have been merged into main.
+- PostgreSQL 16 synthetic CI run #148 passed the current Control Plane claim-admission/rotation/transfer draft tests, Workspace activation/credit/capacity/audit tests, concurrency races and role/CONNECT catalog assertions. This is draft SQL evidence only.
+- Completed draft work: Workspace-centric model; Control Plane/Workspace separation; initial claim admission with HMAC alias coverage; transfer ownership switch and state machine; atomic Workspace activation/debit/capacity/audit; per-Workspace DB role provisioning templates and catalog tests; canonical status/review/test-plan updates.
+- Remaining Phase 2 sequence:
+  1. Split the broad Control Plane function-owner role into transfer, rotation and identity-admission function owners with narrow DML grants and catalog tests.
+  2. Implement mobile contact-change/reverification with all active/retiring HMAC aliases, encryption, idempotency and audit.
+  3. Implement authenticated principal/authority verification for guardian consent, prior counselor fee confirmation and destination acceptance.
+  4. Implement durable outbox/inbox delivery, source write freeze/drain, final snapshot, destination staging, projection updates, generation fencing and forward Saga recovery across databases.
+  5. Complete Workspace domain schema, parent age/legal matrix, retention/deletion/legal-hold rules, credit purchase/refund/renewal and remaining capacity dimensions.
+  6. Implement API authentication/authorization and service credential binding; test counselor/manager/guardian object scope, files, exports, notifications and IDOR.
+  7. Run independent backup/restore, failover, pool isolation, load/capacity and target-environment security tests.
+  8. Re-fetch main and PRs #8–#12, reconcile canonical docs, and obtain independent Supervisor review and explicit Product Owner Gate decision.
+- Phase 3 is not authorized until Phase 2 is independently APPROVED and the Product Owner separately authorizes progression.
 - D-014 remains in force: synthetic data only; real student/customer data prohibited until all required controls/tests/review and written PO approval.
 
 
