@@ -15,6 +15,10 @@ INSERT INTO student_ownership(student_id,owner_workspace_id,ownership_generation
  ('b0000000-0000-0000-0000-0000000000a1','a0000000-0000-0000-0000-000000000001',1,'active'),
  ('b0000000-0000-0000-0000-0000000000a2','a0000000-0000-0000-0000-000000000003',1,'active')
 ON CONFLICT DO NOTHING;
+INSERT INTO student_contact_index(student_id,key_version,mobile_hmac,mobile_ciphertext,cipher_key_version) VALUES
+ ('b0000000-0000-0000-0000-0000000000a1',1,decode(repeat('44',32),'hex'),decode('a1','hex'),1),
+ ('b0000000-0000-0000-0000-0000000000a2',1,decode(repeat('44',32),'hex'),decode('a2','hex'),1)
+ON CONFLICT (student_id,key_version) DO NOTHING;
 SQL
 cat > "$W/a.sql" <<'SQL'
 BEGIN;
