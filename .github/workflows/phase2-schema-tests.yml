@@ -1,6 +1,9 @@
 name: Phase 2 draft schema tests
 
 on:
+  push:
+    branches:
+      - docs/product-owner-decisions-consolidation-2026-11-07
   pull_request:
     branches: [main]
     paths:
