@@ -94,3 +94,36 @@ Initiation is not approval and approval is not finalization.
 ## 7. Explicit non-claims
 
 This crosswalk does not claim that Control Plane/Workspace schemas are complete, key rotation is safe in runtime, API authorization is implemented, Saga recovery is operational, SQL tests pass, backup/restore is proven, Phase 2 is approved, Phase 3 is authorized, or real data may be used.
+
+
+## 8. PR disposition and latest architecture contract inventory (2026-11-09)
+
+PR #12 is the current consolidated Phase 2 reconciliation candidate. It contains the accepted Product Owner decision register, Workspace-centric model, Control Plane/Workspace draft schema, split-owner privilege model, transfer and activation drafts, and the following expanded contracts/reviews:
+- Control Plane contact change/reverification;
+- transfer approval identity and authority;
+- cross-Workspace transfer Saga and durable delivery;
+- Workspace domain schema review;
+- parent/guardian authority matrix for Q-007;
+- category-based retention/legal hold;
+- operational resilience/backup/restore;
+- assessment integrity and scoring snapshots;
+- deterministic planning inputs/PlanItems;
+- curriculum hierarchy and ownership;
+- Activity/Class/Assignment;
+- Student Credit commercial lifecycle;
+- capacity lifecycle and transfer reservations;
+- Phase 2 exit criteria and open decision register.
+
+PR disposition:
+- PR #8 is the historical Counselor/Organization-tenant schema branch and is superseded as the canonical model by the Workspace-centric design in PR #12. Preserve it for historical D-025/D-026/D-027 traceability; do not merge as-is.
+- PR #9 decision-capture material is incorporated/reconciled in the current decision register/crosswalk; do not merge separately or allocate D-numbers from it.
+- PR #10 canonical Workspace-centric document changes are incorporated in PR #12; do not merge separately.
+- PR #11 Control Plane transfer architecture is incorporated and expanded in PR #12; do not merge separately.
+- All four older PRs remain OPEN/DRAFT/UNMERGED with explicit supersession notices pending Product Owner disposition. They have not been closed by the Supervisor.
+- PR #12 remains OPEN/DRAFT/UNMERGED and is not approved for merge.
+
+Latest fetched PR #12 head at this update: `737f4b1f8a74726c97e339c1cef9355c8b424237`. It is 375 commits ahead and 2 commits behind main, with the merge base still `ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114`. GitHub reported mergeable=true at the last fetch; this does not remove the divergence or grant merge approval. No rebase, force-push or merge has been performed.
+
+Latest successful SQL CI: Run #336 at exact SHA `52bd0347b3aba4f816d996065122ed0d362bae5f`, including a passing final-capacity-slot race. Later commits changed Workspace role source and test fixtures and added educational/domain documentation; Run #336 does not cover those latest SQL/test changes. No current-head CI pass is verified.
+
+The current Phase 2 exit checklist is `../PHASE2_EXIT_CRITERIA.md`; unresolved PO/specialist inputs are `../PHASE2_OPEN_DECISIONS.md`. Gate remains NOT READY, Phase 3 unauthorized, D-014 synthetic-only.
