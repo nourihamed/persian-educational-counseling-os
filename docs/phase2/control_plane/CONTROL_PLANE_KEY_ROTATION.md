@@ -26,7 +26,7 @@ A new HMAC version MUST NOT become active for claim writes until every live clai
    - all non-holding claims have no active aliases.
 6. Mark the new key version active and the old one retiring. Keep both aliases for every live claim. Resume writes only after all checks pass.
 7. During the overlap period, every new/changed holding claim MUST create aliases for every active and retiring key version in the same Control Plane transaction. A missing alias rejects the entire transaction.
-8. Retire the old version only after policy-approved overlap, full coverage verification and rollback/recovery review. Mark it retired; do not delete audit history. Remove old aliases only in a separate approved maintenance operation after confirming no consumer depends on them.
+8. Retire the old version only after policy-approved overlap, full coverage verification and rollback/recovery review. Mark it retired; do not delete audit history. In the same approved maintenance operation, remove the retired version's HMAC aliases and contact-index HMAC row only after confirming all consumers use the surviving active version; retain encrypted contact data in the surviving row.
 
 ## 3. Concurrency and enforcement requirements
 
