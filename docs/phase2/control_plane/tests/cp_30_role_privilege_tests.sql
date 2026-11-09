@@ -99,7 +99,9 @@ BEGIN
      OR has_table_privilege('cp_identity_admission_function_owner','public.command_log','INSERT')
      OR NOT has_column_privilege('cp_identity_admission_function_owner','public.identity_write_gate','singleton','UPDATE')
      OR has_column_privilege('cp_identity_admission_function_owner','public.identity_write_gate','maintenance_mode','UPDATE')
-     OR has_column_privilege('cp_identity_admission_function_owner','public.identity_write_gate','rotation_epoch','UPDATE') THEN
+     OR has_column_privilege('cp_identity_admission_function_owner','public.identity_write_gate','rotation_epoch','UPDATE')
+     OR NOT has_column_privilege('cp_identity_admission_function_owner','public.workspaces','workspace_id','UPDATE')
+     OR has_column_privilege('cp_identity_admission_function_owner','public.workspaces','status','UPDATE') THEN
     RAISE EXCEPTION 'FAIL CP-ROLE-08 identity admission owner privilege boundary is incorrect';
   END IF;
 
