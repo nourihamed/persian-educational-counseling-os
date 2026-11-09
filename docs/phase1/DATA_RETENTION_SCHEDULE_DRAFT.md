@@ -71,3 +71,8 @@ Roles are deleted only when every item is complete and recorded:
 - No legal duration is asserted.
 - No deletion has been implemented or tested.
 - Nothing here is evidence that any deletion or anonymisation works.
+
+
+## Phase 2 implementation-contract cross-reference (2026-11-09)
+
+The technical implementation requirements for the accepted category-based/versioned retention direction are now specified in `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md`. This does not approve any numeric duration or replace the required Product Owner, legal, tax and privacy review. Q-020 remains open; all destructive disposition, backup expiry and role deletion controls remain NOT IMPLEMENTED / NOT RUN.
