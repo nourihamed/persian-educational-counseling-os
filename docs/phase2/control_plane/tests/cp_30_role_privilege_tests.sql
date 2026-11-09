@@ -46,6 +46,11 @@ BEGIN
     RAISE EXCEPTION 'FAIL CP-ROLE-05 privileged function scope is too broad';
   END IF;
 
+  IF NOT has_sequence_privilege('cp_function_owner','public.ownership_history_history_id_seq','USAGE')
+     OR has_sequence_privilege('cp_runtime','public.ownership_history_history_id_seq','USAGE') THEN
+    RAISE EXCEPTION 'FAIL CP-ROLE-06A sequence privileges are not scoped to function owner';
+  END IF;
+
   IF NOT has_function_privilege('cp_transfer_executor','public.switch_student_ownership(uuid)','EXECUTE')
      OR NOT has_function_privilege('cp_transfer_executor','public.request_transfer_case_idempotent(text,bytea,uuid,uuid,uuid,uuid,bigint,text)','EXECUTE')
      OR NOT has_function_privilege('cp_rotation_executor','public.begin_identity_hmac_rotation()','EXECUTE')
