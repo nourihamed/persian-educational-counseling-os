@@ -20,9 +20,17 @@
 **سؤال:** کدام سرویس (کاوه‌نگار، ملی‌پیامک، ...) ترجیح داده می‌شود؟
 **اولویت:** Low (تا Phase 20)
 
-## Q-007 — سطح دسترسی پیش‌فرض والد (Parent)
-**سؤال:** آیا Parent به‌صورت پیش‌فرض باید حساب داشته باشد یا فقط با دعوت صریح مشاور/دانش‌آموز فعال می‌شود؟ یادداشت‌های خصوصی مشاور دقیقاً چه قوانین نمایشی دارند؟
-**اولویت:** Medium — قبل از Phase 23، ولی روی مدل داده Phase 2 اثر دارد (آیا Parent از ابتدا Entity باشد یا بعداً اضافه شود).
+## Q-007 — ماتریس تفصیلی دسترسی والد (HIGH-LEVEL POLICY ACCEPTED; DETAILS OPEN)
+**سیاست سطح‌بالا:** گزینه A طبق OQ-G و تصمیمات PO در 2026-11-07 پذیرفته شده است. دسترسی والد به‌صورت مستقل برای هر فرزند و هر permission/scope تنظیم می‌شود. رابطه و اختیار قانونی باید بر اساس سن و قانون قابل‌اعمال احراز شود؛ scope، expiry، تغییر، revocation و audit لازم‌اند. یادداشت خصوصی مشاور و مکالمات محرمانه به‌صورت پیش‌فرض مخفی هستند. اطلاعات حساس، مالی و آزمون مجوز مستقل می‌خواهند. حقوق دانش‌آموز و قانون بر تنظیمات عادی مقدم‌اند.
+
+**مواردی که همچنان باز هستند و باید قبل از پیاده‌سازی مربوطه تعیین شوند:**
+- ماتریس دقیق دسترسی بر اساس سن/وضعیت تحصیلی و اختیار قانونی در ایران؛
+- مدارک/شواهد قابل قبول و فرآیند احراز رابطه و سرپرستی، پس از بررسی حقوقی؛
+- قواعد استثنا، تعارض والدین/سرپرستان، تغییر وضعیت قانونی و revocation؛
+- scopeهای دقیق read/action برای برنامه، پیشرفت، آزمون، مالی، حضور و ارتباطات؛
+- تست‌های executable برای parent-child isolation و دسترسی‌های ممنوع.
+
+**اولویت:** HIGH برای نهایی‌سازی قراردادهای Authorization پیش از فعال‌سازی Parent APIs. Q-007 نباید بسته شود تا ماتریس حقوقی/فنی و تست‌ها تصویب شوند.
 
 ## Q-008 — واحد زمانی و تقویم پیش‌فرض کاربر
 **سؤال:** آیا همه کاربران فقط جلالی می‌بینند یا امکان سوییچ به میلادی هم لازم است از MVP؟
@@ -301,3 +309,24 @@ The following decision topics have received explicit Product Owner choices. They
 - Detailed Q-007 parent permission matrix and legal exceptions.
 - Collision-free D-number crosswalk and reconciliation of PR #8/#9/#10/#11.
 - Control Plane schema and Workspace schema, constraints, API contracts, implementation, and executable acceptance tests.
+
+## Phase 2 Product Owner decision status — 2026-11-09
+
+The following high-level choices are ACCEPTED and must not be re-asked as undecided. Detailed technical/legal parameters remain open where noted:
+
+- OQ-A: Platform Admin cannot initiate a transfer; support review only.
+- OQ-B: encrypted recoverable canonical E.164 plus keyed deterministic HMAC; Platform Security owns key management. Rotation and recovery implementation remain open.
+- OQ-C: collision-free D-number crosswalk before any new identifier; individual PO approval; preserve superseded history. D-028 onward are not assigned.
+- OQ-D: independent Control Plane primary/replica plus independent encrypted backups and restore drills. RPO/RTO, failover, split-brain, backup retention and capacity evidence remain open.
+- OQ-E: MVP transfer uses source write freeze + final snapshot, staging and validation before atomic ownership switch. Freeze boundary, timeout and recovery thresholds remain open.
+- OQ-F1: Iran-only legal workflow in MVP; exact evidence rules require legal review.
+- OQ-F2: category-based, versioned retention; no numeric retention duration approved.
+- OQ-F3: independently configurable Workspace/counselor/branch/concurrency/cell capacity; atomic checks; active students consume capacity; provisional 10 Workspace / 2 per cell limits are not measured capacity or pilot authorization.
+- OQ-G/Q-007: per-child/per-permission parent access policy accepted at high level; Q-007 remains OPEN for detailed legal/age matrix and executable tests.
+- PO decision 18: cross-Workspace and nonexistent resources return indistinguishable 404; 403 only for visible object/action forbidden.
+- PO decision 19: background jobs are scoped to one Workspace with immutable ownership context and idempotent retry.
+- PO decision 20: private S3-compatible storage, tenant namespace, server-side authorization before short-lived signed URL; provider remains open.
+- PO decision 21: UTC canonical timestamps; Jalali default display; Gregorian optional; scheduled events retain local date/time/timezone.
+- PO decision 22: deterministic, explainable, versioned/configurable Risk Engine; AI assistive; counselor override audited.
+
+These accepted directions do not mean implementation or tests exist. Phase 2 remains NOT READY and D-014 prohibits real data.
