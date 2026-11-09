@@ -1,0 +1,3 @@
+SKIP AUTH-1: target occurs 0 times (need exactly 1)
+GENERATION INCOMPLETE: 9 of 10 mutants generated
+MUTANT GENERATION FAILED (exit 3)

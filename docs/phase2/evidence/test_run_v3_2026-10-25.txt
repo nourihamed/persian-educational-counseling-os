@@ -1,0 +1,733 @@
+PostgreSQL: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-p
+Date (UTC): 2026-10-25T20:48:16Z
+canonical schema sha256 (before): 13686834d777e58c925b466a8ea1e0e67dc03350cef01c8e2fbb2182d37acfed
+=== [1] Roles + DDL + constraint/authorization suite (fresh DB p3_suite) ===
+roles exit=0
+schema exit=0
+suite psql exit=0
+PASS notices: 113
+FAIL lines:   0
+--- suite log (unedited) ---
+CREATE FUNCTION
+CREATE FUNCTION
+INSERT 0 2
+INSERT 0 11
+INSERT 0 6
+INSERT 0 2
+INSERT 0 3
+INSERT 0 2
+INSERT 0 2
+INSERT 0 1
+INSERT 0 2
+INSERT 0 2
+UPDATE 2
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:90: NOTICE:  PASS fixture: draft -> published transition accepted
+DO
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 2
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 2
+INSERT 0 1
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:140: NOTICE:  PASS fixture: valid positive rows accepted across Phase 2 entities
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:147: NOTICE:  PASS T2-TI-01 cross-tenant counselor reference rejected (SQLSTATE 23503, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:153: NOTICE:  PASS T2-TI-02 enrollment to another tenant program_version rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:159: NOTICE:  PASS T2-TI-03 plan_version referencing another tenant program_version rejected (SQLSTATE 23503, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:162: NOTICE:  PASS T2-TI-04 NULL tenant_id rejected on tenant-owned table (SQLSTATE 23502, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:167: NOTICE:  PASS T2-TI-05 program_version cannot reference another tenant template (SQLSTATE 23503, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:173: NOTICE:  PASS T2-TI-06 curriculum parent from another tenant rejected (SQLSTATE 23503, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:179: NOTICE:  PASS T2-TI-07 exam_result for another tenant student rejected (SQLSTATE 23503, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:184: NOTICE:  PASS T2-TI-08 credit transaction for tenant without account rejected (owner insert) (SQLSTATE 23503, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:189: NOTICE:  PASS T2-VER-01a published payload is immutable (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:193: NOTICE:  PASS T2-VER-01b published version cannot be deleted (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:197: NOTICE:  PASS T2-VER-01c status-only illegal transition published -> draft (published_at unchanged) (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:201: NOTICE:  PASS T2-VER-01d illegal draft -> superseded (skips publication) (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:205: NOTICE:  PASS T2-VER-02a identity mutation of published version (id) rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:209: NOTICE:  PASS T2-VER-02b identity mutation of draft version (id) rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:213: NOTICE:  PASS T2-VER-03 tenant reassignment of a version rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:217: NOTICE:  PASS T2-VER-04 template reassignment of a version rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:221: NOTICE:  PASS T2-VER-05 published_at rewrite of a published version rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:226: NOTICE:  PASS T2-VER-06 duplicate version_number for same template rejected (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:232: NOTICE:  PASS T2-VER-07 enrollment to a draft version rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:236: NOTICE:  PASS T2-VER-08 TRUNCATE of program_versions rejected (FK-referenced table) (SQLSTATE 0A000, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:240: NOTICE:  PASS T2-VER-09 draft version may be edited while draft (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:244: NOTICE:  PASS T2-VER-10 draft -> published with publisher attribution (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:247: NOTICE:  PASS T2-VER-11 published -> superseded (status-only) (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:251: NOTICE:  PASS T2-VER-12 superseded is terminal (superseded -> published rejected) (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:256: NOTICE:  PASS T2-VER-13a draft version (to be deleted) accepted (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:258: NOTICE:  PASS T2-VER-13b draft version may be deleted (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:266: NOTICE:  PASS T2-VER-14 enrollment remains pinned to its version after new versions
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:271: NOTICE:  PASS T2-PLAN-01 plan_version identity/origin change rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:274: NOTICE:  PASS T2-PLAN-02 draft plan_version activation accepted (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:279: NOTICE:  PASS T2-PLAN-03 insert plan_item into activated version rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:283: NOTICE:  PASS T2-PLAN-04 update plan_item of activated version rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:286: NOTICE:  PASS T2-PLAN-05 delete plan_item of activated version rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:290: NOTICE:  PASS T2-PLAN-06 activation time rewrite rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:293: NOTICE:  PASS T2-PLAN-07 delete of activated plan_version rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:299: NOTICE:  PASS T2-PLAN-08a draft plan_version with a draft item (fixture) (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:303: NOTICE:  PASS T2-PLAN-08b draft item created under draft version (fixture) (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:306: NOTICE:  PASS T2-PLAN-08 draft item ownership reassignment rejected (identity rule) (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:309: NOTICE:  PASS T2-PLAN-09 supersession set once after activation (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:313: NOTICE:  PASS T2-PLAN-10 supersession cannot be rewritten (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+INSERT 0 2
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:321: NOTICE:  PASS T2-PLAN-11 a new version may be activated after the previous is superseded (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:323: NOTICE:  PASS T2-PLAN-12 second concurrently-active version for a plan rejected (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:327: NOTICE:  PASS T2-PLAN-13 TRUNCATE of plan_items rejected by trigger (no inbound FK) (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:333: NOTICE:  PASS T2-TEST-00 test activity for sum-rule test accepted (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:336: NOTICE:  PASS T2-TEST-01 correct+wrong+unanswered != question_count rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:340: NOTICE:  PASS T2-TEST-02 test_record cannot attach to a study activity (SQLSTATE 23503, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:345: NOTICE:  PASS T2-STUDY-00 study activity accepted (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:349: NOTICE:  PASS T2-STUDY-01 study_sessions time order enforced (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:354: NOTICE:  PASS T2-ERR-01 custom error_type without label rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:359: NOTICE:  PASS T2-ERR-02 error_record must reference a test record (SQLSTATE 23503, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:364: NOTICE:  PASS T2-REV-01 duplicate review for same activity and offset rejected (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:370: NOTICE:  PASS T2-EXAM-01 duplicate exam result with NULL subject rejected (NULLS NOT DISTINCT) (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:375: NOTICE:  PASS T2-CLS-01 class ends before it starts rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:380: NOTICE:  PASS T2-CLS-02 recurring class requires a recurrence rule (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:385: NOTICE:  PASS T2-ASG-01 valid assignment accepted (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:390: NOTICE:  PASS T2-ASG-02 invalid assignment status rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:395: NOTICE:  PASS T2-CURR-01 invalid curriculum level rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:400: NOTICE:  PASS T2-AUD-01 platform event with NULL tenant accepted (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:403: NOTICE:  PASS T2-AUD-02 platform-scope event carrying a tenant rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:406: NOTICE:  PASS T2-AUD-03 tenant-scope event without tenant rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:409: NOTICE:  PASS T2-AUD-04 audit row UPDATE rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:411: NOTICE:  PASS T2-AUD-05 audit row DELETE rejected (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:417: NOTICE:  PASS T2-CR-01 zero-amount ledger row rejected (direct) (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:419: NOTICE:  PASS T2-CR-06 negative cached balance rejected (direct owner write) (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:423: NOTICE:  PASS T2-CR-07 purchase +5 via post_credit_transaction (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:427: NOTICE:  PASS T2-CR-08 consume -1 for S1 via post_credit_transaction (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:433: NOTICE:  PASS T2-CR-08b balance is 4 after purchase 5 and consume 1
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:446: NOTICE:  PASS T2-CR-09 idempotent replay returns same id; single effect
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:450: NOTICE:  PASS T2-CR-10 same key with different payload rejected (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:454: NOTICE:  PASS T2-CR-11 overspend rejected by function (insufficient credit) (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:460: NOTICE:  PASS T2-CR-11b rejected overspend left balance unchanged
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:477: NOTICE:  PASS T2-CR-03 activation rollback restored balance and ledger
+DO
+ setseed 
+---------
+ 
+(1 row)
+
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:500: NOTICE:  PASS T2-CR-05 reconciliation drift = 0 after 60 randomized operations (seed 0.42)
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:511: NOTICE:  PASS T2-CR-12 reconciliation detects owner-level balance tampering (probe rolled back)
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:516: NOTICE:  PASS T2-CR-12b probe fully rolled back (drift 0)
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:519: NOTICE:  PASS T2-CR-13 owner-level TRUNCATE of credit_transactions rejected by trigger (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:521: NOTICE:  PASS T2-AUD-06 owner-level TRUNCATE of audit_logs rejected by trigger (SQLSTATE 23514, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+       post_credit_transaction        
+--------------------------------------
+ bd62e866-87da-475d-815c-d6c2b40b8462
+(1 row)
+
+SET
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:532: NOTICE:  PASS T2-R01-01 app_t1 consumes credit for its own tenant (authorized) (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:535: NOTICE:  PASS T2-R01-02 app_t1 cannot issue purchase credit (no purchase path) (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:538: NOTICE:  PASS T2-R01-03 app_t1 cannot issue a refund (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:541: NOTICE:  PASS T2-R01-04 app_t1 cannot post an adjustment (even with a reason) (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:544: NOTICE:  PASS T2-R01-05 app_t1 cannot release a cancellation credit (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:547: NOTICE:  PASS T2-R01-06 app_t1 cannot operate on tenant 2 by substituting tenant_id (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:550: NOTICE:  PASS T2-R01-07 app_t1 cannot write ledger rows by direct INSERT (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:552: NOTICE:  PASS T2-R01-08 app_t1 cannot set the cached balance directly (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:554: NOTICE:  PASS T2-R01-09 app_t1 cannot read the ledger (no cross-tenant read by grant) (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:556: NOTICE:  PASS T2-R01-10 app_t1 cannot read the reconciliation view (all tenants) (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:558: NOTICE:  PASS T2-R01-11 app_t1 cannot self-grant a purchase permission (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:560: NOTICE:  PASS T2-R01-12 app_t1 cannot self-bind to tenant 2 (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+RESET
+SET
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:566: NOTICE:  PASS T2-R01-13 app_t2 cannot consume tenant 1 credit (not bound) (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+RESET
+SET
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:572: NOTICE:  PASS T2-R01-14 issuer_rt issues purchase credit on its bound tenant (authorized path) (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:575: NOTICE:  PASS T2-R01-15 issuer_rt cannot consume credit (wrong operation) (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+RESET
+SET
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:581: NOTICE:  PASS T2-R01-16 adjuster_rt posts an adjustment with reason (authorized path) (accepted)
+ expect_ok 
+-----------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:584: NOTICE:  PASS T2-R01-17 adjuster_rt cannot issue purchase credit (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+RESET
+SET
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:590: NOTICE:  PASS T2-R01-18 role without EXECUTE grant is denied (default-deny) (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+RESET
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:602: NOTICE:  PASS T2-R03-01 PUBLIC has no EXECUTE; runtime roles are not superusers
+DO
+SET
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:606: NOTICE:  PASS T2-R03-02 app_t1 cannot create a schema (no database CREATE) (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:608: NOTICE:  PASS T2-R03-03 app_t1 cannot create objects in public (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:611: NOTICE:  PASS T2-R03-04 app_t1 cannot replace the credit function (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:613: NOTICE:  PASS T2-R03-05 app_t1 cannot alter a credit table (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:615: NOTICE:  PASS T2-R03-06 app_t1 cannot drop the authorization table (SQLSTATE 42501, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+RESET
+CREATE SCHEMA
+CREATE FUNCTION
+CREATE TABLE
+INSERT 0 1
+GRANT
+GRANT
+SET
+SET
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:636: NOTICE:  PASS T2-R03-07 hostile search_path did not redirect the definer function (id is not the hostile constant)
+DO
+RESET
+RESET
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:645: NOTICE:  PASS T2-R03-08 hostile table untouched; public balance is 12 (authorized consume applied)
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:659: NOTICE:  PASS T2-R02-00 identical canonical payload replays to the same id with one effect
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:664: NOTICE:  PASS T2-R02-01 differing kind rejected (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:668: NOTICE:  PASS T2-R02-02 differing amount rejected (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:672: NOTICE:  PASS T2-R02-03 differing student_id rejected (NULL vs value) (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:676: NOTICE:  PASS T2-R02-04 differing order_id rejected (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:680: NOTICE:  PASS T2-R02-05 differing actor_id rejected (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:684: NOTICE:  PASS T2-R02-06 differing reason rejected (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:688: NOTICE:  PASS T2-R02-07 actor NULL vs value rejected (NULL-safe comparison) (SQLSTATE 23505, reason verified)
+ expect_error 
+--------------
+ 
+(1 row)
+
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:694: NOTICE:  PASS T2-R02-08 seven rejected replays left exactly one ledger row
+DO
+psql:/mnt/user-data/outputs/phase2_remediation_v3/repo/docs/phase2/schema/phase2_constraint_tests.sql:696: NOTICE:  === PHASE 2 CONSTRAINT SUITE v3 COMPLETED (synthetic data) ===
+DO
+=== [2] Concurrency, canonical schema (fresh DB p3_conc) ===
+fixtures ready: T9/T10/T11 each balance=1
+== T2-CR-04 concurrent activation: one credit, two students ==
+exit A=0 B=3 ; balance=0 (exp 0) ; consume_rows=1 (exp 1) ; drift=0 (exp 0)
+B error: insufficient credit: balance 0, requested -1
+PASS T2-CR-04
+== T2-CR-04b concurrent identical canonical payload ==
+exit C=0 D=0 ; ledger rows=1 (exp 1) ; balance=0 (exp 0)
+PASS T2-CR-04b
+== T2-CR-04c concurrent same key, different canonical payload ==
+exit E=0 F=3 ; F error: idempotency_key reused with a different canonical payload
+PASS T2-CR-04c
+== T2-VER-02 concurrent publication of the same version number ==
+exit G=0 H=3 ; H error: duplicate key value violates unique constraint "program_versions_tenant_id_program_template_id_version_numb_key" ; rows=1
+PASS T2-VER-02
+== concurrency summary: ALL_PASS ==
+concurrency exit=0
+=== [3] Mutation test: lock removed must be DETECTED (disposable DB p3_mutant) ===
+mutant lock sites remaining: 0  (canonical had: 1)
+fixtures ready: T9/T10/T11 each balance=1
+== T2-CR-04 concurrent activation: one credit, two students ==
+exit A=0 B=3 ; balance=0 (exp 0) ; consume_rows=1 (exp 1) ; drift=0 (exp 0)
+B error: new row for relation "student_credit_accounts" violates check constraint "student_credit_accounts_balance_check"
+FAIL T2-CR-04
+== T2-CR-04b concurrent identical canonical payload ==
+exit C=0 D=3 ; ledger rows=1 (exp 1) ; balance=0 (exp 0)
+FAIL T2-CR-04b
+== T2-CR-04c concurrent same key, different canonical payload ==
+exit E=0 F=3 ; F error: duplicate key value violates unique constraint "credit_transactions_tenant_id_idempotency_key_key"
+FAIL T2-CR-04c
+== T2-VER-02 concurrent publication of the same version number ==
+exit G=0 H=3 ; H error: duplicate key value violates unique constraint "program_versions_tenant_id_program_template_id_version_numb_key" ; rows=1
+PASS T2-VER-02
+== concurrency summary: HAS_FAILURES ==
+MUTATION DETECTED: harness exit=1 and T2-CR-04 FAILED on the mutant (expected)
+mutation exit=0  (0 = mutation detected, i.e. the test is sensitive)
+=== [4] Restoration: canonical schema untouched and passes again (fresh DB p3_restore) ===
+canonical schema sha256 (after):  13686834d777e58c925b466a8ea1e0e67dc03350cef01c8e2fbb2182d37acfed
+NOTICE:  database "p3_restore" does not exist, skipping
+restored concurrency exit=0
+== concurrency summary: ALL_PASS ==
+=== RESULT: ALL_EXECUTED_CHECKS_PASSED (exit 0) ===

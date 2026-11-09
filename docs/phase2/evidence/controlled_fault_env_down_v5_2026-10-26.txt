@@ -1,0 +1,22 @@
+PostgreSQL: 
+Date (UTC): 2026-10-26T20:52:58Z
+STAGE 0 environment: FAILED - cannot connect to PostgreSQL (class=ENVIRONMENT)
+=== [7] Cleanup: drop only the databases this run creates ===
+CLEANUP FAILED [drop p3_suite] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_conc] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_restore] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_prop] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_mutant] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_restore] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_auth_1] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_auth_2] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_auth_3] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_auth_4] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_idem_kind] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_idem_amount] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_idem_student] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_idem_order] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_idem_actor] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+CLEANUP FAILED [drop p3_m_idem_reason] exit=2: psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+STAGE 7-cleanup: FAILED (16 database(s) not dropped)
+=== RESULT: FAILURES_PRESENT (exit 1) failed/skipped stages: 0-environment 7-cleanup ===
