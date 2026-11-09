@@ -22,13 +22,13 @@ The current Workspace schema covers many entity families, but it is not yet a co
 
 Required design: define authoritative question-count semantics (fixed test definition vs per-attempt delivered question set), response finalization boundary, and a deterministic scoring-policy version/snapshot contract. Add transaction-safe finalization that reconciles counts and score before a submitted attempt becomes immutable. Tests must cover missing/duplicate responses, count mismatch, unanswered questions, negative marking ON/OFF and score boundary cases.
 
-**WS-DOM-02 — Membership role has two competing sources of truth**
+**WS-DOM-02 — Membership role source of truth — PARTIALLY ADDRESSED (2026-11-09)**
 
-- `workspace_memberships.role_key` exists alongside many-to-many `membership_roles`.
-- No constraint ensures the scalar role matches the role rows.
-- Authorization can diverge depending on which representation a service queries.
+- The current branch removes scalar `workspace_memberships.role_key`; `membership_roles` is now the sole role-assignment relation. Synthetic fixtures were updated accordingly.
+- This removes the two competing writable role sources.
+- Role grant/revocation still lacks a dedicated append-only event ledger with authenticated actor/authentication-event evidence, and direct-DML restrictions for the projection have not been independently tested.
 
-Recommendation: make `membership_roles` the sole authority for role assignments and remove the scalar `role_key` from the canonical membership row (or explicitly define it as a constrained primary-role projection with a synchronization trigger). The role/permission model must distinguish role grants from explicit permissions and include grant/revoke history. This is a design recommendation; do not silently preserve two writable authorities.
+Remaining requirement: add auditable role grant/revoke commands/events and prove ordinary runtime/executor roles cannot mutate the role projection outside the authorized path. Do not mark this finding fully closed until those controls and tests exist.
 
 **WS-DOM-03 — Guardian relationship/permission history is not auditable enough**
 
