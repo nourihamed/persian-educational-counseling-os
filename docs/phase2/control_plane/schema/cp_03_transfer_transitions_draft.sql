@@ -23,15 +23,14 @@ INSERT INTO transfer_state_transitions (from_state, to_state) VALUES
  -- Non-terminal states may be cancelled or moved to recovery before the ownership switch.
  ('requested','cancelled'),('approvals_pending','cancelled'),('approved','cancelled'),
  ('preflight_ok','cancelled'),('staging','cancelled'),('staged_verified','cancelled'),
- ('cutover_frozen','cancelled'),
  ('staging','failed_recoverable'),('staged_verified','failed_recoverable'),('cutover_frozen','failed_recoverable'),
  ('failed_recoverable','staging'),('failed_recoverable','cutover_frozen'),
  ('failed_recoverable','manual_intervention'),('failed_recoverable','cancelled'),
  -- After the switch, recovery moves forward (no automatic return to the source; PR #11 §5).
  ('ownership_switched','manual_intervention'),('projections_finalizing','manual_intervention'),
- ('manual_intervention','projections_finalizing'),('manual_intervention','cancelled');
--- Note: 'failed_recoverable' -> 'staging' and -> 'cutover_frozen' are PROPOSED recovery paths
--- requiring Product Owner confirmation of the recovery policy (OQ-E still open for thresholds).
+ ('manual_intervention','projections_finalizing');
+-- Recovery transitions are operationally guarded: before switch, a verified checkpoint may resume;
+-- after switch, only forward projection finalization is permitted. Thresholds remain operationally open.
 
 CREATE FUNCTION enforce_transfer_transition() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
