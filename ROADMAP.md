@@ -90,3 +90,6 @@ Phase 2 exit criteria are centralized in `docs/phase2/PHASE2_EXIT_CRITERIA.md`. 
 
 
 The educational domain design targets are now specified in `workspace/ASSESSMENT_DOMAIN_CONTRACT.md`, `workspace/DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` and `workspace/CURRICULUM_DOMAIN_CONTRACT.md`. Schema reconciliation and executable synthetic tests remain required before Phase 2 design/schema exit.
+
+
+Further Workspace domain contracts now cover Activity/Class/Assignment, Student Credit commercial lifecycle and capacity lifecycle/reservations. See `workspace/ACTIVITY_CLASS_DOMAIN_CONTRACT.md`, `workspace/STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` and `workspace/CAPACITY_LIFECYCLE_CONTRACT.md`; schema/test reconciliation remains open.
