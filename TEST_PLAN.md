@@ -168,3 +168,14 @@ The following are **specified / NOT IMPLEMENTED / NOT RUN**. They are not covere
 **Schema reconciliation blocker:** `transfer_approvals UNIQUE(case_id, approval_kind)` with mutable `revoked_at` cannot preserve a revoked approval and a replacement approval as separate immutable events. Replace it with append-only approval/revocation events or a versioned equivalent before marking CP-APPROVAL-03 implemented.
 
 A design document or static SQL assertion does not change any of the statuses above. Existing CI success is limited to the exact SQL/test tree and SHA named in the run evidence.
+
+
+## Workspace domain schema review follow-up (2026-11-09)
+
+See `docs/phase2/workspace/WORKSPACE_DOMAIN_SCHEMA_REVIEW.md`. The following design findings are not yet covered by executable acceptance tests:
+- WS-DOM-01: test definition total/version, response-to-attempt count reconciliation, score recomputation from scoring snapshot, negative-marking ON/OFF and finalization immutability.
+- WS-DOM-02: one canonical membership-role source, grant/revoke audit and no role/permission divergence.
+- WS-DOM-03: append-only guardian relationship/permission verification, grant/revoke and authority revalidation; Q-007 legal matrix remains open.
+- WS-DOM-04..09: per-subject exam results, custom error reasons, subtopics, planning input snapshots/PlanItems, activity taxonomy, class participants/recurrence, capacity last-slot race/reconciliation, credit purchase/refund/renewal, file scanning and notification ownership/permission fencing.
+
+Status for all: SPECIFIED AS GAPS / NOT IMPLEMENTED / NOT RUN. Do not mark domain-schema completeness based only on the current skeleton's schema fixtures.
