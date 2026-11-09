@@ -307,7 +307,8 @@ CREATE TABLE exams (
   title text NOT NULL,
   exam_at timestamptz NOT NULL,
   scoring_policy_snapshot jsonb NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(exam_id,student_id)
 );
 CREATE TABLE exam_results (
   exam_result_id uuid PRIMARY KEY,
@@ -318,7 +319,8 @@ CREATE TABLE exam_results (
   blank_count integer NOT NULL CHECK (blank_count>=0),
   score numeric(7,3),
   scoring_policy_snapshot jsonb NOT NULL,
-  UNIQUE(exam_id,student_id)
+  UNIQUE(exam_id,student_id),
+  FOREIGN KEY(exam_id,student_id) REFERENCES exams(exam_id,student_id)
 );
 
 CREATE TABLE classes (
