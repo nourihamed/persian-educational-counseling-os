@@ -59,3 +59,11 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 ## Pre-pilot security and data-retention items (added 2026-10-17)
 
 Retention draft: `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md` (NEEDS-DECISION / LEGAL-REVIEW; no duration set). Tenant role deletion requires the checklist in that draft (D-017). Active Phase 1 acceptance criteria are in `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`; all remain NOT-RUN. Real student data is prohibited until D-014 conditions are met. This section does not claim any security control is implemented or verified.
+
+
+## Phase 2 database role and credential contracts
+
+- Control Plane roles/grants: `docs/phase2/control_plane/ROLE_PRIVILEGE_CONTRACT.md` and draft `cp_06_role_privileges_draft.sql`.
+- Workspace DB credentials/roles: `docs/phase2/workspace/ROLE_PRIVILEGE_CONTRACT.md`.
+- Control Plane role setup/catalog assertions passed in ephemeral PostgreSQL 16 CI run #35. This is not production role provisioning.
+- Workspace per-DB credential separation, object-level RBAC integration and cross-Workspace connection-denial tests remain SPECIFIED / NOT RUN.
