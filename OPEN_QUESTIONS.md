@@ -300,15 +300,15 @@ The following decision topics have received explicit Product Owner choices. They
 
 ### Unresolved items deliberately retained
 
-- Control Plane RPO/RTO, failover/split-brain controls, backup retention and restore objectives.
-- HMAC/encryption key rotation, disaster recovery, dual-index migration and access governance.
-- Detailed transfer state machine, freeze protocol, timeouts, recovery, legal hold and manual intervention.
+- Control Plane RPO/RTO, failover/split-brain controls, backup retention and restore objectives; independent backup/restore drills remain unexecuted.
+- HMAC/encryption rotation has a draft database gate and alias-completeness protocol, but KMS/HSM integration, trusted cryptographic backfill, role grants, crash recovery and execution evidence remain open.
+- Transfer state machine, Freeze + Final Snapshot workflow, and cutover evidence fields are specified in draft contracts/SQL; exact freeze boundary, drain timeout, retry/backoff, manual-intervention thresholds, outbox/inbox runtime and crash recovery remain open.
 - Iranian legal evidence requirements by student age/guardian status.
 - Numeric retention durations and named operational owners.
-- Capacity benchmarks and actual Workspace/counselor/branch/concurrency/cell limits.
-- Detailed Q-007 parent permission matrix and legal exceptions.
-- Collision-free D-number crosswalk and reconciliation of PR #8/#9/#10/#11.
-- Control Plane schema and Workspace schema, constraints, API contracts, implementation, and executable acceptance tests.
+- Capacity schema/counters are drafted; benchmarked Workspace/counselor/branch/concurrency/cell limits and measured capacity remain open.
+- Detailed Q-007 parent permission matrix, legal exceptions and executable tests.
+- The collision-free decision crosswalk is documented; no D-028+ identifiers are assigned. PR #8's old Counselor/Organization tenant schema and PR #9/#10/#11 must be reconciled/rebased or superseded before merge.
+- Control Plane and Workspace schemas, role/privilege contracts, API/authorization contracts and regression suites now exist as drafts; SQL execution, role verification, runtime services and independent acceptance evidence remain open.
 
 ## Phase 2 Product Owner decision status — 2026-11-09
 
