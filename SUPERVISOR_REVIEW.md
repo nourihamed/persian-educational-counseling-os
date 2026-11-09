@@ -1240,3 +1240,10 @@ WS-DOM-02 is **PARTIALLY ADDRESSED**: competing role sources are removed in the 
 # SUPERVISOR REVIEW ADDENDUM — Educational Domain Contracts (2026-11-09)
 
 Added three design contracts: `ASSESSMENT_DOMAIN_CONTRACT.md`, `DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` and `CURRICULUM_DOMAIN_CONTRACT.md`. They specify immutable assessment versions and response/score integrity, normalized planning inputs/PlanItems with deterministic replay, and complete curriculum hierarchy with Book/Edition/Subtopic and ownership/versioning. The current Workspace SQL skeleton remains incomplete and these documents do not close WS-DOM-01/04/05/06/07. No executable test or implementation is claimed. Gate remains **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Activity, Credit & Capacity Lifecycle (2026-11-09)
+
+Added three Workspace domain contracts: `ACTIVITY_CLASS_DOMAIN_CONTRACT.md`, `STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` and `CAPACITY_LIFECYCLE_CONTRACT.md`. They define typed Activity/Class/Assignment links, the separation of fiat billing from CRD wallet ledger, and capacity reservation/archive/reactivation/transfer boundaries. They deliberately leave refund, suspension, class-scope and numeric capacity policies unresolved. The current SQL skeleton and tests do not yet implement these lifecycles. Phase 2 remains **NOT READY**.
