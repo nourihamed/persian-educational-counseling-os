@@ -38,7 +38,7 @@ The initial PR #12 state had material defects in HMAC uniqueness across key vers
 - No new CRITICAL defect was demonstrated in the included synthetic SQL scope. This is not a runtime or production security clearance; untested paths remain outside this statement.
 
 ### HIGH
-- **Control Plane function-owner blast radius:** one non-login cp_function_owner owns transfer, rotation and claim-admission SECURITY DEFINER functions and has broad DML across Control Plane tables. Executors are function-scoped, but a defect in one definer function could reach unrelated Control Plane data. Split into transfer, rotation and admission function-owner roles with narrowly scoped DML before production.
+- **Control Plane function-owner blast radius — remediation draft added, not closed:** the current branch now assigns transfer, rotation and identity-admission SECURITY DEFINER functions to separate non-login owners and grants family-specific table privileges. Catalog tests were expanded to assert role ownership and representative allow/deny boundaries. The new SQL/test revision has not yet passed a fresh CI run at its exact HEAD; trigger/helper privilege completeness and least-privilege minimization remain under review.
 - **Contact-change workflow missing:** initial claim admission exists, but changing/re-verifying a student's mobile number and updating all active/retiring aliases/ciphertext atomically is not implemented.
 - **Cryptographic trust boundary missing:** no production KMS/HSM, HMAC derivation service, encryption-key lifecycle, authenticated cryptographic backfill or key custody/revocation drill. SQL tests cannot prove two HMAC aliases derive from the same canonical E.164.
 - **Approval authority not proven:** guardian legal authority, prior counselor identity/fee confirmation and destination acceptance are stored as references/snapshots; a trusted authentication/authorization service must bind each approval to the authenticated principal and exact case.
@@ -78,14 +78,14 @@ Run #148 passes the checked-in PostgreSQL 16 draft SQL workflow. This evidence i
 Decision consolidation, crosswalk draft, Control Plane/Workspace contracts and test evidence were updated. Root canonical documents and remaining open questions must continue to be reconciled against the latest branch and PRs #8–#11. Product Owner decisions are not implementation approval.
 
 ## Technical Debt
-- Shared Control Plane function-owner role.
+- Split Control Plane function-owner grant matrix remains pending fresh CI and independent trigger/helper-path review.
 - Initial admission implemented without contact-change/reverification.
 - No durable cross-database outbox/inbox worker or Saga orchestrator.
 - No production credential/KMS/backup/restore evidence.
 - Some legal/retention/capacity and domain rules remain policy-level or unspecified.
 
 ## Required Changes
-1. Split Control Plane function owners by transfer, rotation and identity-admission capability; add catalog regression tests.
+1. Run fresh PostgreSQL 16 CI on the exact branch HEAD and independently inspect all split-owner table, sequence, helper-function and trigger privilege paths; fix any failures before closing the HIGH finding.
 2. Implement mobile contact-change/reverification under the identity gate with all-key alias coverage, idempotency and audit.
 3. Define and implement authenticated approval principal/authority verification and exact-case binding.
 4. Complete outbox/inbox delivery, cross-database freeze/drain/final-snapshot Saga, projection update and forward recovery.
