@@ -57,6 +57,19 @@ CREATE TRIGGER branches_workspace_type_guard
   BEFORE INSERT OR UPDATE ON branches
   FOR EACH ROW EXECUTE FUNCTION reject_branch_for_independent_workspace();
 
+
+CREATE FUNCTION guard_workspace_type_change() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  IF NEW.workspace_type IS DISTINCT FROM OLD.workspace_type
+     AND EXISTS (SELECT 1 FROM branches) THEN
+    RAISE EXCEPTION 'Workspace type cannot change while branch records exist' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER workspace_type_change_guard
+  BEFORE UPDATE OF workspace_type ON workspace_profile
+  FOR EACH ROW EXECUTE FUNCTION guard_workspace_type_change();
+
 CREATE TABLE students (
   student_id uuid PRIMARY KEY,
   platform_student_id uuid NOT NULL UNIQUE,
