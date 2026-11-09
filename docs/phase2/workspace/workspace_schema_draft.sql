@@ -81,6 +81,17 @@ CREATE TABLE students (
   CHECK ((lifecycle_state='archived') = (archived_at IS NOT NULL))
 );
 
+CREATE FUNCTION guard_student_primary_key_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  IF NEW.student_id IS DISTINCT FROM OLD.student_id THEN
+    RAISE EXCEPTION 'student_id is immutable' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER students_primary_key_immutable
+  BEFORE UPDATE OF student_id ON students
+  FOR EACH ROW EXECUTE FUNCTION guard_student_primary_key_mutation();
+
 -- This is a local projection only; Control Plane remains global ownership authority.
 CREATE TABLE enrollments (
   enrollment_id uuid PRIMARY KEY,
