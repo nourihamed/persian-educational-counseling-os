@@ -53,4 +53,6 @@ The function owner receives only the table DML/sequence rights needed by those f
 
 ## 5. Current status
 
-No role provisioning, ownership transfer, GRANT/REVOKE execution, catalog inspection or privilege test has been performed in this project branch. Therefore D-009/D-013 runtime role guarantees remain **UNVERIFIED**. Phase 2 cannot be APPROVED until the role contract is implemented in a controlled test database and independently verified.
+`cp_06_role_privileges_draft.sql` now provisions the separated non-login roles, assigns table/sequence ownership, revokes PUBLIC/direct runtime access, grants only scoped function execution and grants the non-login function owner its required DML/sequence privileges. GitHub Actions run #35 applied this draft to an ephemeral PostgreSQL 16 database; `cp_30_role_privilege_tests.sql` passed all catalog assertions for role attributes, table/sequence/function ownership, direct-table denial, executor function scope, role inheritance and PUBLIC EXECUTE revocation.
+
+**Still open:** production service login identities have not been bound to these group roles; no production database has been inspected; KMS/HSM service identities and grants are not configured; application service authorization and credential rotation are not implemented. D-009/D-013 are verified only for the ephemeral draft role setup, not for production. Phase 2 cannot be APPROVED until the role contract is adapted to deployment identities and independently verified in the target environment.
