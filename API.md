@@ -22,7 +22,7 @@ Status: DRAFT — Phase 0 — Strategy only. No endpoints implemented yet.
 /admin/*         platform admin operations (counselors, plans, programs catalog, reports, audit)
 /workspace/*     Workspace-scoped: students, memberships, branches, counselor assignments, programs, plans, analytics, notes
 /student/*       student-scoped: today, plan, activities, tests, errors, progress
-/parent/*        parent-scoped: high-level progress views
+/parent/*        per-child/per-permission parent-scoped views (sensitive scopes separately authorized)
 /billing/*        orders, subscriptions, credits (read + purchase-intent; real payment flow deferred)
 /notifications/* in-app notification feed, preferences
 ```
