@@ -27,6 +27,48 @@ INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state)
 VALUES ('a2000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',1,'active');
 INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,branch_id,is_responsible,is_primary_branch,state,accepted_at)
 VALUES ('b2000000-0000-0000-0000-000000000001','a2000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000001','d1000000-0000-0000-0000-000000000001',true,true,'active',now());
+
+INSERT INTO subjects(subject_id,subject_key,title,grade_key,source_kind,status)
+VALUES ('e3000000-0000-0000-0000-000000000001','bio-10','Biology','grade_10','workspace_custom','active');
+INSERT INTO chapters(chapter_id,subject_id,title,order_no)
+VALUES ('f3000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','Cell','1');
+INSERT INTO topics(topic_id,chapter_id,title,order_no)
+VALUES ('a4000000-0000-0000-0000-000000000001','f3000000-0000-0000-0000-000000000001','Membrane','1');
+INSERT INTO student_topic_mastery(student_id,topic_id,mastery_score,confidence,last_assessed_at)
+VALUES ('e1000000-0000-0000-0000-000000000001','a4000000-0000-0000-0000-000000000001',72.5,'medium',now());
+INSERT INTO activities(activity_id,student_id,topic_id,activity_kind,title,state,created_by_membership_id)
+VALUES ('b4000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','a4000000-0000-0000-0000-000000000001','study','Read topic','planned','b1000000-0000-0000-0000-000000000001');
+INSERT INTO study_sessions(study_session_id,student_id,activity_id,started_at,ended_at,planned_minutes,actual_minutes,outcome)
+VALUES ('c4000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','b4000000-0000-0000-0000-000000000001',now()-interval '30 minutes',now(),30,28,'completed');
+INSERT INTO test_definitions(test_id,title,subject_id,topic_id,test_kind,scoring_policy_snapshot)
+VALUES ('d4000000-0000-0000-0000-000000000001','Topic quiz','e3000000-0000-0000-0000-000000000001','a4000000-0000-0000-0000-000000000001','educational','{"negative_marking":true,"version":"v1"}'::jsonb);
+INSERT INTO test_attempts(attempt_id,test_id,student_id,state,started_at,submitted_at,correct_count,wrong_count,blank_count,score,scoring_policy_snapshot)
+VALUES ('e4000000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','analysed',now()-interval '15 minutes',now(),8,1,1,75,'{"negative_marking":true,"version":"v1"}'::jsonb);
+INSERT INTO test_responses(response_id,attempt_id,question_no,topic_id,response_state,time_spent_seconds,error_reason)
+VALUES ('f4000000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',1,'a4000000-0000-0000-0000-000000000001','wrong',50,'concept');
+INSERT INTO exams(exam_id,student_id,title,exam_at,scoring_policy_snapshot)
+VALUES ('a5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','Synthetic exam',now(),'{"negative_marking":true}'::jsonb);
+INSERT INTO exam_results(exam_result_id,exam_id,student_id,correct_count,wrong_count,blank_count,score,scoring_policy_snapshot)
+VALUES ('b5000000-0000-0000-0000-000000000001','a5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',10,2,3,80,'{"negative_marking":true}'::jsonb);
+INSERT INTO classes(class_id,subject_id,class_kind,title)
+VALUES ('c5000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','online','Online biology');
+INSERT INTO class_sessions(class_session_id,class_id,starts_at,ends_at,timezone_name)
+VALUES ('d5000000-0000-0000-0000-000000000001','c5000000-0000-0000-0000-000000000001',now(),now()+interval '1 hour','Asia/Tehran');
+INSERT INTO assignments(assignment_id,student_id,class_session_id,title,due_at,state,created_by_membership_id)
+VALUES ('e5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','d5000000-0000-0000-0000-000000000001','Homework',now()+interval '1 day','assigned','b1000000-0000-0000-0000-000000000001');
+INSERT INTO reviews(review_id,student_id,topic_id,scheduled_at,cadence_days,state)
+VALUES ('f5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','a4000000-0000-0000-0000-000000000001',now()+interval '1 day',1,'scheduled');
+INSERT INTO daily_routines(routine_id,student_id,title,schedule_spec,timezone_name)
+VALUES ('a6000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','Daily biology','{"minutes":20}'::jsonb,'Asia/Tehran');
+INSERT INTO progress_snapshots(progress_snapshot_id,student_id,snapshot_date,metrics)
+VALUES ('b6000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',current_date,'{"completed":4}'::jsonb);
+INSERT INTO risk_assessments(risk_assessment_id,student_id,risk_level,engine_version,input_snapshot,explanation)
+VALUES ('c6000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','medium','risk-v1','{"late_tasks":2}'::jsonb,'Synthetic explanation');
+INSERT INTO counselor_notes(counselor_note_id,student_id,author_membership_id,visibility,content)
+VALUES ('d6000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000001','private_to_author','Synthetic private note');
+INSERT INTO audit_events(audit_event_id,actor_membership_id,event_type,target_type,target_id,outcome)
+VALUES ('e6000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000003','student.view','student','e1000000-0000-0000-0000-000000000001','success');
+SELECT ws_expect_error('WS-AUDIT-01 audit events are append-only','UPDATE audit_events SET outcome=''denied'' WHERE audit_event_id=''e6000000-0000-0000-0000-000000000001''','23514');
 SELECT ws_expect_error('WS-ASSIGN-01 second responsible counselor rejected','INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at) VALUES (gen_random_uuid(),''a2000000-0000-0000-0000-000000000001'',''b1000000-0000-0000-0000-000000000002'',true,''active'',now())','23505');
 
 INSERT INTO student_guardian_links(link_id,student_id,guardian_platform_user_id,relationship_type,verification_state,legal_authority_ref,verified_at)
