@@ -24,7 +24,7 @@ INSERT INTO branches(branch_id,name,status) VALUES
 INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state)
 VALUES ('e1000000-0000-0000-0000-000000000001','f1000000-0000-0000-0000-000000000001','Synthetic Student','grade_10','active');
 INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state)
-VALUES ('a2000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',1,'active');
+VALUES ('a2000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',1,'requested');
 INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,branch_id,is_responsible,is_primary_branch,state,accepted_at)
 VALUES ('b2000000-0000-0000-0000-000000000001','a2000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000001','d1000000-0000-0000-0000-000000000001',true,true,'active',now());
 
