@@ -2,7 +2,7 @@
 # Two concurrent activation commands for one enrollment must yield one activation/debit/capacity event.
 # Usage: bash workspace_activation_race.sh <fresh-db-name>
 set -u
-DB="\${1:?database name required}"
+DB="${1:?database name required}"
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
 
