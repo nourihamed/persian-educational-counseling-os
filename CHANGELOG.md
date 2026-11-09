@@ -459,3 +459,9 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Added `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md` for category-based versioned retention and legal-hold/disposition behavior without unapproved numeric durations.
 - Added `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` for failover, independent backup, restore, pool isolation and capacity acceptance criteria.
 - Updated OPEN_QUESTIONS, PROJECT_STATE, ROADMAP, SECURITY and TEST_PLAN references. Documentation only; no runtime or operational tests are claimed.
+
+
+## 2026-11-09 — Workspace capacity race coverage
+- Added a PostgreSQL 16 CI race test for two different student enrollments competing for the final active-student capacity slot.
+- The fixture intentionally provides sufficient Student Credit so the losing transaction exercises capacity serialization, not wallet insufficiency.
+- Test is wired into the Phase 2 workflow; execution status awaits fresh CI on the latest branch head.
