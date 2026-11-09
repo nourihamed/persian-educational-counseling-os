@@ -149,6 +149,35 @@ CREATE UNIQUE INDEX transfer_cases_one_open_per_student
     ON transfer_cases (student_id)
     WHERE state NOT IN ('completed', 'cancelled');
 
+CREATE FUNCTION guard_transfer_case_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'transfer cases are durable; use state transitions, never DELETE' USING ERRCODE='check_violation'; END IF;
+  IF NEW.case_id IS DISTINCT FROM OLD.case_id
+     OR NEW.student_id IS DISTINCT FROM OLD.student_id
+     OR NEW.source_workspace_id IS DISTINCT FROM OLD.source_workspace_id
+     OR NEW.destination_workspace_id IS DISTINCT FROM OLD.destination_workspace_id
+     OR NEW.expected_generation IS DISTINCT FROM OLD.expected_generation
+     OR NEW.initiator_kind IS DISTINCT FROM OLD.initiator_kind
+     OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'transfer case identity fields are immutable' USING ERRCODE='check_violation';
+  END IF;
+  IF (OLD.source_freeze_token IS NOT NULL AND NEW.source_freeze_token IS DISTINCT FROM OLD.source_freeze_token)
+     OR (OLD.source_frozen_at IS NOT NULL AND NEW.source_frozen_at IS DISTINCT FROM OLD.source_frozen_at)
+     OR (OLD.source_unfrozen_at IS NOT NULL AND NEW.source_unfrozen_at IS DISTINCT FROM OLD.source_unfrozen_at)
+     OR (OLD.final_snapshot_ref IS NOT NULL AND NEW.final_snapshot_ref IS DISTINCT FROM OLD.final_snapshot_ref)
+     OR (OLD.final_snapshot_at IS NOT NULL AND NEW.final_snapshot_at IS DISTINCT FROM OLD.final_snapshot_at)
+     OR (OLD.snapshot_manifest_hash IS NOT NULL AND NEW.snapshot_manifest_hash IS DISTINCT FROM OLD.snapshot_manifest_hash)
+     OR (OLD.destination_validation_ref IS NOT NULL AND NEW.destination_validation_ref IS DISTINCT FROM OLD.destination_validation_ref)
+     OR (OLD.destination_validated_at IS NOT NULL AND NEW.destination_validated_at IS DISTINCT FROM OLD.destination_validated_at) THEN
+    RAISE EXCEPTION 'transfer evidence is write-once' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER transfer_cases_identity_guard
+  BEFORE UPDATE OR DELETE ON transfer_cases
+  FOR EACH ROW EXECUTE FUNCTION guard_transfer_case_mutation();
+
 -- Cumulative approvals: all three kinds must exist before the ownership switch (D-026/D-027/PO-8).
 CREATE TABLE transfer_approvals (
     approval_id     uuid PRIMARY KEY,
