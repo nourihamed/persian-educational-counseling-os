@@ -76,3 +76,11 @@ Phase 0 توسط Product Owner در 2026-10-14 بسته شد و PR #1 در هم�
 ## Phase 2 operational resilience contract (2026-11-09)
 
 `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` now defines provider-neutral requirements for independent Control Plane primary/replica and backup domains, split-brain fencing, restore quarantine/reconciliation, key recovery, connection/pool isolation and measured cell capacity. It deliberately does not invent RPO/RTO, replication mode, retention duration, failover mode, provider or capacity limits. All environment drills remain NOT RUN.
+
+
+## Phase 2 domain, policy and operations review additions (2026-11-09)
+
+- `docs/phase2/workspace/WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` records current schema gaps: test response/score integrity, membership role source of truth, guardian auditability, assessment versions/per-subject results, planning inputs, activity taxonomy, class participation, capacity and file/notification lifecycle.
+- `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md` preserves Q-007 as open pending qualified Iran legal review and PO approval.
+- `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md` defines versioned category-based disposition and legal-hold requirements without numeric retention guesses.
+- `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` defines failover/restore/capacity acceptance boundaries; all environment tests remain NOT RUN.
