@@ -102,3 +102,13 @@ If a bounded set of non-critical design details remains but is explicitly constr
 ## 8. Open decision register
 
 The consolidated list of unresolved Product Owner and specialist inputs, with recommendations and required authority, is maintained in `PHASE2_OPEN_DECISIONS.md`. This register does not make decisions or assign unapproved values.
+
+
+## 9. Educational domain contract references
+
+The required educational-domain design targets are now explicit:
+- `workspace/ASSESSMENT_DOMAIN_CONTRACT.md` — assessment versioning, response integrity, deterministic scoring and per-subject exam results.
+- `workspace/DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` — normalized planning inputs, explicit PlanItems, replayability and explainability.
+- `workspace/CURRICULUM_DOMAIN_CONTRACT.md` — complete curriculum hierarchy, ownership, versioning and mastery evidence.
+
+The current Workspace SQL skeleton has not yet been reconciled with these contracts; design documents do not close WS-DOM findings.
