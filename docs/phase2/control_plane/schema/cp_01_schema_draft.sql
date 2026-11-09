@@ -24,6 +24,20 @@ CREATE TABLE workspaces (
     created_at      timestamptz NOT NULL DEFAULT now()
 );
 
+-- Workspace UUID is immutable. The admission function needs a narrow UPDATE privilege on
+-- this key column solely to acquire FOR SHARE row locks; this trigger prevents key mutation.
+CREATE FUNCTION guard_workspace_id_immutable() RETURNS trigger LANGUAGE plpgsql AS $
+BEGIN
+  IF NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN
+    RAISE EXCEPTION 'workspace_id is immutable' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END;
+$;
+CREATE TRIGGER workspaces_workspace_id_immutable
+  BEFORE UPDATE OF workspace_id ON workspaces
+  FOR EACH ROW EXECUTE FUNCTION guard_workspace_id_immutable();
+
 -- Platform-level student identity. Deliberately holds no mobile number.
 CREATE TABLE platform_students (
     student_id  uuid PRIMARY KEY,
