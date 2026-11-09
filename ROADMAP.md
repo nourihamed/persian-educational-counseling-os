@@ -1,4 +1,12 @@
 # ROADMAP.md
+## Current Phase 2 status — 2026-11-09 (authoritative addendum)
+
+- Phase 2 remains **NOT READY**; PR #12 is Open/Draft/Unmerged.
+- Workspace-centric architecture and initial Control Plane/Workspace contracts are being reconciled on PR #12. No PR has been merged by this work.
+- Remaining Phase 2 sequence: (1) complete Control Plane invariants and key rotation enforcement; (2) complete Workspace domain schema and constraints; (3) complete transfer/API/security contracts; (4) reconcile PR #8/#10/#11 and canonical docs; (5) run fresh PostgreSQL, authorization, concurrency, crash/recovery and backup/restore tests; (6) independent Supervisor review and PO gate.
+- Phase 3 is not authorized until Phase 2 is independently APPROVED and the Product Owner authorizes progression.
+- D-014 remains in force: synthetic data only; real student/customer data prohibited until all required controls/tests/review and written PO approval.
+
 
 Status (updated 2026-10-24): Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged. Phase 1 provider-neutral design/documentation gate APPROVED under D-024; PR #3 was squash-merged into main on 2026-10-24 (b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa). D-020 selects Alt-5 hybrid isolation cells; D-023's Level 3 production-cell and Level 4 independent critical-backup targets remain mandatory. Q-023 remains OPEN as a hard pre-hosting deployment gate, not a Phase 1 design blocker: provider/account topology, capability evidence, cost/capacity, and environment-only security/backup tests must be completed before hosted deployment. Active Alt-5 catalog: 51 specifications, 0 implemented, 0 executed, 0 passing. The 41-row category inventory maps all 51 active contracts; endpoint-level coverage remains deferred. PR #6's traceability corrections were merged into `main` at `fb16219d506998c9e074971927b55e322f32c21d`. Phase 2 remains NOT STARTED / NOT AUTHORIZED pending a separate Product Owner decision; real student data remains prohibited under D-014. Local setup is not an isolation boundary.
 
