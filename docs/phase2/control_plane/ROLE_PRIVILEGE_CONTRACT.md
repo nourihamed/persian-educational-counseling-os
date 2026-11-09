@@ -1,58 +1,80 @@
 # Control Plane Role & Privilege Contract
 
-**Status:** DRAFT / NOT EXECUTED. Deployment/security approval required. This contract implements the D-009/D-013 principle: runtime identities are neither table owners nor BYPASSRLS.
+**Status:** DRAFT / NOT APPROVED. Catalog-level tests exist and passed in synthetic PostgreSQL 16 CI. No production credentials or deployment are authorized.
 
-## 1. Required role separation
+## 1. Roles
 
-| Role | Login | Owns tables | BYPASSRLS / SUPERUSER | Permitted responsibility |
-|---|---:|---:|---:|---|
-| `cp_table_owner` | NO | Yes | NO / NO | Owns Control Plane schema/tables; used only by controlled migrations |
-| `cp_function_owner` | NO | No | NO / NO | Owns narrowly scoped SECURITY DEFINER functions; receives only required DML privileges |
-| `cp_runtime` | service login/group | No | NO / NO | No direct mutation of ownership, identity, approval, transfer, command, history or outbox tables |
-| `cp_transfer_executor` | service login/group | No | NO / NO | EXECUTE only on idempotent transfer admission and ownership switch functions |
-| `cp_rotation_executor` | service login/group | No | NO / NO | EXECUTE only on begin/complete/retire HMAC rotation functions |
-| `cp_migration_operator` | controlled, time-bound | No persistent runtime use | deployment-specific | Applies reviewed schema changes with approval and audit; not used by application |
+The current draft creates six cluster-wide roles:
 
-The login/service identities must not be members of `cp_table_owner` or `cp_function_owner`. Group-role membership must be granted only to the corresponding service identity. No application process receives superuser, CREATE ROLE, schema ownership, table ownership or trigger-disabling privileges.
+- cp_table_owner — NOLOGIN; owns Control Plane tables and sequences.
+- cp_function_owner — NOLOGIN; owns SECURITY DEFINER functions.
+- cp_runtime — NOLOGIN; read-only registry access for trusted runtime.
+- cp_transfer_executor — NOLOGIN; may execute the two transfer commands.
+- cp_rotation_executor — NOLOGIN; may execute HMAC rotation lifecycle functions.
+- cp_identity_admission_executor — NOLOGIN; may execute only admit_student_identity_claim(...).
 
-## 2. Function ownership and grants
+All roles are NO SUPERUSER, NO CREATEDB, NO CREATEROLE, NO REPLICATION and NO BYPASSRLS. No application service receives owner-role membership. No role has a password or login in the draft.
 
-The following functions are SECURITY DEFINER candidates and must be owned by `cp_function_owner`, not the migration operator or table owner:
+## 2. Object ownership and direct access
 
-- `switch_student_ownership(uuid)`
-- `request_transfer_case_idempotent(text,bytea,uuid,uuid,uuid,uuid,bigint,text)`
-- `begin_identity_hmac_rotation()`
-- `complete_identity_hmac_rotation(integer)`
-- `retire_identity_hmac_version(integer)`
+- cp_table_owner owns all Control Plane tables and sequences.
+- cp_function_owner owns the privileged functions.
+- cp_runtime cannot directly mutate ownership, claims, transfer cases, approvals, key versions, HMAC aliases, contact index, idempotency logs or outbox/inbox.
+- Transfer, rotation and identity-admission executors have no direct table privileges; they are function-only capabilities.
+- PUBLIC has no EXECUTE on privileged functions.
+- No executor is a member of cp_table_owner or cp_function_owner.
 
-All must retain a fixed safe `search_path` (`pg_catalog, pg_temp`) and schema-qualify every non-system object. PUBLIC EXECUTE must be revoked. Grant only:
-- transfer executor: request-transfer and switch functions;
-- rotation executor: begin/complete/retire rotation functions;
-- runtime: no execute on privileged mutation functions.
+## 3. Executor scope
 
-The function owner receives only the table DML/sequence rights needed by those functions. It must not own the tables and must not have SUPERUSER, BYPASSRLS, CREATEROLE or CREATEDB. The table owner is NOLOGIN and not granted to service roles.
+| Executor | Permitted functions | Forbidden capabilities |
+|---|---|---|
+| cp_transfer_executor | request_transfer_case_idempotent(...), switch_student_ownership(...) | HMAC rotation, initial identity admission, direct table DML |
+| cp_rotation_executor | begin_identity_hmac_rotation(), complete_identity_hmac_rotation(...), retire_identity_hmac_version(...) | Transfer switch, initial identity admission, direct table DML |
+| cp_identity_admission_executor | admit_student_identity_claim(...) | Transfer, rotation, direct table DML |
+| cp_runtime | Registry SELECT | Ownership/claim/approval/key/alias mutations |
 
-## 3. Direct table access
+The exact function signatures and grants are enforced by cp_06_role_privileges_draft.sql and asserted by tests/cp_30_role_privilege_tests.sql.
 
-- Revoke all direct INSERT/UPDATE/DELETE/TRUNCATE privileges on ownership, claims, contact index, HMAC aliases/key versions, transfer cases/approvals, command log, ownership history and outbox/inbox from runtime/service roles.
-- Claim/contact/alias writes must go through controlled admission/contact-change/rotation functions. Those functions are not yet implemented in this branch; deferred alias-completeness triggers are defense-in-depth, not a replacement for least-privilege grants.
-- Transfer approvals must be created only by trusted identity/authorization services after authenticating the principal and verifying guardian authority, prior counselor assignment or destination permission. A DB function cannot infer lawful authority from a text identifier.
-- Outbox workers may update only delivery metadata (e.g. published timestamp) through a narrow function; event identity/payload is immutable.
-- Inbox consumers may insert/deduplicate events through a narrow function and must reject stale/future generations.
+## 4. Function owner blast radius — HIGH
 
-## 4. Security verification required before approval
+The current draft uses one non-login cp_function_owner for the transfer, rotation and initial-admission SECURITY DEFINER functions. It has broad DML grants across Control Plane tables so that each function can perform its transaction. This role cannot log in and no executor can SET ROLE to it, but a vulnerability in any SECURITY DEFINER function could exercise a larger data surface than that function needs.
 
-1. Inspect `pg_roles`, `pg_auth_members`, `information_schema.role_table_grants` and function owners on a fresh database.
-2. Assert all runtime/service roles have `rolsuper=false`, `rolbypassrls=false`, `rolcreaterole=false`, `rolcreatedb=false`.
-3. Assert no runtime/service role owns Control Plane schema/tables or privileged functions.
-4. Assert PUBLIC and runtime roles cannot directly mutate protected tables or execute privileged functions.
-5. Assert only designated transfer/rotation executors can execute their corresponding functions.
-6. Attempt direct table writes, TRUNCATE, trigger disable, function search_path shadowing, and role escalation; all must fail.
-7. Verify SECURITY DEFINER function owner privileges are sufficient but least-privilege and all names are schema-qualified.
-8. Preserve SQL output/logs and test the exact reviewed SHA.
+Before production, split this role into narrowly scoped owners, at minimum:
+- cp_transfer_function_owner
+- cp_rotation_function_owner
+- cp_identity_admission_function_owner
 
-## 5. Current status
+Each function owner should receive only the table/column privileges and helper-function EXECUTE rights required by its own function family. Add catalog tests proving the separation and that no owner role is assumable by service executors. This is a HIGH blocker, not an approved exception.
 
-`cp_06_role_privileges_draft.sql` now provisions the separated non-login roles, assigns table/sequence ownership, revokes PUBLIC/direct runtime access, grants only scoped function execution and grants the non-login function owner its required DML/sequence privileges. GitHub Actions run #35 applied this draft to an ephemeral PostgreSQL 16 database; `cp_30_role_privilege_tests.sql` passed all catalog assertions for role attributes, table/sequence/function ownership, direct-table denial, executor function scope, role inheritance and PUBLIC EXECUTE revocation.
+## 5. Identity admission capability
 
-**Still open:** production service login identities have not been bound to these group roles; no production database has been inspected; KMS/HSM service identities and grants are not configured; application service authorization and credential rotation are not implemented. D-009/D-013 are verified only for the ephemeral draft role setup, not for production. Phase 2 cannot be APPROVED until the role contract is adapted to deployment identities and independently verified in the target environment.
+The initial claim admission function:
+- locks the identity maintenance gate for the transaction;
+- requires exactly one active HMAC key and a unique alias for every active/retiring key version;
+- requires an active encryption key version and non-empty ciphertext;
+- creates platform student, initial ownership, claim, contact-index rows, versioned aliases and an append-only idempotency command in one transaction;
+- rejects duplicate global mobile+grade claims through the versioned alias unique index;
+- rejects same idempotency key with different payload;
+- never stores plaintext E.164 or key material.
+
+The trusted service must still prove that every HMAC alias was computed from the same normalized canonical E.164 value and must authenticate/authorize the caller. Database checks validate coverage and uniqueness, not cryptographic correctness or human identity.
+
+Mobile contact change/reverification is not yet implemented. It must update all active/retiring aliases and ciphertext atomically under the same maintenance gate and uniqueness rules.
+
+## 6. RLS and application authorization
+
+Control Plane database roles do not replace application authorization. Every transfer initiator and approver must be bound to an authenticated Platform User and a verified relationship/authority record. A caller-supplied UUID or evidence reference is not authentication.
+
+The runtime must fail closed when the Control Plane is unavailable, ownership is ambiguous, the generation is stale, or the Workspace projection does not match the registry. No shared application role may access another Workspace database.
+
+## 7. Verification and remaining work
+
+GitHub Actions run #148 executed the role catalog suite on synthetic PostgreSQL 16 databases. It checked role count/attributes, ownership, PUBLIC EXECUTE revocation, direct table denial, executor scope and non-assumability.
+
+Not yet implemented or verified:
+- split function-owner blast radius;
+- mobile contact change/reverification;
+- production login identities, secret binding, KMS/HSM, rotation and revocation;
+- transfer outbox/inbox worker credentials, durable delivery and recovery;
+- API-level authentication/authorization and IDOR tests;
+- target-environment verification, connection-pool isolation and production failover.
