@@ -52,6 +52,7 @@ The initial PR #12 state had material defects in global HMAC uniqueness, source-
 - PRs #8–#11 remain separate Open/Draft/Unmerged. PR #8's old tenant-centric DDL must be reconciled/rebased or superseded before merge; old test evidence does not validate the current schema.
 
 ### LOW
+- PR #12 currently contains 171 granular commits across 36 changed files because updates were recorded file-by-file. Before merge, the Product Owner should authorize a squash/rebase into a small set of logical commits; no history rewrite or merge was performed.
 - Draft SQL naming, indexing and schema organization can be normalized after all domain constraints and runtime contracts are finalized.
 
 ## Architecture
