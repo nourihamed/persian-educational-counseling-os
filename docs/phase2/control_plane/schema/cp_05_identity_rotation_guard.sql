@@ -169,8 +169,8 @@ BEGIN
 END; $$;
 REVOKE ALL ON FUNCTION complete_identity_hmac_rotation(integer) FROM PUBLIC;
 
--- Retire an old version only after overlap/recovery policy is approved. Historical aliases
--- are removed only for that retired HMAC version; encrypted contact ciphertext is retained.
+-- Retire an old version only after overlap/recovery policy is approved. Old HMAC aliases and
+-- that version's contact-index row are removed; ciphertext remains in the surviving active row.
 CREATE FUNCTION retire_identity_hmac_version(p_old_key_version integer) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,pg_temp AS $$
