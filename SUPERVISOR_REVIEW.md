@@ -1166,3 +1166,23 @@ The new contract specifies at-least-once delivery with lease-fenced publishers, 
 
 ## Gate impact
 No runtime worker or executable distributed failure-injection test was implemented. Numeric operational thresholds remain unselected. The HIGH finding remains open and Phase 2 Gate remains **NOT READY**. D-014 synthetic-only restriction remains in force.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Workspace Domain Schema Completeness (2026-11-09)
+
+## Scope
+Inspected the actual `workspace_schema_draft.sql` table/constraint definitions and companion schema test inventory. Added `docs/phase2/workspace/WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` with reproducible file-level findings and remediation order.
+
+## Findings
+### HIGH
+- WS-DOM-01: assessment attempt counters, response rows, total question count and stored score are not reconciled; inconsistent results can be persisted.
+- WS-DOM-02: membership role exists both as scalar `workspace_memberships.role_key` and as `membership_roles`, with no synchronization constraint; authorization has competing sources of truth.
+- WS-DOM-03: guardian relationship/permission records lack sufficient append-only grant/revocation evidence and authenticated authority proof; Q-007 legal matrix remains open.
+
+### MEDIUM
+- WS-DOM-04..09: assessment version/per-subject result/custom error taxonomy; curriculum subtopics and normalized planning inputs/PlanItem; activity taxonomy; class participation/recurrence; final-slot capacity races and credit purchase/refund/renewal; file scan and notification generation/recipient lifecycle remain incomplete.
+
+## Gate impact
+The current Workspace schema is a useful skeleton but cannot be called a complete domain model. No SQL changes or executable tests were made in this review step. Phase 2 remains **NOT READY**; D-014 synthetic-only restriction remains in force.
