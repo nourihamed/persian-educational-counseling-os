@@ -427,3 +427,14 @@ This work remains documentation and draft-schema only. Revised SQL/race tests ha
 Added a PostgreSQL 16 GitHub Actions workflow. Latest successful run #53 executed at branch commit `3c50f0be27ebad6c159d20d2447b763868e6bc86` and passed 22 Control Plane PASS notices (including a role-catalog notice covering eight privilege sub-checks), 1 concurrent global-identity race and 13 Workspace schema PASS notices. Earlier failed runs exposed test-fixture defects and a missing sequence grant to the non-login function owner; these were corrected before run #35.
 
 This evidence applies only to the synthetic SQL/schema cases in the workflow. Production service-role binding, trusted approval identity service, cross-Workspace DB authorization, transfer freeze/drain and crash recovery, outbox/inbox delivery, activation+credit atomicity, full capacity concurrency, backup/restore and HA tests remain NOT RUN. Phase 2 Gate remains NOT READY; D-014 remains in force.
+
+
+### 2026-11-09 — Phase 2 claim admission, Workspace activation and role verification
+`feat:` Added a Control Plane initial identity-claim admission draft (cp_07) with a database maintenance gate, exact active/retiring HMAC alias coverage, global mobile+grade uniqueness, encrypted contact-index insertion, atomic ownership/claim creation and idempotency. Added dedicated identity-admission executor scope and regression/race tests.
+
+`feat:` Added Workspace atomic activation draft: enrollment activation, Student Credit debit (unit_code CRD), active-student capacity reservation and minimal audit event occur in one transaction. Added wallet-row serialization/negative-balance guard, append-only command log and idempotent replay. Added per-Workspace PostgreSQL role naming from canonical Workspace UUID, database CONNECT isolation, worker/exporter limits and role catalog tests.
+
+`test:` GitHub Actions run #148 passed on PostgreSQL 16 at SQL/test tree SHA e97056b44ebfdbfce5344a9c524ba8af1e72055b. It covered Control Plane transfer/rotation/claim admission, concurrent global identity and claim-admission races, Workspace schema/activation/credit/capacity/audit, concurrent activation and two-Workspace role/CONNECT assertions. This is synthetic draft-SQL evidence only.
+
+`docs/security:` Updated Control Plane/Workspace role contracts, HMAC rotation protocol, Workspace database design, canonical architecture/database/API/security overrides, project state, roadmap, test plan and supervisor review. Phase 2 remains NOT READY; PR #12 remains Draft/Open/Unmerged; Phase 3 and real data remain prohibited under D-014.
+
