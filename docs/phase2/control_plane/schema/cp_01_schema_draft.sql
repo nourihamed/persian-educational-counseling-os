@@ -41,8 +41,7 @@ CREATE TABLE student_contact_index (
     mobile_ciphertext  bytea   NOT NULL, -- encrypted canonical E.164; key material external
     cipher_key_version integer NOT NULL CHECK (cipher_key_version > 0),
     updated_at         timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (student_id, key_version),
-    UNIQUE (key_version, mobile_hmac)
+    PRIMARY KEY (student_id, key_version)
 );
 
 -- During rotation, every holding claim must have an alias for EVERY active HMAC key version.
