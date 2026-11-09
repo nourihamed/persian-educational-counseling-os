@@ -91,7 +91,7 @@ CREATE CONSTRAINT TRIGGER enrollment_claim_alias_coverage_alias
   FOR EACH ROW EXECUTE FUNCTION deferred_check_claim_alias_coverage();
 
 CREATE FUNCTION assert_all_claim_alias_coverage() RETURNS void
-LANGUAGE plpgsql AS $
+LANGUAGE plpgsql AS $body$
 DECLARE r record;
 BEGIN
   FOR r IN SELECT claim_id FROM public.enrollment_claims
@@ -99,14 +99,14 @@ BEGIN
   LOOP
     PERFORM public.assert_claim_alias_coverage(r.claim_id);
   END LOOP;
-END; $;
+END; $body$;
 
 CREATE FUNCTION deferred_check_all_claim_alias_coverage() RETURNS trigger
-LANGUAGE plpgsql AS $
+LANGUAGE plpgsql AS $body$
 BEGIN
   PERFORM public.assert_all_claim_alias_coverage();
   RETURN NULL;
-END; $;
+END; $body$;
 CREATE CONSTRAINT TRIGGER hmac_key_version_alias_coverage
   AFTER INSERT OR UPDATE OR DELETE ON mobile_hmac_key_versions
   DEFERRABLE INITIALLY DEFERRED
