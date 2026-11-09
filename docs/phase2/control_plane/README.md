@@ -47,7 +47,7 @@
 
 ## Database role boundary — HIGH
 
-The least-privilege role contract is specified in ROLE_PRIVILEGE_CONTRACT.md. cp_06 creates non-login table/function owner roles and separate runtime, transfer, rotation and identity-admission executors. The identity-admission executor can execute only the initial claim admission function and has no direct table privileges. PostgreSQL 16 CI catalog assertions passed for role attributes, table/sequence/function ownership, direct-table denial, executor function scope, role inheritance and PUBLIC EXECUTE revocation. Production service login binding and target-environment verification remain open.
+The least-privilege role contract is specified in ROLE_PRIVILEGE_CONTRACT.md. cp_06 creates one non-login table owner, three separate non-login function owners (transfer, rotation, identity admission), and separate runtime/transfer/rotation/identity-admission executors. The identity-admission executor can execute only the initial claim admission function and has no direct table privileges. PostgreSQL 16 CI catalog assertions passed for role attributes, table/sequence/function ownership, direct-table denial, executor function scope, role inheritance and PUBLIC EXECUTE revocation. Production service login binding and target-environment verification remain open.
 
 ## HMAC rotation and initial admission — HIGH
 
@@ -84,5 +84,5 @@ Run evidence is synthetic and validates the SQL drafts only. It does not prove K
 - Implement durable outbox/inbox delivery, retries, deduplication, reconciliation and crash recovery; DB delivery functions/worker integration remain incomplete.
 - Implement the real cross-database freeze/drain/final-snapshot/staging Saga and source/destination projection orchestration.
 - Independently verify KMS/HSM, cryptographic backfill and encryption-key lifecycle.
-- Review whether the shared non-login cp_function_owner DML surface should be split into separate transfer, rotation and admission function-owner roles before production.
+- Verify the new transfer/rotation/admission function-owner grants against every SECURITY DEFINER and trigger/helper path in fresh PostgreSQL 16 CI; do not treat the draft split as production approval.
 - Define measured HA/failover, RPO/RTO, split-brain and backup/restore evidence (OQ-D).
