@@ -56,6 +56,7 @@ SELECT ws_expect_error('WS-CREDIT-01 credit ledger UPDATE forbidden','UPDATE cre
 
 -- Organization Workspace may have branches; changing the test profile to independent
 -- must cause future branch creation to fail.
+DELETE FROM branches WHERE branch_id='d1000000-0000-0000-0000-000000000001';
 UPDATE workspace_profile SET workspace_type='independent_counselor' WHERE singleton=true;
 SELECT ws_expect_error('WS-BRANCH-01 Independent Counselor Workspace cannot add branches','INSERT INTO branches(branch_id,name,status) VALUES (gen_random_uuid(),''Forbidden Branch'',''active'')','23514');
 
