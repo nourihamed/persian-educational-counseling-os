@@ -1,7 +1,7 @@
 \set ON_ERROR_STOP on
 \if :{?workspace_key}
 \else
-  \echo 'ERROR: pass -v workspace_key=<unique-lowercase-key> (4-12 chars)'
+  \echo 'ERROR: pass -v workspace_key=<unique-lowercase-key> (32-character lowercase hex Workspace UUID)'
   \quit 3
 \endif
 
@@ -9,8 +9,8 @@ SET app.workspace_key = :'workspace_key';
 
 DO $validate$
 BEGIN
-  IF current_setting('app.workspace_key') !~ '^[a-z0-9]{4,12}$' THEN
-    RAISE EXCEPTION 'workspace_key must match ^[a-z0-9]{4,12}$';
+  IF current_setting('app.workspace_key') !~ '^[0-9a-f]{32}$' THEN
+    RAISE EXCEPTION 'workspace_key must match ^[0-9a-f]{32}$';
   END IF;
 END $validate$;
 
