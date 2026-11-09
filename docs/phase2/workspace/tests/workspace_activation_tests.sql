@@ -16,7 +16,7 @@ END; $test$;
 
 INSERT INTO workspace_profile(singleton,workspace_id,workspace_type)
 VALUES(true,'a8100000-0000-0000-0000-000000000001','organization');
-INSERT INTO workspace_memberships(membership_id,platform_user_id,role_key,status) VALUES
+INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES
  ('b8100000-0000-0000-0000-000000000001','c8100000-0000-0000-0000-000000000001','counselor','active'),
  ('b8100000-0000-0000-0000-000000000002','c8100000-0000-0000-0000-000000000002','counselor','suspended');
 INSERT INTO membership_roles(membership_id,role_key) VALUES
