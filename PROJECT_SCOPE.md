@@ -1,5 +1,8 @@
 # PROJECT_SCOPE.md
 
+
+> **CURRENT SCOPE MODEL OVERRIDE — 2026-11-09 (PR #12, unmerged):** MVP tenancy is Workspace-centric, not Counselor-as-Tenant. Organization Workspace and Independent Counselor Workspace are distinct types. Membership, roles and permissions are scoped to a Workspace; counselor assignments control access to students within it. Global student ownership and mobile+grade uniqueness belong to Control Plane; educational data and credit ledger belong to the Workspace DB. The legacy “Multi-tenant foundation (Counselor = Tenant)” line below is superseded. No scope expansion is authorized by this architecture reconciliation; all implementation remains gated by Phase 2 approval.
+
 Status: Phase 0 scope baseline approved; Product Owner formally closed Phase 0 on 2026-10-14. Scope changes still require explicit Product Owner approval.
 
 ## هدف این سند
