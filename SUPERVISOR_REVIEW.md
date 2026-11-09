@@ -55,7 +55,7 @@ Logical API/authorization contract exists; no runtime endpoint is implemented. A
 D-014 remains. Key material must remain in Platform Security KMS/HSM boundary. Control Plane outage or uncertainty must deny student-data access. No runtime security controls are verified.
 
 ## Testing
-Revised tests: EXECUTED / PASS for 22 Control Plane assertions (including role/privilege catalog checks), 1 concurrent global-identity race and 13 Workspace schema assertions on PostgreSQL 16 (GitHub Actions run #35). Earlier 26 PASS and 5/5 race results apply to a prior schema and are superseded. Role privilege, API/RBAC, cross-Workspace DB isolation, transfer crash/recovery, outbox/inbox delivery, backup/restore and HA acceptance tests remain NOT RUN.
+Revised tests: EXECUTED / PASS for 22 Control Plane assertions (including role/privilege catalog checks), 1 concurrent global-identity race and 13 Workspace schema assertions on PostgreSQL 16 (GitHub Actions run #53). Earlier 26 PASS and 5/5 race results apply to a prior schema and are superseded. Role privilege, API/RBAC, cross-Workspace DB isolation, transfer crash/recovery, outbox/inbox delivery, backup/restore and HA acceptance tests remain NOT RUN.
 
 ## Documentation
 Workspace, transfer, API and key-rotation contracts added; crosswalk corrected; root architecture/domain/API/security/product/scope and PROJECT_STATE received current-authority notes. Full consistency review remains.
