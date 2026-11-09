@@ -78,6 +78,10 @@ REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM
 GRANT SELECT ON transfer_cases,transfer_approvals,student_ownership,enrollment_claims,
   identity_write_gate,mobile_hmac_key_versions,enrollment_claim_identity_aliases,student_contact_index,
   transfer_state_transitions,command_log TO cp_transfer_function_owner;
+-- FOR SHARE requires UPDATE privilege on at least one column. singleton is CHECK-constrained TRUE,
+-- so these two owners can take the gate lock but cannot change maintenance state or epoch.
+GRANT UPDATE (singleton) ON identity_write_gate
+  TO cp_transfer_function_owner,cp_identity_admission_function_owner;
 GRANT INSERT ON transfer_cases,ownership_history,outbox_events,command_log TO cp_transfer_function_owner;
 GRANT UPDATE ON transfer_cases,student_ownership,enrollment_claims,
   enrollment_claim_identity_aliases,command_log TO cp_transfer_function_owner;
