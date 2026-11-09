@@ -23,6 +23,7 @@
 | CP-EVENT-01 | Outbox/inbox duplicate and out-of-order delivery deduplicated/fenced | NOT RUN (outbox payload immutability only tested) |
 | CP-FAIL-01 | Control Plane outage/ambiguous ownership denies student-data access | NOT RUN (runtime fail-closed integration absent) |
 | WS-SCHEMA-01 | Workspace membership, branch/type, counselor assignment, guardian permission, educational domain relations, immutable published versions, credit reversals, capacity counters, private file metadata, in-app notification idempotency, legal holds and append-only audit/ledger | EXECUTED / PASS for included schema fixtures |
+| WS-ROLE-01 | Per-Workspace distinct DB credentials, no runtime owner/BYPASSRLS, no cross-Workspace connection, least-privilege worker/exporter grants | SPECIFIED / NOT RUN |
 | WS-ISO-01 | Workspace A credential cannot access Workspace B database/data | NOT RUN (requires separate credentials/DB service integration) |
 | WS-AUTH-01 | Counselor/manager object and assignment scope enforced | NOT RUN (runtime authorization absent) |
 | WS-PARENT-01 | Per-child/per-permission parent isolation; expiry/revocation | NOT RUN (legal/age matrix and authorization service absent) |
