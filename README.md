@@ -58,3 +58,8 @@ See `DEVELOPMENT_GUIDE.md`. In short: every phase reads `PROJECT_STATE.md` → `
 - Backend: Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2, PostgreSQL 15+, Redis, HTTPX, Pytest
 - Frontend: React, TypeScript, Vite, Persian RTL, PWA-ready
 - Calendar: Jalali default, Gregorian supported, Asia/Tehran timezone, isolated conversion module
+
+
+### Phase 2 security and data-model review updates (2026-11-09)
+
+Additional draft contracts and independent findings are recorded under `docs/phase2/`: contact-change reverification, transfer approval identity/authority, cross-Workspace Saga, Workspace domain schema review, Q-007 parent/guardian authority, category-based retention/legal hold, and backup/failover/restore. A new final-capacity-slot concurrency test is wired into CI but awaits fresh execution. These additions do not close the HIGH findings; Phase 2 remains NOT READY and real data remains prohibited under D-014.
