@@ -1149,3 +1149,20 @@ The new contract fixes the required trust boundary and exact role semantics: ver
 
 ## Gate impact
 No runtime verifier, approval API, revised schema or executable regression tests were implemented in this documentation step. The HIGH findings remain open. Phase 2 Gate remains **NOT READY**; D-014 synthetic-only restriction remains in force.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Cross-Workspace Transfer Saga (2026-11-09)
+
+## Scope
+Added `docs/phase2/transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md` after reviewing the existing transfer workflow contract and Control Plane switch/outbox/inbox drafts.
+
+## HIGH finding — distributed transfer remains design-only
+The Control Plane switch is one local transaction and writes an outbox row, but there is no verified publisher/consumer runtime, source write-freeze/drain controller, final-snapshot service, destination staging importer, durable Saga orchestrator or reconciliation worker. The presence of outbox/inbox tables does not implement delivery or crash recovery.
+
+## Design refinement delivered
+The new contract specifies at-least-once delivery with lease-fenced publishers, idempotent inbox/projection transactions, exact case/student/Workspace/generation event binding, source-side transactional freeze barriers, drain-before-snapshot, isolated destination staging, cutover revalidation and forward-only post-switch recovery. It explicitly rejects cross-database atomicity claims and source fallback after cutover.
+
+## Gate impact
+No runtime worker or executable distributed failure-injection test was implemented. Numeric operational thresholds remain unselected. The HIGH finding remains open and Phase 2 Gate remains **NOT READY**. D-014 synthetic-only restriction remains in force.
