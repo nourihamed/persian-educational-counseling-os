@@ -139,6 +139,8 @@ SELECT format('GRANT SELECT ON TABLE notification_preferences TO %I',
 SELECT format(
   'GRANT SELECT,INSERT,UPDATE ON TABLE enrollments,students,counselor_assignments,workspace_memberships,credit_wallets,credit_transactions,activation_command_log,workspace_capacity_counters,capacity_events TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT INSERT ON TABLE audit_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \\gexec
 SELECT format('GRANT EXECUTE ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT EXECUTE ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid) TO %I',
