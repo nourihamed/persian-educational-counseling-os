@@ -71,3 +71,8 @@ Status (updated 2026-10-24): Phase 0 closed by Product Owner on 2026-10-14; PR #
 Phase 0 توسط Product Owner در 2026-10-14 بسته شد و PR #1 در همان تاریخ در `main` ادغام شد (squash commit `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b`). این بخش فقط سابقه بسته‌شدن Phase 0 را حفظ می‌کند و مرجع وضعیت جاری Phase 1 نیست.
 
 **وضعیت جاری پروژه فقط از ابتدای این فایل و `PROJECT_STATE.md`، `docs/phase1/PHASE1_REPORT.md` و `SUPERVISOR_REVIEW.md` خوانده شود.** طبق وضعیت ثبت‌شده در 2026-10-24 تحت D-024، گیت مستندات/طراحی Phase 1 تأیید شده است؛ Q-023 همچنان گیت اجباری پیش از استقرار میزبانی‌شده است؛ Phase 2 هنوز شروع نشده و مجوز ندارد. تأیید طراحی به معنی تأیید امنیت زمان اجرا نیست.
+
+
+## Phase 2 operational resilience contract (2026-11-09)
+
+`docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` now defines provider-neutral requirements for independent Control Plane primary/replica and backup domains, split-brain fencing, restore quarantine/reconciliation, key recovery, connection/pool isolation and measured cell capacity. It deliberately does not invent RPO/RTO, replication mode, retention duration, failover mode, provider or capacity limits. All environment drills remain NOT RUN.
