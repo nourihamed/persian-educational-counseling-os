@@ -424,6 +424,6 @@ This work remains documentation and draft-schema only. Revised SQL/race tests ha
 
 ## 2026-11-09 — PostgreSQL 16 draft schema verification
 
-Added a PostgreSQL 16 GitHub Actions workflow. Final successful run #35 executed at schema tree commit `418905e6abfcc3134310a4f4a79068b28f74333a` and passed 22 Control Plane assertions (including eight role/privilege catalog checks), 1 concurrent global-identity race and 13 Workspace schema assertions. Earlier failed runs exposed test-fixture defects and a missing sequence grant to the non-login function owner; these were corrected before run #35.
+Added a PostgreSQL 16 GitHub Actions workflow. Latest successful run #53 executed at branch commit `3c50f0be27ebad6c159d20d2447b763868e6bc86` and passed 22 Control Plane PASS notices (including a role-catalog notice covering eight privilege sub-checks), 1 concurrent global-identity race and 13 Workspace schema PASS notices. Earlier failed runs exposed test-fixture defects and a missing sequence grant to the non-login function owner; these were corrected before run #35.
 
 This evidence applies only to the synthetic SQL/schema cases in the workflow. Production service-role binding, trusted approval identity service, cross-Workspace DB authorization, transfer freeze/drain and crash recovery, outbox/inbox delivery, activation+credit atomicity, full capacity concurrency, backup/restore and HA tests remain NOT RUN. Phase 2 Gate remains NOT READY; D-014 remains in force.
