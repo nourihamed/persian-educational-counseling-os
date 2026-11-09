@@ -473,3 +473,9 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 
 ## 2026-11-09 — Phase 2 open decision register
 - Added `docs/phase2/PHASE2_OPEN_DECISIONS.md` to consolidate remaining Product Owner/legal/security/operations decisions and technical closure work without assigning unapproved values.
+
+
+## 2026-11-09 — Workspace membership role source-of-truth correction
+- Removed redundant scalar `workspace_memberships.role_key`; `membership_roles` is the sole role-assignment relation in the draft schema.
+- Updated Workspace schema/activation/race fixtures and added `WS-ROLE-SOURCE-01` schema assertion.
+- Role grant/revocation event audit and direct-DML privilege tests remain open; fresh CI pending.
