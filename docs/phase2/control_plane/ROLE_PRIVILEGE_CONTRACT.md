@@ -52,7 +52,9 @@ The exact function signatures, owner assignments and grants are asserted by `tes
 
 The prior GitHub Actions run #148 passed the former shared-owner catalog design on synthetic PostgreSQL 16. It is historical evidence only and does **not** validate this new split-owner revision.
 
-The transfer and identity-admission owners receive only column-level UPDATE on the CHECK-constrained `singleton` field because PostgreSQL requires UPDATE privilege for `SELECT ... FOR SHARE`; they cannot update `maintenance_mode` or `rotation_epoch`. The rotation owner alone receives those state-changing UPDATE privileges. The catalog suite asserts these column-level boundaries.\n\nThe new catalog suite checks:
+The transfer and identity-admission owners receive only column-level UPDATE on the CHECK-constrained `singleton` field because PostgreSQL requires UPDATE privilege for `SELECT ... FOR SHARE`; they cannot update `maintenance_mode` or `rotation_epoch`. The rotation owner alone receives those state-changing UPDATE privileges. The catalog suite asserts these column-level boundaries.
+
+The new catalog suite checks:
 - role count and forbidden role attributes;
 - absence of the legacy shared `cp_function_owner`;
 - table and function ownership by family;
