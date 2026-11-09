@@ -25,7 +25,7 @@ The initial PR #12 state contained significant gaps: HMAC uniqueness was indexed
 - None newly confirmed as an executable runtime vulnerability because no runtime system is under review. This is not a security clearance.
 
 ### HIGH
-- HMAC rotation still lacks executable global maintenance lock, controlled dual-write path, completeness trigger and KMS/HSM integration. Per-version unique indexes alone do not prove cross-version uniqueness under concurrency.
+- HMAC rotation now has draft SQL for a database-backed maintenance gate, row-lock serialization, claim-write pause, deferred alias-completeness checks and begin/complete/retire functions (cp_05). These drafts have NOT been executed. Production claim-admission service, restricted table grants, KMS/HSM integration, cryptographic backfill and crash/concurrency evidence remain absent; per-version indexes alone are insufficient.
 - Approval principal/authority fields are still only stored references/snapshots. A trusted identity/authorization service must verify and bind guardian legal authority, prior counselor assignment and destination permission to the exact case.
 - Dedicated non-login function owner/workflow role, grants, ownership and privilege review remain unverified. SECURITY DEFINER code must not be executable by PUBLIC or ordinary app roles.
 - Workspace schema is a core skeleton, not the complete Phase 2 domain model. Published-version immutability, Workspace type/branch rules, capacity atomicity and activation/ledger transaction behavior need executable enforcement.
