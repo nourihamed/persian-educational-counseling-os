@@ -3,7 +3,7 @@
 # Run after cp_01, cp_05, cp_07 and cp_06, with active key 1 and retiring key 2 present.
 # Usage: bash cp_25_claim_admission_race.sh <dbname>
 set -u
-DB="\${1:?usage: cp_25_claim_admission_race.sh <dbname>}"
+DB="${1:?usage: cp_25_claim_admission_race.sh <dbname>}"
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
 
