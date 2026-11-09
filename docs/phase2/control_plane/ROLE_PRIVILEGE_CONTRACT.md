@@ -1,6 +1,6 @@
 # Control Plane Role & Privilege Contract
 
-**Status:** DRAFT / NOT APPROVED. The split-owner SQL and catalog assertions passed PostgreSQL 16 GitHub Actions run #222 at exact branch HEAD `2f605051440b4198794e710283f0a6d852983316`. No production credentials or deployment are authorized.
+**Status:** DRAFT / NOT APPROVED. The latest PR description reports PostgreSQL 16 GitHub Actions run #231 PASS at exact branch HEAD `2104eea56806a6f82b405090bc9cbfbd675d2aec`. Re-fetch that workflow run and verify its commit/tree before treating it as current independent evidence. No production credentials or deployment are authorized. No production credentials or deployment are authorized.
 
 ## 1. Roles
 
