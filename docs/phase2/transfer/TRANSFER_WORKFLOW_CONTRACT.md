@@ -85,3 +85,8 @@ Still open: freeze maximum duration, in-flight transaction drain timeout, snapsh
 - Post-switch recovery never cancels or silently reverts ownership.
 
 **No test execution is claimed by this contract.**
+
+
+## Durable cross-database delivery refinement
+
+See `CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md` for the required outbox publisher lease protocol, Workspace inbox transaction, immutable event envelope, source-side freeze/drain barrier, destination staging isolation, failure recovery and reconciliation rules. This is design-only; no distributed Saga runtime or failure-injection evidence is claimed.
