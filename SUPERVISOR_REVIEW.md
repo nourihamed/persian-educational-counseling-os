@@ -1203,3 +1203,8 @@ The contract defines failure domains, single-writer/fencing rules, restore quara
 
 ## Gate impact
 No infrastructure, operational drill or environment evidence was created. Phase 2 remains **NOT READY**; D-014 synthetic-only restriction remains in force.
+
+
+## Workspace capacity concurrency follow-up (2026-11-09)
+
+Added `workspace_capacity_last_slot_race.sh` and wired it into the PostgreSQL 16 workflow. The test uses two distinct enrollments and sufficient wallet balance so the losing transaction must fail on capacity rather than credit exhaustion. Expected invariant: one active enrollment, one debit, one capacity reservation, one command and one audit event; losing attempt fully rolls back. This is implemented in the branch but is **not yet marked PASS** until a fresh CI run on the exact updated head succeeds.
