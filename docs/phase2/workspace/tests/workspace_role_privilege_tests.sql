@@ -36,7 +36,7 @@ DECLARE
   n integer;
   bad text;
 BEGIN
-  IF k !~ '^[a-z0-9]{4,12}$' OR other_k !~ '^[a-z0-9]{4,12}$' OR other_k=k THEN
+  IF k !~ '^[0-9a-f]{32}$' OR other_k !~ '^[0-9a-f]{32}$' OR other_k=k THEN
     RAISE EXCEPTION 'FAIL WS-ROLE-00 invalid or non-distinct workspace role keys';
   END IF;
 
