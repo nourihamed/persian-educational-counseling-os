@@ -21,7 +21,7 @@
 | CP-IDEM-02 | Same key + different payload rejected and audited | SPECIFIED / NOT RUN |
 | CP-EVENT-01 | Outbox/inbox duplicate and out-of-order delivery deduplicated/fenced | SPECIFIED / NOT RUN |
 | CP-FAIL-01 | Control Plane outage/ambiguous ownership denies student-data access | SPECIFIED / NOT RUN |
-| WS-SCHEMA-01 | Workspace membership, branch/type, counselor assignment, guardian permission, educational domain relations, immutable published versions, credit reversals, capacity counters and append-only audit/ledger | SPECIFIED / NOT RUN |
+| WS-SCHEMA-01 | Workspace membership, branch/type, counselor assignment, guardian permission, educational domain relations, immutable published versions, credit reversals, capacity counters, private file metadata, in-app notification idempotency, legal holds and append-only audit/ledger | SPECIFIED / NOT RUN |
 | WS-ISO-01 | Workspace A credential cannot access Workspace B database/data | SPECIFIED / NOT RUN |
 | WS-AUTH-01 | Counselor/manager object and assignment scope enforced | SPECIFIED / NOT RUN |
 | WS-PARENT-01 | Per-child/per-permission parent isolation; expiry/revocation | SPECIFIED / NOT RUN |
