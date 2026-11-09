@@ -1,4 +1,35 @@
 # TEST_PLAN.md
+## Phase 2 Control Plane + Workspace acceptance contracts (2026-11-09)
+
+**Status of this section:** SPECIFIED only. Revised SQL/race files on PR #12 are NOT RUN against the current branch HEAD. Historical test counts in earlier README text are not current evidence.
+
+| ID | Required test | Status |
+|---|---|---|
+| CP-IDENT-01 | Global mobile+grade uniqueness across Workspaces | SPECIFIED / NOT RUN |
+| CP-IDENT-02 | Same mobile with different grade follows approved D-025 rule | SPECIFIED / NOT RUN |
+| CP-IDENT-03 | HMAC rotation freeze, complete backfill, dual-version uniqueness and crash recovery | SPECIFIED / NOT RUN |
+| CP-OWN-01 | Exactly one global owner and one holding claim per student | SPECIFIED / NOT RUN |
+| CP-OWN-02 | Switch rejects missing/multiple/stale source claims | SPECIFIED / NOT RUN |
+| CP-OWN-03 | Ownership generation increments exactly once; stale source writes/jobs denied | SPECIFIED / NOT RUN |
+| CP-XFER-01 | All three cumulative approvals required; expired/revoked approvals denied | SPECIFIED / NOT RUN |
+| CP-XFER-02 | Approval principal, authn event, relationship/assignment and authority scope bound to exact case | SPECIFIED / NOT RUN |
+| CP-XFER-03 | Source freeze barrier drains in-flight writes before final snapshot | SPECIFIED / NOT RUN |
+| CP-XFER-04 | Destination staging remains inaccessible until checks and ownership switch | SPECIFIED / NOT RUN |
+| CP-XFER-05 | Post-switch cancellation/rollback forbidden; forward recovery only | SPECIFIED / NOT RUN |
+| CP-IDEM-01 | Same idempotency key + same canonical payload replays original result | SPECIFIED / NOT RUN |
+| CP-IDEM-02 | Same key + different payload rejected and audited | SPECIFIED / NOT RUN |
+| CP-EVENT-01 | Outbox/inbox duplicate and out-of-order delivery deduplicated/fenced | SPECIFIED / NOT RUN |
+| CP-FAIL-01 | Control Plane outage/ambiguous ownership denies student-data access | SPECIFIED / NOT RUN |
+| WS-ISO-01 | Workspace A credential cannot access Workspace B database/data | SPECIFIED / NOT RUN |
+| WS-AUTH-01 | Counselor/manager object and assignment scope enforced | SPECIFIED / NOT RUN |
+| WS-PARENT-01 | Per-child/per-permission parent isolation; expiry/revocation | SPECIFIED / NOT RUN |
+| WS-VERSION-01 | Published ProgramVersion/StudentPlanVersion immutable | SPECIFIED / NOT RUN |
+| WS-CREDIT-01 | Activation + debit atomic/idempotent; reversal append-only | SPECIFIED / NOT RUN |
+| WS-CAP-01 | Concurrent capacity checks cannot exceed configured limits; archived students excluded | SPECIFIED / NOT RUN |
+| OPS-RESTORE-01 | Independent encrypted backup restore drill, failover and consistency evidence | SPECIFIED / NOT RUN |
+
+A test may be marked IMPLEMENTED only when an executable test exists, EXECUTED only with reproducible logs on the exact reviewed SHA, and PASS only after successful execution. Static review is not execution. Phase 2 cannot pass while required critical security/integrity tests remain NOT RUN.
+
 
 Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14; this is a planned test strategy, not evidence that tests have run or passed.
 
