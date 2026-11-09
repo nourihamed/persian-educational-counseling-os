@@ -355,7 +355,7 @@ CREATE TABLE reviews (
   student_id uuid NOT NULL REFERENCES students(student_id),
   topic_id uuid REFERENCES topics(topic_id),
   scheduled_at timestamptz NOT NULL,
-  cadence_days integer CHECK (cadence_days IS NULL OR cadence_days IN (1,3,7)),
+  cadence_days integer CHECK (cadence_days IS NULL OR cadence_days>0),
   state text NOT NULL CHECK (state IN ('scheduled','completed','missed','cancelled')),
   completed_at timestamptz
 );
