@@ -1,19 +1,25 @@
-# CURRENT PROJECT STATE — PHASE 1 DESIGN GATE (2026-10-24)
+# CURRENT PROJECT STATE — PHASE 2 RECONCILIATION (2026-11-09)
 
-- **Phase 0:** CLOSED by Product Owner on 2026-10-14; PR #1 merged.
-- **Phase 1:** **APPROVED — design/documentation only** after independent review under D-024. Approved scope: provider-neutral Alt-5 architecture, trust boundaries/residual risks, authorization contract, and planned acceptance-test specifications. This is not runtime-security approval.
-- **Architecture:** D-020 Alt-5 hybrid isolation cells. D-023 Level 3 production-cell independence and Level 4 independent critical-backup control remain mandatory.
-- **Q-023:** OPEN as a hard pre-hosting deployment gate, not a Phase 1 design blocker. Provider/account topology, provider capability evidence, cost/capacity and environment-only tests are unselected/unverified and must be completed before hosted deployment. D-014 remains a hard real-data gate.
-- **Tests:** 51 active Alt-5 specifications; 0 implemented, 0 executed, 0 passing. No runtime test, migration, infrastructure or application code is claimed.
-- **Traceability:** 41 category-level path rows; 40 active Alt-5 paths, 39 mapped, one BLOCKED by Q-007 and one excluded Option D row. All 51 active contract IDs map to at least one active path row; endpoint-level coverage remains deferred.
-- **PR #3:** Merged into main by squash on 2026-10-24, merge commit b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa.
-- **PR #6:** Merged into main by squash on 2026-10-24, merge commit fb16219d506998c9e074971927b55e322f32c21d. The 51-contract catalog and corrected 41-row path inventory are now in the source-of-truth branch.
-- **Phase 2:** NOT STARTED / NOT AUTHORIZED. Phase progression requires separate Product Owner authorization. Real student data remains prohibited under D-014.
-- **Historical material below:** older status snapshots and operational notes are retained for traceability. Where they conflict with the current summary above, the dated current summary and D-024 control; do not use older sections as the live gate.
+- **Phase 0:** CLOSED; historical documentation foundation.
+- **Phase 1:** APPROVED for design/documentation only under D-024. This is not runtime security approval.
+- **Phase 2:** **NOT READY.** Product Owner decisions are consolidated in PR #12, but the Workspace-centric domain schema, Control Plane/Workspace separation, transfer workflow, API/security contracts and independent executable evidence remain incomplete.
+- **Source of truth:** GitHub. PR #12 branch `docs/product-owner-decisions-consolidation-2026-11-07`; current branch head must be re-fetched before each review. PR #12 is OPEN / DRAFT / UNMERGED. No changes in this branch are in `main`.
+- **PR #8–#11:** Separate draft PRs; they must be re-fetched and reconciled before any merge. PR #12 does not absorb or merge them.
+- **Current Phase 2 artifacts added/updated on PR #12:** Control Plane schema drafts (including versioned HMAC aliases, ownership switch and transition guards), transfer command idempotency draft, Control Plane regression/race tests, Workspace database design and skeleton SQL, transfer workflow contract, API/authorization contract, HMAC rotation protocol and decision crosswalk. Root architecture/domain/security documents received current-state override notes.
+- **Known incomplete controls:** HMAC rotation lock/dual-write/completeness enforcement and KMS integration; approval identity/authority verification service; dedicated DB roles/grants; outbox/inbox runtime and crash recovery; full Workspace domain schema; complete parent permission/legal matrix; measured HA/backup/restore/capacity.
+- **Tests:** The prior 26 PASS / 0 FAIL and 5/5 race results apply to an earlier draft and are superseded. The revised SQL/race suite has **NOT RUN** against the current branch head. No current Phase 2 test is independently verified as PASS.
+- **Crosswalk:** D-028 onward are NOT assigned. The earlier proposed D-028…D-062 sequence is withdrawn pending the collision-free crosswalk and individual PO approval. OQ-A through OQ-F3 are accepted at policy/direction level; Q-007 remains open for detailed legal/age-based authorization.
+- **Architecture:** Workspace is the tenant boundary (Organization or Independent Counselor). Control Plane owns global student identity, current owner, generation and global mobile+grade claim. Workspace DB owns local educational data and projections. No cross-database foreign keys or atomic cross-database transactions are claimed.
+- **Transfer:** MVP direction is source write-freeze + final snapshot + destination staging/validation + atomic Control Plane ownership switch. Three cumulative approvals remain mandatory. Recovery after ownership switch is forward-only.
+- **Real data:** Prohibited under D-014. Synthetic data only until independent required security/migration/backup/restore/file/API tests pass and the Product Owner gives explicit written approval.
+- **Phase 3:** Not authorized. Do not start Phase 3 or merge PRs based on documentation creation alone.
+
+**Current Gate: NOT READY.** The Phase 2 design is still undergoing reconciliation; the current PR is a draft delivery vehicle, not approval.
 
 ---
 
-# HISTORICAL ADDENDUM — D-023 PRODUCTION / BACKUP INDEPENDENCE TARGET (superseded by D-024) (2026-10-23)
+# HISTORICAL ADDENDUM
+ — D-023 PRODUCTION / BACKUP INDEPENDENCE TARGET (superseded by D-024) (2026-10-23)
 
 - **Product Owner decision:** target Level 3 infrastructure and administrative independence for production cells, plus Level 4 independent administrative/control boundary for critical backups and recovery. See DECISION_LOG.md D-023.
 - **Meaning:** the levels are project-specific targets, not evidence that any provider or deployment meets them. A shared host/account with multiple VMs or Compose stacks is not by itself sufficient. Backup data, keys and deletion/retention controls must be outside ordinary production-account control.
