@@ -121,7 +121,7 @@ SELECT admit_student_identity_claim(
  '[{"key_version":1,"mobile_hmac_hex":"1111111111111111111111111111111111111111111111111111111111111111"},{"key_version":2,"mobile_hmac_hex":"2222222222222222222222222222222222222222222222222222222222222222"}]'::jsonb);
 UPDATE identity_write_gate SET maintenance_mode=false WHERE singleton=true;
 
-SELECT cp_admit_expect_error('CP-ADMIT-12 identity admission command log is append-only',
+SELECT cp_admit_expect_error('CP-ADMIT-13 identity admission command log is append-only',
   $q$UPDATE identity_admission_commands SET grade_key='grade_12' WHERE idempotency_key='admit-one'$q$,
   '23514');
 
