@@ -45,7 +45,7 @@ Credit/capacity rules:
 - Runtime cannot INSERT/UPDATE/DELETE credit_transactions, capacity_events, workspace_capacity_counters or activation_command_log.
 - activate_student_enrollment(...) is the controlled operation exposed to runtime. It validates local generation and prerequisites, then atomically writes the activation debit, capacity event and enrollment state.
 - adjust_workspace_capacity(...) is callable only by the non-login function owner.
-- Wallet balance is derived from the ledger. A wallet-row lock serializes ledger inserts and rejects any transaction that would make the balance negative.
+- Wallet balance is derived from the ledger. The MVP wallet uses unit_code `CRD`, never a fiat currency. A wallet-row lock serializes ledger inserts and rejects any transaction that would make the balance negative.
 - Exporter remains deny-by-default until scope-safe views are designed and explicitly granted.
 
 ## 4. Object-level authorization remains mandatory
