@@ -154,7 +154,8 @@ BEGIN
   IF OLD.status='published' THEN
     RAISE EXCEPTION 'published versions are immutable; create a new version' USING ERRCODE='check_violation';
   END IF;
-  RETURN CASE WHEN TG_OP='DELETE' THEN OLD ELSE NEW END;
+  IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
 END; $;
 CREATE TRIGGER program_versions_immutable
   BEFORE UPDATE OR DELETE ON program_versions
