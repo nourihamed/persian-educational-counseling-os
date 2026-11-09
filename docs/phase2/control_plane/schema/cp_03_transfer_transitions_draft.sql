@@ -25,10 +25,13 @@ INSERT INTO transfer_state_transitions (from_state, to_state) VALUES
  ('preflight_ok','cancelled'),('staging','cancelled'),('staged_verified','cancelled'),
  ('staging','failed_recoverable'),('staged_verified','failed_recoverable'),('cutover_frozen','failed_recoverable'),
  ('failed_recoverable','staging'),('failed_recoverable','cutover_frozen'),
- ('failed_recoverable','manual_intervention'),('failed_recoverable','cancelled'),
- -- After the switch, recovery moves forward (no automatic return to the source; PR #11 §5).
- ('ownership_switched','manual_intervention'),('projections_finalizing','manual_intervention'),
- ('manual_intervention','projections_finalizing');
+ ('failed_recoverable','manual_intervention_pre_switch'),
+ -- A pre-switch case may only cancel after the source has been explicitly unfrozen by
+ -- the source-side freeze controller; this transition table alone is not that proof.
+ ('manual_intervention_pre_switch','staging'),('manual_intervention_pre_switch','cutover_frozen'),('manual_intervention_pre_switch','cancelled'),
+ -- After ownership switch, recovery is forward-only; post-switch intervention cannot cancel or revert.
+ ('ownership_switched','manual_intervention_post_switch'),('projections_finalizing','manual_intervention_post_switch'),
+ ('manual_intervention_post_switch','projections_finalizing');
 -- Recovery transitions are operationally guarded: before switch, a verified checkpoint may resume;
 -- after switch, only forward projection finalization is permitted. Thresholds remain operationally open.
 
