@@ -1,38 +1,49 @@
 # TEST_PLAN.md
 ## Phase 2 Control Plane + Workspace acceptance contracts (2026-11-09)
 
-**Execution evidence:** GitHub Actions workflow run [#53](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42644631913) completed SUCCESS on PostgreSQL 16 at branch commit `3c50f0be27ebad6c159d20d2447b763868e6bc86`: 22 Control Plane PASS notices (one role-catalog notice covers eight privilege sub-checks), 1 concurrent global-identity race, and 13 Workspace schema PASS notices. This is draft-schema evidence only, not runtime/API/production/HA approval. Earlier failed runs exposed and led to correction of test-fixture and privilege-grant defects; run #53 is the latest successful run.
+**Latest successful execution:** GitHub Actions run [#148](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42648353070), PostgreSQL 16, SQL/test tree SHA \`e97056b44ebfdbfce5344a9c524ba8af1e72055b\`. It passed Control Plane transfer/rotation/claim-admission suites, Control Plane role catalog, two-session global identity and claim-admission races, Workspace schema/activation/credit/capacity/audit suites, concurrent activation, and per-Workspace role/CONNECT catalog checks. Subsequent changes were documentation and a test-label correction only. This is synthetic draft-SQL evidence, not API/runtime/production/HA approval.
 
 | ID | Required test | Status |
 |---|---|---|
 | CP-IDENT-01 | Global mobile+grade uniqueness across Workspaces | EXECUTED / PASS |
 | CP-IDENT-02 | Same mobile with different grade follows approved D-025 rule | EXECUTED / PASS |
-| CP-IDENT-03 | HMAC rotation gate, alias completeness, key-version overlap and retirement lifecycle | EXECUTED / PASS for SQL lifecycle cases; crash/recovery and live KMS backfill NOT RUN |
-| CP-IDENT-04 | Rotation gate blocks claim mutations; deferred triggers reject missing/mismatched aliases; complete/retire lifecycle remains safe under retries | EXECUTED / PASS for covered cases; adversarial concurrency/retry NOT RUN |
-| CP-ROLE-01 | Runtime/function/table-owner role separation, no SUPERUSER/BYPASSRLS, no direct protected-table writes, no PUBLIC EXECUTE and safe SECURITY DEFINER ownership | EXECUTED / PASS in ephemeral PostgreSQL CI; production service-role binding NOT RUN |
-| CP-OWN-01 | Exactly one global owner and one holding claim per student | EXECUTED / PARTIAL: one holding claim per student tested; duplicate owner row and DB role path NOT RUN |
-| CP-OWN-02 | Switch rejects missing/multiple/stale source claims | EXECUTED / PARTIAL: stale generation/source tested; missing/multiple source-claim cases NOT RUN |
-| CP-OWN-03 | Ownership generation increments exactly once; stale source writes/jobs denied | EXECUTED / PARTIAL: switch generation increment and stale source/generation tested; stale jobs/writes NOT RUN |
-| CP-XFER-01 | All three cumulative approvals required; expired/revoked approvals denied | EXECUTED / PARTIAL: missing fee approval blocks and three approvals allow switch; expiry/revocation NOT RUN |
-| CP-XFER-02 | Approval principal, authn event, relationship/assignment and authority scope bound to exact case | NOT RUN (schema stores references/snapshots; trusted verification service absent) |
-| CP-XFER-03 | Source freeze barrier drains in-flight writes before final snapshot | NOT RUN (metadata guards only; distributed freeze/drain not implemented) |
-| CP-XFER-04 | Destination staging remains inaccessible until checks and ownership switch | NOT RUN (service-level access gate not implemented) |
-| CP-XFER-05 | Post-switch cancellation/rollback forbidden; forward recovery only | EXECUTED / PARTIAL: post-switch cancellation rejected; crash/forward-recovery NOT RUN |
+| CP-IDENT-03 | HMAC rotation gate, alias completeness, active/retiring overlap and retirement lifecycle | EXECUTED / PASS for SQL lifecycle cases; live KMS backfill and crash/recovery NOT RUN |
+| CP-IDENT-04 | Rotation gate serializes admission; incomplete/mismatched aliases rejected | EXECUTED / PASS for included synthetic cases; KMS and adversarial operational concurrency NOT RUN |
+| CP-ADMIT-01 | Initial claim atomically creates Platform Student, owner, claim, encrypted contact index and every live HMAC alias | EXECUTED / PASS |
+| CP-ADMIT-02 | Idempotent replay and same-key/different-payload rejection | EXECUTED / PASS |
+| CP-ADMIT-03 | Cross-Workspace duplicate mobile+grade rejected; same mobile/different grade allowed | EXECUTED / PASS |
+| CP-ADMIT-04 | Missing/duplicate/malformed aliases, inactive encryption key, inactive Workspace and zero-active-HMAC cases rejected | EXECUTED / PASS |
+| CP-ADMIT-05 | New admission fails closed during maintenance; replay remains idempotent | EXECUTED / PASS |
+| CP-ADMIT-RACE-01 | Concurrent cross-Workspace claim admission produces one winner and full rollback of loser | EXECUTED / PASS |
+| CP-ROLE-01 | Control Plane owner/executor roles, direct-table denial, executor function scope, no PUBLIC EXECUTE | EXECUTED / PASS in ephemeral PostgreSQL; shared function-owner blast radius remains HIGH |
+| CP-OWN-01 | Exactly one global owner and one holding claim per student | EXECUTED / PARTIAL: one holding claim per student tested; broader owner-race and lifecycle paths NOT RUN |
+| CP-OWN-02 | Switch rejects missing/multiple/stale source claims | EXECUTED / PARTIAL: stale generation/source tested; all cardinality cases NOT RUN |
+| CP-OWN-03 | Ownership generation increments exactly once; stale source writes/jobs denied | EXECUTED / PARTIAL: switch generation and stale source/generation tested; stale jobs/writes NOT RUN |
+| CP-XFER-01 | All three cumulative approvals required; expired/revoked approvals denied | EXECUTED / PARTIAL: missing fee approval blocks and all three approvals allow switch; expiry/revocation NOT RUN |
+| CP-XFER-02 | Approval principal, authn event, relationship/assignment and authority scope bound to exact case | NOT RUN (trusted identity/authority verification service absent) |
+| CP-XFER-03 | Source freeze barrier drains in-flight writes before final snapshot | NOT RUN (distributed freeze/drain not implemented) |
+| CP-XFER-04 | Destination staging inaccessible until checks and ownership switch | NOT RUN (service-level access gate not implemented) |
+| CP-XFER-05 | Post-switch cancellation forbidden; forward recovery only | EXECUTED / PARTIAL: post-switch cancellation rejected; crash/forward recovery NOT RUN |
 | CP-IDEM-01 | Same idempotency key + same canonical payload replays original result | EXECUTED / PASS |
-| CP-IDEM-02 | Same key + different payload rejected and audited | EXECUTED / PASS for rejection/payload immutability; audit integration NOT RUN |
-| CP-EVENT-01 | Outbox/inbox duplicate and out-of-order delivery deduplicated/fenced | NOT RUN (outbox payload immutability only tested) |
+| CP-IDEM-02 | Same key + different payload rejected | EXECUTED / PASS for transfer and admission; end-to-end audit integration NOT RUN |
+| CP-EVENT-01 | Outbox/inbox duplicate/out-of-order delivery deduplicated and fenced | NOT RUN (database event payload immutability only; worker delivery absent) |
 | CP-FAIL-01 | Control Plane outage/ambiguous ownership denies student-data access | NOT RUN (runtime fail-closed integration absent) |
-| WS-SCHEMA-01 | Workspace membership, branch/type, counselor assignment, guardian permission, educational domain relations, immutable published versions, credit reversals, capacity counters, private file metadata, in-app notification idempotency, legal holds and append-only audit/ledger | EXECUTED / PASS for included schema fixtures |
-| WS-ROLE-01 | Per-Workspace distinct DB credentials, no runtime owner/BYPASSRLS, no cross-Workspace connection, least-privilege worker/exporter grants | SPECIFIED / NOT RUN |
-| WS-ISO-01 | Workspace A credential cannot access Workspace B database/data | NOT RUN (requires separate credentials/DB service integration) |
+| WS-SCHEMA-01 | Workspace membership, branch/type, assignments, guardian record shape, educational domain, immutable versions, credit ledger, capacity, files, notifications, legal holds and audit | EXECUTED / PASS for included schema fixtures |
+| WS-ROLE-01 | Per-Workspace unique role names, object owners, no elevated runtime attributes, least-privilege grants and two-database CONNECT denial | EXECUTED / PASS in two synthetic databases; production credentials and API/data isolation NOT RUN |
+| WS-ISO-01 | Workspace A cannot access Workspace B data through API/repository/files/jobs | NOT RUN (database CONNECT ACL only was tested) |
 | WS-AUTH-01 | Counselor/manager object and assignment scope enforced | NOT RUN (runtime authorization absent) |
-| WS-PARENT-01 | Per-child/per-permission parent isolation; expiry/revocation | NOT RUN (legal/age matrix and authorization service absent) |
+| WS-PARENT-01 | Per-child/per-permission parent isolation; expiry/revocation/legal matrix | NOT RUN |
 | WS-VERSION-01 | Published ProgramVersion/StudentPlanVersion immutable | EXECUTED / PASS |
-| WS-CREDIT-01 | Activation + debit atomic/idempotent; reversal append-only | EXECUTED / PARTIAL: ledger immutability, exact reversal and duplicate reversal tested; activation/debit atomicity NOT RUN |
-| WS-CAP-01 | Concurrent capacity checks cannot exceed configured limits; archived students excluded | EXECUTED / PARTIAL: atomic counter ceiling/idempotency/underflow tested; concurrent activation and archived exclusion NOT RUN |
+| WS-ACT-01 | Activation, credit debit, capacity reservation and audit event are one transaction | EXECUTED / PASS |
+| WS-ACT-02 | Activation idempotency, payload mismatch and duplicate activation | EXECUTED / PASS |
+| WS-ACT-03 | Insufficient credit, capacity exhaustion, stale generation, missing responsible counselor and suspended actor rollback | EXECUTED / PASS |
+| WS-ACT-RACE-01 | Concurrent activation of the same enrollment yields one debit, capacity reservation and audit event | EXECUTED / PASS |
+| WS-CREDIT-01 | Wallet balance cannot go negative; reversals are exact, append-only and single-use | EXECUTED / PASS for included ledger cases; payment/refund/renewal policy NOT RUN |
+| WS-CREDIT-UNIT-01 | Student Credit unit is CRD, not a fiat currency code | EXECUTED / PASS |
+| WS-CAP-01 | Atomic active-student capacity ceiling and idempotent capacity event | EXECUTED / PASS for included cases; two different students racing for last slot and archived exclusion NOT RUN |
 | OPS-RESTORE-01 | Independent encrypted backup restore drill, failover and consistency evidence | NOT RUN |
 
-A test may be marked IMPLEMENTED only when an executable test exists, EXECUTED only with reproducible logs on the exact reviewed SHA, and PASS only after successful execution. Static review is not execution. Phase 2 cannot pass while required critical security/integrity tests remain NOT RUN.
+A test may be marked IMPLEMENTED only when an executable test exists, EXECUTED only with reproducible logs on the exact reviewed SQL/test tree, and PASS only after successful execution. Static review is not execution. Phase 2 cannot pass while required critical security/integrity tests remain NOT RUN.
 
 
 Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14; this is a planned test strategy, not evidence that tests have run or passed.
