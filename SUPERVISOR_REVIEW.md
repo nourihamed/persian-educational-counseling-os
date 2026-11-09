@@ -1186,3 +1186,20 @@ Inspected the actual `workspace_schema_draft.sql` table/constraint definitions a
 
 ## Gate impact
 The current Workspace schema is a useful skeleton but cannot be called a complete domain model. No SQL changes or executable tests were made in this review step. Phase 2 remains **NOT READY**; D-014 synthetic-only restriction remains in force.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Operational Resilience & Backup (2026-11-09)
+
+## Scope
+Added `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` to translate OQ-D Option A and D-023 into provider-neutral acceptance criteria.
+
+## HIGH finding — no operational evidence
+Independent backup custody, restore drills, primary fencing, failover, split-brain prevention, pool/credential eviction and measured capacity remain unimplemented/unverified. A primary/replica pair is not a backup; same-account backups do not satisfy the independent backup target.
+
+## Design delivered
+The contract defines failure domains, single-writer/fencing rules, restore quarantine and authoritative ownership reconciliation, encryption-key recovery, isolated restore drills, load/connection measurements and 16 environment-level acceptance criteria. It does not choose unapproved RPO/RTO, replication mode, retention periods, failover automation, provider or capacity values.
+
+## Gate impact
+No infrastructure, operational drill or environment evidence was created. Phase 2 remains **NOT READY**; D-014 synthetic-only restriction remains in force.
