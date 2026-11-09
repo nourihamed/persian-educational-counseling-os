@@ -217,3 +217,8 @@ Added assessment, deterministic planning and curriculum domain contracts under `
 ## Activity, Student Credit and capacity design contracts (2026-11-09)
 
 Added `ACTIVITY_CLASS_DOMAIN_CONTRACT.md`, `STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` and `CAPACITY_LIFECYCLE_CONTRACT.md`. These specify typed activity/class relationships, the CRD-vs-fiat commercial ledger boundary and lifecycle-safe capacity reservations. Product decisions on refund policy, suspension capacity, class scope and numeric limits remain open; SQL/service implementation and associated tests remain incomplete.
+
+
+## Workspace authorization privilege correction (2026-11-09)
+
+The Workspace provisioning draft now grants runtime SELECT-only access to membership, role, permission, branch, counselor assignment and guardian relationship/permission tables. The activation function owner is also read-only on these authorization sources. Its DML grants are narrowed to activation needs and column-level lock-only grants; wallet identity is immutable. Catalog tests assert these boundaries. A dedicated audited authorization-management workflow and append-only grant/revoke events remain absent, so authorization changes are fail-closed/unavailable through runtime. Fresh CI for the current branch tree is not verified.
