@@ -39,10 +39,6 @@ CREATE TABLE mobile_encryption_key_versions (
     retired_at timestamptz,
     CHECK ((state='retired') = (retired_at IS NOT NULL))
 );
-ALTER TABLE student_contact_index
-  ADD CONSTRAINT student_contact_index_cipher_key_version_fk
-  FOREIGN KEY (cipher_key_version) REFERENCES mobile_encryption_key_versions(key_version);
-
 -- key_version identifies which HMAC key produced mobile_hmac (rotation, OQ-B).
 -- Multiple versions coexist during a write-frozen, fully backfilled rotation.
 CREATE TABLE student_contact_index (
@@ -81,6 +77,9 @@ INSERT INTO identity_write_gate(singleton,maintenance_mode,rotation_epoch) VALUE
 ALTER TABLE student_contact_index
   ADD CONSTRAINT student_contact_index_key_version_fk
   FOREIGN KEY (key_version) REFERENCES mobile_hmac_key_versions(key_version);
+ALTER TABLE student_contact_index
+  ADD CONSTRAINT student_contact_index_cipher_key_version_fk
+  FOREIGN KEY (cipher_key_version) REFERENCES mobile_encryption_key_versions(key_version);
 
 CREATE TABLE student_ownership (
     student_id           uuid PRIMARY KEY REFERENCES platform_students (student_id),
