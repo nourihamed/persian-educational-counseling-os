@@ -127,9 +127,16 @@ CREATE TABLE transfer_approvals (
     case_id         uuid NOT NULL REFERENCES transfer_cases (case_id),
     approval_kind   text NOT NULL CHECK (approval_kind IN ('guardian_consent', 'fee_confirmation', 'destination_acceptance')),
     evidence_ref    text NOT NULL,                  -- opaque reference; no personal document content
-    approver_ref    text NOT NULL,                  -- authenticated principal reference from Phase 4 identity
+    approver_ref    text NOT NULL,                  -- stable authenticated subject, not caller-supplied authority
+    authn_event_ref text NOT NULL,                  -- reference to verified authentication/step-up event
+    authority_snapshot jsonb NOT NULL,              -- verified relationship/assignment/destination authority snapshot
+    verified_at     timestamptz NOT NULL,
+    valid_until     timestamptz,
+    revoked_at      timestamptz,
     recorded_at     timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (case_id, approval_kind)                 -- one approval of each kind per case; not reusable across cases
+    UNIQUE (case_id, approval_kind),
+    UNIQUE (evidence_ref),
+    CHECK (valid_until IS NULL OR valid_until > verified_at)
 );
 
 -- Idempotency / command deduplication for ownership-changing commands.
