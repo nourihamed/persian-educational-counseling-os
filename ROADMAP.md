@@ -84,3 +84,6 @@ Phase 0 توسط Product Owner در 2026-10-14 بسته شد و PR #1 در هم�
 - `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md` preserves Q-007 as open pending qualified Iran legal review and PO approval.
 - `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md` defines versioned category-based disposition and legal-hold requirements without numeric retention guesses.
 - `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` defines failover/restore/capacity acceptance boundaries; all environment tests remain NOT RUN.
+
+
+Phase 2 exit criteria are centralized in `docs/phase2/PHASE2_EXIT_CRITERIA.md`. Do not treat later-phase implementation requirements as Phase 2 runtime deliverables; Phase 2 must nevertheless specify their architecture, invariants and acceptance tests before progression.
