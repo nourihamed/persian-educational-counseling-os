@@ -2,17 +2,17 @@
 ## Current Phase 2 status — 2026-11-09 (authoritative addendum)
 
 - Phase 2 remains **NOT READY**; PR #12 is Open/Draft/Unmerged. No changes have been merged into main.
-- PostgreSQL 16 synthetic CI run #148 passed the current Control Plane claim-admission/rotation/transfer draft tests, Workspace activation/credit/capacity/audit tests, concurrency races and role/CONNECT catalog assertions. This is draft SQL evidence only.
-- Completed draft work: Workspace-centric model; Control Plane/Workspace separation; initial claim admission with HMAC alias coverage; transfer ownership switch and state machine; atomic Workspace activation/debit/capacity/audit; per-Workspace DB role provisioning templates and catalog tests; canonical status/review/test-plan updates.
+- Latest verified successful SQL CI is Run #231 (PostgreSQL 16) at exact SHA `2104eea56806a6f82b405090bc9cbfbd675d2aec`; it passed the split-owner role catalog assertions, Control Plane transfer/rotation/initial admission tests and races, Workspace schema/activation/credit/capacity/audit tests, and per-Workspace role/CONNECT checks. It does NOT cover the subsequently added final-capacity-slot race script/workflow step. No CI status is verified for the latest branch head.
+- Completed draft/design work: Workspace-centric model; Control Plane/Workspace separation; initial claim admission/HMAC alias coverage; split Control Plane function owners and catalog tests; transfer switch/state machine; atomic Workspace activation/debit/capacity/audit; per-Workspace role/CONNECT tests; contact-change, approval-authority, cross-Workspace Saga, parent authority, retention/legal-hold, operational resilience contracts; Workspace domain schema gap review; final-capacity-slot race test added to CI but not yet executed.
 - Remaining Phase 2 sequence:
-  1. Split the broad Control Plane function-owner role into transfer, rotation and identity-admission function owners with narrow DML grants and catalog tests.
-  2. Implement and test the mobile contact-change/reverification contract (documented); SQL command, trusted proof verifier, API and executable tests remain open.
-  3. Implement and test the transfer approval identity/authority contract (documented); redesign approval/revocation schema as append-only events and add trusted verifier/API tests.
-  4. Implement and test the cross-Workspace Saga contract (documented): durable outbox/inbox workers, source freeze/drain, final snapshot, destination staging, projection updates, generation fencing and forward recovery.
-  5. Complete Workspace domain schema, parent age/legal matrix, retention/deletion/legal-hold rules, credit purchase/refund/renewal and remaining capacity dimensions.
+  1. Implement and test mobile contact-change/reverification; SQL command, trusted proof verifier, API and executable tests remain open.
+  2. Redesign transfer approval/revocation schema as append-only events; implement trusted assertion verifier, authority revalidation and API tests.
+  3. Implement durable cross-Workspace Saga: outbox/inbox workers, source freeze/drain, final snapshot, destination staging, projection updates, generation fencing, reconciliation and crash recovery.
+  4. Resolve Workspace domain HIGH findings WS-DOM-01..03 and MEDIUM WS-DOM-04..09; complete curriculum/planning, assessment, class, activity, capacity, credit and file/notification lifecycle schema.
+  5. Complete Q-007 Iran age/legal guardian matrix and retention/legal-hold policy approvals without inventing numeric durations.
   6. Implement API authentication/authorization and service credential binding; test counselor/manager/guardian object scope, files, exports, notifications and IDOR.
-  7. Run independent backup/restore, failover, pool isolation, load/capacity and target-environment security tests.
-  8. Re-fetch main and PRs #8–#12, reconcile canonical docs, and obtain independent Supervisor review and explicit Product Owner Gate decision.
+  7. Execute independent backup/restore, failover, split-brain, pool isolation, load/capacity and target-environment security tests; resolve Q-023 before hosted deployment.
+  8. Reconcile PRs #8–#11 with PR #12, resolve branch divergence, run fresh CI on exact final SHA, complete independent Supervisor review and obtain explicit Product Owner Gate decision.
 - Phase 3 is not authorized until Phase 2 is independently APPROVED and the Product Owner separately authorizes progression.
 - D-014 remains in force: synthetic data only; real student/customer data prohibited until all required controls/tests/review and written PO approval.
 
