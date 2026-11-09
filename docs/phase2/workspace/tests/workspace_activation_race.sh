@@ -17,7 +17,7 @@ INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state)
 VALUES('a9200000-0000-0000-0000-000000000001','e9100000-0000-0000-0000-000000000001',1,'requested');
 INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at)
 VALUES('b9200000-0000-0000-0000-000000000001','a9200000-0000-0000-0000-000000000001','b9100000-0000-0000-0000-000000000001',true,'active',now());
-INSERT INTO credit_wallets(wallet_id,currency_code)
+INSERT INTO credit_wallets(wallet_id,unit_code)
 VALUES('c9200000-0000-0000-0000-000000000001','CRD');
 INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,reason)
 VALUES('d9200000-0000-0000-0000-000000000001','c9200000-0000-0000-0000-000000000001','grant',10,'race-opening-grant','synthetic race opening balance');
