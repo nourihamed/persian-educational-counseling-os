@@ -87,7 +87,7 @@ Initiation is not approval and approval is not finalization.
 | API/authorization contract | Added; no endpoints implemented |
 | Control Plane SQL tests | Revised; NOT RUN against current HEAD |
 | Canonical root documents | Still require explicit reconciliation and consistency review |
-| PR #8 original domain schema | Still requires Workspace-centric redesign/reconciliation |
+| PR #8 original domain schema | Superseded by `docs/phase2/PHASE2_DOMAIN_MODEL.md` and new Workspace/Control Plane drafts; PR #8 must be reconciled/rebased or superseded and must not be merged as-is |
 | Phase 2 Gate | NOT READY |
 | Real student/customer data | Prohibited under D-014 |
 
