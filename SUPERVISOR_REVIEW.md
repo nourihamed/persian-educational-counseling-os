@@ -13,7 +13,7 @@ Current PR #12 branch tree, including:
 - Transfer Freeze + Final Snapshot contract, API/authorization and security contracts.
 - Project state, roadmap, test plan, changelog and open questions.
 
-Latest successful CI evidence: GitHub Actions run #148, PostgreSQL 16, SQL/test tree SHA e97056b44ebfdbfce5344a9c524ba8af1e72055b. It passed Control Plane role/transfer/rotation/claim-admission tests, two-session global identity and claim-admission races, Workspace schema/activation/credit/capacity/audit tests, concurrent activation and per-Workspace role/CONNECT catalog assertions. Later changes were documentation and a test-label correction only; no SQL behavior changed after run #148.
+Latest successful CI evidence: GitHub Actions run [#200](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42652272823), PostgreSQL 16, exact branch commit `5990bd3170f7c2d8b950d6b7338f0e94b7e46121`. It passed the split-owner role catalog suite (CP-ROLE-01..11), immutable Workspace UUID test, Control Plane transfer/rotation/claim-admission tests and races, Workspace schema/activation/credit/capacity/audit tests, concurrent activation and per-Workspace role/CONNECT assertions. Run #148 is historical evidence for the earlier shared-owner design.
 
 ## Summary
 The initial PR #12 state had material defects in HMAC uniqueness across key versions, source-claim validation, transfer state transitions, idempotency and incomplete Workspace activation. Corrective draft SQL and regression suites now cover initial Control Plane claim admission, HMAC alias coverage, atomic Workspace activation/debit/capacity/audit, and database-role separation. The synthetic PostgreSQL workflow passes. The result is substantially improved but remains a design/schema-draft delivery, not a runtime authorization system, production migration, distributed transfer implementation or operational readiness approval.
@@ -29,7 +29,7 @@ The initial PR #12 state had material defects in HMAC uniqueness across key vers
 - Workspace activation checks local generation, active membership and one accepted responsible counselor; credit debit, active-student capacity reservation, enrollment activation and minimal audit event are atomic/idempotent.
 - Wallet-row locking and balance guard reject negative Student Credit; Student Credit unit CRD is distinct from fiat currency.
 - Per-Workspace PostgreSQL role names derive from canonical Workspace UUID; two synthetic databases reject cross-Workspace CONNECT by catalog privilege checks.
-- Control Plane and Workspace role/privilege catalog suites pass in ephemeral PostgreSQL 16 CI.
+- Control Plane split-owner and Workspace role/privilege catalog suites pass in ephemeral PostgreSQL 16 CI at run #200 / commit `5990bd3`.
 - Workspace schema fixtures cover selected membership, branch, assignment, guardian record, educational domain, versioning, credit ledger, capacity, file, notification, legal-hold and audit constraints.
 
 ## Findings
@@ -38,7 +38,7 @@ The initial PR #12 state had material defects in HMAC uniqueness across key vers
 - No new CRITICAL defect was demonstrated in the included synthetic SQL scope. This is not a runtime or production security clearance; untested paths remain outside this statement.
 
 ### HIGH
-- **Control Plane function-owner blast radius — remediation draft added, not closed:** the current branch now assigns transfer, rotation and identity-admission SECURITY DEFINER functions to separate non-login owners and grants family-specific table privileges. Catalog tests were expanded to assert role ownership and representative allow/deny boundaries. The new SQL/test revision has not yet passed a fresh CI run at its exact HEAD; trigger/helper privilege completeness and least-privilege minimization remain under review.
+- **Control Plane function-owner blast radius — addressed in the tested draft:** transfer, rotation and identity-admission SECURITY DEFINER functions now have separate NOLOGIN owners. Run #200 passed owner-family, representative allow/deny, executor, sequence, helper/trigger-path and column-scoped row-lock assertions. Production credential binding and exhaustive target-environment privilege-drift checks remain open.
 - **Contact-change workflow missing:** initial claim admission exists, but changing/re-verifying a student's mobile number and updating all active/retiring aliases/ciphertext atomically is not implemented.
 - **Cryptographic trust boundary missing:** no production KMS/HSM, HMAC derivation service, encryption-key lifecycle, authenticated cryptographic backfill or key custody/revocation drill. SQL tests cannot prove two HMAC aliases derive from the same canonical E.164.
 - **Approval authority not proven:** guardian legal authority, prior counselor identity/fee confirmation and destination acceptance are stored as references/snapshots; a trusted authentication/authorization service must bind each approval to the authenticated principal and exact case.
@@ -72,20 +72,20 @@ The database functions define operations, not a complete API. Authentication, ob
 Synthetic catalog tests pass for current role drafts. Production identity, secret management, KMS/HSM, API authorization, legal guardian verification, file/export authorization, notification isolation and cross-database pool safety remain unverified. D-014 remains mandatory.
 
 ## Testing
-Run #148 passes the checked-in PostgreSQL 16 draft SQL workflow. This evidence is limited to the included synthetic fixtures and assertions. API, E2E, crash/recovery, backup/restore, failover, real credentials and target-environment tests remain NOT RUN.
+Run #200 passes the checked-in PostgreSQL 16 draft SQL workflow at exact commit `5990bd3`. This evidence is limited to the included synthetic fixtures and assertions. API, E2E, crash/recovery, backup/restore, failover, real credentials and target-environment tests remain NOT RUN.
 
 ## Documentation
 Decision consolidation, crosswalk draft, Control Plane/Workspace contracts and test evidence were updated. Root canonical documents and remaining open questions must continue to be reconciled against the latest branch and PRs #8–#11. Product Owner decisions are not implementation approval.
 
 ## Technical Debt
-- Split Control Plane function-owner grant matrix remains pending fresh CI and independent trigger/helper-path review.
+- Split Control Plane function-owner grant matrix passed the synthetic PostgreSQL 16 catalog/regression workflow; production credential binding and target-environment verification remain open.
 - Initial admission implemented without contact-change/reverification.
 - No durable cross-database outbox/inbox worker or Saga orchestrator.
 - No production credential/KMS/backup/restore evidence.
 - Some legal/retention/capacity and domain rules remain policy-level or unspecified.
 
 ## Required Changes
-1. Run fresh PostgreSQL 16 CI on the exact branch HEAD and independently inspect all split-owner table, sequence, helper-function and trigger privilege paths; fix any failures before closing the HIGH finding.
+1. Preserve the tested split-owner boundary during later integration and add target-environment privilege-drift verification before production.
 2. Implement mobile contact-change/reverification under the identity gate with all-key alias coverage, idempotency and audit.
 3. Define and implement authenticated approval principal/authority verification and exact-case binding.
 4. Complete outbox/inbox delivery, cross-database freeze/drain/final-snapshot Saga, projection update and forward recovery.
