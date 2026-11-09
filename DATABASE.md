@@ -9,16 +9,19 @@ Stack (Master Prompt §49): PostgreSQL 15+, SQLAlchemy 2.x, Alembic. No manual p
 
 ## 1. Conceptual Entity Groups
 
-### Identity & Tenancy
-- `User` (base auth identity: email/phone, password hash, status)
-- `Role`, `Permission` (table-driven RBAC, not a fixed enum — per DECISION_LOG D-005)
-- `Counselor` (tenant root; 1:1 with a `User`)
-- `Student` (1:1 with a `User` once activated; belongs to exactly one tenant via `CounselorStudent`)
-- `Parent` (1:1 with a `User`; linked to one or more `Student` via explicit, permissioned relation)
-- `PlatformAdmin` (cross-tenant; no implicit data access without audited action)
+### Identity & Tenancy (current Workspace-centric model)
+- `PlatformUser` — stable platform identity; mobile is mutable contact/login data.
+- `Workspace` — tenant root, either Organization or Independent Counselor; authoritative registry in Control Plane.
+- `WorkspaceMembership` — PlatformUser membership and Workspace-scoped roles/permissions; one user may belong to multiple Workspaces independently.
+- `Branch` — optional child of Organization Workspace only.
+- `CounselorAssignment` — relationship between counselor membership and local student enrollment; counselor is not a tenant.
+- `PlatformStudent` — global identity reference in Control Plane; `Student` in Workspace DB is an educational projection.
+- `Parent/Guardian` — verified relationship plus per-child/per-permission grants; legal authority is separately verified.
+- `PlatformAdmin` — least-privilege, audited, read-only in MVP.
 
 ### Relationship
-- `CounselorStudent` — fields per Master Prompt §13: `id, counselor_id, student_id, status(Active/Paused/Archived/Ended), started_at, ended_at, access_level, notes, created_at, updated_at`
+- `Enrollment` — Workspace-local lifecycle/projection with `platform_student_id` and `ownership_generation`; it is not global ownership authority.
+- `CounselorAssignment` — Workspace-local assignment with at most one active responsible counselor per active enrollment; changes require authorized owner/manager permission and destination counselor acceptance.
 
 ### Student Profile & Curriculum
 - `StudentProfile` (name, birth_date, grade, field, school, academic_year, goal, target, baseline_level, available_study_time, sleep_schedule, school_schedule, fixed_activities)
