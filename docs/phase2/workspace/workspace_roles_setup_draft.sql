@@ -1,0 +1,161 @@
+\set ON_ERROR_STOP on
+\if :{?workspace_key}
+\else
+  \echo 'ERROR: pass -v workspace_key=<unique-lowercase-key> (4-12 chars)'
+  \quit 3
+\endif
+
+SET app.workspace_key = :'workspace_key';
+
+DO $validate$
+BEGIN
+  IF current_setting('app.workspace_key') !~ '^[a-z0-9]{4,12}$' THEN
+    RAISE EXCEPTION 'workspace_key must match ^[a-z0-9]{4,12}$';
+  END IF;
+END $validate$;
+
+-- PostgreSQL roles are cluster-wide. Every Workspace receives distinct role names,
+-- login identities and database CONNECT grants; generic role names must never be shared.
+DO $roles$
+DECLARE
+  k text := current_setting('app.workspace_key');
+  role_name text;
+  role_names text[] := ARRAY[
+    'ws_'||k||'_table_owner',
+    'ws_'||k||'_function_owner',
+    'ws_'||k||'_runtime',
+    'ws_'||k||'_worker',
+    'ws_'||k||'_exporter',
+    'ws_'||k||'_runtime_login',
+    'ws_'||k||'_worker_login',
+    'ws_'||k||'_exporter_login'
+  ];
+BEGIN
+  FOREACH role_name IN ARRAY role_names LOOP
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=role_name) THEN
+      IF role_name LIKE '%\_login' ESCAPE '\' THEN
+        EXECUTE format(
+          'CREATE ROLE %I LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD NULL',
+          role_name
+        );
+      ELSE
+        EXECUTE format(
+          'CREATE ROLE %I NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS',
+          role_name
+        );
+      END IF;
+    END IF;
+  END LOOP;
+END $roles$;
+
+DO $membership$
+DECLARE k text := current_setting('app.workspace_key');
+BEGIN
+  EXECUTE format('GRANT %I TO %I', 'ws_'||k||'_runtime', 'ws_'||k||'_runtime_login');
+  EXECUTE format('GRANT %I TO %I', 'ws_'||k||'_worker', 'ws_'||k||'_worker_login');
+  EXECUTE format('GRANT %I TO %I', 'ws_'||k||'_exporter', 'ws_'||k||'_exporter_login');
+END $membership$;
+
+-- A database is connectable only by the login identities provisioned for this Workspace
+-- (plus the controlled migration operator executing this script).
+SELECT format('REVOKE CONNECT, TEMPORARY ON DATABASE %I FROM PUBLIC',current_database()) \gexec
+SELECT format('GRANT CONNECT ON DATABASE %I TO %I,%I,%I,%I',
+  current_database(),
+  'ws_'||current_setting('app.workspace_key')||'_runtime_login',
+  'ws_'||current_setting('app.workspace_key')||'_worker_login',
+  'ws_'||current_setting('app.workspace_key')||'_exporter_login',
+  current_user) \gexec
+
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+SELECT format('GRANT CREATE,USAGE ON SCHEMA public TO %I', 'ws_'||current_setting('app.workspace_key')||'_table_owner') \gexec
+SELECT format('GRANT CREATE,USAGE ON SCHEMA public TO %I', 'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT USAGE ON SCHEMA public TO %I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime',
+  'ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter') \gexec
+
+-- Reassign all current Workspace objects to non-login owners.
+DO $owners$
+DECLARE
+  k text := current_setting('app.workspace_key');
+  v_table_owner text := 'ws_'||k||'_table_owner';
+  v_function_owner text := 'ws_'||k||'_function_owner';
+  r record;
+BEGIN
+  FOR r IN SELECT schemaname,tablename FROM pg_tables WHERE schemaname='public' LOOP
+    EXECUTE format('ALTER TABLE %I.%I OWNER TO %I',r.schemaname,r.tablename,v_table_owner);
+  END LOOP;
+  FOR r IN SELECT sequence_schema,sequence_name FROM information_schema.sequences WHERE sequence_schema='public' LOOP
+    EXECUTE format('ALTER SEQUENCE %I.%I OWNER TO %I',r.sequence_schema,r.sequence_name,v_table_owner);
+  END LOOP;
+  FOR r IN
+    SELECT p.oid::regprocedure AS signature
+      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+     WHERE n.nspname='public' AND p.prokind IN ('f','p')
+  LOOP
+    EXECUTE format('ALTER FUNCTION %s OWNER TO %I',r.signature,v_function_owner);
+  END LOOP;
+END $owners$;
+
+-- No inherited PUBLIC or stale direct privileges. New objects default to deny.
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM PUBLIC;
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC;
+SELECT format('REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime',
+  'ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime',
+  'ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+
+-- Backend runtime may operate only inside this Workspace. Object-level counselor/manager/guardian
+-- authorization remains mandatory in the API; these grants are not a substitute for RBAC.
+SELECT format(
+  'GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE %s TO %I',
+  'workspace_memberships,membership_roles,membership_permissions,branches,students,enrollments,counselor_assignments,student_guardian_links,guardian_permissions,program_templates,program_versions,student_plans,student_plan_versions,subjects,chapters,topics,student_topic_mastery,activities,study_sessions,test_definitions,test_attempts,test_responses,exams,exam_results,classes,class_sessions,assignments,reviews,daily_routines,progress_snapshots,risk_assessments,counselor_notes,private_file_objects,notification_preferences,in_app_notifications',
+  'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+SELECT format('GRANT SELECT ON TABLE workspace_profile,credit_wallets,workspace_capacity_counters TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+SELECT format('GRANT INSERT ON TABLE audit_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+
+-- Workers can process only in-app notification delivery state; no student-domain table access.
+SELECT format('GRANT SELECT,UPDATE ON TABLE in_app_notifications TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_worker') \gexec
+SELECT format('GRANT SELECT ON TABLE notification_preferences TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_worker') \gexec
+
+-- Exporter deliberately receives no base-table access. It remains deny-by-default until
+-- separately reviewed, scope-safe export views are created and explicitly granted.
+
+-- SECURITY DEFINER activation function owner has only the DML needed for its transaction.
+SELECT format(
+  'GRANT SELECT,INSERT,UPDATE ON TABLE enrollments,students,counselor_assignments,workspace_memberships,credit_wallets,credit_transactions,activation_command_log,workspace_capacity_counters,capacity_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT EXECUTE ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT EXECUTE ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid) TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+SELECT format('REVOKE ALL ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) FROM PUBLIC,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime',
+  'ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter') \gexec
+SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid) FROM PUBLIC,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+
+-- Default privileges remain deny-by-default for future migrations.
+SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC',
+  'ws_'||current_setting('app.workspace_key')||'_table_owner') \gexec
+SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+
+DO $done$
+BEGIN
+  RAISE NOTICE 'Workspace role setup complete for key % and database %',
+    current_setting('app.workspace_key'),current_database();
+END $done$;
