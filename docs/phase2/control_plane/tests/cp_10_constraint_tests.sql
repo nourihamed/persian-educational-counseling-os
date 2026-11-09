@@ -91,6 +91,7 @@ DO $$ DECLARE a uuid; b uuid; BEGIN
  RAISE NOTICE 'PASS CP-IDEM-01 same key/same payload replayed case %',a;
 END $$;
 SELECT expect_error('CP-IDEM-02 same key with different payload rejected','SELECT request_transfer_case_idempotent(''idem-1'',decode(repeat(''bb'',32),''hex''),gen_random_uuid(),''b0000000-0000-0000-0000-000000000003'',''a0000000-0000-0000-0000-000000000003'',''a0000000-0000-0000-0000-000000000001'',1,''guardian'')','23505');
+SELECT expect_error('CP-IDEM-03 command payload hash is immutable','UPDATE command_log SET payload_hash=decode(repeat(''cc'',32),''hex'') WHERE idempotency_key=''idem-1''','23514');
 
 
 -- A transfer cannot enter cutover_frozen without freeze/snapshot/destination evidence.
