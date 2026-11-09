@@ -21,12 +21,40 @@ CREATE TABLE workspace_memberships (
   CHECK ((status='ended') = (ended_at IS NOT NULL))
 );
 
+CREATE TABLE membership_roles (
+  membership_id uuid NOT NULL REFERENCES workspace_memberships(membership_id),
+  role_key text NOT NULL,
+  granted_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (membership_id, role_key)
+);
+
+CREATE TABLE membership_permissions (
+  membership_id uuid NOT NULL REFERENCES workspace_memberships(membership_id),
+  permission_key text NOT NULL,
+  resource_scope jsonb NOT NULL DEFAULT '{}'::jsonb,
+  granted_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (membership_id, permission_key)
+);
+
 CREATE TABLE branches (
   branch_id uuid PRIMARY KEY,
   name text NOT NULL,
   status text NOT NULL CHECK (status IN ('active','archived')),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE FUNCTION reject_branch_for_independent_workspace() RETURNS trigger LANGUAGE plpgsql AS $
+DECLARE wt text;
+BEGIN
+  SELECT workspace_type INTO wt FROM workspace_profile WHERE singleton=true;
+  IF wt='independent_counselor' THEN
+    RAISE EXCEPTION 'Independent Counselor Workspace cannot contain branches' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $;
+CREATE TRIGGER branches_workspace_type_guard
+  BEFORE INSERT OR UPDATE ON branches
+  FOR EACH ROW EXECUTE FUNCTION reject_branch_for_independent_workspace();
 
 CREATE TABLE students (
   student_id uuid PRIMARY KEY,
@@ -113,13 +141,24 @@ CREATE TABLE program_versions (
   template_id uuid NOT NULL REFERENCES program_templates(template_id),
   version_no integer NOT NULL CHECK (version_no > 0),
   content jsonb NOT NULL,
-  status text NOT NULL CHECK (status IN ('draft','published','superseded')),
+  status text NOT NULL CHECK (status IN ('draft','published')),
   created_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
   created_at timestamptz NOT NULL DEFAULT now(),
   published_at timestamptz,
   UNIQUE(template_id, version_no),
   CHECK ((status='published') = (published_at IS NOT NULL))
 );
+
+CREATE FUNCTION reject_published_version_mutation() RETURNS trigger LANGUAGE plpgsql AS $
+BEGIN
+  IF OLD.status='published' THEN
+    RAISE EXCEPTION 'published versions are immutable; create a new version' USING ERRCODE='check_violation';
+  END IF;
+  RETURN CASE WHEN TG_OP='DELETE' THEN OLD ELSE NEW END;
+END; $;
+CREATE TRIGGER program_versions_immutable
+  BEFORE UPDATE OR DELETE ON program_versions
+  FOR EACH ROW EXECUTE FUNCTION reject_published_version_mutation();
 
 CREATE TABLE student_plans (
   plan_id uuid PRIMARY KEY,
@@ -134,13 +173,17 @@ CREATE TABLE student_plan_versions (
   input_snapshot jsonb NOT NULL,
   rule_version text NOT NULL,
   plan_content jsonb NOT NULL,
-  status text NOT NULL CHECK (status IN ('draft','published','superseded')),
+  status text NOT NULL CHECK (status IN ('draft','published')),
   approved_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
   created_at timestamptz NOT NULL DEFAULT now(),
   published_at timestamptz,
   UNIQUE(plan_id, version_no),
   CHECK ((status='published') = (published_at IS NOT NULL))
 );
+
+CREATE TRIGGER student_plan_versions_immutable
+  BEFORE UPDATE OR DELETE ON student_plan_versions
+  FOR EACH ROW EXECUTE FUNCTION reject_published_version_mutation();
 
 CREATE TABLE credit_wallets (
   wallet_id uuid PRIMARY KEY,
@@ -159,7 +202,9 @@ CREATE TABLE credit_transactions (
   actor_membership_id uuid REFERENCES workspace_memberships(membership_id),
   reason text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  CHECK (transaction_kind <> 'reversal' OR related_transaction_id IS NOT NULL)
+  CHECK (transaction_kind <> 'reversal' OR related_transaction_id IS NOT NULL),
+  CHECK (transaction_kind NOT IN ('purchase','grant') OR amount > 0),
+  CHECK (transaction_kind <> 'activation_debit' OR amount < 0)
 );
 
 CREATE FUNCTION reject_ledger_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -174,7 +219,7 @@ COMMIT;
 
 -- IMPORTANT DRAFT LIMITATIONS:
 -- 1. This skeleton does not replace the complete Phase 2 domain schema.
--- 2. Published-version immutability requires dedicated triggers/privileges in the final schema.
+-- 2. Draft triggers reject UPDATE/DELETE of published versions; final review must test bypass/owner privileges.
 -- 3. Membership/branch/workspace type rules and guardian legal authority require trusted application
 --    authorization plus additional constraints/triggers and executable tests.
 -- 4. Capacity/entitlement checks must be atomic in the activation transaction and remain separate
