@@ -28,7 +28,7 @@ The initial PR #12 state contained significant gaps: HMAC uniqueness was indexed
 - HMAC rotation now has draft SQL for a database-backed maintenance gate, row-lock serialization, claim-write pause, deferred alias-completeness checks and begin/complete/retire functions (cp_05). These drafts have NOT been executed. Production claim-admission service, restricted table grants, KMS/HSM integration, cryptographic backfill and crash/concurrency evidence remain absent; per-version indexes alone are insufficient.
 - Approval principal/authority fields are still only stored references/snapshots. A trusted identity/authorization service must verify and bind guardian legal authority, prior counselor assignment and destination permission to the exact case.
 - Dedicated non-login function owner/workflow role, grants, ownership and privilege review remain unverified. SECURITY DEFINER code must not be executable by PUBLIC or ordinary app roles.
-- Workspace schema is a core skeleton, not the complete Phase 2 domain model. Published-version immutability, Workspace type/branch rules, capacity atomicity and activation/ledger transaction behavior need executable enforcement.
+- Workspace schema is a core skeleton, not the complete Phase 2 domain model. Draft triggers now cover published-version immutability and branch/type restrictions, with a new regression script; they are NOT RUN. Capacity atomicity, activation/credit transaction safety, full educational domain and broader authorization still need implementation and evidence.
 - Outbox/inbox runtime, retry/reconciliation, crash recovery and fail-closed service integration are not implemented.
 - Revised SQL and race tests have not been run against current branch HEAD.
 
