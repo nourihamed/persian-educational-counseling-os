@@ -184,3 +184,10 @@ Status for all: SPECIFIED AS GAPS / NOT IMPLEMENTED / NOT RUN. Do not mark domai
 ## Operational resilience acceptance contracts (2026-11-09)
 
 See `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md`. OPS-HA-01..05, OPS-BACKUP-01..02, OPS-RESTORE-01..04 and OPS-CAP-01..03 are **NOT RUN** and require a representative isolated target environment. No CI result or local SQL test may be substituted for backup independence, restore, fencing, failover, split-brain, pool isolation or measured capacity evidence.
+
+
+## Q-007, retention and operational policy acceptance (2026-11-09)
+
+- Parent/guardian authority: `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md`; Q-007 remains OPEN pending Iran legal review and PO approval. All parent scope/age/dispute tests are NOT RUN.
+- Retention/legal hold: `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md`; policy-version, unresolved-duration fail-closed, legal-hold, restore-suppression and deletion verification tests are NOT RUN.
+- Backup/failover/restore: `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md`; OPS-HA/BACKUP/RESTORE/CAP tests remain NOT RUN pending target environment.
