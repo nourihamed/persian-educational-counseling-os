@@ -148,6 +148,9 @@ SELECT format(
   'GRANT INSERT ON TABLE credit_transactions,activation_command_log,capacity_events,audit_events TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format(
+  'GRANT UPDATE(student_id) ON TABLE students TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format(
   'GRANT UPDATE(state,started_at) ON TABLE enrollments TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format(
@@ -160,8 +163,6 @@ SELECT format('GRANT UPDATE(wallet_id) ON TABLE credit_wallets TO %I',
 SELECT format('GRANT UPDATE(transaction_id) ON TABLE credit_transactions TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT UPDATE(idempotency_key) ON TABLE activation_command_log TO %I',
-  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
-SELECT format('GRANT INSERT ON TABLE audit_events TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT EXECUTE ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
