@@ -5,7 +5,7 @@
 Phase 2 — Database & Domain Model, Control Plane / Workspace reconciliation.
 
 ## Scope Reviewed
-Final PR #12 design tree reviewed at HEAD `b5d87d12ca70f10a02993151060e43263ca731e7`: Control Plane schema/functions cp_01..cp_05, revised Control Plane regression/race tests, Workspace schema and tests, transfer/API/key-rotation contracts, decision crosswalk and canonical documentation. Review method: source inspection and static consistency checks only; PostgreSQL execution was unavailable, so no SQL test is marked executed or passed.
+Final SQL/schema tree reviewed and executed at commit `4720cc3ed12b766c941337fe240a9d240e203522`; subsequent commits `82b651386331cf9fdddf5a38e83f31dcff892509` and `bdef5e8ee85d28e8cb66d5cdb6a81a12a2a0ff0f` update only test-status/project-state evidence. Scope: Control Plane cp_01..cp_05, Control Plane regression/race tests, Workspace schema/tests, transfer/API/key-rotation/role contracts, domain model and crosswalk. GitHub Actions run #10 executed on PostgreSQL 16.15 and passed 21 Control Plane assertions, 1 race test and 13 Workspace assertions. Runtime authorization, role catalog checks, integration and operational tests remain unverified.
 
 ## Summary
 The initial PR #12 state contained significant gaps: HMAC uniqueness was indexed with key_version, the ownership switch did not require exactly one source claim, approval rows lacked principal/authentication/authority metadata, idempotency was not implemented despite a command_log table, and the transition graph permitted post-switch cancellation. The Workspace DB, transfer contract and API authorization design were absent. Corrective draft artifacts have now been added/updated, but they are not runtime implementation or verified tests.
@@ -46,7 +46,7 @@ The initial PR #12 state contained significant gaps: HMAC uniqueness was indexed
 Workspace is the tenant boundary. Control Plane owns global student identity/current owner/generation and global mobile+grade claims. Workspace DB owns local educational records and projections. Cross-database FKs/transactions are not claimed. Current contracts are design-only.
 
 ## Database
-Control Plane SQL drafts and a Workspace schema skeleton exist. They are not production migrations and do not yet implement all required constraints/triggers/roles. No fresh independent PostgreSQL run has been performed in this review.
+Control Plane SQL drafts and a Workspace schema skeleton exist. They are not production migrations and do not yet implement all required constraints/triggers/roles. A fresh PostgreSQL 16.15 run has been performed in GitHub Actions run #10; schema suites passed, but no migration-upgrade or production-like multi-database run has been performed.
 
 ## API
 Logical API/authorization contract exists; no runtime endpoint is implemented. Authorization must combine authenticated Platform User, Workspace membership, resource permission/relationship, counselor assignment, valid consent and current Control Plane owner/generation.
@@ -55,7 +55,7 @@ Logical API/authorization contract exists; no runtime endpoint is implemented. A
 D-014 remains. Key material must remain in Platform Security KMS/HSM boundary. Control Plane outage or uncertainty must deny student-data access. No runtime security controls are verified.
 
 ## Testing
-Revised tests: SPECIFIED / NOT RUN. Earlier 26 PASS and 5/5 race results apply to a prior schema and are superseded. No current-head PASS is claimed.
+Revised tests: EXECUTED / PASS for 21 Control Plane assertions, 1 concurrent global-identity race and 13 Workspace schema assertions on PostgreSQL 16.15 (GitHub Actions run #10). Earlier 26 PASS and 5/5 race results apply to a prior schema and are superseded. Role privilege, API/RBAC, cross-Workspace DB isolation, transfer crash/recovery, outbox/inbox delivery, backup/restore and HA acceptance tests remain NOT RUN.
 
 ## Documentation
 Workspace, transfer, API and key-rotation contracts added; crosswalk corrected; root architecture/domain/API/security/product/scope and PROJECT_STATE received current-authority notes. Full consistency review remains.
