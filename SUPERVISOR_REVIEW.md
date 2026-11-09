@@ -5,7 +5,7 @@
 Phase 2 — Database & Domain Model, Control Plane / Workspace reconciliation.
 
 ## Scope Reviewed
-Live PR #12 branch at the start of this work (HEAD `0507b5547a4b72191acd11336e935427542d0208`), including Control Plane DDL/function/state-machine drafts, initial tests, decision crosswalk and canonical documentation. Subsequent edits in this branch are architectural/documentation changes and require a fresh review at the resulting HEAD.
+Final PR #12 design tree reviewed at HEAD `b5d87d12ca70f10a02993151060e43263ca731e7`: Control Plane schema/functions cp_01..cp_05, revised Control Plane regression/race tests, Workspace schema and tests, transfer/API/key-rotation contracts, decision crosswalk and canonical documentation. Review method: source inspection and static consistency checks only; PostgreSQL execution was unavailable, so no SQL test is marked executed or passed.
 
 ## Summary
 The initial PR #12 state contained significant gaps: HMAC uniqueness was indexed with key_version, the ownership switch did not require exactly one source claim, approval rows lacked principal/authentication/authority metadata, idempotency was not implemented despite a command_log table, and the transition graph permitted post-switch cancellation. The Workspace DB, transfer contract and API authorization design were absent. Corrective draft artifacts have now been added/updated, but they are not runtime implementation or verified tests.
@@ -64,8 +64,8 @@ Workspace, transfer, API and key-rotation contracts added; crosswalk corrected; 
 Complete Workspace schema; controlled HMAC rotation; approval identity binding; DB role/grant hardening; outbox/inbox runtime; full Saga recovery; backup/restore and HA evidence; detailed guardian legal matrix.
 
 ## Required Changes
-1. Complete the HMAC rotation enforcement and tests.
-2. Complete the Workspace schema and immutable-version/capacity/ledger enforcement.
+1. Execute and independently review the HMAC rotation gate/alias-completeness SQL; implement least-privilege grants, trusted claim-admission/contact-change service, KMS/HSM integration and crash/concurrency tests.
+2. Complete the full Workspace schema; test immutable versions and ledger/reversal guards; implement atomic capacity and activation/credit transaction semantics.
 3. Complete authenticated approval verification and database privilege design.
 4. Implement/test outbox/inbox and transfer crash recovery.
 5. Reconcile all canonical documents and all PRs #8–#12.
