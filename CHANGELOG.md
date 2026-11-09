@@ -451,3 +451,11 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Bound the contracts into the Control Plane README, transfer workflow contract, API authorization contract, TEST_PLAN and Supervisor Review.
 - Identified approval-schema reconciliation: current unique (case_id, approval_kind) plus mutable revoked_at cannot retain a revoked approval and replacement as separate immutable events.
 - Documentation/design only. No proof verifier, API, Saga worker, contact-change SQL, approval event schema or new executable tests were implemented. Phase 2 remains NOT READY; D-014 synthetic-only rule unchanged.
+
+
+## 2026-11-09 — Phase 2 domain, legal-policy and operations review
+- Added `docs/phase2/workspace/WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` with HIGH/MEDIUM findings from actual Workspace SQL schema.
+- Added `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md`; Q-007 remains open pending qualified Iran legal review and Product Owner approval.
+- Added `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md` for category-based versioned retention and legal-hold/disposition behavior without unapproved numeric durations.
+- Added `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` for failover, independent backup, restore, pool isolation and capacity acceptance criteria.
+- Updated OPEN_QUESTIONS, PROJECT_STATE, ROADMAP, SECURITY and TEST_PLAN references. Documentation only; no runtime or operational tests are claimed.
