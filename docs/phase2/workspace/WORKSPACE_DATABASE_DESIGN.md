@@ -36,7 +36,7 @@
 ### Commercial and audit
 - `credit_wallets` and `credit_transactions`: Workspace-owned append-only ledger. Activation debit and activation must be atomic/idempotent; reversal is a compensating entry, never an update/delete.
 - Capacity/quota is independent of Student Credit and is checked atomically at activation.
-- Security, finance, sensitive access, transfer projection, permission changes and critical domain events are audited. Never store OTPs, tokens, passwords, encryption keys or unnecessary confidential content in audit payloads.
+- Security, finance, sensitive access, transfer projection, permission changes and critical domain events are audited through append-only audit records. Private file metadata stores provider-neutral object keys (not public URLs), checksums and encryption-key version; server-side authorization is required before short-lived signed URL issuance. In-App notifications use template versions and idempotency keys. Legal holds are explicit and auditable; retention durations remain unapproved and must not be invented. Never store OTPs, tokens, passwords, encryption keys or unnecessary confidential content in audit payloads.
 
 ## 3. Required local invariants
 
