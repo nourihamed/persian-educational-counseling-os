@@ -98,3 +98,13 @@ GitHub Actions run #148 passed the included synthetic PostgreSQL 16 tests for ac
 ## 8. Workspace database roles and credentials
 
 PostgreSQL roles are cluster-wide, not database-local. The companion `workspace_roles_setup_draft.sql` therefore derives every group/login role name from the canonical 32-character lowercase hexadecimal Workspace UUID. It revokes database CONNECT/TEMPORARY from PUBLIC and grants CONNECT only to that Workspace's runtime/worker/exporter logins plus the migration operator. Runtime cannot directly update enrollment state, change student lifecycle/grade, delete student data, write credit/capacity ledgers or call the low-level capacity function. Activation is exposed only through the controlled function. Worker access is limited to in-app notifications; exporter has no base-table grants until reviewed export views exist. The companion `workspace_role_privilege_tests.sql` verifies object ownership, role attributes, grants and cross-Workspace database CONNECT denial across two synthetic databases. Login roles are placeholders with no password; production secret binding and rotation remain external and unverified.
+
+
+## 9. Updated identity and transfer integration boundaries (2026-11-09)
+
+The Workspace DB participates in the new design contracts:
+- Contact change remains a Control Plane identity operation; Workspace databases must not update global mobile/claim state.
+- Transfer approval authenticity and authority are verified by the trusted identity/authorization service; Workspace roles/assignments may provide authoritative inputs but caller-supplied claims are never accepted.
+- Freeze, staging and projection delivery follow `../transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md`; local projection state never overrides Control Plane ownership/generation.
+
+No Workspace runtime/API implementation is implied. Source freeze controller, destination staging importer, inbox consumer and API authorization remain NOT IMPLEMENTED / NOT RUN.
