@@ -1,5 +1,8 @@
 # API.md
 
+
+> **CURRENT API/AUTHORIZATION OVERRIDE — 2026-11-09 (PR #12, unmerged):** Legacy tenant/counselor route examples below are historical. Workspace context is derived from authenticated principal + active membership, never trusted from caller-supplied IDs. Authorization combines Workspace-scoped role, permission, relationship, assignment, resource scope and current Control Plane owner/generation. A Workspace membership grants no access to another Workspace. Ownership lookup failure is fail-closed. Cross-Workspace and nonexistent resources return indistinguishable 404; 403 is only for visible objects with forbidden actions. Transfer requires verified guardian consent, prior responsible counselor's own authenticated fee-receipt confirmation and authorized destination acceptance; Platform Admin cannot initiate. See `docs/phase2/api/API_AUTHORIZATION_CONTRACT.md`. No endpoints are implemented.
+
 Status: DRAFT — Phase 0 — Strategy only. No endpoints implemented yet.
 
 ## 1. Style
