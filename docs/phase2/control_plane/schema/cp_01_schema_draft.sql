@@ -31,9 +31,8 @@ CREATE TABLE platform_students (
 );
 
 -- Contact index: recoverable value is ciphertext; lookup/uniqueness uses a keyed HMAC.
--- key_version identifies WHICH HMAC key produced mobile_hmac (rotation, OQ-B).
--- Rotation: the new key_version rows are written for every student BEFORE the
--- Control Plane's current_key_version is advanced; both versions may coexist during migration.
+-- key_version identifies which HMAC key produced mobile_hmac (rotation, OQ-B).
+-- Multiple versions coexist during a write-frozen, fully backfilled rotation.
 CREATE TABLE student_contact_index (
     student_id         uuid NOT NULL REFERENCES platform_students (student_id),
     key_version        integer NOT NULL CHECK (key_version > 0),
@@ -57,6 +56,10 @@ CREATE TABLE mobile_hmac_key_versions (
 
 -- Global ownership: exactly one row per student; owner is the authoritative Workspace.
 -- ownership_generation is the fencing token: strictly increases on every ownership change.
+ALTER TABLE student_contact_index
+  ADD CONSTRAINT student_contact_index_key_version_fk
+  FOREIGN KEY (key_version) REFERENCES mobile_hmac_key_versions(key_version);
+
 CREATE TABLE student_ownership (
     student_id           uuid PRIMARY KEY REFERENCES platform_students (student_id),
     owner_workspace_id   uuid NOT NULL REFERENCES workspaces (workspace_id),
@@ -66,8 +69,8 @@ CREATE TABLE student_ownership (
 );
 
 -- Global active claim for (canonical mobile, grade). Only states that hold the claim are unique.
--- Proposed (requires Product Owner confirmation): 'active' and 'transfer_pending' hold the claim;
--- 'ended' and 'archived' release it. grade_key is the MVP enumeration (D-025).
+-- Active and transfer_pending hold the claim; ended and archived release it.
+-- grade_key is the MVP enumeration (D-025); same mobile may be used for a different grade.
 CREATE TABLE enrollment_claims (
     claim_id           uuid PRIMARY KEY,
     student_id         uuid NOT NULL REFERENCES platform_students (student_id),
@@ -77,7 +80,8 @@ CREATE TABLE enrollment_claims (
     ownership_generation bigint NOT NULL CHECK (ownership_generation >= 1),
     created_at         timestamptz NOT NULL DEFAULT now(),
     ended_at           timestamptz,
-    CHECK ((claim_state IN ('ended', 'archived')) = (ended_at IS NOT NULL))
+    CHECK ((claim_state IN ('ended', 'archived')) = (ended_at IS NOT NULL)),
+    UNIQUE (claim_id, grade_key)
 );
 -- HMAC aliases are separate rows so multiple key versions can coexist during safe rotation.
 CREATE TABLE enrollment_claim_identity_aliases (
@@ -86,7 +90,8 @@ CREATE TABLE enrollment_claim_identity_aliases (
     key_version   integer NOT NULL REFERENCES mobile_hmac_key_versions(key_version),
     mobile_hmac   bytea NOT NULL CHECK (octet_length(mobile_hmac)=32),
     claim_state   text NOT NULL CHECK (claim_state IN ('active','transfer_pending','ended','archived')),
-    PRIMARY KEY (claim_id, key_version)
+    PRIMARY KEY (claim_id, key_version),
+    FOREIGN KEY (claim_id, grade_key) REFERENCES enrollment_claims(claim_id, grade_key)
 );
 -- D-025: every live identity alias is globally unique within its key version and grade.
 CREATE UNIQUE INDEX enrollment_claims_global_identity
@@ -145,6 +150,16 @@ CREATE TABLE command_log (
     payload_hash     bytea NOT NULL CHECK (octet_length(payload_hash) = 32),
     result_case_id   uuid REFERENCES transfer_cases (case_id),
     recorded_at      timestamptz NOT NULL DEFAULT now()
+);
+
+-- Inbox deduplication ledger. Consumers insert event_id once and reject stale generations.
+CREATE TABLE inbox_events (
+    event_id uuid PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES workspaces(workspace_id),
+    student_id uuid NOT NULL REFERENCES platform_students(student_id),
+    ownership_generation bigint NOT NULL CHECK (ownership_generation >= 1),
+    received_at timestamptz NOT NULL DEFAULT now(),
+    processed_at timestamptz
 );
 
 -- Transactional outbox: written in the same transaction as the ownership switch.
