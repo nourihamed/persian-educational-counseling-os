@@ -418,6 +418,55 @@ CREATE TABLE capacity_events (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE FUNCTION reject_capacity_event_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  RAISE EXCEPTION 'capacity_events is append-only' USING ERRCODE='check_violation';
+END; $body$;
+CREATE TRIGGER capacity_events_append_only
+  BEFORE UPDATE OR DELETE ON capacity_events
+  FOR EACH ROW EXECUTE FUNCTION reject_capacity_event_mutation();
+
+-- Atomic counter adjustment. Call inside the same transaction as student activation/archive
+-- and credit debit/reversal. Reusing an idempotency key with different intent is rejected.
+CREATE FUNCTION adjust_workspace_capacity(
+  p_dimension_key text,
+  p_delta integer,
+  p_idempotency_key text,
+  p_student_id uuid,
+  p_actor_membership_id uuid,
+  p_reason text
+) RETURNS integer LANGUAGE plpgsql AS $body$
+DECLARE v_inserted integer; v_existing public.capacity_events%ROWTYPE; v_current integer;
+BEGIN
+  IF p_delta=0 OR p_idempotency_key IS NULL OR p_idempotency_key='' THEN
+    RAISE EXCEPTION 'capacity delta and idempotency key are required' USING ERRCODE='invalid_parameter_value';
+  END IF;
+  INSERT INTO public.capacity_events(capacity_event_id,dimension_key,delta,idempotency_key,student_id,actor_membership_id,reason)
+  VALUES(gen_random_uuid(),p_dimension_key,p_delta,p_idempotency_key,p_student_id,p_actor_membership_id,p_reason)
+  ON CONFLICT(idempotency_key) DO NOTHING;
+  GET DIAGNOSTICS v_inserted=ROW_COUNT;
+  IF v_inserted=0 THEN
+    SELECT * INTO v_existing FROM public.capacity_events WHERE idempotency_key=p_idempotency_key;
+    IF v_existing.dimension_key<>p_dimension_key OR v_existing.delta<>p_delta
+       OR v_existing.student_id IS DISTINCT FROM p_student_id THEN
+      RAISE EXCEPTION 'capacity idempotency key reused with different intent' USING ERRCODE='unique_violation';
+    END IF;
+    SELECT current_value INTO v_current FROM public.workspace_capacity_counters WHERE dimension_key=p_dimension_key;
+    RETURN v_current;
+  END IF;
+  UPDATE public.workspace_capacity_counters
+     SET current_value=current_value+p_delta,updated_at=now()
+   WHERE dimension_key=p_dimension_key
+     AND current_value+p_delta>=0
+     AND current_value+p_delta<=max_value
+   RETURNING current_value INTO v_current;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'capacity unavailable or decrement would underflow for dimension %',p_dimension_key
+      USING ERRCODE='check_violation';
+  END IF;
+  RETURN v_current;
+END; $body$;
+
 CREATE TABLE audit_events (
   audit_event_id uuid PRIMARY KEY,
   actor_membership_id uuid REFERENCES workspace_memberships(membership_id),
