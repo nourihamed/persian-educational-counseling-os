@@ -92,3 +92,18 @@ The script requires a privileged migration operator and is not a production migr
 7. Test pool reuse across different Workspace requests for stale session/context leakage.
 8. Test credential rotation/revocation, connection termination and fail-closed behavior.
 9. Test activation concurrency, insufficient credit, capacity exhaustion and exact rollback.
+
+
+## 8. Authorization-table write boundary — 2026-11-09 correction
+
+The Workspace provisioning draft now grants the general runtime role **SELECT only** on:
+- workspace_memberships;
+- membership_roles and membership_permissions;
+- branches and counselor_assignments;
+- student_guardian_links and guardian_permissions.
+
+The activation function owner also receives read-only access to those authorization source tables. It has no INSERT/UPDATE/DELETE privileges on membership, role, permission, branch, counselor-assignment or guardian authorization records. This prevents a compromised general runtime or activation function from self-assigning roles, changing counselor responsibility or granting guardian access.
+
+The activation function owner has been narrowed to required reads/inserts and column-level UPDATE grants for enrollment state/start time, capacity counter values, and lock-only columns on wallet/ledger/idempotency rows. Immutable triggers reject mutation through the lock-only columns. A dedicated authorization-management command/function owner and audited grant/revoke event model are not yet implemented; until then, authorization-table changes are intentionally unavailable through runtime.
+
+Catalog test additions assert the runtime and activation function owner cannot write authorization tables, while the required read access and narrowly scoped activation column grants remain available. Fresh CI is required before this correction is marked PASS.
