@@ -1,0 +1,182 @@
+-- WORKSPACE DATABASE — CORE DOMAIN SKELETON (PostgreSQL 15+)
+-- DRAFT ONLY. Not a production migration. Synthetic data only (D-014).
+-- One database/credential boundary per Workspace. No global constraints are claimed.
+BEGIN;
+
+CREATE TABLE workspace_profile (
+  singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+  workspace_id uuid NOT NULL UNIQUE,
+  workspace_type text NOT NULL CHECK (workspace_type IN ('organization','independent_counselor')),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE workspace_memberships (
+  membership_id uuid PRIMARY KEY,
+  platform_user_id uuid NOT NULL,
+  role_key text NOT NULL,
+  status text NOT NULL CHECK (status IN ('invited','active','suspended','ended')),
+  granted_at timestamptz NOT NULL DEFAULT now(),
+  ended_at timestamptz,
+  UNIQUE (platform_user_id),
+  CHECK ((status='ended') = (ended_at IS NOT NULL))
+);
+
+CREATE TABLE branches (
+  branch_id uuid PRIMARY KEY,
+  name text NOT NULL,
+  status text NOT NULL CHECK (status IN ('active','archived')),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE students (
+  student_id uuid PRIMARY KEY,
+  platform_student_id uuid NOT NULL UNIQUE,
+  display_name text NOT NULL,
+  grade_key text NOT NULL CHECK (grade_key IN ('grade_10','grade_11','grade_12')),
+  lifecycle_state text NOT NULL CHECK (lifecycle_state IN ('active','archived')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  archived_at timestamptz,
+  CHECK ((lifecycle_state='archived') = (archived_at IS NOT NULL))
+);
+
+-- This is a local projection only; Control Plane remains global ownership authority.
+CREATE TABLE enrollments (
+  enrollment_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  ownership_generation bigint NOT NULL CHECK (ownership_generation >= 1),
+  state text NOT NULL CHECK (state IN ('requested','awaiting_consent','active','suspended','ended','archived')),
+  started_at timestamptz,
+  ended_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK ((state IN ('ended','archived')) = (ended_at IS NOT NULL))
+);
+CREATE UNIQUE INDEX one_active_local_enrollment_per_student
+  ON enrollments(student_id) WHERE state IN ('active','suspended','awaiting_consent');
+
+CREATE TABLE counselor_assignments (
+  assignment_id uuid PRIMARY KEY,
+  enrollment_id uuid NOT NULL REFERENCES enrollments(enrollment_id),
+  counselor_membership_id uuid NOT NULL REFERENCES workspace_memberships(membership_id),
+  branch_id uuid REFERENCES branches(branch_id),
+  is_responsible boolean NOT NULL DEFAULT false,
+  is_primary_branch boolean NOT NULL DEFAULT false,
+  state text NOT NULL CHECK (state IN ('active','ended')),
+  accepted_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  ended_at timestamptz,
+  CHECK ((state='ended') = (ended_at IS NOT NULL)),
+  CHECK (NOT is_primary_branch OR branch_id IS NOT NULL)
+);
+CREATE UNIQUE INDEX one_responsible_counselor_per_enrollment
+  ON counselor_assignments(enrollment_id) WHERE state='active' AND is_responsible;
+CREATE UNIQUE INDEX one_primary_branch_per_enrollment
+  ON counselor_assignments(enrollment_id) WHERE state='active' AND is_primary_branch;
+
+CREATE TABLE student_guardian_links (
+  link_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  guardian_platform_user_id uuid NOT NULL,
+  relationship_type text NOT NULL,
+  verification_state text NOT NULL CHECK (verification_state IN ('unverified','verified','revoked')),
+  legal_authority_ref text,
+  verified_at timestamptz,
+  revoked_at timestamptz,
+  UNIQUE(student_id, guardian_platform_user_id),
+  CHECK (verification_state <> 'verified' OR (verified_at IS NOT NULL AND legal_authority_ref IS NOT NULL))
+);
+
+CREATE TABLE guardian_permissions (
+  permission_id uuid PRIMARY KEY,
+  guardian_link_id uuid NOT NULL REFERENCES student_guardian_links(link_id),
+  scope_key text NOT NULL,
+  granted_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  authority_ref text NOT NULL,
+  valid_from timestamptz NOT NULL,
+  valid_until timestamptz,
+  revoked_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (valid_until IS NULL OR valid_until > valid_from)
+);
+CREATE INDEX guardian_permissions_active_lookup
+  ON guardian_permissions(guardian_link_id, scope_key, valid_from, valid_until)
+  WHERE revoked_at IS NULL;
+
+CREATE TABLE program_templates (
+  template_id uuid PRIMARY KEY,
+  name text NOT NULL,
+  status text NOT NULL CHECK (status IN ('draft','published','archived')),
+  created_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE program_versions (
+  program_version_id uuid PRIMARY KEY,
+  template_id uuid NOT NULL REFERENCES program_templates(template_id),
+  version_no integer NOT NULL CHECK (version_no > 0),
+  content jsonb NOT NULL,
+  status text NOT NULL CHECK (status IN ('draft','published','superseded')),
+  created_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  published_at timestamptz,
+  UNIQUE(template_id, version_no),
+  CHECK ((status='published') = (published_at IS NOT NULL))
+);
+
+CREATE TABLE student_plans (
+  plan_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE student_plan_versions (
+  plan_version_id uuid PRIMARY KEY,
+  plan_id uuid NOT NULL REFERENCES student_plans(plan_id),
+  version_no integer NOT NULL CHECK (version_no > 0),
+  source_program_version_id uuid REFERENCES program_versions(program_version_id),
+  input_snapshot jsonb NOT NULL,
+  rule_version text NOT NULL,
+  plan_content jsonb NOT NULL,
+  status text NOT NULL CHECK (status IN ('draft','published','superseded')),
+  approved_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  published_at timestamptz,
+  UNIQUE(plan_id, version_no),
+  CHECK ((status='published') = (published_at IS NOT NULL))
+);
+
+CREATE TABLE credit_wallets (
+  wallet_id uuid PRIMARY KEY,
+  currency_code char(3) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(currency_code)
+);
+CREATE TABLE credit_transactions (
+  transaction_id uuid PRIMARY KEY,
+  wallet_id uuid NOT NULL REFERENCES credit_wallets(wallet_id),
+  transaction_kind text NOT NULL CHECK (transaction_kind IN ('purchase','grant','activation_debit','adjustment','reversal')),
+  amount bigint NOT NULL CHECK (amount <> 0),
+  idempotency_key text NOT NULL UNIQUE,
+  related_transaction_id uuid REFERENCES credit_transactions(transaction_id),
+  student_id uuid REFERENCES students(student_id),
+  actor_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  reason text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (transaction_kind <> 'reversal' OR related_transaction_id IS NOT NULL)
+);
+
+CREATE FUNCTION reject_ledger_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'credit_transactions is append-only' USING ERRCODE='check_violation';
+END; $$;
+CREATE TRIGGER credit_transactions_append_only
+  BEFORE UPDATE OR DELETE ON credit_transactions
+  FOR EACH ROW EXECUTE FUNCTION reject_ledger_mutation();
+
+COMMIT;
+
+-- IMPORTANT DRAFT LIMITATIONS:
+-- 1. This skeleton does not replace the complete Phase 2 domain schema.
+-- 2. Published-version immutability requires dedicated triggers/privileges in the final schema.
+-- 3. Membership/branch/workspace type rules and guardian legal authority require trusted application
+--    authorization plus additional constraints/triggers and executable tests.
+-- 4. Capacity/entitlement checks must be atomic in the activation transaction and remain separate
+--    from the credit ledger.
+-- 5. Workspace DB cannot enforce Control Plane global ownership or global mobile+grade uniqueness.
