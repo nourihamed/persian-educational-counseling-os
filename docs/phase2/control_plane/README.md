@@ -1,56 +1,58 @@
-# Control Plane — draft schema, tests and boundaries (PR #12 branch)
+# Control Plane — draft schema, tests and boundaries
 
-**Status:** DRAFT. Not a production migration. Not approved. Phase 2 gate: NOT READY pending independent Supervisor review.
-**Synthetic data only (D-014).** No real student or customer data. No production KMS integration (OQ-B: Platform Security owns keys; none are stored here).
+**Status:** DRAFT / NOT APPROVED. Not a production migration. Phase 2 Gate remains NOT READY.
+**Synthetic data only (D-014).** No real student/customer data. No production KMS integration.
 
-## Execution order (fresh PostgreSQL 15+ database, owner role, `ON_ERROR_STOP=1`)
-1. `schema/cp_01_schema_draft.sql` — tables, global identity index, ownership generation, transfer cases, approvals, idempotency, outbox, append-only history.
-2. `schema/cp_02_switch_function_draft.sql` — atomic ownership switch (`switch_student_ownership`).
-3. `schema/cp_03_transfer_transitions_draft.sql` — transfer state-transition table and guards.
-4. `tests/cp_10_constraint_tests.sql` — constraint, workflow and fencing tests.
-5. `tests/cp_20_race.sh <db>` — two-session global identity race (run on a fresh DB where steps 1–3 and the Workspace rows it needs exist).
+## Apply order on a fresh PostgreSQL 15+ database
+
+1. `schema/cp_01_schema_draft.sql` — registry, ownership, claims and versioned HMAC aliases.
+2. `schema/cp_02_switch_function_draft.sql` — ownership switch with source claim/generation/alias checks and valid cumulative approvals.
+3. `schema/cp_03_transfer_transitions_draft.sql` — transfer state machine; no cancellation after ownership switch.
+4. `schema/cp_04_transfer_command_idempotency.sql` — same-key/same-payload replay and different-payload rejection.
+5. `tests/cp_10_constraint_tests.sql` — synthetic regression suite.
+6. `tests/cp_20_race.sh <dbname>` — two-session alias uniqueness race; requires three fixture Workspace IDs to exist.
 
 ## Database boundary
-- **This is the Control Plane database only.** It contains no educational records, no counselor-private notes, no credit ledgers.
-- **No cross-database foreign keys** exist. `workspace_id` values are opaque UUIDs validated by the workflow, not by PostgreSQL. A Workspace database cannot enforce global ownership or global uniqueness.
-- The switch is **one transaction in this database**. It does not, and cannot, include any Workspace database.
 
-## Invariant enforcement classes (required by the reconciliation brief)
-| Invariant | Enforced by | Where |
+- Control Plane stores global student reference, current Workspace owner, ownership generation, global mobile+grade claims, transfer approvals, transfer state, command idempotency, outbox and ownership history.
+- It does not store educational records, counselor-private notes or credit ledger.
+- No cross-database foreign keys are claimed. Workspace IDs in Control Plane are registry references; Workspace-local projections are not ownership authority.
+- The switch is one Control Plane transaction only. It cannot atomically commit a transaction in a separate Workspace database; durable outbox/inbox and forward recovery are required.
+
+## Invariant status
+
+| Invariant | Draft mechanism | Status |
 |---|---|---|
-| Global mobile(HMAC)+grade uniqueness for holding claims (D-025) | Database (partial unique index) | cp_01 |
-| One claim-holding enrollment per student platform-wide (PO-4) | Database (partial unique index) | cp_01 |
-| Grade limited to grade_10/11/12 | Database (CHECK) | cp_01 |
-| HMAC is exactly 32 bytes | Database (CHECK) | cp_01 |
-| No plaintext mobile column in this database | Database test (catalog check) | cp_10 CP-PRIV-01 |
-| Platform Admin cannot be a transfer initiator (OQ-A) | Database (CHECK on initiator_kind) | cp_01 |
-| One open transfer per student | Database (partial unique index) | cp_01 |
-| Exactly one approval of each kind per case | Database (UNIQUE) | cp_01 |
-| All three cumulative approvals before switch | Database (function precondition, same transaction) | cp_02 |
-| Owner/generation compare-and-swap (fencing) | Database (function, row locks, same transaction) | cp_02 |
-| Legal transfer state transitions only | Database (trigger + table) | cp_03 |
-| Transfer starts in `requested` | Database (trigger) | cp_03 |
-| Ownership history append-only | Database (trigger) | cp_01 |
-| Caller identity and authority (who may call the switch) | **NOT database-enforced.** Phase 4 identity; only a privilege boundary (REVOKE FROM PUBLIC) is drafted | — |
-| Guardian consent validity, scope and expiry | **NOT database-enforced.** Application/workflow + Phase 4 identity; evidence reference only | — |
-| Destination capacity and credit checks | **NOT database-enforced.** Workspace-side checks; capacity separate from credit (PO-3, OQ-F3) | — |
-| Non-reuse of an approval across cases | **NOT database-enforced** (approval rows are per case; reuse of an evidence_ref is a workflow check) | — |
-| Freeze boundary, timeouts, recovery thresholds | **Not designed yet** (OQ-E details open) | — |
+| One current Workspace owner per student | PK on student ownership | Schema specified |
+| Global mobile+grade uniqueness | Unique index on versioned identity aliases | Per-version only; rotation protocol required |
+| One holding claim per student | Partial unique index | Schema specified |
+| HMAC exactly 32 bytes | CHECK | Schema specified |
+| OQ-A Platform Admin cannot initiate | CHECK on initiator kind | Schema specified |
+| All three cumulative approvals | Switch function checks active, non-expired approvals | Principal/authority proof remains application boundary |
+| Owner/generation fencing | row locks + compare and swap | Function draft |
+| Exactly one valid source claim | source/generation/state check + row count | Function draft |
+| Idempotent command replay | cp_04 command log and payload hash | Function draft; tests required |
+| No post-switch cancellation | state transition table | Trigger draft |
+| Append-only ownership history | trigger | Schema specified |
+| Fail-closed if registry unavailable | service/API behavior | Contract only; not runtime-tested |
 
-## Proposed rules that need Product Owner confirmation
-- Which claim states hold the global key: this draft holds `active` and `transfer_pending`; `ended` and `archived` release it (cp_01 comment; test CP-GU-07).
-- Recovery paths `failed_recoverable → staging | cutover_frozen` and `manual_intervention` transitions (cp_03 comment).
-These are marked PROPOSED; they are not decisions.
+## HMAC rotation limitation — HIGH
 
-## Test execution — recorded for this exact draft set
-Run on: PostgreSQL 16.15 (Ubuntu), fresh database `p_cp`, owner role, `ON_ERROR_STOP=1`, synthetic data.
-- `cp_01`, `cp_02`, `cp_03` applied: exit 0 each.
-- `cp_10_constraint_tests.sql`: exit 0; **26 PASS, 0 FAIL**.
-- `cp_20_race.sh`: **5 of 5 runs PASS** (each on a fresh database; exit A=0, B=3, active claims = 1, B failed on `enrollment_claims_global_identity`).
-Not executed: independent reproduction; Workspace-side tests; cross-database workflow tests; crash/recovery tests; outage (fail-closed) tests; load/concurrency beyond two sessions.
+The alias table allows multiple HMAC key versions, but the database draft does not yet implement the global write-maintenance lock, complete dual-write gate, completeness trigger or KMS integration. A partial backfill could still leave incomplete alias coverage unless all claim mutations are routed through the specified controlled workflow. See `CONTROL_PLANE_KEY_ROTATION.md`. Cross-version uniqueness is NOT yet proven.
 
-## Known limitations
-- The Control Plane cannot prove that a caller is the guardian, the prior counselor or the destination counselor; those proofs are Phase 4 identity inputs.
-- The switch function's privilege boundary is drafted (no PUBLIC EXECUTE); the production role design is deployment work.
-- Mobile encryption and HMAC keying are designed, not implemented. Rotation/dual-index migration is not yet drafted as executable SQL.
-- Registry topology, RPO/RTO, failover and split-brain handling are open (OQ-D).
+## Approval limitation — HIGH
+
+The database stores authenticated subject, authentication-event reference, authority snapshot, verification time, expiry and revocation. It cannot independently prove that the subject was the lawful guardian, current prior counselor or authorized destination actor. That proof must come from the identity/authorization service and be bound to the case. Caller-supplied strings are not evidence of authentication.
+
+## Test execution status
+
+The previous reported test counts (26 PASS / 0 FAIL and 5/5 race runs) apply to an earlier schema revision and are **superseded** by the schema and test changes in this branch. The revised SQL suite and race script have NOT been executed against the current HEAD in this session. Status: SPECIFIED / NOT RUN / NOT VERIFIED.
+
+## Remaining Control Plane blockers
+
+- Implement and test rotation lock, complete alias dual-write, alias completeness enforcement and KMS/HSM lifecycle.
+- Implement principal-bound approval verification in the identity/authorization service.
+- Define dedicated non-login function owner and workflow role grants; verify no table-owner/BYPASSRLS privileges.
+- Implement inbox/outbox delivery, retries, deduplication, reconciliation and crash recovery.
+- Execute fresh-database SQL tests and concurrency/crash tests against the exact reviewed SHA.
+- Define measured HA/failover, RPO/RTO, split-brain and backup/restore evidence (OQ-D).
