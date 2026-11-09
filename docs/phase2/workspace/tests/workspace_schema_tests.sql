@@ -12,7 +12,7 @@ END; $test$;
 
 INSERT INTO workspace_profile(singleton,workspace_id,workspace_type)
 VALUES(true,'a1000000-0000-0000-0000-000000000001','organization');
-INSERT INTO workspace_memberships(membership_id,platform_user_id,role_key,status) VALUES
+INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES
  ('b1000000-0000-0000-0000-000000000001','c1000000-0000-0000-0000-000000000001','counselor','active'),
  ('b1000000-0000-0000-0000-000000000002','c1000000-0000-0000-0000-000000000002','counselor','active'),
  ('b1000000-0000-0000-0000-000000000003','c1000000-0000-0000-0000-000000000003','manager','active');
