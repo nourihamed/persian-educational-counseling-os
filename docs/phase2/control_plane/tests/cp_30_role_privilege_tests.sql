@@ -77,7 +77,10 @@ BEGIN
      OR NOT has_table_privilege('cp_transfer_function_owner','public.command_log','INSERT')
      OR has_table_privilege('cp_transfer_function_owner','public.identity_write_gate','UPDATE')
      OR has_table_privilege('cp_transfer_function_owner','public.platform_students','INSERT')
-     OR has_table_privilege('cp_transfer_function_owner','public.mobile_hmac_key_versions','UPDATE') THEN
+     OR has_table_privilege('cp_transfer_function_owner','public.mobile_hmac_key_versions','UPDATE')
+     OR NOT has_column_privilege('cp_transfer_function_owner','public.identity_write_gate','singleton','UPDATE')
+     OR has_column_privilege('cp_transfer_function_owner','public.identity_write_gate','maintenance_mode','UPDATE')
+     OR has_column_privilege('cp_transfer_function_owner','public.identity_write_gate','rotation_epoch','UPDATE') THEN
     RAISE EXCEPTION 'FAIL CP-ROLE-06 transfer owner privilege boundary is incorrect';
   END IF;
   IF NOT has_table_privilege('cp_rotation_function_owner','public.identity_write_gate','UPDATE')
@@ -93,7 +96,10 @@ BEGIN
      OR NOT has_table_privilege('cp_identity_admission_function_owner','public.identity_admission_commands','INSERT')
      OR has_table_privilege('cp_identity_admission_function_owner','public.transfer_cases','UPDATE')
      OR has_table_privilege('cp_identity_admission_function_owner','public.identity_write_gate','UPDATE')
-     OR has_table_privilege('cp_identity_admission_function_owner','public.command_log','INSERT') THEN
+     OR has_table_privilege('cp_identity_admission_function_owner','public.command_log','INSERT')
+     OR NOT has_column_privilege('cp_identity_admission_function_owner','public.identity_write_gate','singleton','UPDATE')
+     OR has_column_privilege('cp_identity_admission_function_owner','public.identity_write_gate','maintenance_mode','UPDATE')
+     OR has_column_privilege('cp_identity_admission_function_owner','public.identity_write_gate','rotation_epoch','UPDATE') THEN
     RAISE EXCEPTION 'FAIL CP-ROLE-08 identity admission owner privilege boundary is incorrect';
   END IF;
 
