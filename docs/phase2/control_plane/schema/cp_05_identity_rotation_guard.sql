@@ -49,8 +49,8 @@ DECLARE v_maintenance boolean;
 BEGIN
   SELECT maintenance_mode INTO v_maintenance
     FROM public.identity_write_gate WHERE singleton=true FOR SHARE;
-  IF v_maintenance THEN
-    RAISE EXCEPTION 'identity claim writes are paused for HMAC rotation'
+  IF NOT FOUND OR v_maintenance IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'identity claim writes are paused or maintenance gate is unavailable'
       USING ERRCODE='object_not_in_prerequisite_state';
   END IF;
   IF TG_OP='DELETE' THEN RETURN OLD; END IF;
@@ -144,8 +144,8 @@ DECLARE v_maintenance boolean;
 BEGIN
   SELECT maintenance_mode INTO v_maintenance
     FROM public.identity_write_gate WHERE singleton=true FOR UPDATE;
-  IF NOT v_maintenance THEN
-    RAISE EXCEPTION 'identity rotation is not in maintenance mode'
+  IF NOT FOUND OR v_maintenance IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'identity rotation is not in maintenance mode or gate is unavailable'
       USING ERRCODE='object_not_in_prerequisite_state';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM public.mobile_hmac_key_versions
@@ -178,8 +178,8 @@ DECLARE v_maintenance boolean;
 BEGIN
   SELECT maintenance_mode INTO v_maintenance
     FROM public.identity_write_gate WHERE singleton=true FOR UPDATE;
-  IF NOT v_maintenance THEN
-    RAISE EXCEPTION 'retirement requires identity maintenance mode'
+  IF NOT FOUND OR v_maintenance IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'retirement requires identity maintenance mode and an available gate'
       USING ERRCODE='object_not_in_prerequisite_state';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM public.mobile_hmac_key_versions
