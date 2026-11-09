@@ -197,3 +197,8 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-004** (w
 - Added Q-007 parent/guardian authority matrix template; high-level per-child/per-permission policy is accepted, but Iran-specific age/legal evidence and dispute rules remain open.
 - Added independent Workspace domain schema review; HIGH findings WS-DOM-01..03 and MEDIUM WS-DOM-04..09 remain unresolved.
 - All new contracts are design-only. No runtime API, proof verifier, Saga worker, deletion job, KMS/HSM, backup/restore or failover control is implemented by these commits. Phase 2 remains NOT READY.
+
+
+## Phase 2 exit gate matrix (2026-11-09)
+
+The authoritative Phase 2 design/schema exit criteria and evidence matrix is now `docs/phase2/PHASE2_EXIT_CRITERIA.md`. It separates Phase 2 design/schema obligations from later runtime/production gates, lists current HIGH/MEDIUM blockers, preserves unresolved PO/legal decisions and prohibits treating draft contracts as implementation evidence. Current gate remains NOT READY.
