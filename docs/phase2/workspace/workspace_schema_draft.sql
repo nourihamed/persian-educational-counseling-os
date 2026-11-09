@@ -43,15 +43,16 @@ CREATE TABLE branches (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE FUNCTION reject_branch_for_independent_workspace() RETURNS trigger LANGUAGE plpgsql AS $
+CREATE FUNCTION reject_branch_for_independent_workspace() RETURNS trigger LANGUAGE plpgsql AS $body$
 DECLARE wt text;
 BEGIN
   SELECT workspace_type INTO wt FROM workspace_profile WHERE singleton=true;
+  IF NOT FOUND THEN RAISE EXCEPTION 'workspace profile must exist before branch creation' USING ERRCODE='foreign_key_violation'; END IF;
   IF wt='independent_counselor' THEN
     RAISE EXCEPTION 'Independent Counselor Workspace cannot contain branches' USING ERRCODE='check_violation';
   END IF;
   RETURN NEW;
-END; $;
+END; $body$;
 CREATE TRIGGER branches_workspace_type_guard
   BEFORE INSERT OR UPDATE ON branches
   FOR EACH ROW EXECUTE FUNCTION reject_branch_for_independent_workspace();
@@ -149,14 +150,14 @@ CREATE TABLE program_versions (
   CHECK ((status='published') = (published_at IS NOT NULL))
 );
 
-CREATE FUNCTION reject_published_version_mutation() RETURNS trigger LANGUAGE plpgsql AS $
+CREATE FUNCTION reject_published_version_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
 BEGIN
   IF OLD.status='published' THEN
     RAISE EXCEPTION 'published versions are immutable; create a new version' USING ERRCODE='check_violation';
   END IF;
   IF TG_OP='DELETE' THEN RETURN OLD; END IF;
   RETURN NEW;
-END; $;
+END; $body$;
 CREATE TRIGGER program_versions_immutable
   BEFORE UPDATE OR DELETE ON program_versions
   FOR EACH ROW EXECUTE FUNCTION reject_published_version_mutation();
