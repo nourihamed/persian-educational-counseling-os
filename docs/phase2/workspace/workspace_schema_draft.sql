@@ -544,6 +544,14 @@ CREATE TABLE credit_wallets (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(unit_code)
 );
+
+CREATE FUNCTION reject_credit_wallet_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  RAISE EXCEPTION 'credit wallet identity/unit is immutable' USING ERRCODE='check_violation';
+END; $body$;
+CREATE TRIGGER credit_wallets_immutable
+  BEFORE UPDATE OR DELETE ON credit_wallets
+  FOR EACH ROW EXECUTE FUNCTION reject_credit_wallet_mutation();
 CREATE TABLE credit_transactions (
   transaction_id uuid PRIMARY KEY,
   wallet_id uuid NOT NULL REFERENCES credit_wallets(wallet_id),
