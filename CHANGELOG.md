@@ -493,3 +493,10 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Added Student Credit commercial lifecycle contract separating CRD from fiat billing and specifying verified payment, grants, refunds and reconciliation.
 - Added Capacity lifecycle contract for multi-dimensional reservations, activation/archive/reactivation and transfer coordination.
 - Linked contracts into Workspace design, Phase 2 exit criteria, Project State, Roadmap, Test Plan and Supervisor Review.
+
+
+## 2026-11-09 — Workspace authorization-table privilege hardening
+- Removed runtime write grants from Workspace membership, role, permission, branch, counselor-assignment and guardian relationship/permission tables; runtime is SELECT-only on these authorization sources.
+- Made the activation function owner read-only on authorization tables and narrowed its activation grants to column-level state/counter changes and lock-only columns.
+- Added immutable wallet identity trigger/test and expanded per-Workspace role privilege assertions.
+- Dedicated audited authorization-management functions and append-only grant/revocation event history remain open; latest changes await fresh CI.
