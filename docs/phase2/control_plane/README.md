@@ -86,3 +86,10 @@ Run evidence is synthetic and validates the SQL drafts only. It does not prove K
 - Independently verify KMS/HSM, cryptographic backfill and encryption-key lifecycle.
 - Verify the new transfer/rotation/admission function-owner grants against every SECURITY DEFINER and trigger/helper path in fresh PostgreSQL 16 CI; do not treat the draft split as production approval.
 - Define measured HA/failover, RPO/RTO, split-brain and backup/restore evidence (OQ-D).
+
+
+## Mobile contact change and reverification — design contract added
+
+`CONTACT_CHANGE_REVERIFICATION_CONTRACT.md` specifies the missing contact-change path. It requires step-up authentication, verified possession of the proposed number, a single-use proof bound to the exact student/Workspace/generation/contact fingerprint, all active/retiring HMAC aliases, active-key ciphertext, atomic uniqueness enforcement, idempotency, append-only audit and transactional outbox.
+
+This is a **design contract only**. No contact-change SQL function, proof verifier, API or executable test has been implemented. The contract explicitly leaves account recovery without the old contact, guardian-age policy, retention durations and notification disclosure policy unresolved. D-014 remains synthetic-only.
