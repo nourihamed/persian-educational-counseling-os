@@ -112,3 +112,12 @@ The required educational-domain design targets are now explicit:
 - `workspace/CURRICULUM_DOMAIN_CONTRACT.md` — complete curriculum hierarchy, ownership, versioning and mastery evidence.
 
 The current Workspace SQL skeleton has not yet been reconciled with these contracts; design documents do not close WS-DOM findings.
+
+
+## 10. Additional Workspace domain contracts
+
+- `workspace/ACTIVITY_CLASS_DOMAIN_CONTRACT.md` — activity taxonomy, class participation, recurrence, attendance and assignment scope.
+- `workspace/STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` — CRD vs fiat separation, payment-to-credit reconciliation and commercial lifecycle.
+- `workspace/CAPACITY_LIFECYCLE_CONTRACT.md` — capacity dimensions, reservations, archive/reactivation and transfer capacity coordination.
+
+The current SQL skeleton does not implement these complete lifecycles; all open product values remain explicit in `PHASE2_OPEN_DECISIONS.md`.
