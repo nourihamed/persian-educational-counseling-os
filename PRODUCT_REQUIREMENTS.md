@@ -31,7 +31,7 @@ Counselor Feedback → Plan Adjustment → Repeat
 
 | Role | توصیف کوتاه |
 |---|---|
-| Platform Admin | مدیریت کل پلتفرم، مشاوران، Billing، تنظیمات سیستم |
+| Platform Admin | مدیریت پلتفرم با حداقل دسترسی؛ در MVP read-only و audited، بدون دسترسی ضمنی به محتوای دانش‌آموز |
 | Counselor | مالک Tenant؛ مدیریت دانش‌آموزان، برنامه، تحلیل، ارتباطات |
 | Student | اجرای برنامه، ثبت عملکرد، مشاهده پیشرفت |
 | Parent | مشاهده سطح‌بالای پیشرفت فرزند (با مجوز) |
