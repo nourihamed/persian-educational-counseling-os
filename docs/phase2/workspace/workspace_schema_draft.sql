@@ -540,9 +540,9 @@ CREATE TRIGGER audit_events_append_only
 
 CREATE TABLE credit_wallets (
   wallet_id uuid PRIMARY KEY,
-  currency_code char(3) NOT NULL,
+  unit_code char(3) NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(currency_code)
+  UNIQUE(unit_code)
 );
 CREATE TABLE credit_transactions (
   transaction_id uuid PRIMARY KEY,
