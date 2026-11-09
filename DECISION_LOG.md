@@ -543,3 +543,9 @@ These identifiers are deliberately OQ labels pending the collision-free D-number
 3. OQ-D/OQ-E settle architectural direction only; they do not approve schema, code, deployment, tests, or production readiness.
 4. OQ-G settles the high-level parent-access policy only; Q-007 must remain open for detailed legal and technical rules.
 5. All decisions above are product/architecture decisions, not proof of implementation or test success. Phase 2 remains NOT READY until independent review of reconciled artifacts and evidence. D-014 real-data prohibition remains in force.
+
+## 2026-11-09 — Phase 2 reconciliation status (no new D-number assigned)
+
+PR #12 branch work adds technical proposals for Workspace DB, Control Plane, transfer workflow, API authorization, HMAC rotation and idempotency. These are not Product Owner decisions and are not assigned D-identifiers. OQ-A through OQ-F3 and OQ-G remain recorded under their approved labels pending the collision-free crosswalk required by OQ-C. The earlier proposed D-028…D-062 sequence is withdrawn as unapproved. See `docs/phase2/architecture/RECONCILIATION_CROSSWALK.md`.
+
+Technical status: Control Plane and Workspace SQL are drafts; revised tests NOT RUN; HMAC rotation enforcement, KMS/HSM, authenticated approval verification, dedicated role/grant design, full Workspace schema and Saga runtime remain incomplete. Phase 2 NOT READY. D-014 remains in force.
