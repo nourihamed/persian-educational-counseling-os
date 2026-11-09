@@ -470,6 +470,55 @@ BEGIN
   RETURN v_current;
 END; $body$;
 
+-- Provider-neutral private object metadata. URLs are never stored as object keys.
+CREATE TABLE private_file_objects (
+  file_id uuid PRIMARY KEY,
+  student_id uuid REFERENCES students(student_id),
+  object_key text NOT NULL UNIQUE CHECK (object_key LIKE 'workspace/%' AND object_key !~* '^https?://'),
+  storage_provider text NOT NULL,
+  content_type text NOT NULL,
+  byte_size bigint NOT NULL CHECK (byte_size>0),
+  sha256 bytea NOT NULL CHECK (octet_length(sha256)=32),
+  encryption_key_version integer NOT NULL CHECK (encryption_key_version>0),
+  state text NOT NULL CHECK (state IN ('quarantined','available','archived')),
+  uploaded_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  archived_at timestamptz,
+  CHECK ((state='archived') = (archived_at IS NOT NULL))
+);
+
+CREATE TABLE notification_preferences (
+  platform_user_id uuid NOT NULL,
+  notification_type text NOT NULL,
+  in_app_enabled boolean NOT NULL DEFAULT true,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY(platform_user_id,notification_type)
+);
+CREATE TABLE in_app_notifications (
+  notification_id uuid PRIMARY KEY,
+  recipient_platform_user_id uuid NOT NULL,
+  notification_type text NOT NULL,
+  template_version text NOT NULL,
+  payload jsonb NOT NULL,
+  idempotency_key text NOT NULL UNIQUE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  read_at timestamptz
+);
+
+CREATE TABLE legal_holds (
+  legal_hold_id uuid PRIMARY KEY,
+  entity_type text NOT NULL,
+  entity_id uuid NOT NULL,
+  hold_ref text NOT NULL,
+  reason text NOT NULL,
+  placed_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  placed_at timestamptz NOT NULL DEFAULT now(),
+  released_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  released_at timestamptz,
+  CHECK ((released_at IS NULL) = (released_by_membership_id IS NULL)),
+  UNIQUE(entity_type,entity_id,hold_ref)
+);
+
 CREATE TABLE audit_events (
   audit_event_id uuid PRIMARY KEY,
   actor_membership_id uuid REFERENCES workspace_memberships(membership_id),
