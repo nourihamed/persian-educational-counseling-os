@@ -63,7 +63,7 @@ The initial PR #12 state had material defects in HMAC uniqueness across key vers
 The high-level Control Plane / Workspace split is appropriate. The global registry is authoritative for owner and generation; Workspace DBs contain local projections. Cross-database atomicity is not claimed. The transfer Saga and fail-closed API behavior still need executable service contracts.
 
 ## Database
-Control Plane schema now includes initial claim admission and HMAC alias coverage. Workspace schema now includes atomic activation/debit/capacity/audit. The shared Control Plane function owner remains too broad. Workspace lifecycle/retention and some domain entities/constraints remain incomplete. No production migration is approved.
+Control Plane schema now includes initial claim admission and HMAC alias coverage. Workspace schema now includes atomic activation/debit/capacity/audit. The split Control Plane function-owner draft remains pending fresh CI and privilege-path review. Workspace lifecycle/retention and some domain entities/constraints remain incomplete. No production migration is approved.
 
 ## API
 The database functions define operations, not a complete API. Authentication, object-level authorization, principal-bound approvals, idempotent HTTP contracts, rate limits, pagination, errors and API-level tenant isolation tests remain required.
