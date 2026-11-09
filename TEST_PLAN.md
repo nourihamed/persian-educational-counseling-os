@@ -1,35 +1,35 @@
 # TEST_PLAN.md
 ## Phase 2 Control Plane + Workspace acceptance contracts (2026-11-09)
 
-**Status of this section:** SPECIFIED only. Revised SQL/race files on PR #12 are NOT RUN against the current branch HEAD. Historical test counts in earlier README text are not current evidence.
+**Execution evidence:** GitHub Actions workflow run [#10](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42643344236) completed SUCCESS on PostgreSQL 16.15 at commit `4720cc3ed12b766c941337fe240a9d240e203522`: 21 Control Plane assertions, 1 concurrent global-identity race, and 13 Workspace schema assertions passed. This is draft-schema evidence only, not runtime/API/security/HA approval. Earlier failed runs exposed and led to correction of two test-fixture defects; the final run is the successful run above.
 
 | ID | Required test | Status |
 |---|---|---|
-| CP-IDENT-01 | Global mobile+grade uniqueness across Workspaces | SPECIFIED / NOT RUN |
-| CP-IDENT-02 | Same mobile with different grade follows approved D-025 rule | SPECIFIED / NOT RUN |
-| CP-IDENT-03 | HMAC rotation freeze, complete backfill, dual-version uniqueness and crash recovery | SPECIFIED / NOT RUN |
-| CP-IDENT-04 | Rotation gate blocks claim mutations; deferred triggers reject missing/mismatched aliases; complete/retire lifecycle remains safe under retries | SPECIFIED / NOT RUN |
-| CP-ROLE-01 | Runtime/function/table-owner role separation, no SUPERUSER/BYPASSRLS, no direct protected-table writes, no PUBLIC EXECUTE and safe SECURITY DEFINER ownership | SPECIFIED / NOT RUN |
-| CP-OWN-01 | Exactly one global owner and one holding claim per student | SPECIFIED / NOT RUN |
-| CP-OWN-02 | Switch rejects missing/multiple/stale source claims | SPECIFIED / NOT RUN |
-| CP-OWN-03 | Ownership generation increments exactly once; stale source writes/jobs denied | SPECIFIED / NOT RUN |
-| CP-XFER-01 | All three cumulative approvals required; expired/revoked approvals denied | SPECIFIED / NOT RUN |
-| CP-XFER-02 | Approval principal, authn event, relationship/assignment and authority scope bound to exact case | SPECIFIED / NOT RUN |
-| CP-XFER-03 | Source freeze barrier drains in-flight writes before final snapshot | SPECIFIED / NOT RUN |
-| CP-XFER-04 | Destination staging remains inaccessible until checks and ownership switch | SPECIFIED / NOT RUN |
-| CP-XFER-05 | Post-switch cancellation/rollback forbidden; forward recovery only | SPECIFIED / NOT RUN |
-| CP-IDEM-01 | Same idempotency key + same canonical payload replays original result | SPECIFIED / NOT RUN |
-| CP-IDEM-02 | Same key + different payload rejected and audited | SPECIFIED / NOT RUN |
-| CP-EVENT-01 | Outbox/inbox duplicate and out-of-order delivery deduplicated/fenced | SPECIFIED / NOT RUN |
-| CP-FAIL-01 | Control Plane outage/ambiguous ownership denies student-data access | SPECIFIED / NOT RUN |
-| WS-SCHEMA-01 | Workspace membership, branch/type, counselor assignment, guardian permission, educational domain relations, immutable published versions, credit reversals, capacity counters, private file metadata, in-app notification idempotency, legal holds and append-only audit/ledger | SPECIFIED / NOT RUN |
-| WS-ISO-01 | Workspace A credential cannot access Workspace B database/data | SPECIFIED / NOT RUN |
-| WS-AUTH-01 | Counselor/manager object and assignment scope enforced | SPECIFIED / NOT RUN |
-| WS-PARENT-01 | Per-child/per-permission parent isolation; expiry/revocation | SPECIFIED / NOT RUN |
-| WS-VERSION-01 | Published ProgramVersion/StudentPlanVersion immutable | SPECIFIED / NOT RUN |
-| WS-CREDIT-01 | Activation + debit atomic/idempotent; reversal append-only | SPECIFIED / NOT RUN |
-| WS-CAP-01 | Concurrent capacity checks cannot exceed configured limits; archived students excluded | SPECIFIED / NOT RUN |
-| OPS-RESTORE-01 | Independent encrypted backup restore drill, failover and consistency evidence | SPECIFIED / NOT RUN |
+| CP-IDENT-01 | Global mobile+grade uniqueness across Workspaces | EXECUTED / PASS |
+| CP-IDENT-02 | Same mobile with different grade follows approved D-025 rule | EXECUTED / PASS |
+| CP-IDENT-03 | HMAC rotation gate, alias completeness, key-version overlap and retirement lifecycle | EXECUTED / PASS for SQL lifecycle cases; crash/recovery and live KMS backfill NOT RUN |
+| CP-IDENT-04 | Rotation gate blocks claim mutations; deferred triggers reject missing/mismatched aliases; complete/retire lifecycle remains safe under retries | EXECUTED / PASS for covered cases; adversarial concurrency/retry NOT RUN |
+| CP-ROLE-01 | Runtime/function/table-owner role separation, no SUPERUSER/BYPASSRLS, no direct protected-table writes, no PUBLIC EXECUTE and safe SECURITY DEFINER ownership | NOT RUN |
+| CP-OWN-01 | Exactly one global owner and one holding claim per student | EXECUTED / PARTIAL: one holding claim per student tested; duplicate owner row and DB role path NOT RUN |
+| CP-OWN-02 | Switch rejects missing/multiple/stale source claims | EXECUTED / PARTIAL: stale generation/source tested; missing/multiple source-claim cases NOT RUN |
+| CP-OWN-03 | Ownership generation increments exactly once; stale source writes/jobs denied | EXECUTED / PARTIAL: switch generation increment and stale source/generation tested; stale jobs/writes NOT RUN |
+| CP-XFER-01 | All three cumulative approvals required; expired/revoked approvals denied | EXECUTED / PARTIAL: missing fee approval blocks and three approvals allow switch; expiry/revocation NOT RUN |
+| CP-XFER-02 | Approval principal, authn event, relationship/assignment and authority scope bound to exact case | NOT RUN (schema stores references/snapshots; trusted verification service absent) |
+| CP-XFER-03 | Source freeze barrier drains in-flight writes before final snapshot | NOT RUN (metadata guards only; distributed freeze/drain not implemented) |
+| CP-XFER-04 | Destination staging remains inaccessible until checks and ownership switch | NOT RUN (service-level access gate not implemented) |
+| CP-XFER-05 | Post-switch cancellation/rollback forbidden; forward recovery only | EXECUTED / PARTIAL: post-switch cancellation rejected; crash/forward-recovery NOT RUN |
+| CP-IDEM-01 | Same idempotency key + same canonical payload replays original result | EXECUTED / PASS |
+| CP-IDEM-02 | Same key + different payload rejected and audited | EXECUTED / PASS for rejection/payload immutability; audit integration NOT RUN |
+| CP-EVENT-01 | Outbox/inbox duplicate and out-of-order delivery deduplicated/fenced | NOT RUN (outbox payload immutability only tested) |
+| CP-FAIL-01 | Control Plane outage/ambiguous ownership denies student-data access | NOT RUN (runtime fail-closed integration absent) |
+| WS-SCHEMA-01 | Workspace membership, branch/type, counselor assignment, guardian permission, educational domain relations, immutable published versions, credit reversals, capacity counters, private file metadata, in-app notification idempotency, legal holds and append-only audit/ledger | EXECUTED / PASS for included schema fixtures |
+| WS-ISO-01 | Workspace A credential cannot access Workspace B database/data | NOT RUN (requires separate credentials/DB service integration) |
+| WS-AUTH-01 | Counselor/manager object and assignment scope enforced | NOT RUN (runtime authorization absent) |
+| WS-PARENT-01 | Per-child/per-permission parent isolation; expiry/revocation | NOT RUN (legal/age matrix and authorization service absent) |
+| WS-VERSION-01 | Published ProgramVersion/StudentPlanVersion immutable | EXECUTED / PASS |
+| WS-CREDIT-01 | Activation + debit atomic/idempotent; reversal append-only | EXECUTED / PARTIAL: ledger immutability, exact reversal and duplicate reversal tested; activation/debit atomicity NOT RUN |
+| WS-CAP-01 | Concurrent capacity checks cannot exceed configured limits; archived students excluded | EXECUTED / PARTIAL: atomic counter ceiling/idempotency/underflow tested; concurrent activation and archived exclusion NOT RUN |
+| OPS-RESTORE-01 | Independent encrypted backup restore drill, failover and consistency evidence | NOT RUN |
 
 A test may be marked IMPLEMENTED only when an executable test exists, EXECUTED only with reproducible logs on the exact reviewed SHA, and PASS only after successful execution. Static review is not execution. Phase 2 cannot pass while required critical security/integrity tests remain NOT RUN.
 
