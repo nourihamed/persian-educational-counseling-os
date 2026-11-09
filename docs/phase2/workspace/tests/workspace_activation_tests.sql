@@ -40,7 +40,7 @@ INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membersh
  ('b8200000-0000-0000-0000-000000000002','a8200000-0000-0000-0000-000000000002','b8100000-0000-0000-0000-000000000001',true,'active',now()),
  ('b8200000-0000-0000-0000-000000000003','a8200000-0000-0000-0000-000000000003','b8100000-0000-0000-0000-000000000001',true,'active',now());
 
-INSERT INTO credit_wallets(wallet_id,currency_code)
+INSERT INTO credit_wallets(wallet_id,unit_code)
 VALUES('c8200000-0000-0000-0000-000000000001','CRD');
 INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,reason)
 VALUES('d8200000-0000-0000-0000-000000000001','c8200000-0000-0000-0000-000000000001','grant',100,'activation-fixture-grant','synthetic opening credit');
