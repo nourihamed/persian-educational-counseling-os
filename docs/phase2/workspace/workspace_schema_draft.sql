@@ -243,10 +243,10 @@ CREATE TRIGGER credit_reversal_guard
   BEFORE INSERT ON credit_transactions
   FOR EACH ROW EXECUTE FUNCTION validate_credit_reversal();
 
-CREATE FUNCTION reject_ledger_mutation() RETURNS trigger LANGUAGE plpgsql AS $
+CREATE FUNCTION reject_ledger_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
 BEGIN
   RAISE EXCEPTION 'credit_transactions is append-only' USING ERRCODE='check_violation';
-END; $$;
+END; $body$;
 CREATE TRIGGER credit_transactions_append_only
   BEFORE UPDATE OR DELETE ON credit_transactions
   FOR EACH ROW EXECUTE FUNCTION reject_ledger_mutation();
