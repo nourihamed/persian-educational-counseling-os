@@ -1215,3 +1215,10 @@ Added `workspace_capacity_last_slot_race.sh` and wired it into the PostgreSQL 16
 # SUPERVISOR REVIEW ADDENDUM — Phase 2 Exit Criteria Baseline (2026-11-09)
 
 Added `docs/phase2/PHASE2_EXIT_CRITERIA.md` as the single Phase 2 exit/evidence matrix. It distinguishes design/schema completion from later runtime/production implementation gates, enumerates current HIGH/MEDIUM blockers, keeps PO/legal decisions explicit, and defines the exact-SHA CI, PR reconciliation and independent-review conditions for a final gate. This does not change the gate: **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Open Decision Register (2026-11-09)
+
+Added `docs/phase2/PHASE2_OPEN_DECISIONS.md` to consolidate unresolved Product Owner and specialist inputs without inventing policy. It distinguishes business/legal choices from technical closure work and recommends a sequencing order. Q-007, Q-020/OQ-F2, OQ-D/OQ-E, approval conflict policy, recovery path, assessment semantics, activity taxonomy, credit lifecycle, capacity, notifications and file-provider parameters remain open. No new decision is made; Gate remains **NOT READY**.
