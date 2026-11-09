@@ -116,6 +116,9 @@ WHERE plan_version_id='b3000000-0000-0000-0000-000000000001';
 SELECT ws_expect_error('WS-VERSION-02 published StudentPlanVersion is immutable','DELETE FROM student_plan_versions WHERE plan_version_id=''b3000000-0000-0000-0000-000000000001''','23514');
 
 INSERT INTO credit_wallets(wallet_id,unit_code) VALUES ('c3000000-0000-0000-0000-000000000001','CRD');
+SELECT ws_expect_error('WS-CREDIT-WALLET-01 wallet identity/unit is immutable',
+  $q$UPDATE credit_wallets SET wallet_id=wallet_id WHERE wallet_id='c3000000-0000-0000-0000-000000000001'$q$,
+  '23514');
 SELECT ws_expect_error('WS-CREDIT-UNIT-01 fiat currency code is not a Student Credit unit',
   $q$INSERT INTO credit_wallets(wallet_id,unit_code) VALUES ('c3000000-0000-0000-0000-000000000099','IRR')$q$,
   '23514');
