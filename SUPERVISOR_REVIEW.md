@@ -1247,3 +1247,23 @@ Added three design contracts: `ASSESSMENT_DOMAIN_CONTRACT.md`, `DETERMINISTIC_PL
 # SUPERVISOR REVIEW ADDENDUM — Activity, Credit & Capacity Lifecycle (2026-11-09)
 
 Added three Workspace domain contracts: `ACTIVITY_CLASS_DOMAIN_CONTRACT.md`, `STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` and `CAPACITY_LIFECYCLE_CONTRACT.md`. They define typed Activity/Class/Assignment links, the separation of fiat billing from CRD wallet ledger, and capacity reservation/archive/reactivation/transfer boundaries. They deliberately leave refund, suspension, class-scope and numeric capacity policies unresolved. The current SQL skeleton and tests do not yet implement these lifecycles. Phase 2 remains **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Workspace Authorization-Table Privileges (2026-11-09)
+
+## Finding — HIGH: runtime authorization-table mutation
+The prior Workspace provisioning draft granted the general runtime role INSERT/UPDATE on membership, role, permission, branch, counselor assignment and guardian relationship/permission tables. A compromised runtime could self-assign a role, alter a responsible counselor assignment or grant guardian scope. This violates least privilege and undermines object-level authorization.
+
+## Remediation committed
+- Runtime now receives SELECT only on workspace_memberships, membership_roles, membership_permissions, branches, counselor_assignments, student_guardian_links and guardian_permissions.
+- Activation function owner also has read-only access to those authorization tables; it cannot mutate them.
+- Activation function owner grants were narrowed to required SELECT/INSERT and column-level UPDATE for enrollment state/start time, capacity counters and lock-only columns. Immutable wallet/ledger/command triggers prevent actual writes through lock-only privileges.
+- Catalog tests now assert runtime/function-owner write denial and required read/column grants. A wallet immutability regression test was added.
+
+## Remaining gap
+A dedicated audited authorization-management command/function owner and append-only role/permission/guardian grant-revocation event model are not yet implemented. Authorization mutations are intentionally fail-closed/unavailable to runtime until that path exists. These changes are in the latest branch tree but have not yet been covered by a fresh CI run.
+
+## Gate impact
+This addresses the excessive runtime DML grant in the draft but does not establish API authorization or complete authorization lifecycle. HIGH finding remains partially open pending exact-SHA CI and audited management workflow. Phase 2 remains **NOT READY**.
