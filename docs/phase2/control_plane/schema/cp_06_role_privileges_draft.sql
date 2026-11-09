@@ -55,6 +55,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON
   enrollment_claim_identity_aliases,transfer_cases,transfer_approvals,command_log,
   inbox_events,outbox_events,ownership_history,transfer_state_transitions
 TO cp_function_owner;
+GRANT USAGE,SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA public TO cp_function_owner;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO cp_function_owner;
 
 -- Runtime roles have no direct table privileges.
