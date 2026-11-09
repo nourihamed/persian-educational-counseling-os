@@ -540,7 +540,7 @@ CREATE TRIGGER audit_events_append_only
 
 CREATE TABLE credit_wallets (
   wallet_id uuid PRIMARY KEY,
-  unit_code char(3) NOT NULL CHECK (unit_code ~ '^[A-Z0-9]{3}
+  unit_code char(3) NOT NULL CHECK (unit_code = 'CRD'), -- Student Credit unit, never fiat currency
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(unit_code)
 );
@@ -596,65 +596,6 @@ COMMIT;
 -- 2. Draft triggers reject UPDATE/DELETE of published versions; final review must test bypass/owner privileges.
 -- 3. Membership/branch/workspace type rules and guardian legal authority require trusted application
 --    authorization plus additional constraints/triggers and executable tests.
--- 4. Capacity/entitlement checks must be atomic in the activation transaction and remain separate
---    from the credit ledger.
--- 5. Workspace DB cannot enforce Control Plane global ownership or global mobile+grade uniqueness.
-),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(unit_code)
-);
-CREATE TABLE credit_transactions (
-  transaction_id uuid PRIMARY KEY,
-  wallet_id uuid NOT NULL REFERENCES credit_wallets(wallet_id),
-  transaction_kind text NOT NULL CHECK (transaction_kind IN ('purchase','grant','activation_debit','adjustment','reversal')),
-  amount bigint NOT NULL CHECK (amount <> 0),
-  idempotency_key text NOT NULL UNIQUE,
-  related_transaction_id uuid REFERENCES credit_transactions(transaction_id),
-  student_id uuid REFERENCES students(student_id),
-  actor_membership_id uuid REFERENCES workspace_memberships(membership_id),
-  reason text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  CHECK (transaction_kind <> 'reversal' OR related_transaction_id IS NOT NULL),
-  CHECK (transaction_kind NOT IN ('purchase','grant') OR amount > 0),
-  CHECK (transaction_kind <> 'activation_debit' OR amount < 0)
-);
-
-CREATE UNIQUE INDEX one_reversal_per_credit_transaction
-  ON credit_transactions(related_transaction_id)
-  WHERE transaction_kind='reversal';
-
-CREATE FUNCTION validate_credit_reversal() RETURNS trigger LANGUAGE plpgsql AS $body$
-DECLARE v_wallet uuid; v_amount bigint; v_kind text;
-BEGIN
-  IF NEW.transaction_kind='reversal' THEN
-    SELECT wallet_id,amount,transaction_kind INTO v_wallet,v_amount,v_kind
-      FROM credit_transactions WHERE transaction_id=NEW.related_transaction_id FOR UPDATE;
-    IF NOT FOUND OR v_wallet<>NEW.wallet_id OR v_kind='reversal' OR NEW.amount<>-v_amount THEN
-      RAISE EXCEPTION 'reversal must reference one original transaction in the same wallet with exact opposite amount'
-        USING ERRCODE='check_violation';
-    END IF;
-  END IF;
-  RETURN NEW;
-END; $body$;
-CREATE TRIGGER credit_reversal_guard
-  BEFORE INSERT ON credit_transactions
-  FOR EACH ROW EXECUTE FUNCTION validate_credit_reversal();
-
-CREATE FUNCTION reject_ledger_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
-BEGIN
-  RAISE EXCEPTION 'credit_transactions is append-only' USING ERRCODE='check_violation';
-END; $body$;
-CREATE TRIGGER credit_transactions_append_only
-  BEFORE UPDATE OR DELETE ON credit_transactions
-  FOR EACH ROW EXECUTE FUNCTION reject_ledger_mutation();
-
-COMMIT;
-
--- IMPORTANT DRAFT LIMITATIONS:
--- 1. This skeleton does not replace the complete Phase 2 domain schema.
--- 2. Draft triggers reject UPDATE/DELETE of published versions; final review must test bypass/owner privileges.
--- 3. Membership/branch/workspace type rules and guardian legal authority require trusted application
---    authorization plus additional constraints/triggers and executable tests.
--- 4. Capacity/entitlement checks must be atomic in the activation transaction and remain separate
---    from the credit ledger.
+-- 4. Atomic activation/debit/capacity orchestration is in companion workspace_activation_transactions.sql;
+--    it remains a draft and still requires trusted Control Plane/API authorization.
 -- 5. Workspace DB cannot enforce Control Plane global ownership or global mobile+grade uniqueness.
