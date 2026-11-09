@@ -74,7 +74,7 @@ A role label alone is insufficient. Cross-Workspace and nonexistent objects retu
 
 ## 6. Schema status and omissions
 
-This document defines responsibilities and invariants, not a complete executable schema. The companion `workspace_schema_draft.sql` is a deliberately limited relational skeleton for the core ownership, membership, enrollment, assignment, guardian permission, versioning and credit-ledger boundaries. Educational domain tables beyond that skeleton remain specified, not implemented. No migrations or runtime services are authorized.
+This document defines responsibilities and invariants, not a complete executable schema. The companion `workspace_schema_draft.sql` now includes a draft relational skeleton for membership/roles, enrollment/assignment, guardian permissions, curriculum/subject/chapter/topic, mastery, activities/study sessions, tests/attempts/responses, exams/results, classes/sessions, assignments/reviews/routines, progress/risk/counselor notes, capacity counters, audit, versioning and credit ledger. It is still not the complete production domain model: activation + credit + capacity transaction orchestration, complete retention/file/notification structures, authorization enforcement and several domain-specific constraints remain open. No migrations or runtime services are authorized.
 
 ## 7. Acceptance tests (not executed here)
 
