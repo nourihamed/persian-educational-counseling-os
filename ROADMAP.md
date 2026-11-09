@@ -87,3 +87,6 @@ Phase 0 توسط Product Owner در 2026-10-14 بسته شد و PR #1 در هم�
 
 
 Phase 2 exit criteria are centralized in `docs/phase2/PHASE2_EXIT_CRITERIA.md`. Do not treat later-phase implementation requirements as Phase 2 runtime deliverables; Phase 2 must nevertheless specify their architecture, invariants and acceptance tests before progression.
+
+
+The educational domain design targets are now specified in `workspace/ASSESSMENT_DOMAIN_CONTRACT.md`, `workspace/DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` and `workspace/CURRICULUM_DOMAIN_CONTRACT.md`. Schema reconciliation and executable synthetic tests remain required before Phase 2 design/schema exit.
