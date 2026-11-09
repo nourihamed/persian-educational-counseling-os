@@ -121,6 +121,7 @@ VALUES
 SELECT expect_error('CP-APP-01 missing prior counselor fee confirmation blocks switch','SELECT switch_student_ownership(''d0000000-0000-0000-0000-000000000002'')','23514');
 INSERT INTO transfer_approvals(approval_id,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
 VALUES (gen_random_uuid(),'d0000000-0000-0000-0000-000000000002','fee_confirmation','ev-f1','prior-counselor-subject','authn-f1','{"source_assignment":"verified","fee_confirmation":true}',now());
+SELECT expect_error('CP-APP-02 approval evidence cannot be rewritten','UPDATE transfer_approvals SET approver_ref=''forged-subject'' WHERE case_id=''d0000000-0000-0000-0000-000000000002'' AND approval_kind=''guardian_consent''','23514');
 
 -- Stale generation is rejected before any partial write.
 UPDATE student_ownership SET ownership_generation=2 WHERE student_id='b0000000-0000-0000-0000-000000000001';
@@ -134,7 +135,8 @@ DO $$ DECLARE g bigint; BEGIN
  IF (SELECT count(*) FROM ownership_history WHERE case_id='d0000000-0000-0000-0000-000000000002' AND ownership_generation=2)<>1 THEN RAISE EXCEPTION 'FAIL CP-SWITCH-03 history missing'; END IF;
  IF (SELECT count(*) FROM outbox_events WHERE case_id='d0000000-0000-0000-0000-000000000002' AND event_type='ownership_switched')<>1 THEN RAISE EXCEPTION 'FAIL CP-SWITCH-04 outbox missing'; END IF;
  RAISE NOTICE 'PASS CP-SWITCH-01 atomic owner/generation/claim/history/outbox switch';
-END $$;
+END $;
+SELECT expect_error('CP-OUTBOX-01 outbox payload cannot be rewritten','UPDATE outbox_events SET payload=''{"tampered":true}''::jsonb WHERE case_id=''d0000000-0000-0000-0000-000000000002''','23514');
 SELECT expect_error('CP-STATE-01 cancellation after ownership switch forbidden','UPDATE transfer_cases SET state=''cancelled'' WHERE case_id=''d0000000-0000-0000-0000-000000000002''','23514');
 UPDATE transfer_cases SET state='projections_finalizing' WHERE case_id='d0000000-0000-0000-0000-000000000002';
 UPDATE transfer_cases SET state='completed' WHERE case_id='d0000000-0000-0000-0000-000000000002';
