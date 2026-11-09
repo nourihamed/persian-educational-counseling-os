@@ -1222,3 +1222,14 @@ Added `docs/phase2/PHASE2_EXIT_CRITERIA.md` as the single Phase 2 exit/evidence 
 # SUPERVISOR REVIEW ADDENDUM — Open Decision Register (2026-11-09)
 
 Added `docs/phase2/PHASE2_OPEN_DECISIONS.md` to consolidate unresolved Product Owner and specialist inputs without inventing policy. It distinguishes business/legal choices from technical closure work and recommends a sequencing order. Q-007, Q-020/OQ-F2, OQ-D/OQ-E, approval conflict policy, recovery path, assessment semantics, activity taxonomy, credit lifecycle, capacity, notifications and file-provider parameters remain open. No new decision is made; Gate remains **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Membership Role Source (2026-11-09)
+
+## Change reviewed
+The Workspace schema draft now removes scalar `workspace_memberships.role_key`; `membership_roles` is the sole role-assignment relation. The schema test suite adds `WS-ROLE-SOURCE-01` to assert that the scalar column is absent and the canonical relation exists. All known synthetic fixture inserts were updated.
+
+## Finding status
+WS-DOM-02 is **PARTIALLY ADDRESSED**: competing role sources are removed in the draft schema. Append-only grant/revocation event history, authenticated actor attribution and direct-DML denial tests remain open. Do not mark role lifecycle auditability complete. Fresh CI on the exact latest tree is pending.
