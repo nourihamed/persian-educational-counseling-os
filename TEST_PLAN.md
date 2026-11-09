@@ -1,7 +1,7 @@
 # TEST_PLAN.md
 ## Phase 2 Control Plane + Workspace acceptance contracts (2026-11-09)
 
-**Execution evidence:** GitHub Actions workflow run [#10](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42643344236) completed SUCCESS on PostgreSQL 16.15 at commit `4720cc3ed12b766c941337fe240a9d240e203522`: 21 Control Plane assertions, 1 concurrent global-identity race, and 13 Workspace schema assertions passed. This is draft-schema evidence only, not runtime/API/security/HA approval. Earlier failed runs exposed and led to correction of two test-fixture defects; the final run is the successful run above.
+**Execution evidence:** GitHub Actions workflow run [#35](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42644150581) completed SUCCESS on PostgreSQL 16 at commit `418905e6abfcc3134310a4f4a79068b28f74333a`: 22 Control Plane assertions (including eight role/privilege catalog checks), 1 concurrent global-identity race, and 13 Workspace schema assertions passed. This is draft-schema evidence only, not runtime/API/production/HA approval. Earlier failed runs exposed and led to correction of test-fixture and privilege-grant defects; run #35 is the latest successful run.
 
 | ID | Required test | Status |
 |---|---|---|
@@ -9,7 +9,7 @@
 | CP-IDENT-02 | Same mobile with different grade follows approved D-025 rule | EXECUTED / PASS |
 | CP-IDENT-03 | HMAC rotation gate, alias completeness, key-version overlap and retirement lifecycle | EXECUTED / PASS for SQL lifecycle cases; crash/recovery and live KMS backfill NOT RUN |
 | CP-IDENT-04 | Rotation gate blocks claim mutations; deferred triggers reject missing/mismatched aliases; complete/retire lifecycle remains safe under retries | EXECUTED / PASS for covered cases; adversarial concurrency/retry NOT RUN |
-| CP-ROLE-01 | Runtime/function/table-owner role separation, no SUPERUSER/BYPASSRLS, no direct protected-table writes, no PUBLIC EXECUTE and safe SECURITY DEFINER ownership | NOT RUN |
+| CP-ROLE-01 | Runtime/function/table-owner role separation, no SUPERUSER/BYPASSRLS, no direct protected-table writes, no PUBLIC EXECUTE and safe SECURITY DEFINER ownership | EXECUTED / PASS in ephemeral PostgreSQL CI; production service-role binding NOT RUN |
 | CP-OWN-01 | Exactly one global owner and one holding claim per student | EXECUTED / PARTIAL: one holding claim per student tested; duplicate owner row and DB role path NOT RUN |
 | CP-OWN-02 | Switch rejects missing/multiple/stale source claims | EXECUTED / PARTIAL: stale generation/source tested; missing/multiple source-claim cases NOT RUN |
 | CP-OWN-03 | Ownership generation increments exactly once; stale source writes/jobs denied | EXECUTED / PARTIAL: switch generation increment and stale source/generation tested; stale jobs/writes NOT RUN |
