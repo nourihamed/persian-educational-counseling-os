@@ -202,3 +202,8 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-004** (w
 ## Phase 2 exit gate matrix (2026-11-09)
 
 The authoritative Phase 2 design/schema exit criteria and evidence matrix is now `docs/phase2/PHASE2_EXIT_CRITERIA.md`. It separates Phase 2 design/schema obligations from later runtime/production gates, lists current HIGH/MEDIUM blockers, preserves unresolved PO/legal decisions and prohibits treating draft contracts as implementation evidence. Current gate remains NOT READY.
+
+
+## Phase 2 unresolved decision register (2026-11-09)
+
+`docs/phase2/PHASE2_OPEN_DECISIONS.md` consolidates remaining PO/legal/security/operations inputs, recommended safe defaults and sequencing. It explicitly preserves Q-007, Q-020/OQ-F2, OQ-D/OQ-E and other policy values as unresolved; no numbers or legal rules are inferred.
