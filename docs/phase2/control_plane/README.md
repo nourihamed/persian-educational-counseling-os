@@ -6,11 +6,12 @@
 ## Apply order on a fresh PostgreSQL 15+ database
 
 1. `schema/cp_01_schema_draft.sql` — registry, ownership, claims and versioned HMAC aliases.
-2. `schema/cp_02_switch_function_draft.sql` — ownership switch with source claim/generation/alias checks and valid cumulative approvals.
-3. `schema/cp_03_transfer_transitions_draft.sql` — transfer state machine; no cancellation after ownership switch.
-4. `schema/cp_04_transfer_command_idempotency.sql` — same-key/same-payload replay and different-payload rejection.
-5. `tests/cp_10_constraint_tests.sql` — synthetic regression suite.
-6. `tests/cp_20_race.sh <dbname>` — two-session alias uniqueness race; requires three fixture Workspace IDs to exist.
+2. `schema/cp_05_identity_rotation_guard.sql` — maintenance gate, deferred alias-completeness checks and rotation lifecycle functions.
+3. `schema/cp_02_switch_function_draft.sql` — ownership switch with source claim/generation/alias checks and valid cumulative approvals.
+4. `schema/cp_03_transfer_transitions_draft.sql` — transfer state machine; freeze/snapshot evidence required; no post-switch cancellation.
+5. `schema/cp_04_transfer_command_idempotency.sql` — same-key/same-payload replay and different-payload rejection.
+6. `tests/cp_10_constraint_tests.sql` — synthetic regression suite.
+7. `tests/cp_20_race.sh <dbname>` — two-session alias uniqueness race; requires three fixture Workspace IDs to exist.
 
 ## Database boundary
 
