@@ -13,7 +13,6 @@ CREATE TABLE workspace_profile (
 CREATE TABLE workspace_memberships (
   membership_id uuid PRIMARY KEY,
   platform_user_id uuid NOT NULL,
-  role_key text NOT NULL,
   status text NOT NULL CHECK (status IN ('invited','active','suspended','ended')),
   granted_at timestamptz NOT NULL DEFAULT now(),
   ended_at timestamptz,
@@ -21,6 +20,7 @@ CREATE TABLE workspace_memberships (
   CHECK ((status='ended') = (ended_at IS NOT NULL))
 );
 
+-- Canonical source of Workspace role assignments. Do not duplicate a role on workspace_memberships.
 CREATE TABLE membership_roles (
   membership_id uuid NOT NULL REFERENCES workspace_memberships(membership_id),
   role_key text NOT NULL,
