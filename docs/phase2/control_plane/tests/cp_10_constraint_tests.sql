@@ -25,8 +25,8 @@ INSERT INTO mobile_hmac_key_versions(key_version,state) VALUES (1,'active'),(2,'
 INSERT INTO student_contact_index(student_id,key_version,mobile_hmac,mobile_ciphertext,cipher_key_version) VALUES
  ('b0000000-0000-0000-0000-000000000001',1,decode(repeat('11',32),'hex'),'\x01',1),
  ('b0000000-0000-0000-0000-000000000001',2,decode(repeat('12',32),'hex'),'\x02',1),
- ('b0000000-0000-0000-0000-000000000002',1,decode(repeat('22',32),'hex'),'\x03',1),
- ('b0000000-0000-0000-0000-000000000002',2,decode(repeat('23',32),'hex'),decode('03','hex'),1),
+ ('b0000000-0000-0000-0000-000000000002',1,decode(repeat('11',32),'hex'),'\x03',1),
+ ('b0000000-0000-0000-0000-000000000002',2,decode(repeat('12',32),'hex'),decode('03','hex'),1),
  ('b0000000-0000-0000-0000-000000000003',1,decode(repeat('33',32),'hex'),'\x04',1);
 INSERT INTO student_ownership(student_id,owner_workspace_id,ownership_generation,lifecycle_state) VALUES
  ('b0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001',1,'active'),
@@ -68,7 +68,7 @@ VALUES ('c0000000-0000-0000-0000-000000000003','b0000000-0000-0000-0000-00000000
 INSERT INTO enrollment_claim_identity_aliases(claim_id,grade_key,key_version,mobile_hmac,claim_state)
 VALUES ('c0000000-0000-0000-0000-000000000003','grade_11',1,decode(repeat('11',32),'hex'),'active');
 INSERT INTO enrollment_claim_identity_aliases(claim_id,grade_key,key_version,mobile_hmac,claim_state)
-VALUES ('c0000000-0000-0000-0000-000000000003','grade_11',2,decode(repeat('23',32),'hex'),'active');
+VALUES ('c0000000-0000-0000-0000-000000000003','grade_11',2,decode(repeat('12',32),'hex'),'active');
 COMMIT;
 
 -- Rotation maintenance gate blocks new claim admission until all active/retiring aliases are verified.
