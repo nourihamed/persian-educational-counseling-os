@@ -43,6 +43,7 @@ ALTER TABLE inbox_events OWNER TO cp_table_owner;
 ALTER TABLE outbox_events OWNER TO cp_table_owner;
 ALTER TABLE ownership_history OWNER TO cp_table_owner;
 ALTER TABLE transfer_state_transitions OWNER TO cp_table_owner;
+ALTER SEQUENCE ownership_history_history_id_seq OWNER TO cp_table_owner;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC;
