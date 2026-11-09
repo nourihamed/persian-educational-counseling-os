@@ -139,7 +139,10 @@ CREATE TABLE transfer_cases (
     CHECK (source_unfrozen_at IS NULL OR (source_frozen_at IS NOT NULL AND source_unfrozen_at>=source_frozen_at)),
     updated_at           timestamptz NOT NULL DEFAULT now(),
     CHECK (source_workspace_id <> destination_workspace_id),
-    UNIQUE (idempotency_key)
+    UNIQUE (idempotency_key),
+    UNIQUE (source_freeze_token),
+    UNIQUE (final_snapshot_ref),
+    UNIQUE (destination_validation_ref)
 );
 -- At most one open (non-terminal) transfer per student.
 CREATE UNIQUE INDEX transfer_cases_one_open_per_student
