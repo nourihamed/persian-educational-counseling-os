@@ -105,6 +105,9 @@ GRANT INSERT ON platform_students,student_ownership,enrollment_claims,
   student_contact_index,enrollment_claim_identity_aliases,identity_admission_commands
   TO cp_identity_admission_function_owner;
 GRANT UPDATE (workspace_id) ON workspaces TO cp_identity_admission_function_owner;
+-- FOR UPDATE on the append-only admission command requires UPDATE on a column.
+-- The existing BEFORE UPDATE trigger rejects all mutations, so this grant permits locking only.
+GRANT UPDATE (idempotency_key) ON identity_admission_commands TO cp_identity_admission_function_owner;
 GRANT EXECUTE ON FUNCTION assert_claim_alias_coverage(uuid)
   TO cp_identity_admission_function_owner;
 
