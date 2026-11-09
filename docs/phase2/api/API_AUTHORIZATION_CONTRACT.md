@@ -24,6 +24,33 @@
 | Ownership switch | Control Plane workflow service only | final revalidation; three approvals; frozen and staged verified; expected generation matches | atomic transaction, command idempotency, history + outbox |
 | Finalize projections | scoped Workspace worker | current owner and new generation match | inbox dedupe, retries, stale-generation rejection |
 
+## 2A. Initial student identity admission (logical operation; not an implemented endpoint)
+
+- The API authenticates the Platform User and resolves an active Workspace membership plus explicit student.create permission. Do not infer permission from a role label alone.
+- The service verifies control of the submitted mobile number, normalizes it to canonical E.164, validates the grade and resolves an active Workspace.
+- The trusted service computes the canonical payload hash, encrypts E.164 using the active Platform Security encryption key and computes one HMAC alias for every active/retiring HMAC key version. Plaintext, keys and caller-supplied HMAC/ciphertext values are never accepted as authoritative.
+- The service invokes Control Plane admit_student_identity_claim(...) using a server-generated student/claim ID and idempotency key. The database function atomically creates the global student reference, initial Workspace owner, claim, encrypted contact index and all versioned aliases.
+- Global mobile+grade uniqueness is enforced by the Control Plane. A duplicate claim returns a non-disclosing conflict; no Workspace-local record may be created on failure.
+- The database function verifies alias count/version coverage and uniqueness, but cannot prove the HMACs came from the same canonical E.164. The trusted service/KMS boundary is responsible for that guarantee.
+- The operation is a draft DB capability only. No HTTP endpoint, OTP verification service, KMS integration or production authorization path is implemented.
+
+## 2B. Mobile contact change / reverification (NOT IMPLEMENTED)
+
+- Require re-authentication/step-up and verification of the new mobile number before changing the canonical contact.
+- Keep the old identity claim authoritative until the new number is verified and the complete active/retiring alias set can be committed.
+- Update ciphertext, contact-index rows and all aliases under the same Control Plane maintenance gate; preserve global mobile+grade uniqueness and idempotency.
+- Reject duplicate claims without revealing another student's existence. Audit old/new key-version references and actor, but never log plaintext or HMAC keys.
+- A contact-change function and executable tests are still missing; do not implement by direct table UPDATE.
+
+## 2C. Workspace enrollment activation (logical operation; not an implemented endpoint)
+
+- Before activation, validate current Control Plane owner and ownership_generation; fail closed if Control Plane is unavailable or generation differs.
+- Verify actor's exact student.activate permission, active Workspace membership, accepted responsible counselor, required guardian/consent state, product entitlement and configured capacity.
+- Determine debit amount from server-side entitlement/pricing policy; never accept a client-supplied debit amount.
+- Invoke activate_student_enrollment(...) with server-derived actor, wallet, generation and idempotency context. The draft DB function atomically debits Student Credit, reserves active-student capacity, changes enrollment to active and writes an audit event.
+- The database function checks active membership and one accepted responsible counselor as defense-in-depth; it does not replace exact API authorization or Control Plane ownership validation.
+- Activation SQL and concurrency tests pass synthetically; the HTTP/API authorization and end-to-end service are not implemented.
+
 ## 3. Parent/guardian authorization
 
 - Verify relationship and legal authority according to age and applicable Iran MVP legal review. Do not infer legal authority from phone number or self-assertion.
@@ -76,4 +103,7 @@
 - Only authorized destination actor can accept.
 - Missing ownership validation denies read/write/export/file/job access.
 - Idempotency replay and payload mismatch semantics are stable.
+- Initial claim admission creates all active/retiring HMAC aliases; global mobile+grade duplicate and concurrent race are rejected (SQL draft tests PASS; API/KMS verification NOT RUN).
+- Workspace activation atomically debits Student Credit, reserves capacity and audits; insufficient credit/capacity and same-enrollment concurrency roll back or replay correctly (SQL draft tests PASS; API authorization NOT RUN).
+- Mobile contact-change/reverification updates all aliases atomically and rejects global duplicates (NOT IMPLEMENTED / NOT RUN).
 - High-risk actions enforce MFA/step-up and audit.
