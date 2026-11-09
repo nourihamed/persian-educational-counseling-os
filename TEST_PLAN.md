@@ -1,7 +1,7 @@
 # TEST_PLAN.md
 ## Phase 2 Control Plane + Workspace acceptance contracts (2026-11-09)
 
-**Latest successful execution:** GitHub Actions run [#148](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42648353070), PostgreSQL 16, SQL/test tree SHA \`e97056b44ebfdbfce5344a9c524ba8af1e72055b\`. It passed Control Plane transfer/rotation/claim-admission suites, Control Plane role catalog, two-session global identity and claim-admission races, Workspace schema/activation/credit/capacity/audit suites, concurrent activation, and per-Workspace role/CONNECT catalog checks. Subsequent changes were documentation and a test-label correction only. This is synthetic draft-SQL evidence, not API/runtime/production/HA approval.
+**Latest successful execution:** GitHub Actions run [#231](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42653297866), PostgreSQL 16, exact SQL/test tree at commit `2104eea56806a6f82b405090bc9cbfbd675d2aec` (run status SUCCESS). The workflow ran on the exact PR #12 HEAD at that time. Subsequent commits `fde21b8` and `3d88729` changed documentation only; SQL/test files were not changed. This is synthetic draft-SQL evidence, not API/runtime/production/HA approval.
 
 | ID | Required test | Status |
 |---|---|---|
