@@ -33,7 +33,7 @@ DECLARE
 BEGIN
   FOREACH role_name IN ARRAY role_names LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=role_name) THEN
-      IF role_name LIKE '%\_login' ESCAPE '\' THEN
+      IF right(role_name,6)='_login' THEN
         EXECUTE format(
           'CREATE ROLE %I LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD NULL',
           role_name
