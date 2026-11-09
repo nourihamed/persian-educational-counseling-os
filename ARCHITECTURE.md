@@ -1,5 +1,8 @@
 # ARCHITECTURE.md
 
+
+> **CURRENT ARCHITECTURE OVERRIDE — 2026-11-09 (PR #12, unmerged):** The older `Tenant = Counselor` wording below is historical and superseded. The authoritative tenant boundary is **Workspace**: Organization Workspace or Independent Counselor Workspace. A person may belong to multiple Workspaces with independent membership/permissions; a Counselor is a member/assignment, not a tenant. Control Plane is authoritative for global student identity, current Workspace ownership and ownership generation. Each Workspace has an isolated Workspace DB/credential and local educational records/projections. No cross-database foreign keys or atomic cross-database transaction are claimed. Access to student data requires current Control Plane owner/generation validation and fails closed if validation is unavailable. See `docs/phase2/architecture/RECONCILIATION_CROSSWALK.md`, `docs/phase2/workspace/WORKSPACE_DATABASE_DESIGN.md` and `docs/phase2/transfer/TRANSFER_WORKFLOW_CONTRACT.md`. This is design-only; PR #12 is unmerged and Phase 2 remains NOT READY.
+
 Status: conceptual architecture baseline; no implementation yet. Current tenant-isolation topology is governed by D-020/D-023 and Phase 1 design docs.
 
 ## 1. Layering
