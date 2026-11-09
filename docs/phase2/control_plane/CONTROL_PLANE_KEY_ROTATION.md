@@ -61,7 +61,7 @@ A new HMAC version MUST NOT become active for claim writes until every live clai
 
 ## 6. Test evidence
 
-GitHub Actions run #148 passed on PostgreSQL 16 at SQL/test tree SHA e97056b44ebfdbfce5344a9c524ba8af1e72055b:
+GitHub Actions run [#231](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42653297866) passed on PostgreSQL 16 at exact PR #12 HEAD `2104eea56806a6f82b405090bc9cbfbd675d2aec`. This run includes the split-owner catalog assertions; run #148 is historical evidence for the earlier shared-owner design.
 - rotation maintenance gate and alias-coverage regressions: PASS;
 - duplicate mobile+grade claim rejection and different-grade allowance: PASS;
 - initial admission creates all live-key aliases and ownership atomically: PASS;
@@ -80,4 +80,4 @@ These are synthetic SQL-draft tests. They do not prove KMS/HSM, actual HMAC deri
 - Implement KMS/HSM access policy, encryption-key lifecycle, cryptographic backfill and key rotation/revocation drills.
 - Implement durable outbox/inbox delivery and transfer saga recovery.
 - Add crash injection, KMS outage, transfer-vs-rotation concurrency and target-environment tests.
-- Split the broad non-login cp_function_owner DML surface into narrowly scoped transfer, rotation and admission function owners before production.
+- Production service identity binding, exhaustive privilege-drift verification and KMS/HSM integration remain unimplemented; the draft split-owner design has passed synthetic catalog assertions.
