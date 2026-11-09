@@ -442,3 +442,12 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 
 `docs/security:` Updated Control Plane/Workspace role contracts, HMAC rotation protocol, Workspace database design, canonical architecture/database/API/security overrides, project state, roadmap, test plan and supervisor review. Phase 2 remains NOT READY; PR #12 remains Draft/Open/Unmerged; Phase 3 and real data remain prohibited under D-014.
 
+
+
+## 2026-11-09 — Phase 2 identity, approval and transfer contracts
+- Added `docs/phase2/control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md` for secure mobile contact change, proof binding, all-live-key alias coverage, idempotency and audit.
+- Added `docs/phase2/control_plane/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` for verified guardian, prior counselor fee-receipt and destination acceptance authorities, signed one-time assertions, revocation and re-approval.
+- Added `docs/phase2/transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md` for durable outbox/inbox, source freeze/drain, destination staging, cutover and forward recovery.
+- Bound the contracts into the Control Plane README, transfer workflow contract, API authorization contract, TEST_PLAN and Supervisor Review.
+- Identified approval-schema reconciliation: current unique (case_id, approval_kind) plus mutable revoked_at cannot retain a revoked approval and replacement as separate immutable events.
+- Documentation/design only. No proof verifier, API, Saga worker, contact-change SQL, approval event schema or new executable tests were implemented. Phase 2 remains NOT READY; D-014 synthetic-only rule unchanged.
