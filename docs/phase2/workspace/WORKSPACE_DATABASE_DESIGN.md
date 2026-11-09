@@ -113,3 +113,12 @@ No Workspace runtime/API implementation is implied. Source freeze controller, de
 ## 10. Independent domain-schema review
 
 See `WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` for the independent review of the current SQL skeleton. HIGH gaps include test-attempt/response/score reconciliation, competing membership role sources of truth, and insufficient append-only guardian relationship/permission evidence. MEDIUM gaps include per-subject exam results, custom error taxonomy, subtopics, normalized planning inputs/PlanItem, canonical activity taxonomy, class participation/recurrence, capacity races/reconciliation, credit purchase/refund/renewal and file/notification lifecycle controls. These are findings, not silently accepted deferrals; Phase 2 remains NOT READY.
+
+
+## 11. Assessment, planning and curriculum domain contracts
+
+- `ASSESSMENT_DOMAIN_CONTRACT.md` defines immutable test/exam versions, per-attempt delivered question set, submit-time response/count integrity, deterministic scoring snapshots, custom error reasons and per-subject exam results.
+- `DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` defines normalized school/availability/sleep/class/exam/review inputs, immutable PlanVersions, explicit PlanItems, deterministic scheduling, reason codes and execution linkage.
+- `CURRICULUM_DOMAIN_CONTRACT.md` defines Grade → Subject → Book/Edition → Chapter → Topic → Subtopic, source ownership, immutable editions and mastery evidence.
+
+These contracts are design targets only. The current SQL skeleton does not yet contain all required structures or executable tests; WS-DOM-01, 04, 05, 06 and 07 remain open.
