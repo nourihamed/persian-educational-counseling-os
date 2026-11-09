@@ -165,16 +165,10 @@ BEGIN
   INSERT INTO public.student_ownership(
     student_id,owner_workspace_id,ownership_generation,lifecycle_state
   ) VALUES (p_student_id,p_workspace_id,1,'active');
-  -- enrollment_claims.mobile_hmac is the current active-key fingerprint; the complete
-  -- versioned set is stored in enrollment_claim_identity_aliases.
   INSERT INTO public.enrollment_claims(
-    claim_id,student_id,workspace_id,grade_key,mobile_hmac,claim_state,ownership_generation
+    claim_id,student_id,workspace_id,grade_key,claim_state,ownership_generation
   ) VALUES (
-    p_claim_id,p_student_id,p_workspace_id,p_grade_key,
-    (SELECT decode(a.mobile_hmac_hex,'hex')
-       FROM jsonb_to_recordset(p_aliases) AS a(key_version integer,mobile_hmac_hex text)
-      WHERE a.key_version=(SELECT key_version FROM public.mobile_hmac_key_versions WHERE state='active')),
-    'active',1
+    p_claim_id,p_student_id,p_workspace_id,p_grade_key,'active',1
   );
 
   FOR v_alias IN
