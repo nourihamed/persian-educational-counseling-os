@@ -97,3 +97,8 @@ Phase 2 may be recommended **APPROVED** only when all Phase 2 design/schema requ
 If a bounded set of non-critical design details remains but is explicitly constrained and does not block the next phase, a **CONDITIONAL PASS** may be considered. Any unresolved HIGH security/data-integrity/tenant-boundary defect means **NOT READY**.
 
 **Current status: NOT READY.**
+
+
+## 8. Open decision register
+
+The consolidated list of unresolved Product Owner and specialist inputs, with recommendations and required authority, is maintained in `PHASE2_OPEN_DECISIONS.md`. This register does not make decisions or assign unapproved values.
