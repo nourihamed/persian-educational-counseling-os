@@ -469,3 +469,7 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 
 ## 2026-11-09 — Phase 2 exit criteria baseline
 - Added `docs/phase2/PHASE2_EXIT_CRITERIA.md` to distinguish Phase 2 design/schema completion from later runtime/production gates and centralize evidence, blockers, unresolved PO decisions and gate rules.
+
+
+## 2026-11-09 — Phase 2 open decision register
+- Added `docs/phase2/PHASE2_OPEN_DECISIONS.md` to consolidate remaining Product Owner/legal/security/operations decisions and technical closure work without assigning unapproved values.
