@@ -211,3 +211,10 @@ See `docs/phase2/PHASE2_OPEN_DECISIONS.md` for policy decisions that gate the co
 ## Membership role source-of-truth remediation (2026-11-09)
 
 Removed scalar `workspace_memberships.role_key`; `membership_roles` is the sole role-assignment relation. Added synthetic schema assertion `WS-ROLE-SOURCE-01` to prove the scalar column is absent and canonical relation exists. Role grant/revocation event history and direct-DML authorization tests remain open. The test is wired into the current Workspace schema suite; fresh CI result pending.
+
+
+## Educational domain contract test references (2026-11-09)
+
+- Assessment: `docs/phase2/workspace/ASSESSMENT_DOMAIN_CONTRACT.md` — immutable definition versions, delivered question sets, submit-time count reconciliation, deterministic score recomputation, custom error reason and exam-subject aggregation tests. NOT IMPLEMENTED / NOT RUN.
+- Planning: `docs/phase2/workspace/DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` — deterministic replay, hard constraints, non-overlap, explanation, version immutability, carry-forward and timezone/Jalali boundary tests. NOT IMPLEMENTED / NOT RUN.
+- Curriculum: `docs/phase2/workspace/CURRICULUM_DOMAIN_CONTRACT.md` — Book/Edition/Subtopic hierarchy, ownership, immutable reference curriculum and mastery mapping tests. NOT IMPLEMENTED / NOT RUN.
