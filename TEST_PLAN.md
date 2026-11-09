@@ -218,3 +218,10 @@ Removed scalar `workspace_memberships.role_key`; `membership_roles` is the sole 
 - Assessment: `docs/phase2/workspace/ASSESSMENT_DOMAIN_CONTRACT.md` — immutable definition versions, delivered question sets, submit-time count reconciliation, deterministic score recomputation, custom error reason and exam-subject aggregation tests. NOT IMPLEMENTED / NOT RUN.
 - Planning: `docs/phase2/workspace/DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` — deterministic replay, hard constraints, non-overlap, explanation, version immutability, carry-forward and timezone/Jalali boundary tests. NOT IMPLEMENTED / NOT RUN.
 - Curriculum: `docs/phase2/workspace/CURRICULUM_DOMAIN_CONTRACT.md` — Book/Edition/Subtopic hierarchy, ownership, immutable reference curriculum and mastery mapping tests. NOT IMPLEMENTED / NOT RUN.
+
+
+## Activity, credit and capacity lifecycle tests
+
+- Activity/class: `docs/phase2/workspace/ACTIVITY_CLASS_DOMAIN_CONTRACT.md` — controlled taxonomy, recurrence idempotency, participant scope, attendance and carry-forward tests. NOT RUN.
+- Student Credit commercial lifecycle: `docs/phase2/workspace/STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` — verified payment webhook, grant idempotency, refund/reversal and wallet reconciliation tests. NOT RUN beyond existing synthetic ledger/activation checks.
+- Capacity lifecycle: `docs/phase2/workspace/CAPACITY_LIFECYCLE_CONTRACT.md` — archive/re-activation, suspension policy, destination transfer reservation and counter reconciliation tests. NOT RUN beyond activation and final-slot race tests.
