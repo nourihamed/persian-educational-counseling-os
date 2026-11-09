@@ -465,3 +465,7 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Added a PostgreSQL 16 CI race test for two different student enrollments competing for the final active-student capacity slot.
 - The fixture intentionally provides sufficient Student Credit so the losing transaction exercises capacity serialization, not wallet insufficiency.
 - Test is wired into the Phase 2 workflow; execution status awaits fresh CI on the latest branch head.
+
+
+## 2026-11-09 — Phase 2 exit criteria baseline
+- Added `docs/phase2/PHASE2_EXIT_CRITERIA.md` to distinguish Phase 2 design/schema completion from later runtime/production gates and centralize evidence, blockers, unresolved PO decisions and gate rules.
