@@ -70,7 +70,8 @@ BEGIN
   END IF;
   IF (SELECT count(*) FROM credit_transactions WHERE idempotency_key='activation:activate-one')<>1
      OR (SELECT count(*) FROM capacity_events WHERE idempotency_key='activation:activate-one')<>1
-     OR (SELECT count(*) FROM activation_command_log WHERE idempotency_key='activate-one')<>1 THEN
+     OR (SELECT count(*) FROM activation_command_log WHERE idempotency_key='activate-one')<>1
+     OR (SELECT count(*) FROM audit_events WHERE event_type='student.activation' AND target_id='a8200000-0000-0000-0000-000000000001' AND correlation_id='activate-one')<>1 THEN
     RAISE EXCEPTION 'FAIL WS-ACT-05 activation evidence count mismatch';
   END IF;
   RAISE NOTICE 'PASS WS-ACT-01..05 atomic activation, debit and capacity reservation';
@@ -81,6 +82,13 @@ SELECT activate_student_enrollment(
   'activate-one','a8200000-0000-0000-0000-000000000001',
   'c8200000-0000-0000-0000-000000000001',1,40,
   'b8100000-0000-0000-0000-000000000001');
+DO $assert$ BEGIN
+  IF (SELECT count(*) FROM audit_events WHERE event_type='student.activation' AND target_id='a8200000-0000-0000-0000-000000000001')<>1 THEN
+    RAISE EXCEPTION 'FAIL WS-ACT-05B idempotent replay duplicated the audit event';
+  END IF;
+  RAISE NOTICE 'PASS WS-ACT-05B replay does not duplicate the activation audit event';
+END $assert$;
+
 SELECT ws_activation_expect_error('WS-ACT-06 same key with different debit is rejected',
   $q$SELECT activate_student_enrollment('activate-one','a8200000-0000-0000-0000-000000000001','c8200000-0000-0000-0000-000000000001',1,41,'b8100000-0000-0000-0000-000000000001')$q$,
   '23505');
