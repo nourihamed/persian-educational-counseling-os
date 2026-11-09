@@ -191,3 +191,8 @@ See `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md`.
 - Parent/guardian authority: `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md`; Q-007 remains OPEN pending Iran legal review and PO approval. All parent scope/age/dispute tests are NOT RUN.
 - Retention/legal hold: `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md`; policy-version, unresolved-duration fail-closed, legal-hold, restore-suppression and deletion verification tests are NOT RUN.
 - Backup/failover/restore: `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md`; OPS-HA/BACKUP/RESTORE/CAP tests remain NOT RUN pending target environment.
+
+
+## Capacity last-slot concurrency regression (2026-11-09)
+
+Added executable synthetic test `docs/phase2/workspace/tests/workspace_capacity_last_slot_race.sh` and wired it into `.github/workflows/phase2-schema-tests.yml`. It races two different enrollments for one remaining active-student slot while keeping credit sufficient, and asserts one activation/debit/capacity/audit winner plus full rollback for the loser. **Status: IMPLEMENTED IN BRANCH / CI EXECUTION NOT YET VERIFIED.**
