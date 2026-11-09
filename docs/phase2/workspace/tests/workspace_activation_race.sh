@@ -9,8 +9,10 @@ trap 'rm -rf "$W"' EXIT
 psql -X -v ON_ERROR_STOP=1 -q -d "$DB" <<'SQL'
 INSERT INTO workspace_profile(singleton,workspace_id,workspace_type)
 VALUES(true,'a9100000-0000-0000-0000-000000000001','organization');
-INSERT INTO workspace_memberships(membership_id,platform_user_id,role_key,status)
-VALUES('b9100000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','counselor','active');
+INSERT INTO workspace_memberships(membership_id,platform_user_id,status)
+VALUES('b9100000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','active');
+INSERT INTO membership_roles(membership_id,role_key)
+VALUES('b9100000-0000-0000-0000-000000000001','counselor');
 INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state)
 VALUES('e9100000-0000-0000-0000-000000000001','f9100000-0000-0000-0000-000000000001','Race Student','grade_10','active');
 INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state)
