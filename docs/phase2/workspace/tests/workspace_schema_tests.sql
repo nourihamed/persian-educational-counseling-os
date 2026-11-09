@@ -53,6 +53,10 @@ INSERT INTO credit_wallets(wallet_id,currency_code) VALUES ('c3000000-0000-0000-
 INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,reason)
 VALUES ('d3000000-0000-0000-0000-000000000001','c3000000-0000-0000-0000-000000000001','purchase',100,'ws-credit-1','synthetic purchase');
 SELECT ws_expect_error('WS-CREDIT-01 credit ledger UPDATE forbidden','UPDATE credit_transactions SET amount=200 WHERE transaction_id=''d3000000-0000-0000-0000-000000000001''','23514');
+SELECT ws_expect_error('WS-CREDIT-02 reversal must be exact opposite amount','INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,related_transaction_id,reason) VALUES (gen_random_uuid(),''c3000000-0000-0000-0000-000000000001'',''reversal'',-50,''ws-credit-bad-reversal'',''d3000000-0000-0000-0000-000000000001'',''synthetic bad reversal'')','23514');
+INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,related_transaction_id,reason)
+VALUES ('e3000000-0000-0000-0000-000000000001','c3000000-0000-0000-0000-000000000001','reversal',-100,'ws-credit-reversal','d3000000-0000-0000-0000-000000000001','synthetic exact reversal');
+SELECT ws_expect_error('WS-CREDIT-03 duplicate reversal forbidden','INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,related_transaction_id,reason) VALUES (gen_random_uuid(),''c3000000-0000-0000-0000-000000000001'',''reversal'',-100,''ws-credit-duplicate-reversal'',''d3000000-0000-0000-0000-000000000001'',''synthetic duplicate reversal'')','23505');
 
 -- Organization Workspace may have branches; changing the test profile to independent
 -- must cause future branch creation to fail.
