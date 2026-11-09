@@ -111,6 +111,13 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d workspace_activation_race -f docs/phase2/workspace/workspace_activation_transactions.sql
           bash docs/phase2/workspace/tests/workspace_activation_race.sh workspace_activation_race
 
+      - name: Test competing enrollments for final active-student capacity slot
+        run: |
+          createdb workspace_capacity_race
+          psql -X -v ON_ERROR_STOP=1 -d workspace_capacity_race -f docs/phase2/workspace/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_capacity_race -f docs/phase2/workspace/workspace_activation_transactions.sql
+          bash docs/phase2/workspace/tests/workspace_capacity_last_slot_race.sh workspace_capacity_race
+
       - name: Test per-Workspace database roles and cross-database denial
         run: |
           createdb workspace_other
