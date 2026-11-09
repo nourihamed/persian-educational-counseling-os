@@ -4,8 +4,16 @@ Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-
 
 ## اصول پایه
 
+**Workspace access contract (Product Owner decisions 2026-11-05):** Workspace is the logical Tenant. Every request must verify active Workspace membership, role, resource relationship and scoped permission. Inside an Organization Workspace, counselor-to-student assignment and manager scope are independently enforced; Branch is not a security tenant. A person belonging to multiple Workspaces receives no cross-Workspace access by implication. Workspace suspension must not silently suspend that person's other Workspaces.
+
+High-risk roles, including counselors and managers, require MFA under the risk-based policy. Sessions must be inventoried, revocable and subject to expiry/renewal; exact timeouts and step-up triggers remain implementation design items. Parent/legal-guardian access requires verified relationship and legal authority appropriate to age and jurisdiction, with consent, per-child scope, expiry and revocation. Private counselor notes and confidential communications are hidden by default.
+
+Student transfer is a distinct audited atomic workflow: an eligible parent/legal guardian, current counselor or destination Workspace may initiate a request, but initiation alone never completes transfer. Required approvals remain cumulative: valid parent/guardian consent, previous counselor fee-payment approval, and destination Workspace acceptance. Transfer history must preserve prior ownership/records without automatically exposing confidential counselor notes or correspondence.
+
+File storage must be private and Workspace-namespaced; server-side authorization is required before issuing short-lived signed URLs. Uploads require type/size limits and scanning. Background jobs must be bound to one immutable Workspace context and validate ownership/membership on execution and retry. Exports require separate scoped authorization, minimization, audit and rate limits. Audit records for security, finance, sensitive access, transfer and permission changes must be append-only/protected and must not contain secrets or OTPs.
+
 **معماری فعال Phase 1 (D-020 / D-023; طراحی‌شده، نه پیاده‌سازی یا آزمون‌شده):** Alt-5 hybrid isolation cells؛ هر cell باید host/VM و مرز شبکه مستقل، PostgreSQL cluster/instance جدا، و برای هر Tenant دیتابیس و credential مستقل داشته باشد. هدف Level 3 استقلال زیرساختی/اداری برای cellها و Level 4 مرز مدیریتی مستقل برای backup/recovery حیاتی است. جزئیات الزامی و residualها در `docs/phase1/TENANT_ISOLATION_DESIGN.md` و `DECISION_LOG.md` ثبت شده‌اند. D-009/Q-001 مکانیزم تاریخی Phase 0 است و معماری فعال Phase 1 را تعیین نمی‌کند. RLS در صورت استفاده فقط دفاع تکمیلی است؛ مرز cell یا دفاع در برابر host/root compromise نیست. هیچ‌یک از این کنترل‌ها هنوز runtime-verified نیست.
-1. **Tenant Isolation امنیتی است، نه فقط معماری.** هر نشتی داده بین Counselorها یک Security Incident محسوب می‌شود.
+1. **Workspace Isolation امنیتی است، نه فقط معماری.** هر دسترسی یا نشت غیرمجاز بین Workspaceها یک Security Incident محسوب می‌شود؛ درون یک Organization Workspace نیز عبور از محدوده انتساب Counselor یا مجوز مدیر، نقض کنترل دسترسی است.
 2. **Defense in Depth در معماری فعال Alt-5**: کنترل object-level در Application باید همراه با جداسازی دیتابیس/اعتبارنامه هر Tenant و مرز شبکه/میزبان هر cell اعمال شود. RLS، در صورت استفاده، لایه دفاعی تکمیلی است؛ جایگزین جداسازی Alt-5 نیست و الزام عمومی برای انتخاب RLS به‌عنوان مرز اصلی Phase 1 محسوب نمی‌شود.
 3. **Least Privilege**: هر Role فقط به چیزی که لازم دارد دسترسی دارد؛ Parent و Student هرگز به یادداشت خصوصی مشاور دسترسی پیش‌فرض ندارند.
 
@@ -18,7 +26,7 @@ Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-
 - XSS Protection: sanitize ورودی‌های آزاد متن، CSP در Frontend
 - CSRF: برای session-based endpointها (در صورت استفاده از Cookie)
 - Rate Limiting: روی Login، Password Reset، API عمومی (Redis-based)
-- Secure File Upload: محدودیت نوع/حجم فایل، اسکن قبل از ذخیره، نام‌گذاری غیرقابل‌حدس، جداسازی فایل بر اساس tenant_id در مسیر Storage
+- Secure File Upload: محدودیت نوع/حجم فایل، اسکن قبل از ذخیره، نام‌گذاری غیرقابل‌حدس، جداسازی فایل بر اساس Workspace ID در مسیر Storage
 - Audit Logs: برای عملیات حساس (تغییر Credit، تغییر Role، حذف دانش‌آموز، ورود Admin به حساب دیگران)
 - **Backup/Recovery (D-023):** backupهای حیاتی، مدیریت backup، کلیدهای رمزنگاری و کنترل‌های حذف/retention باید خارج از کنترل مدیریتی عادی حساب production باشند؛ restore باید وضعیت تعلیق/offboarding تنانت را از مرجع معتبر بازیابی کند. تفاوت نام bucket/service به‌تنهایی اثبات استقلال نیست.
 - Secrets Management: هیچ secret در کد/Git؛ از `.env` + Secret Manager (Vault/Cloud secret store) در Production
@@ -30,7 +38,7 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 - **Credit/Billing endpoints**: نیاز به audit log کامل + idempotency key روی تمام عملیات مالی.
 - **Payment Webhooks**: امضا/signature verification الزامی؛ idempotent processing.
 - **Admin impersonation (در صورت وجود)**: باید audit-logged و قابل محدودسازی باشد.
-- **Parent access**: پیش از نمایش هر داده، بررسی صریح Consent/Permission سطح دانش‌آموز+مشاور.
+- **Parent access**: پیش از نمایش هر داده، احراز رابطه و اختیار قانونی متناسب با سن/قانون و بررسی consent، per-child permission، scope، expiry و revocation؛ یادداشت خصوصی مشاور و مکالمات محرمانه به‌صورت پیش‌فرض مخفی‌اند.
 - **File access (گزارش‌ها، PDF)**: لینک‌های دانلود باید Scoped و زمان‌دار (signed URL) باشند، نه public permanent link.
 - **Program/Plan Versioning** (طبق D-008 — Accepted و D-012 — Accepted؛ الزامات مفهومی‌اند و تا پیاده‌سازی و تست در فازهای مجاز، کنترل فنی موجود نیست):
   1. در MVP، فقط `ProgramTemplate` و `ProgramVersion` متعلق به یک Tenant پشتیبانی می‌شوند. هر `ProgramVersion` باید به Template همان Tenant تعلق داشته باشد. قالب‌ها و نسخه‌های متعلق به Platform یا کاتالوگ مشترک خارج از MVP هستند (D-012 / Q-013 — Resolved).

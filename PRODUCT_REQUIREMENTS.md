@@ -28,8 +28,8 @@ Counselor Feedback → Plan Adjustment → Repeat
 
 | Role | توصیف کوتاه |
 |---|---|
-| Platform Admin | مدیریت کل پلتفرم، مشاوران، Billing، تنظیمات سیستم |
-| Counselor | مالک Tenant؛ مدیریت دانش‌آموزان، برنامه، تحلیل، ارتباطات |
+| Platform Admin | مدیریت کنترل‌شده پلتفرم با دسترسی حداقلی، audited و بدون دسترسی ضمنی به داده Workspaceها |
+| Counselor | عضو یک یا چند Workspace؛ مدیریت دانش‌آموزان منتسب به خود و سایر منابع فقط در محدوده مجوز Workspace |
 | Student | اجرای برنامه، ثبت عملکرد، مشاهده پیشرفت |
 | Parent | مشاهده سطح‌بالای پیشرفت فرزند (با مجوز) |
 | Teacher | (فاز بعد) مرتبط با کلاس‌ها/تکالیف |
@@ -41,10 +41,10 @@ Counselor Feedback → Plan Adjustment → Repeat
 ## 3. مدل کسب‌وکار (Business Model)
 
 ```
-Platform → Counselor → Student
+Platform → Workspace → (Organization with Branches and Counselors | Independent Counselor) → Student Enrollment
 ```
 
-مشاور از پلتفرم خرید می‌کند (Subscription / Student Credit / Package / Trial)، سپس برای هر دانش‌آموز که اضافه می‌کند یک واحد ظرفیت (Credit) مصرف می‌شود.
+Workspace از پلتفرم محصول/اشتراک/اعتبار خریداری می‌کند. Student Credit و ظرفیت دانش‌آموز دو مفهوم مستقل‌اند؛ debit اعتبار فقط پس از activation موفق و به‌صورت atomic/idempotent انجام می‌شود. کیف اعتبار متعلق به Workspace است و بین Workspaceها منتقل یا ادغام نمی‌شود.
 
 مدل‌های Billing که معماری باید از روز اول اجازه‌ی اضافه‌شدن‌شان را بدهد (نه لزوماً همه در MVP پیاده شوند):
 
@@ -62,7 +62,7 @@ Platform → Counselor → Student
 
 ## 4. اصل Multi-Tenant (غیرقابل مذاکره)
 
-هر Counselor یک Tenant مستقل است. هیچ داده، query، گزارش، فایل، نوتیفیکیشن یا background job نباید بین Tenantها نشت کند. این اصل باید در تمام لایه‌ها اعمال شود: DB، API، Authorization، Services، Reports، Files، Notifications، Jobs.
+هر Workspace یک Tenant مستقل و مرز مالکیت داده است؛ Counselor خودِ Tenant نیست. Organization Workspace می‌تواند چند Counselor و چند Branch داشته باشد و Independent Counselor Workspace متعلق به یک مشاور مستقل است. یک شخص می‌تواند عضو چند Workspace باشد، اما عضویت و مجوزها در هر Workspace مستقل‌اند. در سازمان، مشاور فقط دانش‌آموزان منتسب به خود را می‌بیند مگر مجوز صریح و محدود دیگری داشته باشد. هیچ داده، query، گزارش، فایل، نوتیفیکیشن یا background job نباید بین Workspaceها نشت کند. این اصل باید در تمام لایه‌ها اعمال شود: DB، API، Authorization، Services، Reports، Files، Notifications، Jobs.
 
 **معماری فعال جداسازی تنانت در Phase 1 (D-020 / D-023):** Alt-5 hybrid isolation cells؛ هر cell به host/VM و مرز شبکه مستقل و PostgreSQL cluster/instance جدا نیاز دارد و هر Tenant درون cell دیتابیس و runtime credential مستقل خود را دارد. هدف D-023 شامل Level 3 استقلال زیرساختی/اداری cell و Level 4 کنترل مدیریتی مستقل برای backup/recovery حیاتی است. تصمیم D-009 / Q-001 مورخ 2026-10-12 مکانیزم تاریخی Phase 0 بود و به‌عنوان توپولوژی فعال superseded شده است؛ `tenant_id`، application authorization و RLS در صورت استفاده همچنان می‌توانند دفاع تکمیلی باشند، نه جایگزین مرز cell. این معماری هنوز پیاده‌سازی یا آزمون نشده؛ جزئیات و شواهد لازم در `docs/phase1/TENANT_ISOLATION_DESIGN.md` و `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md` ثبت شده‌اند. طبق D-012 / Q-013، در MVP فقط `ProgramTemplate` و `ProgramVersion` متعلق به Tenant پشتیبانی می‌شوند؛ قالب‌های سطح‌پلتفرم و نسخه‌های آن‌ها خارج از MVP هستند.
 
