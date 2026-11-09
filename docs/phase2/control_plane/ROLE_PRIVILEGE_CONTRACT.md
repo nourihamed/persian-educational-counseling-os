@@ -4,10 +4,10 @@
 
 ## 1. Roles
 
-The current draft creates six cluster-wide roles:
+The current draft creates eight cluster-wide roles:
 
 - cp_table_owner — NOLOGIN; owns Control Plane tables and sequences.
-- cp_function_owner — NOLOGIN; owns SECURITY DEFINER functions.
+- cp_transfer_function_owner — NOLOGIN; owns transfer SECURITY DEFINER functions only.\n- cp_rotation_function_owner — NOLOGIN; owns HMAC rotation SECURITY DEFINER functions only.\n- cp_identity_admission_function_owner — NOLOGIN; owns initial identity-admission SECURITY DEFINER function only.
 - cp_runtime — NOLOGIN; read-only registry access for trusted runtime.
 - cp_transfer_executor — NOLOGIN; may execute the two transfer commands.
 - cp_rotation_executor — NOLOGIN; may execute HMAC rotation lifecycle functions.
@@ -33,7 +33,7 @@ All roles are NO SUPERUSER, NO CREATEDB, NO CREATEROLE, NO REPLICATION and NO BY
 | cp_identity_admission_executor | admit_student_identity_claim(...) | Transfer, rotation, direct table DML |
 | cp_runtime | Registry SELECT | Ownership/claim/approval/key/alias mutations |
 
-The exact function signatures and grants are enforced by cp_06_role_privileges_draft.sql and asserted by tests/cp_30_role_privilege_tests.sql.
+The exact function signatures, owner assignments and grants are enforced by cp_06_role_privileges_draft.sql and asserted by tests/cp_30_role_privilege_tests.sql.
 
 ## 4. Function owner blast radius — HIGH
 
@@ -72,7 +72,7 @@ The runtime must fail closed when the Control Plane is unavailable, ownership is
 GitHub Actions run #148 executed the role catalog suite on synthetic PostgreSQL 16 databases. It checked role count/attributes, ownership, PUBLIC EXECUTE revocation, direct table denial, executor scope and non-assumability.
 
 Not yet implemented or verified:
-- split function-owner blast radius;
+- freshly verify the split function-owner blast radius and all trigger/helper privilege paths;
 - mobile contact change/reverification;
 - production login identities, secret binding, KMS/HSM, rotation and revocation;
 - transfer outbox/inbox worker credentials, durable delivery and recovery;
