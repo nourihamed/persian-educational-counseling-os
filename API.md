@@ -20,7 +20,7 @@ Status: DRAFT — Phase 0 — Strategy only. No endpoints implemented yet.
 ```
 /auth            register, login, logout, refresh, password-reset
 /admin/*         platform admin operations (counselors, plans, programs catalog, reports, audit)
-/counselor/*     counselor-scoped: students, programs, plans, analytics, notes
+/workspace/*     Workspace-scoped: students, memberships, branches, counselor assignments, programs, plans, analytics, notes
 /student/*       student-scoped: today, plan, activities, tests, errors, progress
 /parent/*        parent-scoped: high-level progress views
 /billing/*        orders, subscriptions, credits (read + purchase-intent; real payment flow deferred)
