@@ -131,6 +131,10 @@ BEGIN
   SELECT count(*) INTO v_expected_keys
     FROM public.mobile_hmac_key_versions
    WHERE state IN ('active','retiring');
+  IF (SELECT count(*) FROM public.mobile_hmac_key_versions WHERE state='active')<>1 THEN
+    RAISE EXCEPTION 'exactly one active HMAC key version is required for claim admission'
+      USING ERRCODE='check_violation';
+  END IF;
   SELECT count(*),count(DISTINCT a.key_version)
     INTO v_supplied_keys,v_distinct_keys
     FROM jsonb_to_recordset(p_aliases) AS a(key_version integer,mobile_hmac_hex text);
