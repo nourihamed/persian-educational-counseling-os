@@ -111,3 +111,13 @@ The new `docs/phase2/control_plane/` and `docs/phase2/workspace/` drafts define 
 The companion SQL files are schema/function drafts. They do not constitute runtime services or production migrations. Control Plane regression, race and Workspace schema tests are specified but NOT RUN against the current PR #12 HEAD. Dedicated DB roles/grants, trusted identity verification, KMS/HSM, outbox/inbox delivery, cross-database freeze/snapshot orchestration, crash recovery, backup/restore and measured HA/capacity evidence remain open.
 
 **Phase 2 Gate: NOT READY.** D-014 remains in force; synthetic data only. Phase 3 is not authorized.
+
+
+## 8. Identity and transfer contract cross-references (2026-11-09)
+
+The current Phase 2 design set now includes:
+- `control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md` — mobile contact change and reverification.
+- `control_plane/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` — authenticated, authority-bound cumulative transfer approvals.
+- `transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md` — durable cross-database event delivery, freeze/drain, staging and forward recovery.
+
+These are design contracts, not implementations. The approval table's current unique (case, kind) plus mutable revocation field requires append-only event-model reconciliation. Runtime/API/cryptographic verification and distributed failure-injection evidence remain absent. Gate remains NOT READY.
