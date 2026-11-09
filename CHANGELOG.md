@@ -420,3 +420,10 @@ Verification boundary: documentation-only. Alt-5 acceptance catalog remains 47 s
 Added Workspace DB design and schema skeleton, transfer workflow contract, API/authorization contract, HMAC rotation protocol, idempotent transfer-command draft, and updated Control Plane schema/function/state-machine/test drafts. Corrected the decision crosswalk and added current-state authority notes to canonical product/architecture/security documents.
 
 This work remains documentation and draft-schema only. Revised SQL/race tests have NOT RUN against the current HEAD. Earlier Control Plane test counts are superseded. No runtime implementation, production migration, merge, Phase 3 authorization, or real-data permission is claimed. Phase 2 Gate remains NOT READY; D-014 remains in force.
+
+
+## 2026-11-09 — PostgreSQL 16 draft schema verification
+
+Added a PostgreSQL 16 GitHub Actions workflow. Final successful run #10 executed at schema tree commit `4720cc3ed12b766c941337fe240a9d240e203522` and passed 21 Control Plane assertions, 1 concurrent global-identity race and 13 Workspace schema assertions. Earlier failed runs exposed test-fixture defects (HMAC alias fixture mismatch and branch assignment cleanup); both were corrected before the successful run.
+
+This evidence applies only to the synthetic SQL/schema cases in the workflow. Role catalog/privilege verification, trusted approval identity service, cross-Workspace DB authorization, transfer freeze/drain and crash recovery, outbox/inbox delivery, activation+credit atomicity, full capacity concurrency, backup/restore and HA tests remain NOT RUN. Phase 2 Gate remains NOT READY; D-014 remains in force.
