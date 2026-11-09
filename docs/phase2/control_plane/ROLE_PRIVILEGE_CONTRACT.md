@@ -1,6 +1,6 @@
 # Control Plane Role & Privilege Contract
 
-**Status:** DRAFT / NOT APPROVED. The split-owner SQL and catalog assertions passed PostgreSQL 16 GitHub Actions run #212 at exact branch HEAD `615a4b3d73e7b2c07f4ff3ae48a299f86f5c6650`. No production credentials or deployment are authorized.
+**Status:** DRAFT / NOT APPROVED. The split-owner SQL and catalog assertions passed PostgreSQL 16 GitHub Actions run #222 at exact branch HEAD `2f605051440b4198794e710283f0a6d852983316`. No production credentials or deployment are authorized.
 
 ## 1. Roles
 
@@ -50,7 +50,7 @@ The exact function signatures, owner assignments and grants are asserted by `tes
 
 ## 5. Verification status and residual risks
 
-The prior GitHub Actions run #148 passed the former shared-owner catalog design. Run #212 is the current evidence for the split-owner revision; it passed the full draft SQL workflow on PostgreSQL 16, including the new owner/privilege assertions and Workspace/identity tests.
+The prior GitHub Actions run #148 passed the former shared-owner catalog design. Run #222 is the current evidence for the split-owner revision; it passed the full draft SQL workflow on PostgreSQL 16, including the new owner/privilege assertions and Workspace/identity tests.
 
 The transfer and identity-admission owners receive only column-level UPDATE on the CHECK-constrained `singleton` field because PostgreSQL requires UPDATE privilege for `SELECT ... FOR SHARE`; they cannot update `maintenance_mode` or `rotation_epoch`. The rotation owner alone receives those state-changing UPDATE privileges. The catalog suite asserts these column-level boundaries.
 
