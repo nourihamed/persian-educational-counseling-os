@@ -160,6 +160,30 @@ CREATE TABLE transfer_approvals (
     CHECK (valid_until IS NULL OR valid_until > verified_at)
 );
 
+CREATE FUNCTION guard_transfer_approval_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'transfer approvals are immutable; use revocation' USING ERRCODE='check_violation'; END IF;
+  IF NEW.approval_id IS DISTINCT FROM OLD.approval_id
+     OR NEW.case_id IS DISTINCT FROM OLD.case_id
+     OR NEW.approval_kind IS DISTINCT FROM OLD.approval_kind
+     OR NEW.evidence_ref IS DISTINCT FROM OLD.evidence_ref
+     OR NEW.approver_ref IS DISTINCT FROM OLD.approver_ref
+     OR NEW.authn_event_ref IS DISTINCT FROM OLD.authn_event_ref
+     OR NEW.authority_snapshot IS DISTINCT FROM OLD.authority_snapshot
+     OR NEW.verified_at IS DISTINCT FROM OLD.verified_at
+     OR NEW.valid_until IS DISTINCT FROM OLD.valid_until
+     OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR (OLD.revoked_at IS NOT NULL AND NEW.revoked_at IS DISTINCT FROM OLD.revoked_at)
+     OR (OLD.revoked_at IS NULL AND NEW.revoked_at IS NULL) THEN
+    RAISE EXCEPTION 'approval evidence is immutable; only one-way revocation is allowed'
+      USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER transfer_approvals_immutable
+  BEFORE UPDATE OR DELETE ON transfer_approvals
+  FOR EACH ROW EXECUTE FUNCTION guard_transfer_approval_mutation();
+
 -- Idempotency / command deduplication for ownership-changing commands.
 CREATE TABLE command_log (
     idempotency_key  text PRIMARY KEY,
@@ -188,6 +212,25 @@ CREATE TABLE outbox_events (
     created_at   timestamptz NOT NULL DEFAULT now(),
     published_at timestamptz
 );
+
+CREATE FUNCTION guard_outbox_event_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'outbox events are immutable' USING ERRCODE='check_violation'; END IF;
+  IF NEW.event_id IS DISTINCT FROM OLD.event_id
+     OR NEW.case_id IS DISTINCT FROM OLD.case_id
+     OR NEW.event_type IS DISTINCT FROM OLD.event_type
+     OR NEW.payload IS DISTINCT FROM OLD.payload
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at
+     OR (OLD.published_at IS NOT NULL AND NEW.published_at IS DISTINCT FROM OLD.published_at)
+     OR (OLD.published_at IS NULL AND NEW.published_at IS NULL) THEN
+    RAISE EXCEPTION 'outbox payload is immutable; only null-to-published timestamp is allowed'
+      USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER outbox_events_immutable
+  BEFORE UPDATE OR DELETE ON outbox_events
+  FOR EACH ROW EXECUTE FUNCTION guard_outbox_event_mutation();
 
 -- Append-only audit of ownership changes (fencing history).
 CREATE TABLE ownership_history (
