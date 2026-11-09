@@ -8,6 +8,7 @@
 | CP-IDENT-01 | Global mobile+grade uniqueness across Workspaces | SPECIFIED / NOT RUN |
 | CP-IDENT-02 | Same mobile with different grade follows approved D-025 rule | SPECIFIED / NOT RUN |
 | CP-IDENT-03 | HMAC rotation freeze, complete backfill, dual-version uniqueness and crash recovery | SPECIFIED / NOT RUN |
+| CP-IDENT-04 | Rotation gate blocks claim mutations; deferred triggers reject missing/mismatched aliases; complete/retire lifecycle remains safe under retries | SPECIFIED / NOT RUN |
 | CP-OWN-01 | Exactly one global owner and one holding claim per student | SPECIFIED / NOT RUN |
 | CP-OWN-02 | Switch rejects missing/multiple/stale source claims | SPECIFIED / NOT RUN |
 | CP-OWN-03 | Ownership generation increments exactly once; stale source writes/jobs denied | SPECIFIED / NOT RUN |
