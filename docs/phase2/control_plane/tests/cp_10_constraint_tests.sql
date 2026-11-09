@@ -20,6 +20,7 @@ INSERT INTO platform_students(student_id) VALUES
  ('b0000000-0000-0000-0000-000000000001'),
  ('b0000000-0000-0000-0000-000000000002'),
  ('b0000000-0000-0000-0000-000000000003');
+INSERT INTO mobile_encryption_key_versions(key_version,state,key_manager_ref) VALUES (1,'active','kms://synthetic/mobile-key-v1');
 INSERT INTO mobile_hmac_key_versions(key_version,state) VALUES (1,'active'),(2,'retiring');
 INSERT INTO student_contact_index(student_id,key_version,mobile_hmac,mobile_ciphertext,cipher_key_version) VALUES
  ('b0000000-0000-0000-0000-000000000001',1,decode(repeat('11',32),'hex'),'\x01',1),
