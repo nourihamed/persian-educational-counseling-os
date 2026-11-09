@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Concurrent global identity claim test. Run on a fresh DB after cp_01..cp_04.
+# Concurrent global identity claim test. Run on a fresh DB after cp_01, cp_05, cp_02, cp_03 and cp_04.
 # Workspace IDs below must already exist; key version 1 is inserted if absent.
 set -u
 DB="${1:?usage: cp_20_race.sh <dbname>}"
