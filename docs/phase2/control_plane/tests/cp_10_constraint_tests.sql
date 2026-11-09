@@ -71,6 +71,7 @@ UPDATE transfer_cases SET state='approved' WHERE case_id='d0000000-0000-0000-000
 UPDATE transfer_cases SET state='preflight_ok' WHERE case_id='d0000000-0000-0000-0000-000000000002';
 UPDATE transfer_cases SET state='staging' WHERE case_id='d0000000-0000-0000-0000-000000000002';
 UPDATE transfer_cases SET state='staged_verified' WHERE case_id='d0000000-0000-0000-0000-000000000002';
+UPDATE transfer_cases SET source_freeze_token='freeze-1',source_frozen_at=now(),final_snapshot_ref='snapshot-1',snapshot_manifest_hash=decode(repeat('aa',32),'hex'),destination_validation_ref='validation-1',destination_validated_at=now() WHERE case_id='d0000000-0000-0000-0000-000000000002';
 UPDATE transfer_cases SET state='cutover_frozen' WHERE case_id='d0000000-0000-0000-0000-000000000002';
 INSERT INTO transfer_approvals(approval_id,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
 VALUES
@@ -105,6 +106,7 @@ UPDATE transfer_cases SET state='approved' WHERE case_id='d0000000-0000-0000-000
 UPDATE transfer_cases SET state='preflight_ok' WHERE case_id='d0000000-0000-0000-0000-000000000003';
 UPDATE transfer_cases SET state='staging' WHERE case_id='d0000000-0000-0000-0000-000000000003';
 UPDATE transfer_cases SET state='staged_verified' WHERE case_id='d0000000-0000-0000-0000-000000000003';
+UPDATE transfer_cases SET source_freeze_token='freeze-3',source_frozen_at=now(),final_snapshot_ref='snapshot-3',snapshot_manifest_hash=decode(repeat('bb',32),'hex'),destination_validation_ref='validation-3',destination_validated_at=now() WHERE case_id='d0000000-0000-0000-0000-000000000003';
 UPDATE transfer_cases SET state='cutover_frozen' WHERE case_id='d0000000-0000-0000-0000-000000000003';
 INSERT INTO transfer_approvals(approval_id,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
 VALUES
