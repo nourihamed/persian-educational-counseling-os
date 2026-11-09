@@ -1,6 +1,6 @@
 # Control Plane Role & Privilege Contract
 
-**Status:** DRAFT / NOT APPROVED. The split-owner SQL and catalog assertions have been added but are pending a fresh PostgreSQL 16 CI run on the exact branch HEAD. No production credentials or deployment are authorized.
+**Status:** DRAFT / NOT APPROVED. The split-owner SQL and catalog assertions passed PostgreSQL 16 GitHub Actions run #200 at exact commit `5990bd3170f7c2d8b950d6b7338f0e94b7e46121`. No production credentials or deployment are authorized.
 
 ## 1. Roles
 
@@ -50,7 +50,7 @@ The exact function signatures, owner assignments and grants are asserted by `tes
 
 ## 5. Verification status and residual risks
 
-The prior GitHub Actions run #148 passed the former shared-owner catalog design on synthetic PostgreSQL 16. It is historical evidence only and does **not** validate this new split-owner revision.
+The prior GitHub Actions run #148 passed the former shared-owner catalog design. Run #200 is the current evidence for the split-owner revision; it passed the full draft SQL workflow on PostgreSQL 16, including the new owner/privilege assertions and Workspace/identity tests.
 
 The transfer and identity-admission owners receive only column-level UPDATE on the CHECK-constrained `singleton` field because PostgreSQL requires UPDATE privilege for `SELECT ... FOR SHARE`; they cannot update `maintenance_mode` or `rotation_epoch`. The rotation owner alone receives those state-changing UPDATE privileges. The catalog suite asserts these column-level boundaries.
 
@@ -65,7 +65,7 @@ The new catalog suite checks:
 - executor function scope; and
 - PUBLIC EXECUTE revocation.
 
-**Not yet verified:** fresh CI on the exact new branch HEAD, completeness/minimality of every table privilege, all trigger/helper execution paths, production service identity and secret binding, KMS/HSM, rotation/revocation operations, and target-environment behavior. The new split is a remediation draft, not a closed HIGH finding or production security approval.
+**Verified at draft-SQL level:** run #200 passed on the exact SQL/test commit, including the owner split, representative allow/deny grants, trigger/helper paths exercised by the regression suite, and column-scoped row-lock privileges. **Still not verified:** exhaustive formal privilege minimization, production service identity and secret binding, KMS/HSM, rotation/revocation operations, and target-environment behavior. This is not production security approval.
 
 ## 6. Identity admission and application authorization
 
