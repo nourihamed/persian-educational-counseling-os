@@ -206,3 +206,8 @@ The design/schema vs later implementation evidence boundary and gate requirement
 ## Open decision dependencies
 
 See `docs/phase2/PHASE2_OPEN_DECISIONS.md` for policy decisions that gate the corresponding executable tests/features. Tests depending on unapproved legal, retention, scoring, credit, capacity or operational values must remain blocked rather than inventing expected values.
+
+
+## Membership role source-of-truth remediation (2026-11-09)
+
+Removed scalar `workspace_memberships.role_key`; `membership_roles` is the sole role-assignment relation. Added synthetic schema assertion `WS-ROLE-SOURCE-01` to prove the scalar column is absent and canonical relation exists. Role grant/revocation event history and direct-DML authorization tests remain open. The test is wired into the current Workspace schema suite; fresh CI result pending.
