@@ -114,8 +114,12 @@ SELECT format('REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %I,%
 -- Backend runtime may operate only inside this Workspace. Object-level counselor/manager/guardian
 -- authorization remains mandatory in the API; these grants are not a substitute for RBAC.
 SELECT format(
-  'GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE %s TO %I',
-  'workspace_memberships,membership_roles,membership_permissions,branches,students,enrollments,counselor_assignments,student_guardian_links,guardian_permissions,program_templates,program_versions,student_plans,student_plan_versions,subjects,chapters,topics,student_topic_mastery,activities,study_sessions,test_definitions,test_attempts,test_responses,exams,exam_results,classes,class_sessions,assignments,reviews,daily_routines,progress_snapshots,risk_assessments,counselor_notes,private_file_objects,notification_preferences,in_app_notifications',
+  'GRANT SELECT,INSERT,UPDATE ON TABLE %s TO %I',
+  'workspace_memberships,membership_roles,membership_permissions,branches,counselor_assignments,student_guardian_links,guardian_permissions,program_templates,program_versions,student_plans,student_plan_versions,subjects,chapters,topics,student_topic_mastery,activities,study_sessions,test_definitions,test_attempts,test_responses,exams,exam_results,classes,class_sessions,assignments,reviews,daily_routines,progress_snapshots,risk_assessments,counselor_notes,private_file_objects,notification_preferences,in_app_notifications',
+  'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+SELECT format('GRANT SELECT,INSERT ON TABLE students,enrollments TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+SELECT format('GRANT UPDATE(display_name) ON TABLE students TO %I',
   'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
 SELECT format('GRANT SELECT ON TABLE workspace_profile,credit_wallets,workspace_capacity_counters TO %I',
   'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
