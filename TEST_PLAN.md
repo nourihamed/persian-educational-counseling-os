@@ -196,3 +196,8 @@ See `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md`.
 ## Capacity last-slot concurrency regression (2026-11-09)
 
 Added executable synthetic test `docs/phase2/workspace/tests/workspace_capacity_last_slot_race.sh` and wired it into `.github/workflows/phase2-schema-tests.yml`. It races two different enrollments for one remaining active-student slot while keeping credit sufficient, and asserts one activation/debit/capacity/audit winner plus full rollback for the loser. **Status: IMPLEMENTED IN BRANCH / CI EXECUTION NOT YET VERIFIED.**
+
+
+## Phase 2 exit criteria reference
+
+The design/schema vs later implementation evidence boundary and gate requirements are centralized in `docs/phase2/PHASE2_EXIT_CRITERIA.md`. No test may be marked PASS without exact-SHA execution evidence; design specifications and static review remain separate statuses.
