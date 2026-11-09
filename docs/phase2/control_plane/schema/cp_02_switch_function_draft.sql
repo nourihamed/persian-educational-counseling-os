@@ -38,7 +38,13 @@ BEGIN
     END IF;
 
     SELECT count(DISTINCT approval_kind) INTO v_approvals
-      FROM public.transfer_approvals WHERE case_id = p_case_id;
+      FROM public.transfer_approvals
+     WHERE case_id = p_case_id
+       AND revoked_at IS NULL
+       AND (valid_until IS NULL OR valid_until > now())
+       AND verified_at <= now()
+       AND authn_event_ref <> ''
+       AND approver_ref <> '';
     IF v_approvals <> 3 THEN
         RAISE EXCEPTION 'transfer case % has % of 3 required approvals', p_case_id, v_approvals
             USING ERRCODE = 'check_violation';
