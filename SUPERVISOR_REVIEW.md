@@ -1,4 +1,82 @@
 # SUPERVISOR REVIEW — PHASE 1 TRACEABILITY FOLLOW-UP (2026-10-24)
+# SUPERVISOR REVIEW — Phase 2 reconciliation update (2026-11-09)
+
+## Phase
+Phase 2 — Database & Domain Model, Control Plane / Workspace reconciliation.
+
+## Scope Reviewed
+Live PR #12 branch at the start of this work (HEAD `0507b5547a4b72191acd11336e935427542d0208`), including Control Plane DDL/function/state-machine drafts, initial tests, decision crosswalk and canonical documentation. Subsequent edits in this branch are architectural/documentation changes and require a fresh review at the resulting HEAD.
+
+## Summary
+The initial PR #12 state contained significant gaps: HMAC uniqueness was indexed with key_version, the ownership switch did not require exactly one source claim, approval rows lacked principal/authentication/authority metadata, idempotency was not implemented despite a command_log table, and the transition graph permitted post-switch cancellation. The Workspace DB, transfer contract and API authorization design were absent. Corrective draft artifacts have now been added/updated, but they are not runtime implementation or verified tests.
+
+## Passed
+- Workspace-centric authority and Control Plane / Workspace responsibility split documented.
+- Transfer workflow contract records freeze + final snapshot, three cumulative approvals and forward-only post-switch recovery.
+- API authorization contract records Workspace membership, object scope, parent per-child permissions and fail-closed ownership checks.
+- Control Plane schema now models versioned HMAC aliases, and the switch function checks source claim count, generation and alias coverage.
+- Idempotent transfer command admission function draft added.
+- Transition graph no longer permits cancellation after ownership switch.
+- Prior test evidence explicitly superseded in Control Plane README.
+
+## Findings
+
+### CRITICAL
+- None newly confirmed as an executable runtime vulnerability because no runtime system is under review. This is not a security clearance.
+
+### HIGH
+- HMAC rotation still lacks executable global maintenance lock, controlled dual-write path, completeness trigger and KMS/HSM integration. Per-version unique indexes alone do not prove cross-version uniqueness under concurrency.
+- Approval principal/authority fields are still only stored references/snapshots. A trusted identity/authorization service must verify and bind guardian legal authority, prior counselor assignment and destination permission to the exact case.
+- Dedicated non-login function owner/workflow role, grants, ownership and privilege review remain unverified. SECURITY DEFINER code must not be executable by PUBLIC or ordinary app roles.
+- Workspace schema is a core skeleton, not the complete Phase 2 domain model. Published-version immutability, Workspace type/branch rules, capacity atomicity and activation/ledger transaction behavior need executable enforcement.
+- Outbox/inbox runtime, retry/reconciliation, crash recovery and fail-closed service integration are not implemented.
+- Revised SQL and race tests have not been run against current branch HEAD.
+
+### MEDIUM
+- Crosswalk and canonical documents need final line-by-line consistency review against PR #8–#11 and the latest branch head.
+- Q-007 parent permissions still requires legal/age-specific matrix and executable tests; Iran MVP legal evidence rules require qualified legal review.
+- OQ-D operational RPO/RTO, failover consistency, split-brain, backup retention, restore drills and measured capacity remain open.
+- Transfer freeze boundary, timeout, in-flight transaction barrier, retry policy and manual-intervention thresholds remain unspecified.
+- Retention durations remain unapproved by design; no values may be invented.
+
+### LOW
+- Draft SQL naming and schema organization may be normalized after the domain model is complete.
+
+## Architecture
+Workspace is the tenant boundary. Control Plane owns global student identity/current owner/generation and global mobile+grade claims. Workspace DB owns local educational records and projections. Cross-database FKs/transactions are not claimed. Current contracts are design-only.
+
+## Database
+Control Plane SQL drafts and a Workspace schema skeleton exist. They are not production migrations and do not yet implement all required constraints/triggers/roles. No fresh independent PostgreSQL run has been performed in this review.
+
+## API
+Logical API/authorization contract exists; no runtime endpoint is implemented. Authorization must combine authenticated Platform User, Workspace membership, resource permission/relationship, counselor assignment, valid consent and current Control Plane owner/generation.
+
+## Security
+D-014 remains. Key material must remain in Platform Security KMS/HSM boundary. Control Plane outage or uncertainty must deny student-data access. No runtime security controls are verified.
+
+## Testing
+Revised tests: SPECIFIED / NOT RUN. Earlier 26 PASS and 5/5 race results apply to a prior schema and are superseded. No current-head PASS is claimed.
+
+## Documentation
+Workspace, transfer, API and key-rotation contracts added; crosswalk corrected; root architecture/domain/API/security/product/scope and PROJECT_STATE received current-authority notes. Full consistency review remains.
+
+## Technical Debt
+Complete Workspace schema; controlled HMAC rotation; approval identity binding; DB role/grant hardening; outbox/inbox runtime; full Saga recovery; backup/restore and HA evidence; detailed guardian legal matrix.
+
+## Required Changes
+1. Complete the HMAC rotation enforcement and tests.
+2. Complete the Workspace schema and immutable-version/capacity/ledger enforcement.
+3. Complete authenticated approval verification and database privilege design.
+4. Implement/test outbox/inbox and transfer crash recovery.
+5. Reconcile all canonical documents and all PRs #8–#12.
+6. Execute the complete test plan on exact final SHA and preserve raw evidence.
+
+## Recommendation
+Do not merge PR #12 or start Phase 3. Continue Phase 2 remediation. Real student/customer data remains prohibited.
+
+## Gate Status
+**NOT READY**
+
 
 ## Phase
 Phase 1 — Architecture & Multi-Tenancy (design/documentation only)
