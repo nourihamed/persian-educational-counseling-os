@@ -33,26 +33,33 @@ INSERT INTO student_ownership(student_id,owner_workspace_id,ownership_generation
  ('b0000000-0000-0000-0000-000000000003','a0000000-0000-0000-0000-000000000003',1,'active');
 
 -- D-025: a claim has aliases for every active/retiring key version during rotation.
+BEGIN;
 INSERT INTO enrollment_claims(claim_id,student_id,workspace_id,grade_key,claim_state,ownership_generation)
 VALUES ('c0000000-0000-0000-0000-000000000001','b0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001','grade_10','active',1);
 INSERT INTO enrollment_claim_identity_aliases(claim_id,grade_key,key_version,mobile_hmac,claim_state) VALUES
  ('c0000000-0000-0000-0000-000000000001','grade_10',1,decode(repeat('11',32),'hex'),'active'),
  ('c0000000-0000-0000-0000-000000000001','grade_10',2,decode(repeat('12',32),'hex'),'active');
+COMMIT;
+
+BEGIN;
 INSERT INTO enrollment_claims(claim_id,student_id,workspace_id,grade_key,claim_state,ownership_generation)
 VALUES ('c0000000-0000-0000-0000-000000000002','b0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000002','grade_10','active',1);
 SELECT expect_error('CP-GU-01 duplicate mobile+grade alias across Workspace rejected','INSERT INTO enrollment_claim_identity_aliases(claim_id,grade_key,key_version,mobile_hmac,claim_state) VALUES (''c0000000-0000-0000-0000-000000000002'',''grade_10'',1,decode(repeat(''11'',32),''hex''),''active'')','23505');
 -- Failed alias insertion leaves the deliberately created claim; end it before testing another grade.
 UPDATE enrollment_claims SET claim_state='ended', ended_at=now() WHERE claim_id='c0000000-0000-0000-0000-000000000002';
+COMMIT;
 SELECT expect_error('CP-GU-02 one claim-holding enrollment per student','INSERT INTO enrollment_claims(claim_id,student_id,workspace_id,grade_key,claim_state,ownership_generation) VALUES (gen_random_uuid(),''b0000000-0000-0000-0000-000000000001'',''a0000000-0000-0000-0000-000000000001'',''grade_11'',''active'',1)','23505');
 SELECT expect_error('CP-GU-03 unsupported grade rejected','INSERT INTO enrollment_claims(claim_id,student_id,workspace_id,grade_key,claim_state,ownership_generation) VALUES (gen_random_uuid(),''b0000000-0000-0000-0000-000000000003'',''a0000000-0000-0000-0000-000000000003'',''grade 10'',''active'',1)','23514');
 
 -- Same mobile alias in a different grade is permitted by D-025.
+BEGIN;
 INSERT INTO enrollment_claims(claim_id,student_id,workspace_id,grade_key,claim_state,ownership_generation)
 VALUES ('c0000000-0000-0000-0000-000000000003','b0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000002','grade_11','active',1);
 INSERT INTO enrollment_claim_identity_aliases(claim_id,grade_key,key_version,mobile_hmac,claim_state)
 VALUES ('c0000000-0000-0000-0000-000000000003','grade_11',1,decode(repeat('11',32),'hex'),'active');
 INSERT INTO enrollment_claim_identity_aliases(claim_id,grade_key,key_version,mobile_hmac,claim_state)
 VALUES ('c0000000-0000-0000-0000-000000000003','grade_11',2,decode(repeat('23',32),'hex'),'active');
+COMMIT;
 
 -- Rotation maintenance gate blocks new claim admission until all active/retiring aliases are verified.
 SELECT begin_identity_hmac_rotation();
