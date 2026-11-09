@@ -6,6 +6,8 @@ DB="${1:?usage: cp_20_race.sh <dbname>}"
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
 psql -X -v ON_ERROR_STOP=1 -q -d "$DB" <<'SQL'
+INSERT INTO mobile_encryption_key_versions(key_version,state,key_manager_ref) VALUES (1,'active','kms://synthetic/mobile-key-v1')
+ON CONFLICT (key_version) DO NOTHING;
 INSERT INTO mobile_hmac_key_versions(key_version,state) VALUES (1,'active')
 ON CONFLICT (key_version) DO NOTHING;
 INSERT INTO platform_students(student_id) VALUES
