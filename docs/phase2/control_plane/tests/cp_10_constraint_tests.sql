@@ -63,6 +63,17 @@ DO $$ DECLARE a uuid; b uuid; BEGIN
 END $$;
 SELECT expect_error('CP-IDEM-02 same key with different payload rejected','SELECT request_transfer_case_idempotent(''idem-1'',decode(repeat(''bb'',32),''hex''),gen_random_uuid(),''b0000000-0000-0000-0000-000000000003'',''a0000000-0000-0000-0000-000000000003'',''a0000000-0000-0000-0000-000000000001'',1,''guardian'')','23505');
 
+
+-- A transfer cannot enter cutover_frozen without freeze/snapshot/destination evidence.
+INSERT INTO transfer_cases(case_id,student_id,source_workspace_id,destination_workspace_id,expected_generation,initiator_kind,state,idempotency_key)
+VALUES ('d0000000-0000-0000-0000-000000000004','b0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000002','a0000000-0000-0000-0000-000000000001',1,'current_counselor','requested','missing-freeze-evidence');
+UPDATE transfer_cases SET state='approvals_pending' WHERE case_id='d0000000-0000-0000-0000-000000000004';
+UPDATE transfer_cases SET state='approved' WHERE case_id='d0000000-0000-0000-0000-000000000004';
+UPDATE transfer_cases SET state='preflight_ok' WHERE case_id='d0000000-0000-0000-0000-000000000004';
+UPDATE transfer_cases SET state='staging' WHERE case_id='d0000000-0000-0000-0000-000000000004';
+UPDATE transfer_cases SET state='staged_verified' WHERE case_id='d0000000-0000-0000-0000-000000000004';
+SELECT expect_error('CP-CUTOVER-01 cutover_frozen requires source freeze + final snapshot + destination validation','UPDATE transfer_cases SET state=''cutover_frozen'' WHERE case_id=''d0000000-0000-0000-0000-000000000004''','23514');
+
 -- Transfer test for student 1.
 INSERT INTO transfer_cases(case_id,student_id,source_workspace_id,destination_workspace_id,expected_generation,initiator_kind,state,idempotency_key)
 VALUES ('d0000000-0000-0000-0000-000000000002','b0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000002',1,'guardian','requested','transfer-1');
