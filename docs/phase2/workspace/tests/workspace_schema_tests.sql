@@ -69,6 +69,17 @@ VALUES ('d6000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-00000000
 INSERT INTO audit_events(audit_event_id,actor_membership_id,event_type,target_type,target_id,outcome)
 VALUES ('e6000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000003','student.view','student','e1000000-0000-0000-0000-000000000001','success');
 SELECT ws_expect_error('WS-AUDIT-01 audit events are append-only','UPDATE audit_events SET outcome=''denied'' WHERE audit_event_id=''e6000000-0000-0000-0000-000000000001''','23514');
+
+INSERT INTO private_file_objects(file_id,student_id,object_key,storage_provider,content_type,byte_size,sha256,encryption_key_version,state,uploaded_by_membership_id)
+VALUES ('f6000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','workspace/synthetic/student/file-1','s3-compatible','application/pdf',128,decode(repeat('aa',32),'hex'),1,'available','b1000000-0000-0000-0000-000000000001');
+SELECT ws_expect_error('WS-FILE-01 public URL cannot be used as object key','INSERT INTO private_file_objects(file_id,object_key,storage_provider,content_type,byte_size,sha256,encryption_key_version,state) VALUES (gen_random_uuid(),''https://public.example/file.pdf'',''s3-compatible'',''application/pdf'',128,decode(repeat(''aa'',32),''hex''),1,''available'')','23514');
+
+INSERT INTO in_app_notifications(notification_id,recipient_platform_user_id,notification_type,template_version,payload,idempotency_key)
+VALUES ('a7000000-0000-0000-0000-000000000001','c1000000-0000-0000-0000-000000000001','plan.published','v1','{"plan_id":"synthetic"}'::jsonb,'notification-1');
+SELECT ws_expect_error('WS-NOTIFY-01 duplicate notification idempotency key rejected','INSERT INTO in_app_notifications(notification_id,recipient_platform_user_id,notification_type,template_version,payload,idempotency_key) VALUES (gen_random_uuid(),''c1000000-0000-0000-0000-000000000001'',''plan.published'',''v1'',''{}'',''notification-1'')','23505');
+INSERT INTO legal_holds(legal_hold_id,entity_type,entity_id,hold_ref,reason,placed_by_membership_id)
+VALUES ('b7000000-0000-0000-0000-000000000001','student','e1000000-0000-0000-0000-000000000001','hold-1','Synthetic legal hold','b1000000-0000-0000-0000-000000000003');
+
 SELECT ws_expect_error('WS-ASSIGN-01 second responsible counselor rejected','INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at) VALUES (gen_random_uuid(),''a2000000-0000-0000-0000-000000000001'',''b1000000-0000-0000-0000-000000000002'',true,''active'',now())','23505');
 
 INSERT INTO student_guardian_links(link_id,student_id,guardian_platform_user_id,relationship_type,verification_state,legal_authority_ref,verified_at)
