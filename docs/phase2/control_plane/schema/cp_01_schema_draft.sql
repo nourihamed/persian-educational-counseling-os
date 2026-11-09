@@ -108,7 +108,7 @@ CREATE TABLE transfer_cases (
     state                text NOT NULL CHECK (state IN (
         'requested', 'approvals_pending', 'approved', 'preflight_ok', 'staging',
         'staged_verified', 'cutover_frozen', 'ownership_switched',
-        'projections_finalizing', 'completed', 'cancelled', 'failed_recoverable', 'manual_intervention')),
+        'projections_finalizing', 'completed', 'cancelled', 'failed_recoverable', 'manual_intervention_pre_switch', 'manual_intervention_post_switch')),
     idempotency_key      text NOT NULL CHECK (length(idempotency_key) > 0),
     created_at           timestamptz NOT NULL DEFAULT now(),
     updated_at           timestamptz NOT NULL DEFAULT now(),
