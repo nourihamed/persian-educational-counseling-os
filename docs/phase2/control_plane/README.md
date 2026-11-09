@@ -39,7 +39,7 @@
 
 ## HMAC rotation limitation — HIGH
 
-The alias table allows multiple HMAC key versions, but the database draft does not yet implement the global write-maintenance lock, complete dual-write gate, completeness trigger or KMS integration. A partial backfill could still leave incomplete alias coverage unless all claim mutations are routed through the specified controlled workflow. See `CONTROL_PLANE_KEY_ROTATION.md`. Cross-version uniqueness is NOT yet proven.
+The schema now includes a database-backed maintenance gate, claim-write pause, deferred alias-completeness checks, and begin/complete/retire rotation functions in cp_05. These are still unexecuted drafts. Dedicated role grants, restricted direct table writes, KMS/HSM integration, operational dual-write service and crash-recovery evidence are not verified. Cross-version uniqueness is NOT yet proven until the full SQL and concurrency suite passes on the exact HEAD.
 
 ## Approval limitation — HIGH
 
@@ -51,7 +51,7 @@ The previous reported test counts (26 PASS / 0 FAIL and 5/5 race runs) apply to 
 
 ## Remaining Control Plane blockers
 
-- Implement and test rotation lock, complete alias dual-write, alias completeness enforcement and KMS/HSM lifecycle.
+- Independently execute and review the rotation lock, alias completeness triggers and rotation functions; implement least-privilege role grants, restricted direct table writes, KMS/HSM lifecycle and operational recovery.
 - Implement principal-bound approval verification in the identity/authorization service.
 - Define dedicated non-login function owner and workflow role grants; verify no table-owner/BYPASSRLS privileges.
 - Implement inbox/outbox delivery, retries, deduplication, reconciliation and crash recovery.
