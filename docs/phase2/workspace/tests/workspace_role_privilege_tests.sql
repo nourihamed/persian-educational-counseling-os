@@ -95,7 +95,9 @@ BEGIN
      OR has_table_privilege(runtime_role,'public.credit_transactions','INSERT')
      OR has_table_privilege(runtime_role,'public.capacity_events','INSERT')
      OR has_table_privilege(runtime_role,'public.activation_command_log','INSERT')
-     OR has_table_privilege(runtime_role,'public.students','TRUNCATE') THEN
+     OR has_table_privilege(runtime_role,'public.students','TRUNCATE')
+     OR NOT has_table_privilege(function_owner,'public.audit_events','INSERT')
+     OR has_table_privilege(function_owner,'public.audit_events','UPDATE') THEN
     RAISE EXCEPTION 'FAIL WS-ROLE-09 runtime table privileges are too broad or incomplete';
   END IF;
 
