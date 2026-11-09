@@ -87,7 +87,11 @@ BEGIN
   END IF;
 
   IF NOT has_table_privilege(runtime_role,'public.students','SELECT')
-     OR NOT has_table_privilege(runtime_role,'public.enrollments','UPDATE')
+     OR has_table_privilege(runtime_role,'public.enrollments','UPDATE')
+     OR has_table_privilege(runtime_role,'public.enrollments','DELETE')
+     OR has_table_privilege(runtime_role,'public.students','DELETE')
+     OR has_column_privilege(runtime_role,'public.students','lifecycle_state','UPDATE')
+     OR NOT has_column_privilege(runtime_role,'public.students','display_name','UPDATE')
      OR has_table_privilege(runtime_role,'public.credit_transactions','INSERT')
      OR has_table_privilege(runtime_role,'public.capacity_events','INSERT')
      OR has_table_privilege(runtime_role,'public.activation_command_log','INSERT')
