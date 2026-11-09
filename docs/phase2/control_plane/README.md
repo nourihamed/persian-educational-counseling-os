@@ -47,7 +47,7 @@
 
 ## Database role boundary — HIGH
 
-The least-privilege role contract is specified in ROLE_PRIVILEGE_CONTRACT.md. cp_06 creates one non-login table owner, three separate non-login function owners (transfer, rotation, identity admission), and separate runtime/transfer/rotation/identity-admission executors. The identity-admission executor can execute only the initial claim admission function and has no direct table privileges. PostgreSQL 16 CI catalog assertions passed for role attributes, table/sequence/function ownership, direct-table denial, executor function scope, role inheritance and PUBLIC EXECUTE revocation. Production service login binding and target-environment verification remain open.
+The least-privilege role contract is specified in ROLE_PRIVILEGE_CONTRACT.md. cp_06 creates one non-login table owner, three separate non-login function owners (transfer, rotation, identity admission), and separate runtime/transfer/rotation/identity-admission executors. The identity-admission executor can execute only the initial claim admission function and has no direct table privileges. The split-owner SQL and expanded catalog assertions are pending a fresh PostgreSQL 16 CI pass. Transfer and identity-admission owners receive only column-level UPDATE on the CHECK-constrained identity-gate singleton to support FOR SHARE locking; only the rotation owner can change maintenance state and epoch. Production service login binding and target-environment verification remain open.
 
 ## HMAC rotation and initial admission — HIGH
 
