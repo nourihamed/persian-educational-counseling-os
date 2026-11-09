@@ -36,7 +36,11 @@ BEGIN
      OR has_table_privilege('cp_runtime','public.student_ownership','DELETE')
      OR has_table_privilege('cp_transfer_executor','public.student_ownership','UPDATE')
      OR has_table_privilege('cp_rotation_executor','public.student_ownership','UPDATE')
+     OR has_table_privilege('cp_identity_admission_executor','public.student_ownership','SELECT')
      OR has_table_privilege('cp_identity_admission_executor','public.student_ownership','INSERT')
+     OR has_table_privilege('cp_identity_admission_executor','public.student_ownership','UPDATE')
+     OR has_table_privilege('cp_identity_admission_executor','public.student_ownership','DELETE')
+     OR has_table_privilege('cp_identity_admission_executor','public.identity_admission_commands','SELECT')
      OR has_table_privilege('cp_identity_admission_executor','public.identity_admission_commands','INSERT') THEN
     RAISE EXCEPTION 'FAIL CP-ROLE-04 runtime/executor has direct protected-table access';
   END IF;
@@ -69,7 +73,8 @@ BEGIN
 
   IF NOT has_function_privilege('cp_identity_admission_executor','public.admit_student_identity_claim(text,bytea,uuid,uuid,uuid,text,bytea,integer,jsonb)','EXECUTE')
      OR has_function_privilege('cp_identity_admission_executor','public.switch_student_ownership(uuid)','EXECUTE')
-     OR has_function_privilege('cp_identity_admission_executor','public.begin_identity_hmac_rotation()','EXECUTE') THEN
+     OR has_function_privilege('cp_identity_admission_executor','public.begin_identity_hmac_rotation()','EXECUTE')
+     OR has_function_privilege('cp_identity_admission_executor','public.request_transfer_case_idempotent(text,bytea,uuid,uuid,uuid,uuid,bigint,text)','EXECUTE') THEN
     RAISE EXCEPTION 'FAIL CP-ROLE-06B identity admission executor function scope is incorrect';
   END IF;
 
@@ -86,7 +91,7 @@ BEGIN
   CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) acl
   WHERE ns.nspname='public'
     AND p.proname IN ('switch_student_ownership','request_transfer_case_idempotent',
-      'begin_identity_hmac_rotation','complete_identity_hmac_rotation','retire_identity_hmac_version')
+      'begin_identity_hmac_rotation','complete_identity_hmac_rotation','retire_identity_hmac_version','admit_student_identity_claim')
     AND acl.grantee=0 AND acl.privilege_type='EXECUTE';
   IF n<>0 THEN RAISE EXCEPTION 'FAIL CP-ROLE-08 PUBLIC retains EXECUTE on privileged functions'; END IF;
 
