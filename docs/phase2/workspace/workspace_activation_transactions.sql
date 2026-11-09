@@ -34,6 +34,14 @@ BEGIN
       RAISE EXCEPTION 'reversal must reference one original transaction in the same wallet with exact opposite amount'
         USING ERRCODE='check_violation';
     END IF;
+    IF EXISTS (
+      SELECT 1 FROM public.credit_transactions
+       WHERE transaction_kind='reversal'
+         AND related_transaction_id=NEW.related_transaction_id
+    ) THEN
+      RAISE EXCEPTION 'original credit transaction has already been reversed'
+        USING ERRCODE='unique_violation';
+    END IF;
   END IF;
 
   SELECT COALESCE(sum(amount),0) INTO v_balance
