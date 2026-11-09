@@ -10,8 +10,10 @@
 3. `schema/cp_02_switch_function_draft.sql` — ownership switch with source claim/generation/alias checks and valid cumulative approvals.
 4. `schema/cp_03_transfer_transitions_draft.sql` — transfer state machine; freeze/snapshot evidence required; no post-switch cancellation.
 5. `schema/cp_04_transfer_command_idempotency.sql` — same-key/same-payload replay and different-payload rejection.
-6. `tests/cp_10_constraint_tests.sql` — synthetic regression suite.
-7. `tests/cp_20_race.sh <dbname>` — two-session alias uniqueness race; requires three fixture Workspace IDs to exist.
+6. `schema/cp_06_role_privileges_draft.sql` — non-login owner/function roles, least-privilege table/sequence grants and scoped executor functions (apply only in an isolated test DB).
+7. `tests/cp_30_role_privilege_tests.sql` — catalog-level role/privilege assertions.
+8. `tests/cp_10_constraint_tests.sql` — synthetic regression suite.
+9. `tests/cp_20_race.sh <dbname>` — two-session alias uniqueness race; requires three fixture Workspace IDs to exist.
 
 ## Database boundary
 
@@ -39,7 +41,7 @@
 
 ## Database role boundary — HIGH
 
-The least-privilege role contract is specified in `ROLE_PRIVILEGE_CONTRACT.md`. It has not been provisioned or executed. Runtime roles must not own tables, have BYPASSRLS/SUPERUSER, directly mutate protected Control Plane tables or execute privileged functions outside their designated scope. D-009/D-013 remain UNVERIFIED until catalog and negative privilege tests pass.
+The least-privilege role contract is specified in `ROLE_PRIVILEGE_CONTRACT.md`; the cp_06 draft and cp_30 catalog tests passed in ephemeral PostgreSQL 16 CI run #35. Production service login binding, production database grants and target-environment verification remain open. Runtime roles must not own tables, have BYPASSRLS/SUPERUSER, directly mutate protected Control Plane tables or execute privileged functions outside their designated scope.
 
 ## HMAC rotation limitation — HIGH
 
