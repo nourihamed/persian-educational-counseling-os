@@ -414,3 +414,9 @@ Updated current-state, roadmap, phase report and supervisor review after PR #3 w
 - `SUPERVISOR_REVIEW.md` records this follow-up finding and correction.
 
 Verification boundary: documentation-only. Alt-5 acceptance catalog remains 47 specifications, 0 implemented, 0 executed, 0 passing. Q-023 remains a mandatory pre-hosting deployment gate; D-014's real-student-data prohibition remains unchanged. No application code, migrations, infrastructure, executable tests, Phase 2 work, or hosting approval was added or implied.
+
+## 2026-11-09 — Phase 2 Workspace / Control Plane reconciliation (PR #12 branch; unmerged)
+
+Added Workspace DB design and schema skeleton, transfer workflow contract, API/authorization contract, HMAC rotation protocol, idempotent transfer-command draft, and updated Control Plane schema/function/state-machine/test drafts. Corrected the decision crosswalk and added current-state authority notes to canonical product/architecture/security documents.
+
+This work remains documentation and draft-schema only. Revised SQL/race tests have NOT RUN against the current HEAD. Earlier Control Plane test counts are superseded. No runtime implementation, production migration, merge, Phase 3 authorization, or real-data permission is claimed. Phase 2 Gate remains NOT READY; D-014 remains in force.
