@@ -1,0 +1,75 @@
+name: Phase 2 draft schema tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/phase2/**"
+      - ".github/workflows/phase2-schema-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-draft-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Apply Control Plane drafts and run regression suite
+        run: |
+          createdb control_plane_test
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_01_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_05_identity_rotation_guard.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/tests/cp_10_constraint_tests.sql
+
+      - name: Apply Control Plane drafts and run concurrent global-identity race
+        run: |
+          createdb control_plane_race
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_01_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_05_identity_rotation_guard.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race <<'SQL'
+          INSERT INTO workspaces(workspace_id,workspace_type,status) VALUES
+            ('a0000000-0000-0000-0000-000000000001','organization','active'),
+            ('a0000000-0000-0000-0000-000000000002','independent_counselor','active'),
+            ('a0000000-0000-0000-0000-000000000003','organization','active');
+          SQL
+          bash docs/phase2/control_plane/tests/cp_20_race.sh control_plane_race
+
+      - name: Apply Workspace draft and run schema regression suite
+        run: |
+          createdb workspace_test
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/tests/workspace_schema_tests.sql
