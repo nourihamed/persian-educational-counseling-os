@@ -67,3 +67,15 @@ Retention draft: `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md` (NEEDS-DECISION 
 - Workspace DB credentials/roles: `docs/phase2/workspace/ROLE_PRIVILEGE_CONTRACT.md`.
 - Control Plane role setup/catalog assertions passed in ephemeral PostgreSQL 16 CI run #35. This is not production role provisioning.
 - Workspace per-DB credential separation, object-level RBAC integration and cross-Workspace connection-denial tests remain SPECIFIED / NOT RUN.
+
+
+## Phase 2 security-contract references (2026-11-09)
+
+- Mobile contact change/reverification: `docs/phase2/control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md`.
+- Transfer approval identity/authority: `docs/phase2/control_plane/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md`.
+- Cross-Workspace transfer Saga: `docs/phase2/transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md`.
+- Parent/legal authority matrix (Q-007 remains open): `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md`.
+- Category-based retention/legal hold: `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md`.
+- Backup/failover/restore: `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md`.
+
+All are design contracts only. Contact verifier, trusted approval verifier, Saga runtime, legal matrix, deletion jobs, KMS/HSM and operational drills remain NOT IMPLEMENTED / NOT RUN. No legal durations are approved; D-014 synthetic-only remains mandatory.
