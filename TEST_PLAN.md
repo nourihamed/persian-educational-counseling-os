@@ -1,7 +1,7 @@
 # TEST_PLAN.md
 ## Phase 2 Control Plane + Workspace acceptance contracts (2026-11-09)
 
-**Execution evidence:** GitHub Actions workflow run [#35](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42644150581) completed SUCCESS on PostgreSQL 16 at commit `418905e6abfcc3134310a4f4a79068b28f74333a`: 22 Control Plane assertions (including eight role/privilege catalog checks), 1 concurrent global-identity race, and 13 Workspace schema assertions passed. This is draft-schema evidence only, not runtime/API/production/HA approval. Earlier failed runs exposed and led to correction of test-fixture and privilege-grant defects; run #35 is the latest successful run.
+**Execution evidence:** GitHub Actions workflow run [#53](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42644631913) completed SUCCESS on PostgreSQL 16 at branch commit `3c50f0be27ebad6c159d20d2447b763868e6bc86`: 22 Control Plane PASS notices (one role-catalog notice covers eight privilege sub-checks), 1 concurrent global-identity race, and 13 Workspace schema PASS notices. This is draft-schema evidence only, not runtime/API/production/HA approval. Earlier failed runs exposed and led to correction of test-fixture and privilege-grant defects; run #53 is the latest successful run.
 
 | ID | Required test | Status |
 |---|---|---|
