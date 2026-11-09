@@ -37,6 +37,10 @@
 | Append-only ownership history | trigger | Schema specified |
 | Fail-closed if registry unavailable | service/API behavior | Contract only; not runtime-tested |
 
+## Database role boundary — HIGH
+
+The least-privilege role contract is specified in `ROLE_PRIVILEGE_CONTRACT.md`. It has not been provisioned or executed. Runtime roles must not own tables, have BYPASSRLS/SUPERUSER, directly mutate protected Control Plane tables or execute privileged functions outside their designated scope. D-009/D-013 remain UNVERIFIED until catalog and negative privilege tests pass.
+
 ## HMAC rotation limitation — HIGH
 
 The schema now includes a database-backed maintenance gate, claim-write pause, deferred alias-completeness checks, and begin/complete/retire rotation functions in cp_05. These are still unexecuted drafts. Dedicated role grants, restricted direct table writes, KMS/HSM integration, operational dual-write service and crash-recovery evidence are not verified. Cross-version uniqueness is NOT yet proven until the full SQL and concurrency suite passes on the exact HEAD.
