@@ -1,6 +1,9 @@
 # PRODUCT_REQUIREMENTS.md
 ## Persian Educational Counseling & Study OS
 
+> **CURRENT PRODUCT MODEL OVERRIDE — 2026-11-09 (PR #12, unmerged):** The current business hierarchy is **Platform → Workspace → Students**, where Workspace is either Organization or Independent Counselor. Counselor is a Workspace member/assignment, not the tenant root. A user may belong to multiple Workspaces with independent permissions. Student ownership is global in Control Plane; educational records are Workspace-local. The older Platform → Counselor → Student and “Counselor owns Tenant” wording below is superseded. Parent access is per-child/per-permission with verified legal authority; private counselor notes/confidential communications are hidden by default. Public individual rankings/results are not allowed; aggregate/anonymized statistics only. See `docs/PRODUCT_OWNER_DECISIONS_2026-11-07.md` and the reconciliation crosswalk. PR #12 is not merged; Phase 2 remains NOT READY.
+
+
 Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14; product requirements remain a maintained baseline and do not imply implementation.
 
 ---
