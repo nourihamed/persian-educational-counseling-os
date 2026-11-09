@@ -24,6 +24,9 @@ DECLARE
     v_gen       bigint;
     v_approvals integer;
     v_new_gen   bigint;
+    v_claim_count integer;
+    v_alias_count integer;
+    v_active_key_count integer;
 BEGIN
     SELECT * INTO v_case FROM public.transfer_cases WHERE case_id = p_case_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -64,12 +67,51 @@ BEGIN
            updated_at = now()
      WHERE student_id = v_case.student_id;
 
-    -- Move the claim-holding enrollment to the destination with the new generation (fencing).
+    -- Exactly one valid source claim is mandatory; otherwise ownership must not switch.
+    PERFORM 1 FROM public.enrollment_claims
+     WHERE student_id = v_case.student_id
+       AND workspace_id = v_case.source_workspace_id
+       AND ownership_generation = v_gen
+       AND claim_state IN ('active','transfer_pending')
+     FOR UPDATE;
+    GET DIAGNOSTICS v_claim_count = ROW_COUNT;
+    IF v_claim_count <> 1 THEN
+        RAISE EXCEPTION 'expected exactly one valid source enrollment claim, found %', v_claim_count
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    SELECT count(*) INTO v_active_key_count
+      FROM public.mobile_hmac_key_versions WHERE state IN ('active','retiring');
+    SELECT count(*) INTO v_alias_count
+      FROM public.enrollment_claim_identity_aliases a
+      JOIN public.enrollment_claims c ON c.claim_id=a.claim_id
+     WHERE c.student_id=v_case.student_id
+       AND a.claim_state IN ('active','transfer_pending')
+       AND a.key_version IN (SELECT key_version FROM public.mobile_hmac_key_versions WHERE state IN ('active','retiring'));
+    IF v_active_key_count = 0 OR v_alias_count <> v_active_key_count THEN
+        RAISE EXCEPTION 'identity aliases incomplete: found %, expected one per active/retiring key version %', v_alias_count, v_active_key_count
+            USING ERRCODE = 'check_violation';
+    END IF;
+
     UPDATE public.enrollment_claims
        SET workspace_id = v_case.destination_workspace_id,
            ownership_generation = v_new_gen,
            claim_state = 'active'
-     WHERE student_id = v_case.student_id AND claim_state IN ('active', 'transfer_pending');
+     WHERE student_id = v_case.student_id
+       AND workspace_id = v_case.source_workspace_id
+       AND ownership_generation = v_gen
+       AND claim_state IN ('active', 'transfer_pending');
+    GET DIAGNOSTICS v_claim_count = ROW_COUNT;
+    IF v_claim_count <> 1 THEN
+        RAISE EXCEPTION 'claim update affected %, expected exactly one', v_claim_count
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    UPDATE public.enrollment_claim_identity_aliases a
+       SET claim_state='active'
+      FROM public.enrollment_claims c
+     WHERE c.claim_id=a.claim_id AND c.student_id=v_case.student_id
+       AND a.claim_state IN ('active','transfer_pending');
 
     INSERT INTO public.ownership_history (student_id, from_workspace_id, to_workspace_id, ownership_generation, case_id)
     VALUES (v_case.student_id, v_case.source_workspace_id, v_case.destination_workspace_id, v_new_gen, p_case_id);
@@ -86,7 +128,9 @@ BEGIN
 END;
 $$;
 
--- Privilege boundary: no PUBLIC execute; only the Control Plane workflow role may call it.
+-- Privilege boundary: no PUBLIC execute. Deployment must grant EXECUTE only to a dedicated
+-- Control Plane workflow role after verifying the function owner is a non-login, least-privilege
+-- role with no table-owner/BYPASSRLS capability. No application/user role may call directly.
 REVOKE ALL ON FUNCTION switch_student_ownership(uuid) FROM PUBLIC;
 
 COMMIT;
