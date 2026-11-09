@@ -50,6 +50,20 @@ CREATE TRIGGER credit_transaction_insert_guard
   BEFORE INSERT ON public.credit_transactions
   FOR EACH ROW EXECUTE FUNCTION validate_credit_reversal();
 
+-- New local enrollments must start inactive. Only the controlled activation function may activate them.
+CREATE FUNCTION enforce_enrollment_initial_state() RETURNS trigger
+LANGUAGE plpgsql AS $body$
+BEGIN
+  IF NEW.state NOT IN ('requested','awaiting_consent') OR NEW.started_at IS NOT NULL THEN
+    RAISE EXCEPTION 'new enrollment must start requested/awaiting_consent without started_at'
+      USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER enrollments_initial_state_guard
+  BEFORE INSERT ON public.enrollments
+  FOR EACH ROW EXECUTE FUNCTION enforce_enrollment_initial_state();
+
 CREATE TABLE activation_command_log (
   idempotency_key text PRIMARY KEY CHECK (length(idempotency_key)>0),
   enrollment_id uuid NOT NULL REFERENCES enrollments(enrollment_id),
