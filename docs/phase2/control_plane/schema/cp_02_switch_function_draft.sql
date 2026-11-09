@@ -37,7 +37,7 @@ BEGIN
             USING ERRCODE = 'check_violation';
     END IF;
     IF v_case.source_freeze_token IS NULL OR v_case.source_frozen_at IS NULL
-       OR v_case.final_snapshot_ref IS NULL OR v_case.snapshot_manifest_hash IS NULL
+       OR v_case.final_snapshot_ref IS NULL OR v_case.final_snapshot_at IS NULL OR v_case.snapshot_manifest_hash IS NULL
        OR v_case.destination_validation_ref IS NULL OR v_case.destination_validated_at IS NULL THEN
         RAISE EXCEPTION 'cutover evidence incomplete: freeze, final snapshot and destination validation are required'
             USING ERRCODE = 'check_violation';
