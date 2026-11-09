@@ -54,6 +54,16 @@ CREATE TABLE mobile_hmac_key_versions (
     CHECK ((state='retired') = (retired_at IS NOT NULL))
 );
 
+-- Global identity-write maintenance gate. A database row lock serializes rotation
+-- start/finish with in-flight claim mutations; maintenance mode persists across sessions.
+CREATE TABLE identity_write_gate (
+    singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+    maintenance_mode boolean NOT NULL DEFAULT false,
+    rotation_epoch bigint NOT NULL DEFAULT 0,
+    changed_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO identity_write_gate(singleton,maintenance_mode,rotation_epoch) VALUES (true,false,0);
+
 -- Global ownership: exactly one row per student; owner is the authoritative Workspace.
 -- ownership_generation is the fencing token: strictly increases on every ownership change.
 ALTER TABLE student_contact_index
