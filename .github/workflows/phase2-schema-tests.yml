@@ -53,6 +53,8 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_06_role_privileges_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/tests/cp_10_constraint_tests.sql
 
       - name: Apply Control Plane drafts and run concurrent global-identity race
@@ -63,6 +65,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_06_role_privileges_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_race <<'SQL'
           INSERT INTO workspaces(workspace_id,workspace_type,status) VALUES
             ('a0000000-0000-0000-0000-000000000001','organization','active'),
