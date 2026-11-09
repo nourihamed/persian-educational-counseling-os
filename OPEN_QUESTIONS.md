@@ -330,3 +330,8 @@ The following high-level choices are ACCEPTED and must not be re-asked as undeci
 - PO decision 22: deterministic, explainable, versioned/configurable Risk Engine; AI assistive; counselor override audited.
 
 These accepted directions do not mean implementation or tests exist. Phase 2 remains NOT READY and D-014 prohibits real data.
+
+
+### Q-007 technical contract reference (2026-11-09)
+
+The high-level OQ-G Option A decision remains accepted: parent access is per child and per permission. The implementation-facing unresolved matrix is now captured in `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md`. It deliberately does not invent Iranian age thresholds, legal evidence, custody/dispute rules or student-objection rights. Qualified Iran legal review and explicit Product Owner approval remain required before Parent APIs or guardian transfer approval are enabled. Q-007 remains OPEN.
