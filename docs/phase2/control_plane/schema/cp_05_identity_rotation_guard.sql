@@ -161,7 +161,7 @@ BEGIN
   UPDATE public.mobile_hmac_key_versions
      SET state='active', activated_at=now(), retired_at=NULL
    WHERE key_version=p_new_key_version;
-  PERFORM public.deferred_check_all_claim_alias_coverage();
+  PERFORM public.assert_all_claim_alias_coverage();
 
   UPDATE public.identity_write_gate
      SET maintenance_mode=false, changed_at=now()
@@ -195,7 +195,8 @@ BEGIN
      SET state='retired', retired_at=now()
    WHERE key_version=p_old_key_version;
   DELETE FROM public.enrollment_claim_identity_aliases WHERE key_version=p_old_key_version;
-  PERFORM public.deferred_check_all_claim_alias_coverage();
+  DELETE FROM public.student_contact_index WHERE key_version=p_old_key_version;
+  PERFORM public.assert_all_claim_alias_coverage();
   UPDATE public.identity_write_gate
      SET maintenance_mode=false, changed_at=now()
    WHERE singleton=true;
