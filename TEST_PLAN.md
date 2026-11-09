@@ -140,3 +140,31 @@ D-009/Q-001 مکانیزم Phase 0 بوده است و دیگر معماری مر
 ## Target-environment load and connection tests (pre-pilot, added 2026-10-17)
 
 Plan: `docs/phase1/TARGET_ENV_LOAD_TEST_PLAN.md`. Status: PLAN ONLY; all scenarios NOT-RUN or BLOCKED. No measurement exists. These tests are pilot-validation criteria (D-015, D-014), not prerequisites for Phase 1 design approval.
+
+
+## Phase 2 security-contract extensions (2026-11-09)
+
+The following are **specified / NOT IMPLEMENTED / NOT RUN**. They are not covered by the existing PostgreSQL SQL CI runs.
+
+| ID | Required test | Status |
+|---|---|---|
+| CP-CONTACT-01 | Contact change requires step-up and verified new-contact proof bound to exact student/case-equivalent operation, Workspace and generation | NOT RUN — verifier/API absent |
+| CP-CONTACT-02 | Contact change updates ciphertext and all active/retiring aliases atomically; duplicate mobile+grade fully rolls back | NOT RUN — SQL function absent |
+| CP-CONTACT-03 | Proof replay, expiry, revocation, wrong subject/purpose/contact/generation and idempotency mismatch reject | NOT RUN — proof verifier absent |
+| CP-CONTACT-04 | Concurrent contact change vs HMAC rotation and ownership transfer serializes safely | NOT RUN |
+| CP-APPROVAL-01 | Signed approval assertion validates issuer, audience, signature, algorithm, nonce, expiry and exact case/student/Workspace/generation/kind | NOT RUN — trusted verifier absent |
+| CP-APPROVAL-02 | Guardian per-child legal authority, current counselor assignment + explicit fee-received attestation, and destination delegated permission are verified | NOT RUN — policy/identity services absent |
+| CP-APPROVAL-03 | Revocation and replacement approval are append-only; one current valid event per approval kind is selected | NOT RUN — schema requires redesign |
+| CP-APPROVAL-04 | Revocation racing ownership switch serializes; authority is revalidated at cutover | NOT RUN |
+| CP-APPROVAL-05 | Platform Admin cannot initiate, substitute for, or approve any required approval | NOT RUN — service/API tests absent |
+| CP-SAGA-01 | Outbox publisher lease, crash-before/after-publish, duplicate publish and retry are safe | NOT RUN — worker absent |
+| CP-SAGA-02 | Inbox receipt and projection mutation are atomic/idempotent; duplicate ID/hash mismatch and stale generation reject | NOT RUN — consumer absent |
+| CP-SAGA-03 | Source freeze blocks all mutation paths and drains in-flight writes before snapshot | NOT RUN — freeze controller absent |
+| CP-SAGA-04 | Destination staging is isolated; manifest/checksum/attachment/exclusion mismatch prevents cutover | NOT RUN — staging importer absent |
+| CP-SAGA-05 | Crash injection at each Saga boundary recovers pre-switch safely and post-switch forward-only | NOT RUN — orchestrator absent |
+| API-AUTH-01 | Student, counselor, manager, branch, parent per-child, file/export, notification and job authorization matrix | NOT RUN — runtime API absent |
+| API-AUTH-02 | Cross-Workspace hidden resource and nonexistent resource return indistinguishable 404; visible-but-forbidden returns 403 | NOT RUN — runtime API absent |
+
+**Schema reconciliation blocker:** `transfer_approvals UNIQUE(case_id, approval_kind)` with mutable `revoked_at` cannot preserve a revoked approval and a replacement approval as separate immutable events. Replace it with append-only approval/revocation events or a versioned equivalent before marking CP-APPROVAL-03 implemented.
+
+A design document or static SQL assertion does not change any of the statuses above. Existing CI success is limited to the exact SQL/test tree and SHA named in the run evidence.
