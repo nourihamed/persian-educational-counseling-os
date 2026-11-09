@@ -35,13 +35,25 @@ CREATE TABLE platform_students (
 -- Rotation: the new key_version rows are written for every student BEFORE the
 -- Control Plane's current_key_version is advanced; both versions may coexist during migration.
 CREATE TABLE student_contact_index (
-    student_id         uuid PRIMARY KEY REFERENCES platform_students (student_id),
+    student_id         uuid NOT NULL REFERENCES platform_students (student_id),
     key_version        integer NOT NULL CHECK (key_version > 0),
     mobile_hmac        bytea   NOT NULL CHECK (octet_length(mobile_hmac) = 32),
-    mobile_ciphertext  bytea   NOT NULL,            -- encrypted E.164; decryption keys held by Platform Security
+    mobile_ciphertext  bytea   NOT NULL, -- encrypted canonical E.164; key material external
     cipher_key_version integer NOT NULL CHECK (cipher_key_version > 0),
     updated_at         timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (key_version, student_id)
+    PRIMARY KEY (student_id, key_version),
+    UNIQUE (key_version, mobile_hmac)
+);
+
+-- During rotation, every holding claim must have an alias for EVERY active HMAC key version.
+-- Unique aliases enforce global mobile+grade uniqueness independently for each key version.
+-- The write gate/rotation protocol is documented in CONTROL_PLANE_KEY_ROTATION.md.
+CREATE TABLE mobile_hmac_key_versions (
+    key_version integer PRIMARY KEY CHECK (key_version > 0),
+    state text NOT NULL CHECK (state IN ('active','retiring','retired')),
+    activated_at timestamptz NOT NULL DEFAULT now(),
+    retired_at timestamptz,
+    CHECK ((state='retired') = (retired_at IS NOT NULL))
 );
 
 -- Global ownership: exactly one row per student; owner is the authoritative Workspace.
@@ -62,18 +74,25 @@ CREATE TABLE enrollment_claims (
     student_id         uuid NOT NULL REFERENCES platform_students (student_id),
     workspace_id       uuid NOT NULL REFERENCES workspaces (workspace_id),
     grade_key          text NOT NULL CHECK (grade_key IN ('grade_10', 'grade_11', 'grade_12')),
-    key_version        integer NOT NULL CHECK (key_version > 0),
-    mobile_hmac        bytea NOT NULL CHECK (octet_length(mobile_hmac) = 32),
     claim_state        text NOT NULL CHECK (claim_state IN ('active', 'transfer_pending', 'ended', 'archived')),
     ownership_generation bigint NOT NULL CHECK (ownership_generation >= 1),
     created_at         timestamptz NOT NULL DEFAULT now(),
     ended_at           timestamptz,
     CHECK ((claim_state IN ('ended', 'archived')) = (ended_at IS NOT NULL))
 );
--- D-025: at most one claim-holding enrollment per (mobile, grade) platform-wide.
+-- HMAC aliases are separate rows so multiple key versions can coexist during safe rotation.
+CREATE TABLE enrollment_claim_identity_aliases (
+    claim_id      uuid NOT NULL REFERENCES enrollment_claims(claim_id),
+    grade_key     text NOT NULL CHECK (grade_key IN ('grade_10','grade_11','grade_12')),
+    key_version   integer NOT NULL REFERENCES mobile_hmac_key_versions(key_version),
+    mobile_hmac   bytea NOT NULL CHECK (octet_length(mobile_hmac)=32),
+    claim_state   text NOT NULL CHECK (claim_state IN ('active','transfer_pending','ended','archived')),
+    PRIMARY KEY (claim_id, key_version)
+);
+-- D-025: every live identity alias is globally unique within its key version and grade.
 CREATE UNIQUE INDEX enrollment_claims_global_identity
-    ON enrollment_claims (key_version, mobile_hmac, grade_key)
-    WHERE claim_state IN ('active', 'transfer_pending');
+    ON enrollment_claim_identity_aliases (key_version, mobile_hmac, grade_key)
+    WHERE claim_state IN ('active','transfer_pending');
 -- One claim-holding enrollment per student platform-wide (PO-4).
 CREATE UNIQUE INDEX enrollment_claims_one_per_student
     ON enrollment_claims (student_id)
