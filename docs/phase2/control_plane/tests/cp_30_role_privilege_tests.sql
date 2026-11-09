@@ -46,6 +46,9 @@ BEGIN
     RAISE EXCEPTION 'FAIL CP-ROLE-05 privileged function scope is too broad';
   END IF;
 
+  IF (SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='public.ownership_history_history_id_seq'::regclass)<>'cp_table_owner' THEN
+    RAISE EXCEPTION 'FAIL CP-ROLE-06A history sequence owner mismatch';
+  END IF;
   IF NOT has_sequence_privilege('cp_function_owner','public.ownership_history_history_id_seq','USAGE')
      OR has_sequence_privilege('cp_runtime','public.ownership_history_history_id_seq','USAGE') THEN
     RAISE EXCEPTION 'FAIL CP-ROLE-06A sequence privileges are not scoped to function owner';
