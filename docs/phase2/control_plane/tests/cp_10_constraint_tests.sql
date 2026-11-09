@@ -16,6 +16,7 @@ INSERT INTO workspaces(workspace_id,workspace_type,status) VALUES
  ('a0000000-0000-0000-0000-000000000001','organization','active'),
  ('a0000000-0000-0000-0000-000000000002','independent_counselor','active'),
  ('a0000000-0000-0000-0000-000000000003','organization','active');
+SELECT expect_error('CP-WS-IMM-01 workspace UUID cannot be rewritten','UPDATE workspaces SET workspace_id=''a0000000-0000-0000-0000-000000000099'' WHERE workspace_id=''a0000000-0000-0000-0000-000000000001''','23514');
 INSERT INTO platform_students(student_id) VALUES
  ('b0000000-0000-0000-0000-000000000001'),
  ('b0000000-0000-0000-0000-000000000002'),
