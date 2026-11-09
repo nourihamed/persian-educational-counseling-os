@@ -123,6 +123,7 @@ SELECT ws_expect_error('WS-CAP-02 capacity underflow rejected','SELECT adjust_wo
 -- Organization Workspace may have branches; changing the type while branches exist is forbidden.
 SELECT ws_expect_error('WS-BRANCH-02 Workspace type cannot change while branches exist','UPDATE workspace_profile SET workspace_type=''independent_counselor'' WHERE singleton=true','23514');
 -- After removing branches, changing the test profile to independent must block future branches.
+UPDATE counselor_assignments SET branch_id=NULL WHERE assignment_id='b2000000-0000-0000-0000-000000000001';
 DELETE FROM branches WHERE branch_id='d1000000-0000-0000-0000-000000000001';
 UPDATE workspace_profile SET workspace_type='independent_counselor' WHERE singleton=true;
 SELECT ws_expect_error('WS-BRANCH-01 Independent Counselor Workspace cannot add branches','INSERT INTO branches(branch_id,name,status) VALUES (gen_random_uuid(),''Forbidden Branch'',''active'')','23514');
