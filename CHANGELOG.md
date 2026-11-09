@@ -486,3 +486,10 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Added deterministic planning domain contract for normalized schedule/availability inputs, explicit PlanItems, reproducibility and explainability.
 - Added curriculum domain contract for Grade → Subject → Book/Edition → Chapter → Topic → Subtopic, ownership, versioning and mastery evidence.
 - Linked all three contracts from Workspace design, exit criteria, Project State, Roadmap, Test Plan and Supervisor Review. SQL reconciliation and tests remain open.
+
+
+## 2026-11-09 — Activity, credit and capacity lifecycle contracts
+- Added Activity/Class/Assignment domain contract with recurrence, participation, attendance and provenance rules.
+- Added Student Credit commercial lifecycle contract separating CRD from fiat billing and specifying verified payment, grants, refunds and reconciliation.
+- Added Capacity lifecycle contract for multi-dimensional reservations, activation/archive/reactivation and transfer coordination.
+- Linked contracts into Workspace design, Phase 2 exit criteria, Project State, Roadmap, Test Plan and Supervisor Review.
