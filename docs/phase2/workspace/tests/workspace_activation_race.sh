@@ -56,12 +56,13 @@ balance="$(psql -X -tA -d "$DB" -c "SELECT COALESCE(sum(amount),0) FROM credit_t
 debits="$(psql -X -tA -d "$DB" -c "SELECT count(*) FROM credit_transactions WHERE wallet_id='c9200000-0000-0000-0000-000000000001' AND transaction_kind='activation_debit'")"
 capacity="$(psql -X -tA -d "$DB" -c "SELECT current_value FROM workspace_capacity_counters WHERE dimension_key='active_students'")"
 commands="$(psql -X -tA -d "$DB" -c "SELECT count(*) FROM activation_command_log")"
+audits="$(psql -X -tA -d "$DB" -c "SELECT count(*) FROM audit_events WHERE event_type='student.activation'")"
 
-echo "exit A=$ea B=$eb; enrollment=$state; balance=$balance; debits=$debits; capacity=$capacity; commands=$commands"
+echo "exit A=$ea B=$eb; enrollment=$state; balance=$balance; debits=$debits; capacity=$capacity; commands=$commands; audit events=$audits"
 echo "B error: $(grep -m1 'ERROR:' "$W/b.log" | sed 's/.*ERROR:  //')"
 if [ "$ea" -eq 0 ] && [ "$eb" -eq 3 ] && [ "$state" = "active" ] \
    && [ "$balance" = "2" ] && [ "$debits" = "1" ] \
-   && [ "$capacity" = "1" ] && [ "$commands" = "1" ] \
+   && [ "$capacity" = "1" ] && [ "$commands" = "1" ] && [ "$audits" = "1" ] \
    && grep -q 'cannot be activated' "$W/b.log"; then
   echo "PASS WS-ACT-RACE-01 exactly one activation/debit/capacity reservation"
   exit 0
