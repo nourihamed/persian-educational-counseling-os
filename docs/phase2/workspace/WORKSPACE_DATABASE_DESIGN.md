@@ -108,3 +108,8 @@ The Workspace DB participates in the new design contracts:
 - Freeze, staging and projection delivery follow `../transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md`; local projection state never overrides Control Plane ownership/generation.
 
 No Workspace runtime/API implementation is implied. Source freeze controller, destination staging importer, inbox consumer and API authorization remain NOT IMPLEMENTED / NOT RUN.
+
+
+## 10. Independent domain-schema review
+
+See `WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` for the independent review of the current SQL skeleton. HIGH gaps include test-attempt/response/score reconciliation, competing membership role sources of truth, and insufficient append-only guardian relationship/permission evidence. MEDIUM gaps include per-subject exam results, custom error taxonomy, subtopics, normalized planning inputs/PlanItem, canonical activity taxonomy, class participation/recurrence, capacity races/reconciliation, credit purchase/refund/renewal and file/notification lifecycle controls. These are findings, not silently accepted deferrals; Phase 2 remains NOT READY.
