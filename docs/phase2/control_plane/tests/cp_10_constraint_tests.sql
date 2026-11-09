@@ -70,6 +70,15 @@ DO $rotation$ BEGIN
  IF (SELECT count(*) FROM mobile_hmac_key_versions WHERE state IN ('active','retiring'))<>2 THEN RAISE EXCEPTION 'FAIL CP-ROT-03 expected two overlap key versions'; END IF;
  RAISE NOTICE 'PASS CP-ROT-02/03 rotation completion verified and gate reopened';
 END $rotation$;
+SELECT begin_identity_hmac_rotation();
+SELECT retire_identity_hmac_version(1);
+DO $retire$ BEGIN
+ IF (SELECT state FROM mobile_hmac_key_versions WHERE key_version=1)<>'retired' THEN RAISE EXCEPTION 'FAIL CP-ROT-04 old key version not retired'; END IF;
+ IF EXISTS (SELECT 1 FROM enrollment_claim_identity_aliases WHERE key_version=1) THEN RAISE EXCEPTION 'FAIL CP-ROT-05 retired aliases remain'; END IF;
+ IF EXISTS (SELECT 1 FROM student_contact_index WHERE key_version=1) THEN RAISE EXCEPTION 'FAIL CP-ROT-06 retired contact HMAC rows remain'; END IF;
+ IF (SELECT maintenance_mode FROM identity_write_gate WHERE singleton=true) THEN RAISE EXCEPTION 'FAIL CP-ROT-07 gate remained enabled after retirement'; END IF;
+ RAISE NOTICE 'PASS CP-ROT-04..07 old HMAC aliases/index rows purged and gate reopened';
+END $retire$;
 
 -- Platform Admin cannot initiate a transfer.
 SELECT expect_error('CP-INIT-01 Platform Admin is not an eligible initiator','INSERT INTO transfer_cases(case_id,student_id,source_workspace_id,destination_workspace_id,expected_generation,initiator_kind,state,idempotency_key) VALUES (gen_random_uuid(),''b0000000-0000-0000-0000-000000000002'',''a0000000-0000-0000-0000-000000000002'',''a0000000-0000-0000-0000-000000000001'',1,''platform_admin'',''requested'',''admin-key'')','23514');
