@@ -1103,3 +1103,30 @@ Allowed values: `NOT READY` / `CONDITIONAL PASS` / `APPROVED`
 3. If the verdict is not `APPROVED`, the listed fixes are made and this section is updated again.
 4. If `APPROVED`, the owner records acceptance (Q-019 direction is already recorded in D-016); then a separate commit replaces this section with a dated final entry.
 5. The independent reviewer records APPROVED only when the gate criteria are satisfied; the Product Owner retains PR-merge and next-phase authorization.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Mobile Contact Change Design (2026-11-09)
+
+## Scope
+Reviewed the current Control Plane initial-claim and HMAC-rotation drafts and added `docs/phase2/control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md`.
+
+## Finding — HIGH (still open)
+Initial identity admission and HMAC rotation have database-side draft functions, but no operation changes the mobile contact for an existing student. Without a separately specified path, the product cannot safely handle a legitimate contact update while preserving global mobile+grade uniqueness, active/retiring HMAC alias coverage, ciphertext consistency, idempotency and ownership fencing.
+
+## Design contract delivered
+The new contract requires:
+- step-up authentication and verified possession of the proposed contact;
+- one-time proof bound to exact student, Workspace, ownership generation, purpose and contact fingerprint;
+- one active encryption key and aliases for every active/retiring HMAC version;
+- atomic updates of all contact-index and claim-alias rows, with uniqueness conflict rollback;
+- serialization against rotation through the identity gate and against transfer through the student ownership row;
+- append-only command/audit evidence and transactional outbox;
+- no plaintext mobile, OTP or key material in DB, source control, logs or events.
+
+## Explicit limitations
+This is a design-only deliverable. No SQL implementation, trusted proof verifier, API, service identity or executable contact-change tests exist. Account recovery without the current contact, guardian-age/authority requirements, notification disclosure and numeric retention periods remain open; no policy was inferred. The existing initial-admission CI does not test this new contract.
+
+## Gate impact
+This addendum does not close the HIGH finding. Control Plane identity readiness remains **NOT READY**. D-014 synthetic-only restriction remains in force; no real data or production operation is authorized.
