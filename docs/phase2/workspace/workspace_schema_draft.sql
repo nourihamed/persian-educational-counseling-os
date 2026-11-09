@@ -222,7 +222,28 @@ CREATE TABLE credit_transactions (
   CHECK (transaction_kind <> 'activation_debit' OR amount < 0)
 );
 
-CREATE FUNCTION reject_ledger_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE UNIQUE INDEX one_reversal_per_credit_transaction
+  ON credit_transactions(related_transaction_id)
+  WHERE transaction_kind='reversal';
+
+CREATE FUNCTION validate_credit_reversal() RETURNS trigger LANGUAGE plpgsql AS $body$
+DECLARE v_wallet uuid; v_amount bigint; v_kind text;
+BEGIN
+  IF NEW.transaction_kind='reversal' THEN
+    SELECT wallet_id,amount,transaction_kind INTO v_wallet,v_amount,v_kind
+      FROM credit_transactions WHERE transaction_id=NEW.related_transaction_id FOR UPDATE;
+    IF NOT FOUND OR v_wallet<>NEW.wallet_id OR v_kind='reversal' OR NEW.amount<>-v_amount THEN
+      RAISE EXCEPTION 'reversal must reference one original transaction in the same wallet with exact opposite amount'
+        USING ERRCODE='check_violation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER credit_reversal_guard
+  BEFORE INSERT ON credit_transactions
+  FOR EACH ROW EXECUTE FUNCTION validate_credit_reversal();
+
+CREATE FUNCTION reject_ledger_mutation() RETURNS trigger LANGUAGE plpgsql AS $
 BEGIN
   RAISE EXCEPTION 'credit_transactions is append-only' USING ERRCODE='check_violation';
 END; $$;
