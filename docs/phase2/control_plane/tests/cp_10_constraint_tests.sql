@@ -107,6 +107,7 @@ SELECT expect_error('CP-CUTOVER-01 cutover_frozen requires source freeze + final
 -- Transfer test for student 1.
 INSERT INTO transfer_cases(case_id,student_id,source_workspace_id,destination_workspace_id,expected_generation,initiator_kind,state,idempotency_key)
 VALUES ('d0000000-0000-0000-0000-000000000002','b0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000002',1,'guardian','requested','transfer-1');
+SELECT expect_error('CP-CASE-IMM-01 transfer identity cannot be rewritten','UPDATE transfer_cases SET source_workspace_id=''a0000000-0000-0000-0000-000000000003'' WHERE case_id=''d0000000-0000-0000-0000-000000000002''','23514');
 UPDATE transfer_cases SET state='approvals_pending' WHERE case_id='d0000000-0000-0000-0000-000000000002';
 UPDATE transfer_cases SET state='approved' WHERE case_id='d0000000-0000-0000-0000-000000000002';
 UPDATE transfer_cases SET state='preflight_ok' WHERE case_id='d0000000-0000-0000-0000-000000000002';
@@ -114,6 +115,7 @@ UPDATE transfer_cases SET state='staging' WHERE case_id='d0000000-0000-0000-0000
 UPDATE transfer_cases SET state='staged_verified' WHERE case_id='d0000000-0000-0000-0000-000000000002';
 UPDATE transfer_cases SET source_freeze_token='freeze-1',source_frozen_at=now(),final_snapshot_ref='snapshot-1',final_snapshot_at=now(),snapshot_manifest_hash=decode(repeat('aa',32),'hex'),destination_validation_ref='validation-1',destination_validated_at=now() WHERE case_id='d0000000-0000-0000-0000-000000000002';
 UPDATE transfer_cases SET state='cutover_frozen' WHERE case_id='d0000000-0000-0000-0000-000000000002';
+SELECT expect_error('CP-CASE-IMM-02 freeze/snapshot evidence is write-once','UPDATE transfer_cases SET final_snapshot_ref=''tampered-snapshot'' WHERE case_id=''d0000000-0000-0000-0000-000000000002''','23514');
 INSERT INTO transfer_approvals(approval_id,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
 VALUES
  (gen_random_uuid(),'d0000000-0000-0000-0000-000000000002','guardian_consent','ev-g1','guardian-subject','authn-g1','{"relationship":"verified","legal_authority":"verified","scope":"transfer"}',now()),
