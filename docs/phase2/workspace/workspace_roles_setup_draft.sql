@@ -142,7 +142,24 @@ SELECT format('GRANT SELECT ON TABLE notification_preferences TO %I',
 
 -- SECURITY DEFINER activation function owner has only the DML needed for its transaction.
 SELECT format(
-  'GRANT SELECT,INSERT,UPDATE ON TABLE enrollments,students,counselor_assignments,workspace_memberships,credit_wallets,credit_transactions,activation_command_log,workspace_capacity_counters,capacity_events TO %I',
+  'GRANT SELECT ON TABLE enrollments,students,counselor_assignments,workspace_memberships,credit_wallets,credit_transactions,activation_command_log,workspace_capacity_counters,capacity_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format(
+  'GRANT INSERT ON TABLE credit_transactions,activation_command_log,capacity_events,audit_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format(
+  'GRANT UPDATE(state,started_at) ON TABLE enrollments TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format(
+  'GRANT UPDATE(current_value,updated_at) ON TABLE workspace_capacity_counters TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+-- Narrow UPDATE privileges exist only to permit SELECT ... FOR UPDATE row locks.
+-- Append-only/immutable triggers reject any actual change to these lock-only columns.
+SELECT format('GRANT UPDATE(wallet_id) ON TABLE credit_wallets TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT UPDATE(transaction_id) ON TABLE credit_transactions TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT UPDATE(idempotency_key) ON TABLE activation_command_log TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT INSERT ON TABLE audit_events TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
