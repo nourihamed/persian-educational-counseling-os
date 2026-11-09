@@ -107,3 +107,30 @@
 - Workspace activation atomically debits Student Credit, reserves capacity and audits; insufficient credit/capacity and same-enrollment concurrency roll back or replay correctly (SQL draft tests PASS; API authorization NOT RUN).
 - Mobile contact-change/reverification updates all aliases atomically and rejects global duplicates (NOT IMPLEMENTED / NOT RUN).
 - High-risk actions enforce MFA/step-up and audit.
+
+
+## 8. Required cross-contract bindings (2026-11-09 review)
+
+- Mobile contact changes must follow `control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md`; no direct API/table update is permitted. Proof is one-time and bound to student, Workspace, generation, purpose and proposed-contact fingerprint.
+- Transfer approvals must follow `control_plane/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md`. API actors cannot submit an approver UUID or authority snapshot as proof. The trusted verifier derives the subject and authority from authenticated evidence and emits a case-bound assertion.
+- Distributed transfer operations must follow `transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md`. API handlers cannot directly activate destination projections or unfreeze the source after ownership switch.
+- The HTTP service must bind idempotency keys to a canonical, versioned request hash. Same key/same hash returns the original logical result; same key/different hash returns a non-disclosing conflict and creates a security/audit event.
+- Approval, revocation and ownership switch must serialize at case scope. The API must not report an approval as effective until its durable event commits, nor report transfer completion until both projections and source fencing are reconciled.
+
+## 9. API authorization acceptance matrix (specified, not executed)
+
+| Surface | Required negative cases |
+|---|---|
+| Student CRUD / profile | guessed cross-Workspace ID; counselor without active assignment; suspended membership; stale owner/generation |
+| Parent portal | child A grant used for child B; expired/revoked grant; wrong scope; guardian authority disputed or absent |
+| Manager / branch | manager without explicit permission; branch outside scope; membership revoked between list and detail |
+| Transfer request | ineligible initiator; Platform Admin shortcut; stale source owner; duplicate open case; payload mismatch |
+| Transfer approval | forged/replayed assertion; wrong principal/case/student/generation/kind; missing legal/assignment/delegation evidence; revoked authority at cutover |
+| Transfer Saga | source write during freeze; staging read by normal role; stale source job/file/export after switch; duplicate/out-of-order event |
+| Contact change | unverified new contact; proof replay/wrong subject; alias gap; duplicate mobile+grade; concurrent rotation/transfer |
+| Files and attachments | guessed object ID; expired signed URL; URL after ownership generation change; wrong Workspace namespace |
+| Reports and exports | unauthorized filters; cross-tenant aggregate leakage; background export after permission revocation |
+| Notifications | recipient substitution; child/Workspace mismatch; stale queued notification after transfer; sensitive data in event payload |
+| Background jobs | caller-controlled Workspace; generation mismatch; retry duplicate side effect; execution after membership/assignment revocation |
+
+Each endpoint and worker must have a traceable test ID, required principal, tenant/relationship context, expected HTTP/result code and audit assertion before API implementation is accepted.
