@@ -3,6 +3,10 @@
 DO $role_test$
 DECLARE n integer; bad text;
 BEGIN
+  SELECT count(*) INTO n FROM pg_roles
+   WHERE rolname IN ('cp_table_owner','cp_function_owner','cp_runtime','cp_transfer_executor','cp_rotation_executor');
+  IF n<>5 THEN RAISE EXCEPTION 'FAIL CP-ROLE-00 expected all five separated roles'; END IF;
+
   SELECT count(*) INTO n
   FROM pg_roles
   WHERE rolname IN ('cp_table_owner','cp_function_owner','cp_runtime','cp_transfer_executor','cp_rotation_executor')
