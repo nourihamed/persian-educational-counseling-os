@@ -188,3 +188,12 @@ See `OPEN_QUESTIONS.md` for full detail. The following remain open: **Q-004** (w
 3. The Product Owner confirmed formal Phase 0 closure on 2026-10-14. PR #1 is now merged; neither closure nor merge authorizes Phase 1.
 4. Q-001 (tenant isolation), Q-002 (MVP scope), Q-003 (MVP billing depth under D-010), and Q-010 (Pilot hosting) were decided by the Product Owner on 2026-10-12 and moved to Resolved/Closed. Those earlier product decisions were separate from phase closure; Phase 0 was subsequently formally closed on 2026-10-14. They do not authorize Phase 1.
 5. Phase 1 may begin only after the Product Owner separately authorizes it and its required workflow/gates are satisfied. PR #1 is already merged and is no longer a pending prerequisite.
+
+
+## Phase 2 policy and operational contract updates (2026-11-09)
+
+- Added provider-neutral operational resilience/backup/restore contract; RPO/RTO, replication mode, retention durations, failover mode, provider and measured capacity remain unresolved.
+- Added category-based retention/legal-hold implementation contract; no numeric periods or legal compliance are claimed.
+- Added Q-007 parent/guardian authority matrix template; high-level per-child/per-permission policy is accepted, but Iran-specific age/legal evidence and dispute rules remain open.
+- Added independent Workspace domain schema review; HIGH findings WS-DOM-01..03 and MEDIUM WS-DOM-04..09 remain unresolved.
+- All new contracts are design-only. No runtime API, proof verifier, Saga worker, deletion job, KMS/HSM, backup/restore or failover control is implemented by these commits. Phase 2 remains NOT READY.
