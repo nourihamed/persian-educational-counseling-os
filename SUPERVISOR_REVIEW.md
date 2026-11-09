@@ -5,42 +5,89 @@
 Phase 2 — Database & Domain Model, Control Plane / Workspace reconciliation.
 
 ## Scope Reviewed
-Final SQL/schema tree reviewed and executed at commit `4720cc3ed12b766c941337fe240a9d240e203522`; subsequent commits `82b651386331cf9fdddf5a38e83f31dcff892509` and `bdef5e8ee85d28e8cb66d5cdb6a81a12a2a0ff0f` update only test-status/project-state evidence. Scope: Control Plane cp_01..cp_05, Control Plane regression/race tests, Workspace schema/tests, transfer/API/key-rotation/role contracts, domain model and crosswalk. GitHub Actions run #10 executed on PostgreSQL 16.15 and passed 21 Control Plane assertions, 1 race test and 13 Workspace assertions. Runtime authorization, role catalog checks, integration and operational tests remain unverified.
+Current PR #12 branch tree, including:
+- canonical Workspace-centric Phase 2 domain model and PR #8 supersession note;
+- Control Plane schema/function drafts cp_01 through cp_06;
+- Control Plane constraint/workflow, concurrency and role-privilege test suites;
+- Workspace schema, educational domain, capacity/ledger/file/notification/legal-hold structures and regression suite;
+- transfer Freeze + Final Snapshot workflow, API/authorization, HMAC rotation and Control Plane/Workspace role contracts;
+- decision crosswalk and canonical project documents.
+
+Latest successful CI evidence: GitHub Actions run [#53](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42644631913), PostgreSQL 16, branch tree SHA `3c50f0be27ebad6c159d20d2447b763868e6bc86`: 22 Control Plane PASS notices (including one role-catalog notice with eight privilege sub-checks), 1 two-session global-identity race, and 13 Workspace schema PASS notices. The current branch has only subsequent root-level status/review/changelog edits; no SQL schema/test file changed after that run.
 
 ## Summary
-The initial PR #12 state contained significant gaps: HMAC uniqueness was indexed with key_version, the ownership switch did not require exactly one source claim, approval rows lacked principal/authentication/authority metadata, idempotency was not implemented despite a command_log table, and the transition graph permitted post-switch cancellation. The Workspace DB, transfer contract and API authorization design were absent. Corrective draft artifacts have now been added/updated, but they are not runtime implementation or verified tests.
+The initial PR #12 state had material defects in global HMAC uniqueness, source-claim validation, transfer evidence, idempotency and post-switch state transitions. Corrective schema/function drafts and regression suites now exist, and the synthetic PostgreSQL 16 workflow passes. The architecture is substantially more complete, but the result is still design/schema-draft quality—not a production implementation, migration, runtime authorization system or operational readiness approval.
 
 ## Passed
-- Workspace-centric authority and Control Plane / Workspace responsibility split documented.
-- Transfer workflow contract records freeze + final snapshot, three cumulative approvals and forward-only post-switch recovery.
-- API authorization contract records Workspace membership, object scope, parent per-child permissions and fail-closed ownership checks.
-- Control Plane schema now models versioned HMAC aliases, and the switch function checks source claim count, generation and alias coverage.
-- Idempotent transfer command admission function draft added.
-- Transition graph no longer permits cancellation after ownership switch.
-- Prior test evidence explicitly superseded in Control Plane README.
+- Workspace-centric tenant model is documented: Organization Workspace and Independent Counselor Workspace; counselor is a member/assignee, not the tenant root.
+- Control Plane and Workspace DB responsibilities are separated; global ownership and generation are not delegated to Workspace-local projections.
+- HMAC rotation gate, alias completeness, lifecycle functions and old-version index cleanup are specified and exercised by the synthetic SQL suite.
+- Transfer switch checks one valid source claim, owner/generation, aliases, three cumulative approvals and freeze/snapshot/destination validation evidence.
+- Transfer case identity/evidence, approval evidence, command payload and outbox event payload are protected against mutation.
+- Idempotent transfer admission, post-switch forward-only state transitions and atomic owner/generation/history/outbox switch pass included SQL cases.
+- Control Plane non-login owner/function roles, scoped executor grants and catalog checks pass in ephemeral PostgreSQL 16 CI.
+- Workspace schema regression covers branch/type, counselor assignment, guardian permission record shape, educational domain relations, published version immutability, credit reversal integrity, capacity counter idempotency/limits, private file metadata, notification idempotency, legal hold and append-only audit.
+- Latest successful CI run is reproducible from the checked-in workflow; earlier failed runs exposed test-fixture and sequence-grant defects that were corrected before run #53.
 
 ## Findings
 
 ### CRITICAL
-- None newly confirmed as an executable runtime vulnerability because no runtime system is under review. This is not a security clearance.
+- None newly confirmed in the draft SQL scope. This is not a runtime security clearance.
 
 ### HIGH
-- HMAC rotation now has draft SQL for a database-backed maintenance gate, row-lock serialization, claim-write pause, deferred alias-completeness checks and begin/complete/retire functions (cp_05). These drafts have NOT been executed. Production claim-admission service, restricted table grants, KMS/HSM integration, cryptographic backfill and crash/concurrency evidence remain absent; per-version indexes alone are insufficient.
-- Approval principal/authority fields are still only stored references/snapshots. A trusted identity/authorization service must verify and bind guardian legal authority, prior counselor assignment and destination permission to the exact case.
-- Dedicated non-login function owner/workflow role, grants, ownership and privilege review remain unverified. SECURITY DEFINER code must not be executable by PUBLIC or ordinary app roles.
-- Workspace schema is a core skeleton, not the complete Phase 2 domain model. Draft triggers now cover published-version immutability and branch/type restrictions, with a new regression script; they are NOT RUN. Capacity atomicity, activation/credit transaction safety, full educational domain and broader authorization still need implementation and evidence.
-- Outbox/inbox runtime, retry/reconciliation, crash recovery and fail-closed service integration are not implemented.
-- Revised SQL and race tests have not been run against current branch HEAD.
+- Control Plane role setup is tested only in an ephemeral CI database. Production service login identities, memberships, secret binding, credential rotation and target-environment catalog verification remain unconfigured.
+- Workspace DB role/credential separation is specified but not provisioned or tested. Cross-Workspace connection-denial and pool-reuse isolation remain NOT RUN.
+- Approval fields store references and snapshots; they do not authenticate or prove lawful guardian authority, previous counselor identity/fee confirmation or destination authority. A trusted identity/authorization service is still required.
+- HMAC and encryption key references exist, but KMS/HSM integration, authenticated cryptographic backfill, encryption-key rewrapping/rotation and disaster recovery are not implemented.
+- Distributed source write freeze/drain, final snapshot orchestration, destination staging, cross-database recovery, outbox/inbox delivery and stale-job fencing are not runtime implemented. SQL metadata/state checks do not prove a working Saga.
+- Workspace activation + Student Credit debit + capacity reservation are not yet one implemented transaction. Capacity counter functions pass, but concurrent activation, archived-student accounting and ledger coupling remain untested.
+- Full runtime RBAC/object-level authorization, guardian legal matrix, file access, export, notification and report isolation are not implemented.
 
 ### MEDIUM
-- Crosswalk and canonical documents need final line-by-line consistency review against PR #8–#11 and the latest branch head.
-- Q-007 parent permissions still requires legal/age-specific matrix and executable tests; Iran MVP legal evidence rules require qualified legal review.
-- OQ-D operational RPO/RTO, failover consistency, split-brain, backup retention, restore drills and measured capacity remain open.
-- Transfer freeze boundary, timeout, in-flight transaction barrier, retry policy and manual-intervention thresholds remain unspecified.
-- Retention durations remain unapproved by design; no values may be invented.
+- Q-007 per-child parent permission policy still needs Iran age/legal evidence matrix, exceptions and executable authorization tests.
+- Control Plane RPO/RTO, failover/split-brain behavior, independent backup retention and restore drills remain unverified.
+- Capacity limits are provisional; measured Workspace/counselor/branch/concurrency/cell capacity and cost remain unavailable.
+- Transfer freeze boundary, drain timeout, retry/backoff and manual-intervention thresholds need measured operational definitions.
+- Retention durations remain deliberately unapproved; legal/contractual owners and numeric periods must not be invented.
+- PRs #8–#11 remain separate Open/Draft/Unmerged. PR #8's old tenant-centric DDL must be reconciled/rebased or superseded before merge; old test evidence does not validate the current schema.
 
 ### LOW
-- Draft SQL naming and schema organization may be normalized after the domain model is complete.
+- Draft SQL naming, indexing and schema organization can be normalized after all domain constraints and runtime contracts are finalized.
+
+## Architecture
+The Workspace-centric two-domain architecture is coherent at design level. Control Plane is the authority for global identity/current ownership/generation; each Workspace DB owns its local educational domain. Cross-database foreign keys and atomic transactions are not claimed. The design is not yet backed by running services or target infrastructure.
+
+## Database
+The synthetic Control Plane and Workspace draft suites pass on PostgreSQL 16. The suites do not prove safe upgrades from PR #8's old schema, production migration reversibility, workload performance, actual cross-database transfer, or complete domain constraints.
+
+## API
+Logical API/authorization contracts exist; no runtime endpoints are implemented. All object reads/writes, jobs, exports, files and notifications must enforce authenticated Platform User + Workspace membership + resource permission/relationship + assignment/consent + current Control Plane owner/generation.
+
+## Security
+D-014 remains in force. No real student/customer data is permitted. Control Plane role catalog checks passed in ephemeral CI; Workspace roles, service identities, KMS/HSM, production secrets, runtime authorization and target-environment controls remain unverified.
+
+## Testing
+EXECUTED / PASS on PostgreSQL 16 for the included synthetic schema cases in CI run #53: 22 Control Plane PASS notices (one notice covers eight role-catalog sub-checks), 1 concurrent global-identity race, and 13 Workspace PASS notices. The following remain NOT RUN: production service-role binding, Workspace credential isolation, runtime API/RBAC, approval identity proof, cross-database transfer/freeze/drain, crash/recovery, outbox/inbox delivery, activation-credit-capacity atomicity, load/performance, backup/restore, failover and disaster recovery.
+
+## Documentation
+Canonical Workspace domain model, Control Plane/Workspace designs, transfer/API/key-rotation/role contracts, decision crosswalk and project-state documents are present on PR #12. PR #12 is still Draft and unmerged; PRs #8–#11 remain separate. Main is unchanged.
+
+## Technical Debt
+Runtime application and service implementation; production role binding; KMS/HSM; complete Saga; outbox/inbox; activation-credit-capacity transaction; full legal/parent matrix; backup/restore/HA; benchmark and measured limits; migration reconciliation with PR #8.
+
+## Required Changes
+1. Implement and independently verify trusted identity/authority verification and runtime Workspace/object-level authorization.
+2. Bind production service identities to least-privilege Control Plane and per-Workspace DB roles; verify credentials and grants in the target environment.
+3. Implement end-to-end cross-database Freeze + Final Snapshot Saga, outbox/inbox, crash recovery and fail-closed ownership validation.
+4. Implement atomic student activation + credit debit + capacity reservation and test concurrency/idempotency.
+5. Complete KMS/HSM and both HMAC/encryption key lifecycle, backup/restore, failover and measured capacity evidence.
+6. Reconcile or supersede PRs #8–#11 and obtain independent review of all acceptance tests on the final schema/migration path.
+
+## Recommendation
+Do not merge PR #12 or start Phase 3. Continue Phase 2 remediation. Synthetic schema tests passing is necessary progress, not complete Phase 2 acceptance. Real student/customer data remains prohibited.
+
+## Gate Status
+**NOT READY**
 
 ## Architecture
 Workspace is the tenant boundary. Control Plane owns global student identity/current owner/generation and global mobile+grade claims. Workspace DB owns local educational records and projections. Cross-database FKs/transactions are not claimed. Current contracts are design-only.
