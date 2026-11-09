@@ -59,7 +59,7 @@ BEGIN
   IF p_idempotency_key IS NULL OR length(p_idempotency_key)=0
      OR p_payload_hash IS NULL OR octet_length(p_payload_hash)<>32
      OR p_student_id IS NULL OR p_claim_id IS NULL OR p_workspace_id IS NULL
-     OR p_grade_key NOT IN ('grade_10','grade_11','grade_12')
+     OR p_grade_key IS NULL OR p_grade_key NOT IN ('grade_10','grade_11','grade_12')
      OR p_mobile_ciphertext IS NULL OR octet_length(p_mobile_ciphertext)=0
      OR p_cipher_key_version IS NULL
      OR p_aliases IS NULL OR jsonb_typeof(p_aliases)<>'array'
