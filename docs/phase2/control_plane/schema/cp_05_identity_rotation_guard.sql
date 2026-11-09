@@ -27,7 +27,7 @@ BEGIN
        AND ci.mobile_hmac=a.mobile_hmac
      WHERE a.claim_id=p_claim_id
        AND a.grade_key=v_grade
-       AND a.claim_state IN ('active','transfer_pending')
+       AND a.claim_state = v_state
        AND a.key_version IN (SELECT key_version FROM public.mobile_hmac_key_versions WHERE state IN ('active','retiring'));
     IF v_expected=0 OR v_actual<>v_expected THEN
       RAISE EXCEPTION 'claim % has % verified active/retiring HMAC aliases; expected %',p_claim_id,v_actual,v_expected
@@ -35,7 +35,8 @@ BEGIN
     END IF;
   ELSE
     SELECT count(*) INTO v_actual FROM public.enrollment_claim_identity_aliases
-     WHERE claim_id=p_claim_id AND claim_state IN ('active','transfer_pending');
+     WHERE claim_id=p_claim_id
+       AND (claim_state IN ('active','transfer_pending') OR claim_state IS DISTINCT FROM v_state);
     IF v_actual<>0 THEN
       RAISE EXCEPTION 'non-holding claim % still has % active aliases',p_claim_id,v_actual
         USING ERRCODE='check_violation';
