@@ -31,7 +31,7 @@ All roles are NOLOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOREPLICATION, NOI
 
 | Function owner | Intended table capabilities | Explicitly excluded examples |
 |---|---|---|
-| `cp_transfer_function_owner` | Read transfer cases/approvals, owner/claim/alias/contact state and transition table; insert/update transfer command records, ownership history and outbox; update ownership/claim/alias state; use ownership-history sequence | HMAC key lifecycle updates, identity admission inserts, rotation gate updates |
+| `cp_transfer_function_owner` | Read transfer cases/approvals, owner/claim/alias/contact state and transition table; insert/update transfer command records, ownership history and outbox; update ownership/claim/alias state; use ownership-history sequence; lock the identity gate using UPDATE(singleton) only | HMAC key lifecycle updates, identity admission inserts, maintenance_mode/rotation_epoch updates |
 | `cp_rotation_function_owner` | Read/update identity write gate and HMAC key versions; read claim/alias/contact state; delete retired aliases/contact-index rows; execute alias-coverage helpers | Transfer cases, ownership switch, initial student/claim admission |
 | `cp_identity_admission_function_owner` | Read gate/key/workspace and identity state needed for validation; insert initial platform student, ownership, claim, contact index, aliases and idempotency command; execute alias-coverage helper | Transfer cases/approvals, command log, ownership switch, HMAC key lifecycle updates/deletes |
 
@@ -52,7 +52,7 @@ The exact function signatures, owner assignments and grants are asserted by `tes
 
 The prior GitHub Actions run #148 passed the former shared-owner catalog design on synthetic PostgreSQL 16. It is historical evidence only and does **not** validate this new split-owner revision.
 
-The new catalog suite checks:
+The transfer and identity-admission owners receive only column-level UPDATE on the CHECK-constrained `singleton` field because PostgreSQL requires UPDATE privilege for `SELECT ... FOR SHARE`; they cannot update `maintenance_mode` or `rotation_epoch`. The rotation owner alone receives those state-changing UPDATE privileges. The catalog suite asserts these column-level boundaries.\n\nThe new catalog suite checks:
 - role count and forbidden role attributes;
 - absence of the legacy shared `cp_function_owner`;
 - table and function ownership by family;
