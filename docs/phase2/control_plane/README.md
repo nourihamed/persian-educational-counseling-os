@@ -93,3 +93,10 @@ Run evidence is synthetic and validates the SQL drafts only. It does not prove K
 `CONTACT_CHANGE_REVERIFICATION_CONTRACT.md` specifies the missing contact-change path. It requires step-up authentication, verified possession of the proposed number, a single-use proof bound to the exact student/Workspace/generation/contact fingerprint, all active/retiring HMAC aliases, active-key ciphertext, atomic uniqueness enforcement, idempotency, append-only audit and transactional outbox.
 
 This is a **design contract only**. No contact-change SQL function, proof verifier, API or executable test has been implemented. The contract explicitly leaves account recovery without the old contact, guardian-age policy, retention durations and notification disclosure policy unresolved. D-014 remains synthetic-only.
+
+
+## Transfer approval identity and authority
+
+`TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` defines the trusted identity/authorization boundary for guardian consent, source-counselor fee confirmation and destination acceptance. It requires a signed, one-time, case/student/Workspace/generation-bound assertion from a trusted verifier, authority revalidation at cutover, append-only approval/revocation history and serialization of revocation against ownership switch.
+
+**Schema gap identified:** current `transfer_approvals` has one row per (case, kind) and mutable `revoked_at`; it cannot retain a revoked approval and a replacement approval as separate immutable events. This must be reconciled before approval workflow implementation. Q-007 legal guardian/age policy remains open. Design only; no executable approval verifier or API tests are claimed.
