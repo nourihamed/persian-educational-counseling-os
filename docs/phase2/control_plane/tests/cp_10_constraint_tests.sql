@@ -25,7 +25,7 @@ INSERT INTO student_contact_index(student_id,key_version,mobile_hmac,mobile_ciph
  ('b0000000-0000-0000-0000-000000000001',1,decode(repeat('11',32),'hex'),'\x01',1),
  ('b0000000-0000-0000-0000-000000000001',2,decode(repeat('12',32),'hex'),'\x02',1),
  ('b0000000-0000-0000-0000-000000000002',1,decode(repeat('22',32),'hex'),'\x03',1),
- ('b0000000-0000-0000-0000-000000000002',2,decode(repeat('23',32),'hex'),'\\x03',1),
+ ('b0000000-0000-0000-0000-000000000002',2,decode(repeat('23',32),'hex'),decode('03','hex'),1),
  ('b0000000-0000-0000-0000-000000000003',1,decode(repeat('33',32),'hex'),'\x04',1);
 INSERT INTO student_ownership(student_id,owner_workspace_id,ownership_generation,lifecycle_state) VALUES
  ('b0000000-0000-0000-0000-000000000001','a0000000-0000-0000-0000-000000000001',1,'active'),
