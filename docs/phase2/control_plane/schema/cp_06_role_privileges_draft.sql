@@ -1,5 +1,5 @@
 -- CONTROL PLANE — DRAFT least-privilege roles and grants.
--- Apply only in an isolated test database after cp_01..cp_05. Requires a privileged
+-- Apply only in an isolated test database after cp_01..cp_07. Requires a privileged
 -- migration operator. Do not apply to production without security review.
 BEGIN;
 
@@ -20,11 +20,14 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='cp_rotation_executor') THEN
     CREATE ROLE cp_rotation_executor NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='cp_identity_admission_executor') THEN
+    CREATE ROLE cp_identity_admission_executor NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+  END IF;
 END $roles$;
 
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT CREATE ON SCHEMA public TO cp_table_owner,cp_function_owner;
-GRANT USAGE ON SCHEMA public TO cp_function_owner,cp_runtime,cp_transfer_executor,cp_rotation_executor;
+GRANT USAGE ON SCHEMA public TO cp_function_owner,cp_runtime,cp_transfer_executor,cp_rotation_executor,cp_identity_admission_executor;
 
 -- The table owner is a non-login role. The function owner is deliberately not a table owner.
 ALTER TABLE workspaces OWNER TO cp_table_owner;
@@ -39,6 +42,7 @@ ALTER TABLE enrollment_claim_identity_aliases OWNER TO cp_table_owner;
 ALTER TABLE transfer_cases OWNER TO cp_table_owner;
 ALTER TABLE transfer_approvals OWNER TO cp_table_owner;
 ALTER TABLE command_log OWNER TO cp_table_owner;
+ALTER TABLE identity_admission_commands OWNER TO cp_table_owner;
 ALTER TABLE inbox_events OWNER TO cp_table_owner;
 ALTER TABLE outbox_events OWNER TO cp_table_owner;
 ALTER TABLE ownership_history OWNER TO cp_table_owner;
@@ -53,21 +57,25 @@ REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
 GRANT SELECT,INSERT,UPDATE,DELETE ON
   workspaces,platform_students,student_contact_index,mobile_encryption_key_versions,
   mobile_hmac_key_versions,identity_write_gate,student_ownership,enrollment_claims,
-  enrollment_claim_identity_aliases,transfer_cases,transfer_approvals,command_log,
+  enrollment_claim_identity_aliases,transfer_cases,transfer_approvals,command_log,identity_admission_commands,
   inbox_events,outbox_events,ownership_history,transfer_state_transitions
 TO cp_function_owner;
 GRANT USAGE,SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA public TO cp_function_owner;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO cp_function_owner;
 
 -- Runtime roles have no direct table privileges.
-REVOKE ALL ON ALL TABLES IN SCHEMA public FROM cp_runtime,cp_transfer_executor,cp_rotation_executor;
-REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM cp_runtime,cp_transfer_executor,cp_rotation_executor;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM cp_runtime,cp_transfer_executor,cp_rotation_executor,cp_identity_admission_executor;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM cp_runtime,cp_transfer_executor,cp_rotation_executor,cp_identity_admission_executor;
 
 -- Transfer service receives only the two ownership-changing operations.
 ALTER FUNCTION switch_student_ownership(uuid) OWNER TO cp_function_owner;
 ALTER FUNCTION request_transfer_case_idempotent(text,bytea,uuid,uuid,uuid,uuid,bigint,text) OWNER TO cp_function_owner;
 GRANT EXECUTE ON FUNCTION switch_student_ownership(uuid) TO cp_transfer_executor;
 GRANT EXECUTE ON FUNCTION request_transfer_case_idempotent(text,bytea,uuid,uuid,uuid,uuid,bigint,text) TO cp_transfer_executor;
+
+-- Identity admission service receives only the initial claim admission operation.
+ALTER FUNCTION admit_student_identity_claim(text,bytea,uuid,uuid,uuid,text,bytea,integer,jsonb) OWNER TO cp_function_owner;
+GRANT EXECUTE ON FUNCTION admit_student_identity_claim(text,bytea,uuid,uuid,uuid,text,bytea,integer,jsonb) TO cp_identity_admission_executor;
 
 -- Rotation service receives only the version lifecycle operations.
 ALTER FUNCTION begin_identity_hmac_rotation() OWNER TO cp_function_owner;
