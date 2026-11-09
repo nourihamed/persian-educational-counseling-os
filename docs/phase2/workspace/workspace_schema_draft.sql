@@ -200,6 +200,241 @@ CREATE TRIGGER student_plan_versions_immutable
   BEFORE UPDATE OR DELETE ON student_plan_versions
   FOR EACH ROW EXECUTE FUNCTION reject_published_version_mutation();
 
+-- Educational domain: reference curriculum, student mastery, execution and analysis.
+CREATE TABLE subjects (
+  subject_id uuid PRIMARY KEY,
+  subject_key text NOT NULL UNIQUE,
+  title text NOT NULL,
+  grade_key text NOT NULL CHECK (grade_key IN ('grade_10','grade_11','grade_12')),
+  source_kind text NOT NULL CHECK (source_kind IN ('platform_reference','workspace_custom')),
+  source_ref text,
+  status text NOT NULL CHECK (status IN ('active','archived')),
+  CHECK ((source_kind='platform_reference') = (source_ref IS NOT NULL))
+);
+CREATE TABLE chapters (
+  chapter_id uuid PRIMARY KEY,
+  subject_id uuid NOT NULL REFERENCES subjects(subject_id),
+  title text NOT NULL,
+  order_no integer NOT NULL CHECK (order_no>0),
+  UNIQUE(subject_id,order_no)
+);
+CREATE TABLE topics (
+  topic_id uuid PRIMARY KEY,
+  chapter_id uuid NOT NULL REFERENCES chapters(chapter_id),
+  title text NOT NULL,
+  order_no integer NOT NULL CHECK (order_no>0),
+  UNIQUE(chapter_id,order_no)
+);
+CREATE TABLE student_topic_mastery (
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  topic_id uuid NOT NULL REFERENCES topics(topic_id),
+  mastery_score numeric(5,2) NOT NULL CHECK (mastery_score BETWEEN 0 AND 100),
+  confidence text NOT NULL CHECK (confidence IN ('low','medium','high')),
+  last_assessed_at timestamptz,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY(student_id,topic_id)
+);
+
+CREATE TABLE activities (
+  activity_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  topic_id uuid REFERENCES topics(topic_id),
+  activity_kind text NOT NULL CHECK (activity_kind IN ('study','homework','review','test','class_followup','custom')),
+  title text NOT NULL,
+  description text,
+  due_at timestamptz,
+  priority smallint NOT NULL DEFAULT 3 CHECK (priority BETWEEN 1 AND 5),
+  state text NOT NULL CHECK (state IN ('planned','in_progress','completed','overdue','cancelled')),
+  created_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz
+);
+CREATE INDEX activities_student_due_idx ON activities(student_id,due_at) WHERE state IN ('planned','in_progress','overdue');
+
+CREATE TABLE study_sessions (
+  study_session_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  activity_id uuid REFERENCES activities(activity_id),
+  started_at timestamptz NOT NULL,
+  ended_at timestamptz,
+  planned_minutes integer CHECK (planned_minutes IS NULL OR planned_minutes>0),
+  actual_minutes integer CHECK (actual_minutes IS NULL OR actual_minutes>=0),
+  outcome text CHECK (outcome IN ('completed','partial','interrupted')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (ended_at IS NULL OR ended_at>=started_at)
+);
+
+CREATE TABLE test_definitions (
+  test_id uuid PRIMARY KEY,
+  title text NOT NULL,
+  subject_id uuid NOT NULL REFERENCES subjects(subject_id),
+  topic_id uuid REFERENCES topics(topic_id),
+  test_kind text NOT NULL CHECK (test_kind IN ('educational','mastery','exam_simulation')),
+  time_limit_seconds integer CHECK (time_limit_seconds IS NULL OR time_limit_seconds>0),
+  negative_marking boolean NOT NULL DEFAULT true,
+  scoring_policy_snapshot jsonb NOT NULL,
+  created_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE test_attempts (
+  attempt_id uuid PRIMARY KEY,
+  test_id uuid NOT NULL REFERENCES test_definitions(test_id),
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  state text NOT NULL CHECK (state IN ('started','submitted','analysed','cancelled')),
+  started_at timestamptz NOT NULL,
+  submitted_at timestamptz,
+  correct_count integer NOT NULL DEFAULT 0 CHECK (correct_count>=0),
+  wrong_count integer NOT NULL DEFAULT 0 CHECK (wrong_count>=0),
+  blank_count integer NOT NULL DEFAULT 0 CHECK (blank_count>=0),
+  score numeric(7,3),
+  scoring_policy_snapshot jsonb NOT NULL,
+  CHECK ((state IN ('submitted','analysed')) = (submitted_at IS NOT NULL))
+);
+CREATE TABLE test_responses (
+  response_id uuid PRIMARY KEY,
+  attempt_id uuid NOT NULL REFERENCES test_attempts(attempt_id),
+  question_no integer NOT NULL CHECK (question_no>0),
+  topic_id uuid REFERENCES topics(topic_id),
+  response_state text NOT NULL CHECK (response_state IN ('correct','wrong','blank')),
+  time_spent_seconds integer CHECK (time_spent_seconds IS NULL OR time_spent_seconds>=0),
+  error_reason text CHECK (error_reason IN ('concept','memory','careless','time','strategy','unknown')),
+  UNIQUE(attempt_id,question_no)
+);
+
+CREATE TABLE exams (
+  exam_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  title text NOT NULL,
+  exam_at timestamptz NOT NULL,
+  scoring_policy_snapshot jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE exam_results (
+  exam_result_id uuid PRIMARY KEY,
+  exam_id uuid NOT NULL REFERENCES exams(exam_id),
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  correct_count integer NOT NULL CHECK (correct_count>=0),
+  wrong_count integer NOT NULL CHECK (wrong_count>=0),
+  blank_count integer NOT NULL CHECK (blank_count>=0),
+  score numeric(7,3),
+  scoring_policy_snapshot jsonb NOT NULL,
+  UNIQUE(exam_id,student_id)
+);
+
+CREATE TABLE classes (
+  class_id uuid PRIMARY KEY,
+  subject_id uuid REFERENCES subjects(subject_id),
+  class_kind text NOT NULL CHECK (class_kind IN ('online','offline','onsite')),
+  title text NOT NULL,
+  instructor_label text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE class_sessions (
+  class_session_id uuid PRIMARY KEY,
+  class_id uuid NOT NULL REFERENCES classes(class_id),
+  starts_at timestamptz NOT NULL,
+  ends_at timestamptz NOT NULL,
+  timezone_name text NOT NULL,
+  join_or_location_ref text,
+  CHECK (ends_at>starts_at)
+);
+CREATE TABLE assignments (
+  assignment_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  class_session_id uuid REFERENCES class_sessions(class_session_id),
+  title text NOT NULL,
+  due_at timestamptz,
+  state text NOT NULL CHECK (state IN ('assigned','in_progress','submitted','reviewed','overdue','cancelled')),
+  created_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE reviews (
+  review_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  topic_id uuid REFERENCES topics(topic_id),
+  scheduled_at timestamptz NOT NULL,
+  cadence_days integer CHECK (cadence_days IS NULL OR cadence_days IN (1,3,7)),
+  state text NOT NULL CHECK (state IN ('scheduled','completed','missed','cancelled')),
+  completed_at timestamptz
+);
+CREATE TABLE daily_routines (
+  routine_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  title text NOT NULL,
+  schedule_spec jsonb NOT NULL,
+  timezone_name text NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE progress_snapshots (
+  progress_snapshot_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  snapshot_date date NOT NULL,
+  metrics jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(student_id,snapshot_date)
+);
+CREATE TABLE risk_assessments (
+  risk_assessment_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  risk_level text NOT NULL CHECK (risk_level IN ('low','medium','high','critical')),
+  engine_version text NOT NULL,
+  input_snapshot jsonb NOT NULL,
+  explanation text NOT NULL,
+  overridden_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  override_reason text,
+  assessed_at timestamptz NOT NULL DEFAULT now(),
+  CHECK ((overridden_by_membership_id IS NULL) = (override_reason IS NULL))
+);
+CREATE TABLE counselor_notes (
+  counselor_note_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  author_membership_id uuid NOT NULL REFERENCES workspace_memberships(membership_id),
+  visibility text NOT NULL CHECK (visibility IN ('private_to_author','workspace_scoped')),
+  content text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  archived_at timestamptz
+);
+
+-- Workspace-local capacity counters; Cell-level limits remain Control Plane/platform concerns.
+-- Activation must lock/update the relevant counter and debit credit in the same transaction.
+CREATE TABLE workspace_capacity_counters (
+  dimension_key text PRIMARY KEY CHECK (dimension_key IN ('active_students','counselors','branches','concurrent_users')),
+  current_value integer NOT NULL DEFAULT 0 CHECK (current_value>=0),
+  max_value integer NOT NULL CHECK (max_value>0),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (current_value<=max_value)
+);
+CREATE TABLE capacity_events (
+  capacity_event_id uuid PRIMARY KEY,
+  dimension_key text NOT NULL REFERENCES workspace_capacity_counters(dimension_key),
+  delta integer NOT NULL CHECK (delta<>0),
+  idempotency_key text NOT NULL UNIQUE,
+  student_id uuid REFERENCES students(student_id),
+  actor_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  reason text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE audit_events (
+  audit_event_id uuid PRIMARY KEY,
+  actor_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  event_type text NOT NULL,
+  target_type text NOT NULL,
+  target_id uuid,
+  outcome text NOT NULL CHECK (outcome IN ('allowed','denied','success','failure')),
+  correlation_id text,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE FUNCTION reject_audit_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  RAISE EXCEPTION 'audit_events is append-only' USING ERRCODE='check_violation';
+END; $body$;
+CREATE TRIGGER audit_events_append_only
+  BEFORE UPDATE OR DELETE ON audit_events
+  FOR EACH ROW EXECUTE FUNCTION reject_audit_mutation();
+
 CREATE TABLE credit_wallets (
   wallet_id uuid PRIMARY KEY,
   currency_code char(3) NOT NULL,
