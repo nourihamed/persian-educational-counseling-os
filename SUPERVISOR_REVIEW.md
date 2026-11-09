@@ -1130,3 +1130,22 @@ This is a design-only deliverable. No SQL implementation, trusted proof verifier
 
 ## Gate impact
 This addendum does not close the HIGH finding. Control Plane identity readiness remains **NOT READY**. D-014 synthetic-only restriction remains in force; no real data or production operation is authorized.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Transfer Approval Identity & Authority (2026-11-09)
+
+## Scope
+Reviewed Control Plane transfer approval schema and ownership-switch function. Added `docs/phase2/control_plane/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md`.
+
+## HIGH findings
+1. **Approval authenticity is not enforced by SQL:** `switch_student_ownership` currently checks that three approval kinds exist, that references are non-empty, and that approvals are not expired/revoked. It does not cryptographically verify issuer, audience, signature, nonce, authenticated subject or exact authority. The function header itself delegates caller authorization to a later identity layer. A trusted verifier/service boundary and narrowly scoped recording command are required.
+2. **Approval event model cannot support safe re-approval:** `transfer_approvals UNIQUE(case_id, approval_kind)` plus mutable `revoked_at` prevents recording a replacement approval after revocation while preserving the old evidence. Use append-only approval and revocation events or a versioned equivalent; switch must select one current valid event per kind.
+3. **Cutover TOCTOU risk needs explicit serialization:** authority/assignment/guardian relationship may be revoked after initial approval. The case-level switch and revocation commands must serialize and revalidate authority at cutover.
+
+## Contract delivered
+The new contract fixes the required trust boundary and exact role semantics: verified per-child guardian authority, exact source counselor assignment plus explicit fee-received attestation, and destination representative permission. It prohibits Platform Admin substitution and keeps Q-007/legal and conflict-of-interest policy unresolved rather than guessing.
+
+## Gate impact
+No runtime verifier, approval API, revised schema or executable regression tests were implemented in this documentation step. The HIGH findings remain open. Phase 2 Gate remains **NOT READY**; D-014 synthetic-only restriction remains in force.
