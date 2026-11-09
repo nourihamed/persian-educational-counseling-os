@@ -207,3 +207,8 @@ The authoritative Phase 2 design/schema exit criteria and evidence matrix is now
 ## Phase 2 unresolved decision register (2026-11-09)
 
 `docs/phase2/PHASE2_OPEN_DECISIONS.md` consolidates remaining PO/legal/security/operations inputs, recommended safe defaults and sequencing. It explicitly preserves Q-007, Q-020/OQ-F2, OQ-D/OQ-E and other policy values as unresolved; no numbers or legal rules are inferred.
+
+
+## Educational domain design contracts (2026-11-09)
+
+Added assessment, deterministic planning and curriculum domain contracts under `docs/phase2/workspace/`. These define versioned assessment/score integrity, normalized planning inputs and explicit PlanItems, and Grade → Subject → Book/Edition → Chapter → Topic → Subtopic ownership/versioning. The current SQL skeleton remains incomplete relative to these contracts; no implementation or test pass is claimed.
