@@ -479,3 +479,10 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Removed redundant scalar `workspace_memberships.role_key`; `membership_roles` is the sole role-assignment relation in the draft schema.
 - Updated Workspace schema/activation/race fixtures and added `WS-ROLE-SOURCE-01` schema assertion.
 - Role grant/revocation event audit and direct-DML privilege tests remain open; fresh CI pending.
+
+
+## 2026-11-09 — Educational domain contracts
+- Added assessment domain contract for immutable definitions/attempts, response-count integrity, scoring-policy snapshots, custom error analysis and per-subject exam results.
+- Added deterministic planning domain contract for normalized schedule/availability inputs, explicit PlanItems, reproducibility and explainability.
+- Added curriculum domain contract for Grade → Subject → Book/Edition → Chapter → Topic → Subtopic, ownership, versioning and mastery evidence.
+- Linked all three contracts from Workspace design, exit criteria, Project State, Roadmap, Test Plan and Supervisor Review. SQL reconciliation and tests remain open.
