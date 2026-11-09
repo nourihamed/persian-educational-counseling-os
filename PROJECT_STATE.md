@@ -212,3 +212,8 @@ The authoritative Phase 2 design/schema exit criteria and evidence matrix is now
 ## Educational domain design contracts (2026-11-09)
 
 Added assessment, deterministic planning and curriculum domain contracts under `docs/phase2/workspace/`. These define versioned assessment/score integrity, normalized planning inputs and explicit PlanItems, and Grade → Subject → Book/Edition → Chapter → Topic → Subtopic ownership/versioning. The current SQL skeleton remains incomplete relative to these contracts; no implementation or test pass is claimed.
+
+
+## Activity, Student Credit and capacity design contracts (2026-11-09)
+
+Added `ACTIVITY_CLASS_DOMAIN_CONTRACT.md`, `STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` and `CAPACITY_LIFECYCLE_CONTRACT.md`. These specify typed activity/class relationships, the CRD-vs-fiat commercial ledger boundary and lifecycle-safe capacity reservations. Product decisions on refund policy, suspension capacity, class scope and numeric limits remain open; SQL/service implementation and associated tests remain incomplete.
