@@ -225,3 +225,8 @@ Removed scalar `workspace_memberships.role_key`; `membership_roles` is the sole 
 - Activity/class: `docs/phase2/workspace/ACTIVITY_CLASS_DOMAIN_CONTRACT.md` — controlled taxonomy, recurrence idempotency, participant scope, attendance and carry-forward tests. NOT RUN.
 - Student Credit commercial lifecycle: `docs/phase2/workspace/STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` — verified payment webhook, grant idempotency, refund/reversal and wallet reconciliation tests. NOT RUN beyond existing synthetic ledger/activation checks.
 - Capacity lifecycle: `docs/phase2/workspace/CAPACITY_LIFECYCLE_CONTRACT.md` — archive/re-activation, suspension policy, destination transfer reservation and counter reconciliation tests. NOT RUN beyond activation and final-slot race tests.
+
+
+## Authorization-table least-privilege regression tests (2026-11-09)
+
+Workspace role privilege tests now assert runtime and activation function owner cannot INSERT/UPDATE/DELETE membership, role, permission, branch, counselor-assignment or guardian authorization tables; runtime retains required SELECT. They also assert the activation function owner's column-level grants for state transitions and row-lock-only columns. Added wallet identity immutability test WS-CREDIT-WALLET-01. Status: IMPLEMENTED IN BRANCH / NOT RUN on latest SHA.
