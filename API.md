@@ -12,7 +12,7 @@ Status: DRAFT — Phase 0 — Strategy only. No endpoints implemented yet.
 
 ## 2. AuthN/AuthZ on every request
 - Every non-public endpoint requires a valid access token (Master Prompt §47).
-- Authorization is resolved from the authenticated principal's role + tenant membership — **never** from a `tenant_id`/`counselor_id` passed in the request body or query string. Client-supplied tenant IDs are, at most, validated against the resolved identity, never trusted as the source of truth (IDOR prevention, ties to ARCHITECTURE.md §3).
+- Authorization is resolved from the authenticated principal's role + tenant membership — **never** from a `workspace_id`/`counselor_id` passed in the request body or query string. Client-supplied tenant IDs are, at most, validated against the resolved identity, never trusted as the source of truth (IDOR prevention, ties to ARCHITECTURE.md §3).
 - Platform Admin endpoints are a separate router group with mandatory audit logging.
 
 ## 3. Planned Resource Groups (names indicative, not final)
