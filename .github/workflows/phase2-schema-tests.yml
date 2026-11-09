@@ -50,6 +50,7 @@ jobs:
           createdb control_plane_test
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_01_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_05_identity_rotation_guard.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_07_claim_admission_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
@@ -62,6 +63,7 @@ jobs:
           createdb control_plane_race
           psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_01_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_05_identity_rotation_guard.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_07_claim_admission_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
@@ -73,6 +75,20 @@ jobs:
             ('a0000000-0000-0000-0000-000000000003','organization','active');
           SQL
           bash docs/phase2/control_plane/tests/cp_20_race.sh control_plane_race
+
+      - name: Test Control Plane initial claim admission and concurrency
+        run: |
+          createdb control_plane_admission_test
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_01_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_05_identity_rotation_guard.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_07_claim_admission_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_06_role_privileges_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/tests/cp_15_identity_admission_tests.sql
+          bash docs/phase2/control_plane/tests/cp_25_claim_admission_race.sh control_plane_admission_test
 
       - name: Apply Workspace draft and run schema regression suite
         run: |
