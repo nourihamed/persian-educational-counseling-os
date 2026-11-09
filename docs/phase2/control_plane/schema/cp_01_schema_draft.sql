@@ -31,6 +31,18 @@ CREATE TABLE platform_students (
 );
 
 -- Contact index: recoverable value is ciphertext; lookup/uniqueness uses a keyed HMAC.
+CREATE TABLE mobile_encryption_key_versions (
+    key_version integer PRIMARY KEY CHECK (key_version>0),
+    state text NOT NULL CHECK (state IN ('active','retiring','retired')),
+    key_manager_ref text NOT NULL, -- non-secret KMS/HSM key identifier; never key material
+    created_at timestamptz NOT NULL DEFAULT now(),
+    retired_at timestamptz,
+    CHECK ((state='retired') = (retired_at IS NOT NULL))
+);
+ALTER TABLE student_contact_index
+  ADD CONSTRAINT student_contact_index_cipher_key_version_fk
+  FOREIGN KEY (cipher_key_version) REFERENCES mobile_encryption_key_versions(key_version);
+
 -- key_version identifies which HMAC key produced mobile_hmac (rotation, OQ-B).
 -- Multiple versions coexist during a write-frozen, fully backfilled rotation.
 CREATE TABLE student_contact_index (
