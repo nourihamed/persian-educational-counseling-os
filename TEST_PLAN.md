@@ -1,7 +1,7 @@
 # TEST_PLAN.md
 ## Phase 2 Control Plane + Workspace acceptance contracts (2026-11-09)
 
-**Latest successful execution:** GitHub Actions run [#231](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42653297866), PostgreSQL 16, exact SQL/test tree at commit `2104eea56806a6f82b405090bc9cbfbd675d2aec` (run status SUCCESS). The workflow ran on the exact PR #12 HEAD at that time. Subsequent commits `fde21b8` and `3d88729` changed documentation only; SQL/test files were not changed. This is synthetic draft-SQL evidence, not API/runtime/production/HA approval.
+**Latest successful execution:** GitHub Actions run [#231](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42653297866), PostgreSQL 16, exact SQL/test tree at commit `2104eea56806a6f82b405090bc9cbfbd675d2aec` (run status SUCCESS). The workflow ran on the exact PR #12 HEAD at that time. Run #231 remains evidence only for its exact historical tree. Later documentation commits were followed by a new executable capacity-race script and workflow change, so the latest test tree is not covered by Run #231. No fresh successful run is currently verified. This is synthetic draft-SQL evidence, not API/runtime/production/HA approval.
 
 | ID | Required test | Status |
 |---|---|---|
