@@ -122,3 +122,12 @@ See `WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` for the independent review of the curren
 - `CURRICULUM_DOMAIN_CONTRACT.md` defines Grade → Subject → Book/Edition → Chapter → Topic → Subtopic, source ownership, immutable editions and mastery evidence.
 
 These contracts are design targets only. The current SQL skeleton does not yet contain all required structures or executable tests; WS-DOM-01, 04, 05, 06 and 07 remain open.
+
+
+## 12. Activity, credit and capacity lifecycle contracts
+
+- `ACTIVITY_CLASS_DOMAIN_CONTRACT.md` defines the shared Activity execution model, typed links, class participants, recurring sessions and assignment/attendance scope.
+- `STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` separates fiat billing from Workspace CRD ledger, payment verification, grants, reversals, refunds and reconciliation.
+- `CAPACITY_LIFECYCLE_CONTRACT.md` defines multi-dimensional capacity reservations, activation/archive/reactivation and transfer destination reservation boundaries.
+
+These contracts do not select unapproved product policy (refunds, suspension capacity, numeric limits, class scope) and do not claim implementation. Schema and tests remain incomplete.
