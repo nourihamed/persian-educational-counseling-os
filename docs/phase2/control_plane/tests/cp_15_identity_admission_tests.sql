@@ -101,9 +101,16 @@ SELECT cp_admit_expect_error('CP-ADMIT-10 inactive Workspace is rejected',
   $q$SELECT admit_student_identity_claim('admit-inactive-workspace',decode(repeat('ee',32),'hex'),'b7100000-0000-0000-0000-000000000004','c7100000-0000-0000-0000-000000000004','a7100000-0000-0000-0000-000000000004','grade_10',decode('aabbccdd','hex'),1,'[{"key_version":1,"mobile_hmac_hex":"3333333333333333333333333333333333333333333333333333333333333333"},{"key_version":2,"mobile_hmac_hex":"2222222222222222222222222222222222222222222222222222222222222222"}]'::jsonb)$q$,
   '23503');
 
+-- A retiring-only key set must not accept new claims; exactly one active HMAC key is required.
+UPDATE mobile_hmac_key_versions SET state='retiring' WHERE key_version=1;
+SELECT cp_admit_expect_error('CP-ADMIT-11 exactly one active HMAC key is required',
+  $q$SELECT admit_student_identity_claim('admit-no-active-key',decode(repeat('ff',32),'hex'),'b7100000-0000-0000-0000-000000000004','c7100000-0000-0000-0000-000000000004','a7100000-0000-0000-0000-000000000001','grade_10',decode('aabbccdd','hex'),1,'[{"key_version":1,"mobile_hmac_hex":"3333333333333333333333333333333333333333333333333333333333333333"},{"key_version":2,"mobile_hmac_hex":"2222222222222222222222222222222222222222222222222222222222222222"}]'::jsonb)$q$,
+  '23514');
+UPDATE mobile_hmac_key_versions SET state='active' WHERE key_version=1;
+
 -- During key rotation, new admissions fail closed; exact replay remains idempotent.
 UPDATE identity_write_gate SET maintenance_mode=true WHERE singleton=true;
-SELECT cp_admit_expect_error('CP-ADMIT-11 new admission is blocked during HMAC rotation maintenance',
+SELECT cp_admit_expect_error('CP-ADMIT-12 new admission is blocked during HMAC rotation maintenance',
   $q$SELECT admit_student_identity_claim('admit-maintenance',decode(repeat('ff',32),'hex'),'b7100000-0000-0000-0000-000000000004','c7100000-0000-0000-0000-000000000004','a7100000-0000-0000-0000-000000000001','grade_10',decode('aabbccdd','hex'),1,'[{"key_version":1,"mobile_hmac_hex":"3333333333333333333333333333333333333333333333333333333333333333"},{"key_version":2,"mobile_hmac_hex":"2222222222222222222222222222222222222222222222222222222222222222"}]'::jsonb)$q$,
   '55000');
 SELECT admit_student_identity_claim(
