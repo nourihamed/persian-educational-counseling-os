@@ -6,9 +6,9 @@
 - Completed draft work: Workspace-centric model; Control Plane/Workspace separation; initial claim admission with HMAC alias coverage; transfer ownership switch and state machine; atomic Workspace activation/debit/capacity/audit; per-Workspace DB role provisioning templates and catalog tests; canonical status/review/test-plan updates.
 - Remaining Phase 2 sequence:
   1. Split the broad Control Plane function-owner role into transfer, rotation and identity-admission function owners with narrow DML grants and catalog tests.
-  2. Implement mobile contact-change/reverification with all active/retiring HMAC aliases, encryption, idempotency and audit.
-  3. Implement authenticated principal/authority verification for guardian consent, prior counselor fee confirmation and destination acceptance.
-  4. Implement durable outbox/inbox delivery, source write freeze/drain, final snapshot, destination staging, projection updates, generation fencing and forward Saga recovery across databases.
+  2. Implement and test the mobile contact-change/reverification contract (documented); SQL command, trusted proof verifier, API and executable tests remain open.
+  3. Implement and test the transfer approval identity/authority contract (documented); redesign approval/revocation schema as append-only events and add trusted verifier/API tests.
+  4. Implement and test the cross-Workspace Saga contract (documented): durable outbox/inbox workers, source freeze/drain, final snapshot, destination staging, projection updates, generation fencing and forward recovery.
   5. Complete Workspace domain schema, parent age/legal matrix, retention/deletion/legal-hold rules, credit purchase/refund/renewal and remaining capacity dimensions.
   6. Implement API authentication/authorization and service credential binding; test counselor/manager/guardian object scope, files, exports, notifications and IDOR.
   7. Run independent backup/restore, failover, pool isolation, load/capacity and target-environment security tests.
