@@ -4,6 +4,10 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-11-09 — Phase 2 Control Plane function-owner split (draft; synthetic CI)
+`security/test/docs:` Replaced the shared Control Plane SECURITY DEFINER owner with three non-login function-family owners for transfer, HMAC rotation and initial identity admission. Narrowed grants by table/function family; added column-scoped row-lock privileges for identity-gate, immutable Workspace UUID and append-only admission-command rows; added a Workspace UUID immutability trigger; expanded role catalog assertions and aligned the privilege contract, project state and Supervisor review. GitHub Actions run #200 passed on PostgreSQL 16 at SQL/test commit `5990bd3170f7c2d8b950d6b7338f0e94b7e46121`. This validates only the draft SQL and synthetic tests; production credentials, KMS/HSM, API authorization, distributed transfer Saga and operational resilience remain unverified. Phase 2 Gate remains NOT READY; D-014 synthetic-only restriction remains in force; Phase 3 is not authorized.
+
+
 ### 2026-10-24 — Merge of Phase 1 traceability follow-up (PR #6)
 `docs:` PR #6 was squash-merged into `main` at `fb16219d506998c9e074971927b55e322f32c21d`. Post-merge verification confirmed 51 unique active Alt-5 acceptance specifications with no duplicates and 41 path-inventory rows; all active contract IDs are mapped to at least one active path row and all active row references exist in the catalog. No code, migration, infrastructure, or executable test was added or run. Phase 1 remains approved for design/documentation only under D-024; Q-023 remains a pre-hosting gate, Phase 2 remains unauthorized, and real student data remains prohibited under D-014.
 
