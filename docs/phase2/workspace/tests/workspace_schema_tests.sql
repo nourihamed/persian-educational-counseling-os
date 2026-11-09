@@ -19,6 +19,19 @@ INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES
 INSERT INTO membership_roles(membership_id,role_key) VALUES
  ('b1000000-0000-0000-0000-000000000001','counselor'),
  ('b1000000-0000-0000-0000-000000000003','organization_manager');
+
+DO $role_source$
+DECLARE n integer;
+BEGIN
+ SELECT count(*) INTO n
+ FROM information_schema.columns
+ WHERE table_schema='public' AND table_name='workspace_memberships' AND column_name='role_key';
+ IF n<>0 THEN RAISE EXCEPTION 'FAIL WS-ROLE-SOURCE-01 scalar workspace_memberships.role_key must not exist'; END IF;
+ IF to_regclass('public.membership_roles') IS NULL THEN
+   RAISE EXCEPTION 'FAIL WS-ROLE-SOURCE-01 membership_roles relation missing';
+ END IF;
+ RAISE NOTICE 'PASS WS-ROLE-SOURCE-01 membership_roles is the only role-assignment relation';
+END $role_source$;
 INSERT INTO branches(branch_id,name,status) VALUES
  ('d1000000-0000-0000-0000-000000000001','Branch A','active');
 INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state)
