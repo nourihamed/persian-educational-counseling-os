@@ -40,6 +40,19 @@ BEGIN
     IF NEW.state IS NOT DISTINCT FROM OLD.state THEN
         RETURN NEW;
     END IF;
+    IF NEW.state='cutover_frozen' AND (
+        NEW.source_freeze_token IS NULL OR NEW.source_frozen_at IS NULL OR
+        NEW.final_snapshot_ref IS NULL OR NEW.snapshot_manifest_hash IS NULL OR
+        NEW.destination_validation_ref IS NULL OR NEW.destination_validated_at IS NULL
+    ) THEN
+        RAISE EXCEPTION 'cutover_frozen requires source freeze, final snapshot and destination validation evidence'
+            USING ERRCODE='check_violation';
+    END IF;
+    IF OLD.state='manual_intervention_pre_switch' AND NEW.state='cancelled'
+       AND NEW.source_unfrozen_at IS NULL THEN
+        RAISE EXCEPTION 'pre-switch cancellation requires recorded source unfreeze'
+            USING ERRCODE='check_violation';
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM public.transfer_state_transitions t
                     WHERE t.from_state = OLD.state AND t.to_state = NEW.state) THEN
         RAISE EXCEPTION 'illegal transfer transition % -> %', OLD.state, NEW.state
