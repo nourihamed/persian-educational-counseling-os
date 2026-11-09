@@ -24,7 +24,7 @@ INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membersh
 INSERT INTO credit_wallets(wallet_id,unit_code)
 VALUES('cc200000-0000-0000-0000-000000000001','CRD');
 INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,reason)
-VALUES('dd200000-0000-0000-0000-000000000001','cc200000-0000-0000-0000-000000000001','grant',10,'capacity-race-opening','synthetic opening credit');
+VALUES('dd200000-0000-0000-0000-000000000001','cc200000-0000-0000-0000-000000000001','grant',100,'capacity-race-opening','synthetic opening credit');
 INSERT INTO workspace_capacity_counters(dimension_key,current_value,max_value)
 VALUES('active_students',0,1);
 SQL
@@ -66,7 +66,7 @@ echo "exit A=$ea B=$eb; active=$active; requested=$requested; balance=$balance; 
 echo "B error: $(grep -m1 'ERROR:' "$W/b.log" | sed 's/.*ERROR:  //')"
 
 if [ "$ea" -eq 0 ] && [ "$eb" -eq 3 ] && [ "$active" = "1" ] \
-   && [ "$requested" = "1" ] && [ "$balance" = "2" ] && [ "$debits" = "1" ] \
+   && [ "$requested" = "1" ] && [ "$balance" = "92" ] && [ "$debits" = "1" ] \
    && [ "$capacity" = "1" ] && [ "$commands" = "1" ] && [ "$audits" = "1" ] \
    && grep -q 'capacity unavailable' "$W/b.log"; then
   echo "PASS WS-CAP-RACE-01 exactly one enrollment wins the final active-student slot"
