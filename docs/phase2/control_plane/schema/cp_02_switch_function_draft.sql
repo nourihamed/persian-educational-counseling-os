@@ -91,6 +91,8 @@ BEGIN
     SELECT count(*) INTO v_alias_count
       FROM public.enrollment_claim_identity_aliases a
       JOIN public.enrollment_claims c ON c.claim_id=a.claim_id
+      JOIN public.student_contact_index ci
+        ON ci.student_id=c.student_id AND ci.key_version=a.key_version AND ci.mobile_hmac=a.mobile_hmac
      WHERE c.student_id=v_case.student_id
        AND a.claim_state IN ('active','transfer_pending')
        AND a.key_version IN (SELECT key_version FROM public.mobile_hmac_key_versions WHERE state IN ('active','retiring'));
