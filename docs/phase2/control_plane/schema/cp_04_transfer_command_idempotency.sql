@@ -2,6 +2,26 @@
 -- Apply after cp_01 and cp_02. Not production code; authenticated service boundary required.
 BEGIN;
 
+CREATE FUNCTION guard_command_log_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  IF TG_OP='DELETE' THEN
+    RAISE EXCEPTION 'command_log is append-only' USING ERRCODE='check_violation';
+  END IF;
+  IF NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+     OR NEW.command_name IS DISTINCT FROM OLD.command_name
+     OR NEW.payload_hash IS DISTINCT FROM OLD.payload_hash
+     OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR (OLD.result_case_id IS NOT NULL AND NEW.result_case_id IS DISTINCT FROM OLD.result_case_id)
+     OR (OLD.result_case_id IS NULL AND NEW.result_case_id IS NULL) THEN
+    RAISE EXCEPTION 'command identity/payload is immutable; only null-to-result binding is allowed'
+      USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER command_log_immutable
+  BEFORE UPDATE OR DELETE ON command_log
+  FOR EACH ROW EXECUTE FUNCTION guard_command_log_mutation();
+
 CREATE FUNCTION request_transfer_case_idempotent(
     p_idempotency_key text,
     p_payload_hash bytea,
