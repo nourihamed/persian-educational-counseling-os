@@ -1233,3 +1233,10 @@ The Workspace schema draft now removes scalar `workspace_memberships.role_key`; 
 
 ## Finding status
 WS-DOM-02 is **PARTIALLY ADDRESSED**: competing role sources are removed in the draft schema. Append-only grant/revocation event history, authenticated actor attribution and direct-DML denial tests remain open. Do not mark role lifecycle auditability complete. Fresh CI on the exact latest tree is pending.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Educational Domain Contracts (2026-11-09)
+
+Added three design contracts: `ASSESSMENT_DOMAIN_CONTRACT.md`, `DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` and `CURRICULUM_DOMAIN_CONTRACT.md`. They specify immutable assessment versions and response/score integrity, normalized planning inputs/PlanItems with deterministic replay, and complete curriculum hierarchy with Book/Edition/Subtopic and ownership/versioning. The current Workspace SQL skeleton remains incomplete and these documents do not close WS-DOM-01/04/05/06/07. No executable test or implementation is claimed. Gate remains **NOT READY**.
