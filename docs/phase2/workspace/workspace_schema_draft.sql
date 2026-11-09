@@ -448,10 +448,13 @@ BEGIN
   IF v_inserted=0 THEN
     SELECT * INTO v_existing FROM public.capacity_events WHERE idempotency_key=p_idempotency_key;
     IF v_existing.dimension_key<>p_dimension_key OR v_existing.delta<>p_delta
-       OR v_existing.student_id IS DISTINCT FROM p_student_id THEN
+       OR v_existing.student_id IS DISTINCT FROM p_student_id
+       OR v_existing.actor_membership_id IS DISTINCT FROM p_actor_membership_id
+       OR v_existing.reason IS DISTINCT FROM p_reason THEN
       RAISE EXCEPTION 'capacity idempotency key reused with different intent' USING ERRCODE='unique_violation';
     END IF;
     SELECT current_value INTO v_current FROM public.workspace_capacity_counters WHERE dimension_key=p_dimension_key;
+    IF NOT FOUND THEN RAISE EXCEPTION 'capacity counter is not configured for %',p_dimension_key USING ERRCODE='check_violation'; END IF;
     RETURN v_current;
   END IF;
   UPDATE public.workspace_capacity_counters
