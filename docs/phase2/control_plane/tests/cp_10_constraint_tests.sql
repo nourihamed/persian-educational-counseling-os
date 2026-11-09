@@ -1,4 +1,4 @@
--- CONTROL PLANE regression suite. Synthetic only. Run on a FRESH DB after cp_01..cp_04.
+-- CONTROL PLANE regression suite. Synthetic only. Run on a FRESH DB after cp_01, cp_05, cp_02, cp_03 and cp_04.
 \set ON_ERROR_STOP on
 CREATE OR REPLACE FUNCTION expect_error(label text, stmt text, want text)
 RETURNS void LANGUAGE plpgsql AS $$
