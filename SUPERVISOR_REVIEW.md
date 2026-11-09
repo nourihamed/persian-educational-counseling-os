@@ -1208,3 +1208,10 @@ No infrastructure, operational drill or environment evidence was created. Phase 
 ## Workspace capacity concurrency follow-up (2026-11-09)
 
 Added `workspace_capacity_last_slot_race.sh` and wired it into the PostgreSQL 16 workflow. The test uses two distinct enrollments and sufficient wallet balance so the losing transaction must fail on capacity rather than credit exhaustion. Expected invariant: one active enrollment, one debit, one capacity reservation, one command and one audit event; losing attempt fully rolls back. This is implemented in the branch but is **not yet marked PASS** until a fresh CI run on the exact updated head succeeds.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Phase 2 Exit Criteria Baseline (2026-11-09)
+
+Added `docs/phase2/PHASE2_EXIT_CRITERIA.md` as the single Phase 2 exit/evidence matrix. It distinguishes design/schema completion from later runtime/production implementation gates, enumerates current HIGH/MEDIUM blockers, keeps PO/legal decisions explicit, and defines the exact-SHA CI, PR reconciliation and independent-review conditions for a final gate. This does not change the gate: **NOT READY**.
