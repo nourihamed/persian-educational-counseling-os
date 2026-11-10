@@ -262,3 +262,10 @@ Latest CI run #519 passed all 13 steps on commit `d45753924513f9920f714b966361b9
 Governance SQL tests now verify transactional role/permission projections, membership lifecycle transition constraints, no stale grants after reactivation, end timestamp, idempotent replay after actor suspension, and denial of application-role access to the materializer. The dedicated governance owner is non-login and least-privileged.
 
 This remains a tested draft, not an approved production implementation. No application role has EXECUTE; cryptographic authority verification, role grantability/self-escalation policy, API adapter/object authorization, guardian legal policy (Q-007), and service-level concurrency tests remain open. Phase 2 remains NOT READY; D-014 synthetic-only remains in force.
+
+
+## Trusted governance assertion contract — 2026-11-10
+
+Added `docs/phase2/workspace/WORKSPACE_GOVERNANCE_AUTHORIZATION_ASSERTION_CONTRACT.md` as the next design target. It specifies signed assertion claims, exact actor/Workspace/target/action/scope/policy/payload binding, single-use replay prevention, verifier receipt, atomic command handoff, anti-escalation controls and privilege boundaries. No verifier, receipt schema, adapter credential, API or application EXECUTE grant has been implemented.
+
+Product Owner decision still needed: role-to-role grantability/delegation matrix (including Organization Manager and Counselor powers). Recommendation: default deny and no self-grant. Q-007 remains open. WS-DOM-02/03 remain HIGH; Phase 2 NOT READY.
