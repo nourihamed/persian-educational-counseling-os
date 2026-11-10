@@ -1346,3 +1346,12 @@ CI #474 passed the previous event-ledger-only commit. The projection materialize
 
 ## Recommendation
 Treat this as partial remediation only. Do not grant application execute or begin Phase 3. Phase 2 remains **NOT READY**; D-014 synthetic-only remains mandatory.
+
+
+## Verification update — CI #519 (2026-11-10)
+
+Latest branch commit tested: `d45753924513f9920f714b966361b9697e8264d5`. GitHub Actions run #519 passed all 13 steps. The governance event/projection test step and per-Workspace role boundary step both passed, as did the complete Control Plane, activation, concurrency and capacity suites.
+
+The SQL draft now enforces locked membership state transitions and rejects grants/scope changes for inactive targets. Reactivation does not resurrect old grants. A dedicated governance owner is isolated from the activation function owner; service roles cannot execute the materializer.
+
+**Independent review conclusion:** partial remediation verified at the PostgreSQL draft/test level. The trusted authorization service, cryptographic assertion validation, grantability/anti-escalation policy, API object-level authorization, guardian legal policy and concurrency at the service boundary remain HIGH. Phase 2 remains **NOT READY**; do not start Phase 3.
