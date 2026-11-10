@@ -1367,8 +1367,8 @@ Added `docs/phase2/workspace/WORKSPACE_GOVERNANCE_AUTHORIZATION_ASSERTION_CONTRA
 ## Review
 The contract requires a signed, versioned assertion bound to exact issuer, audience/Workspace, actor and active membership, authentication event/assurance, action, target, role/permission, canonical scope digest, authority basis, policy version, payload digest, nonce and bounded validity. It defines a single-use verification receipt and atomic consume + event + projection boundary. It explicitly prohibits runtime execute and leaves signature algorithm/key lifecycle to Platform Security rather than guessing.
 
-## Product Owner decision still required
-The exact role-to-role grantability/delegation matrix remains unresolved. Recommendation is default deny, no self-grant, no implicit delegation and no grant beyond explicitly delegated lower/equal scope. Organization Manager delegation and counselor delegation must be decided before adapter implementation.
+## Product Owner decision — CLOSED (2026-11-10)
+The Product Owner accepted the MVP role grantability matrix in `docs/phase2/workspace/PO_DECISION_ROLE_GRANTABILITY_MATRIX_2026-11-10.md`: Organization Manager may invite/activate/revoke counselors only within its own Workspace; Counselor cannot delegate; Branch Manager is operational-only within assigned Branch; other staff are operational-only and cannot delegate; Platform Admin is limited to narrow Governance operations, including Organization Manager appointment approval, without general Workspace write or student-data access. Deny-by-default, no self-grant, no privilege escalation, strict scope and revocation freshness are mandatory. This closes the policy decision, not implementation.
 
 ## Gate impact
 Contract only; no verifier, proof schema, adapter, credential, API or tests implemented. Q-007 guardian policy remains open. WS-DOM-02/03 remain HIGH; Phase 2 remains **NOT READY**.
