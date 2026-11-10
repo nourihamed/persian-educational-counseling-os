@@ -115,6 +115,11 @@ No Workspace runtime/API implementation is implied. Source freeze controller, de
 See `WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` for the independent review of the current SQL skeleton. HIGH gaps include test-attempt/response/score reconciliation, competing membership role sources of truth, and insufficient append-only guardian relationship/permission evidence. MEDIUM gaps include per-subject exam results, custom error taxonomy, subtopics, normalized planning inputs/PlanItem, canonical activity taxonomy, class participation/recurrence, capacity races/reconciliation, credit purchase/refund/renewal and file/notification lifecycle controls. These are findings, not silently accepted deferrals; Phase 2 remains NOT READY.
 
 
+
+## 10A. Membership and guardian governance event contract
+
+`WORKSPACE_GOVERNANCE_EVENT_CONTRACT.md` defines append-only role/permission and guardian relationship/permission event histories, current-state projection rules, authenticated actor/evidence references, grant/revoke idempotency, concurrency and fail-closed authority evaluation. It does not close WS-DOM-02/03: the SQL event schema, restricted command functions and executable tests remain outstanding; Q-007 remains open.
+
 ## 11. Assessment, planning and curriculum domain contracts
 
 - `ASSESSMENT_DOMAIN_CONTRACT.md` defines immutable test/exam versions, per-attempt delivered question set, submit-time response/count integrity, deterministic scoring snapshots, custom error reasons and per-subject exam results.
