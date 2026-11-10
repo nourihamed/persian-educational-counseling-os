@@ -1,6 +1,6 @@
 -- Governance event ledger tests. Synthetic only; run after workspace_schema_draft.sql
 -- and workspace_governance_events_draft.sql in a fresh database.
-\\set ON_ERROR_STOP on
+\set ON_ERROR_STOP on
 
 INSERT INTO workspace_profile(singleton,workspace_id,workspace_type)
 VALUES(true,'a9100000-0000-0000-0000-000000000001','organization');
