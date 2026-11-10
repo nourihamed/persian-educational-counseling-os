@@ -75,6 +75,7 @@ DECLARE
   v_permission_key text;
   v_resource_scope jsonb;
   v_membership_status text;
+  v_target_status text;
 BEGIN
   IF p_event_id IS NULL OR p_aggregate_type IS NULL OR p_aggregate_id IS NULL
      OR p_event_type IS NULL OR p_idempotency_key IS NULL
@@ -156,6 +157,36 @@ BEGIN
     END IF;
     IF p_authn_event_ref IS NULL OR length(btrim(p_authn_event_ref))=0 THEN
       RAISE EXCEPTION 'authenticated actor event reference is required' USING ERRCODE='invalid_parameter_value';
+    END IF;
+  END IF;
+
+  IF p_aggregate_type IN ('membership_role','membership_permission') THEN
+    SELECT status INTO v_target_status
+      FROM public.workspace_memberships
+     WHERE membership_id=p_aggregate_id
+     FOR UPDATE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'membership projection target does not exist' USING ERRCODE='no_data_found';
+    END IF;
+    IF p_event_type IN ('role_granted','permission_granted','permission_scope_changed')
+       AND v_target_status<>'active' THEN
+      RAISE EXCEPTION 'cannot grant/change role or permission for inactive membership'
+        USING ERRCODE='insufficient_privilege';
+    END IF;
+  ELSIF p_aggregate_type='membership' THEN
+    SELECT status INTO v_target_status
+      FROM public.workspace_memberships
+     WHERE membership_id=p_aggregate_id
+     FOR UPDATE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'membership lifecycle target does not exist' USING ERRCODE='no_data_found';
+    END IF;
+    IF (p_event_type='membership_activated' AND v_target_status<>'invited')
+       OR (p_event_type='membership_reactivated' AND v_target_status<>'suspended')
+       OR (p_event_type='membership_suspended' AND v_target_status<>'active')
+       OR (p_event_type='membership_ended' AND v_target_status='ended') THEN
+      RAISE EXCEPTION 'invalid membership lifecycle transition: % -> %',
+        v_target_status,p_event_type USING ERRCODE='check_violation';
     END IF;
   END IF;
 
