@@ -99,22 +99,18 @@ Q-007 remains open. Guardian verification, custody/age/student-objection and dis
 
 ## 6. Required acceptance tests
 
-A versioned grantability matrix is required for at least:
-- Platform Admin / Platform Support (including explicit restrictions on cross-Workspace role changes);
+The tests below are acceptance criteria for a future trusted verifier/adapter implementation. They do not imply that unresolved grantability rules have been approved. Role-specific positive cases must be added only after the Product Owner approves the corresponding matrix entries. Until then, unspecified grants and delegations must be denied.
+
+The test suite must cover these principal categories once their permitted actions are explicitly defined:
+- Platform Admin / Platform Support, with narrow governance scope and no implied cross-Workspace student-data access;
 - Organization Manager;
 - Counselor / Branch-scoped counselor;
 - other Workspace staff roles, if approved;
 - parent/guardian and student self-service principals.
 
-**Decision Required:** approve the exact role-to-role grant/revoke matrix, including whether an Organization Manager may appoint another Organization Manager, whether a counselor may delegate any permission, and which permissions require dual approval.
+The accepted Organization Manager appointment rule in section 5.1 is controlling. Do not add a second-Manager approval or generic dual-approval requirement unless a separate Product Owner decision explicitly requires it. Q-007 remains open; guardian authority tests must remain fail-closed until legal policy and evidence-verification rules are approved.
 
-**Recommendation:** default deny; a principal may grant only explicitly delegated lower/equal-scope permissions listed in a versioned policy; no self-grant; no implicit authority from role names; high-impact manager and guardian authority changes require independent step-up and separate approval where defined by Product Owner policy.
 
-No role hierarchy or delegation rights are inferred by this contract.
-
-Q-007 remains open. Guardian verification, custody/age/student-objection and dispute rules must not be implemented from assumptions. Guardian relationship/permission event families continue to fail closed until legal policy and evidence-verification rules are approved.
-
-## 6. Required acceptance tests
 
 ### Cryptographic and identity binding
 - Invalid signature, unknown/revoked key, disallowed algorithm, issuer/audience mismatch and expired/not-yet-valid assertion reject.
