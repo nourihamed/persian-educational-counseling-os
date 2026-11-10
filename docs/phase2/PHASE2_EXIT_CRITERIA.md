@@ -151,3 +151,8 @@ Until these pass, WS-DOM-02/03 remain HIGH and the phase gate remains **NOT READ
 ### 11.1 Latest verification — 2026-11-10
 
 CI run #519 passed all 13 PostgreSQL workflow steps on commit `d45753924513f9920f714b966361b9697e8264d5`. Governance projection and role-privilege assertions passed. This is evidence for the SQL draft only. The remaining exit criteria listed above are still open; WS-DOM-02/03 remain HIGH and the phase gate remains **NOT READY**.
+
+
+### 11.2 Trusted governance assertion contract
+
+`workspace/WORKSPACE_GOVERNANCE_AUTHORIZATION_ASSERTION_CONTRACT.md` is now the required design target for authenticated governance commands. It does not close the gate: signature/issuer verification, proof receipt storage/consumption, role grantability policy, trusted adapter, API tests and guardian legal policy remain unimplemented. Application EXECUTE remains prohibited.
