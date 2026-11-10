@@ -89,6 +89,11 @@ Run evidence is synthetic and validates the SQL drafts only. It does not prove K
 
 
 
+
+## Distributed transfer Saga
+
+See `../transfer/TRANSFER_SAGA_OUTBOX_INBOX_RECOVERY_CONTRACT.md` for the cross-database protocol. Current CP SQL atomically switches owner only inside CP; it does not implement Workspace-side freeze/drain, snapshot/staging, inbox projection delivery or crash recovery. Those remain separate implementation and operational gates.
+
 ## Transfer approval identity and authority
 
 See `../transfer/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` for the trusted-principal, authority, exact-case binding, replay prevention, revocation and cutover revalidation contract. The current SQL schema stores references and an authority snapshot, but the switch function's non-empty-string checks do **not** authenticate those references or prove authority. This remains a HIGH finding; no trusted verifier or executable authority tests are implemented.
