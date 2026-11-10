@@ -263,3 +263,8 @@ Status: IMPLEMENTED IN WORK BRANCH / FRESH CI PENDING. Guardian projection tests
 Latest CI #519 passed all 13 workflow steps on `d45753924513f9920f714b966361b9697e8264d5`. The governance suite covers event sequence/idempotency, role and permission projection updates, scope changes, revocation, membership suspension/end/reactivation, invalid lifecycle transitions, inactive target grants, replay after actor suspension and append-only enforcement. Role tests verify dedicated governance-owner separation and deny application-role execution.
 
 Status: IMPLEMENTED IN BRANCH / CI PASS for SQL draft tests. This does not mean end-to-end authorization is implemented. Trusted assertion verification, role-grantability policy, API/RBAC/object authorization and guardian legal authority remain NOT IMPLEMENTED / NOT RUN.
+
+
+## Trusted governance assertion acceptance tests — 2026-11-10
+
+New design target: `docs/phase2/workspace/WORKSPACE_GOVERNANCE_AUTHORIZATION_ASSERTION_CONTRACT.md`. Required but NOT IMPLEMENTED / NOT RUN: signature/key/issuer/audience validation, exact actor-target-action-scope binding, role-grantability and anti-escalation, one-use proof receipt and concurrent replay, atomic receipt consumption + event/projection rollback, revoke-vs-read freshness, and verifier/adapter privilege isolation. No application role may receive EXECUTE until these tests pass.
