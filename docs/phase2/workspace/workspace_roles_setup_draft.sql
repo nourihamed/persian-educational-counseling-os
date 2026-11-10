@@ -209,6 +209,8 @@ SELECT format('GRANT UPDATE(status,ended_at) ON TABLE workspace_memberships TO %
   'ws_'||current_setting('app.workspace_key')||'_governance_owner') \gexec
 SELECT format('ALTER FUNCTION append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz) OWNER TO %I',
   'ws_'||current_setting('app.workspace_key')||'_governance_owner') \gexec
+SELECT format('GRANT EXECUTE ON FUNCTION append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz) TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \gexec
 SELECT format('REVOKE CREATE ON SCHEMA public FROM %I',
   'ws_'||current_setting('app.workspace_key')||'_governance_owner') \gexec
 SELECT format('REVOKE ALL ON FUNCTION append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz) FROM PUBLIC,%I,%I,%I,%I',
