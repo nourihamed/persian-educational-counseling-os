@@ -140,6 +140,10 @@ BEGIN
      OR has_table_privilege(runtime_role,'public.credit_transactions','INSERT')
      OR has_table_privilege(runtime_role,'public.capacity_events','INSERT')
      OR has_table_privilege(runtime_role,'public.activation_command_log','INSERT')
+     OR has_table_privilege(runtime_role,'public.workspace_governance_events','SELECT')
+     OR has_table_privilege(runtime_role,'public.workspace_governance_events','INSERT')
+     OR has_table_privilege(function_owner,'public.workspace_governance_events','INSERT')
+     OR has_function_privilege(runtime_role,'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)','EXECUTE')
      OR has_table_privilege(runtime_role,'public.students','TRUNCATE')
      OR NOT has_table_privilege(function_owner,'public.audit_events','INSERT')
      OR has_table_privilege(function_owner,'public.audit_events','UPDATE') THEN
