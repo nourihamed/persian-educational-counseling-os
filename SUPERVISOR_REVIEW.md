@@ -1284,3 +1284,20 @@ Trusted issuer/audience-pinned assertion or equivalent opaque proof verification
 
 ## Gate impact
 The contract is design-only. No verifier, schema migration, API integration or executable approval-authority tests were implemented in this change. Existing transfer SQL tests do not close this finding. Transfer authority remains **NOT READY**. Synthetic-only D-014 remains mandatory.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Cross-Workspace Transfer Saga (2026-11-10)
+
+## Scope
+Added `docs/phase2/transfer/TRANSFER_SAGA_OUTBOX_INBOX_RECOVERY_CONTRACT.md` and cross-linked it from the transfer workflow and Control Plane README.
+
+## HIGH finding — distributed transfer remains unimplemented
+The current Control Plane switch is a single-database transaction. It does not perform source-side mutation freeze/drain, a consistent final snapshot, destination quarantine/staging and integrity validation, durable Workspace inbox projection updates, retry/reconciliation, or crash recovery across separate databases. A CP outbox row alone is not proof of end-to-end delivery or projection correctness.
+
+## Contract delivered
+Defined stable event/command identity, generation fencing, source write barrier, snapshot manifest, destination staging receipts, CP cutover revalidation, transactional outbox and idempotent inbox, at-least-once delivery, dead-letter/manual intervention, deterministic forward-only recovery, completion predicates, observability and fault-injection test requirements. No numeric timeout/SLO/retention values were invented.
+
+## Gate impact
+Design contract only; no distributed worker, Workspace freeze controller, snapshot/staging service, inbox consumer, chaos tests or production topology was implemented. This HIGH finding remains open. Phase 2 remains **NOT READY** and D-014 synthetic-only remains in force.
