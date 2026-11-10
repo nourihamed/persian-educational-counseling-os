@@ -76,3 +76,23 @@ All tests are specifications until executable SQL and service tests exist and pa
 ## 7. Gate impact
 
 This contract closes neither WS-DOM-02 nor WS-DOM-03 by itself. The current role projection is canonical, but append-only grant/revoke evidence and runtime command restrictions remain to be implemented/tested. Guardian authority remains blocked by Q-007 and trusted verification. Phase 2 remains **NOT READY**.
+
+
+## 8. Executable draft status — 2026-11-10
+
+A companion PostgreSQL draft now exists at `workspace_governance_events_draft.sql`, with synthetic regression tests at `tests/workspace_governance_event_tests.sql` and CI integration in `.github/workflows/phase2-schema-tests.yml`.
+
+Implemented in the draft:
+- Unified append-only event ledger for membership lifecycle, role, permission, guardian relationship and guardian permission event families.
+- Per-aggregate monotonic sequence allocation serialized with a transaction advisory lock.
+- Unique idempotency key; exact replay returns the original event, while payload/aggregate/type mismatch is rejected.
+- Active membership check for membership actors, required authentication reference for actor-attributed events, and required authority reference for grant/verification event types.
+- UPDATE/DELETE rejection and deny-by-default table/function grants for runtime, worker, exporter and existing activation function-owner roles.
+
+Not implemented and intentionally not implied:
+- Projection updates to `membership_roles`, `membership_permissions`, `student_guardian_links` or `guardian_permissions`.
+- Cryptographic validation of authentication/authority references. Non-empty references are not proof.
+- Trusted authorization adapter, role-grant matrix, guardian legal verification, concurrent access-vs-revocation service semantics, and projection reconciliation.
+- No application role is granted EXECUTE on the append function yet.
+
+The CI test verifies ledger behavior only. WS-DOM-02/03 remain HIGH until the trusted command adapter, projection transaction boundary, authorization tests and Q-007 legal decision are complete.
