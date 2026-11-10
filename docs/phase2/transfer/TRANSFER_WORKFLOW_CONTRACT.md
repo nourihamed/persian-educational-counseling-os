@@ -67,6 +67,11 @@ After `ownership_switched`, cancellation and automatic rollback are forbidden. R
 Still open: freeze maximum duration, in-flight transaction drain timeout, snapshot format/version, retry/backoff, manual-intervention SLA, alert thresholds, RPO/RTO, backup retention, failover consistency, split-brain prevention, and exact legal retention periods. Do not invent numeric values.
 
 
+
+## 9. Cross-database Saga and recovery contract
+
+The required freeze/drain barrier, immutable snapshot manifest, quarantined destination staging, generation-fenced cutover, transactional outbox/inbox, at-least-once delivery, deterministic retry/reconciliation and forward-only crash recovery are specified in `TRANSFER_SAGA_OUTBOX_INBOX_RECOVERY_CONTRACT.md`. This is an architecture/acceptance contract, not evidence of a distributed runtime implementation. Operational thresholds remain unassigned until measured and approved.
+
 ## 8. Authenticated approval authority contract
 
 The detailed identity and authority requirements are specified in `TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md`. This companion contract is normative for future implementation: a non-empty `approver_ref` / `authn_event_ref` or a count of three approval kinds is not proof of authenticated identity or authority. Every approval must be bound to the exact case/student/source/destination/generation/payload, verified by a trusted issuer/audience-pinned service, single-use, revocable before cutover, and revalidated immediately before ownership switch. Guardian legal authority remains blocked on Q-007; no Iranian legal age/custody rule is inferred.
