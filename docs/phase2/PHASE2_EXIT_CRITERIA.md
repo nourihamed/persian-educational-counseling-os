@@ -90,6 +90,16 @@ No value may be invented to make the checklist appear complete.
 - Keep D-014 synthetic-only; do not start Phase 3.
 - A green mergeability flag is not a phase approval.
 
+
+## 6A. Newly added contract coverage (2026-11-10)
+
+- `control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md`
+- `transfer/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md`
+- `transfer/TRANSFER_SAGA_OUTBOX_INBOX_RECOVERY_CONTRACT.md`
+- `workspace/WORKSPACE_GOVERNANCE_EVENT_CONTRACT.md`
+
+These contracts improve design completeness but do not satisfy schema, executable-test, CI or runtime evidence rows above. The approval SQL's current non-empty-reference checks remain insufficient; the Workspace governance event model is not yet implemented. Exact branch SHA and CI must be refreshed after all later SQL/test changes.
+
 ## 7. Gate rule
 
 Phase 2 may be recommended **APPROVED** only when all Phase 2 design/schema requirements are closed, every unresolved decision is either approved or explicitly deferred with a named downstream gate, the draft schema/test tree passes fresh CI on the exact final SHA, PR/canonical-document reconciliation is complete, and the independent Supervisor review has no open HIGH design/schema findings.
