@@ -95,6 +95,7 @@ jobs:
           createdb workspace_test
           psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_governance_events_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/tests/workspace_schema_tests.sql
 
       - name: Test Workspace governance event ledger
@@ -130,6 +131,7 @@ jobs:
           createdb workspace_other
           psql -X -v ON_ERROR_STOP=1 -d workspace_other -f docs/phase2/workspace/workspace_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d workspace_other -f docs/phase2/workspace/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_other -f docs/phase2/workspace/workspace_governance_events_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=a1000000000000000000000000000001 -d workspace_test -f docs/phase2/workspace/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=a1000000000000000000000000000002 -d workspace_other -f docs/phase2/workspace/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=a1000000000000000000000000000001 -v other_workspace_key=a1000000000000000000000000000002 -v other_database=workspace_other -d workspace_test -f docs/phase2/workspace/tests/workspace_role_privilege_tests.sql
