@@ -81,6 +81,13 @@ These were already recorded as open in the Supervisor Review; this review keeps 
 
 File metadata has quarantine/available/archive states but no explicit malware scan result, content-disposition policy, upload actor authentication event, or transfer generation binding. Notification payload schema and recipient authorization are not constrained, and queued notifications are not fenced against revoked permission/ownership changes.
 
+
+### Remediation update — 2026-11-10
+
+The scalar `workspace_memberships.role_key` field has been removed in the current branch and `membership_roles` is the canonical role-assignment projection. This closes the competing-role-source portion of WS-DOM-02 only. The append-only grant/revoke ledger, authenticated actor evidence, narrow command functions and direct-DML denial tests remain open.
+
+A companion `WORKSPACE_GOVERNANCE_EVENT_CONTRACT.md` now specifies the target event/projection model for membership roles, permissions and guardian relationships/permissions. This is a design contract, not implemented schema or test evidence. WS-DOM-02 and WS-DOM-03 remain HIGH and open.
+
 ## Passed / useful foundations
 
 - Workspace-local DB is correctly treated as a projection boundary; Control Plane remains global owner.
