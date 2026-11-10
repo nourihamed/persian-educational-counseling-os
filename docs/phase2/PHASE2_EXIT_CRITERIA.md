@@ -131,3 +131,18 @@ The current Workspace SQL skeleton has not yet been reconciled with these contra
 - `workspace/CAPACITY_LIFECYCLE_CONTRACT.md` — capacity dimensions, reservations, archive/reactivation and transfer capacity coordination.
 
 The current SQL skeleton does not implement these complete lifecycles; all open product values remain explicit in `PHASE2_OPEN_DECISIONS.md`.
+
+
+## 11. Governance event/projection status — 2026-11-10
+
+The Workspace event ledger now has a draft transactional projection materializer for membership roles, permissions and lifecycle. Its dedicated non-login owner and least-privilege grants are part of the provisioning draft. This is not a trusted authorization service and no application role is granted execute.
+
+Exit criteria still require:
+- cryptographic or otherwise independently verifiable authentication and authority assertions bound to actor, target, action, scope, policy and event;
+- explicit role/permission grantability matrix and anti-self-escalation rules;
+- trusted API/service adapter and object-level authorization tests;
+- concurrent revoke-vs-read freshness/linearization tests;
+- guardian legal authority, per-child permissions and revocation semantics after Q-007 is resolved;
+- fresh CI on the latest branch head.
+
+Until these pass, WS-DOM-02/03 remain HIGH and the phase gate remains **NOT READY**.
