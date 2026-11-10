@@ -1301,3 +1301,21 @@ Defined stable event/command identity, generation fencing, source write barrier,
 
 ## Gate impact
 Design contract only; no distributed worker, Workspace freeze controller, snapshot/staging service, inbox consumer, chaos tests or production topology was implemented. This HIGH finding remains open. Phase 2 remains **NOT READY** and D-014 synthetic-only remains in force.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Workspace Governance Event Model (2026-11-10)
+
+## Scope
+Reviewed `workspace_schema_draft.sql`, `WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` and the Workspace authorization/domain contracts. Added `WORKSPACE_GOVERNANCE_EVENT_CONTRACT.md` and cross-linked it from the Workspace database design and schema review.
+
+## Findings
+- WS-DOM-02: removal of scalar `workspace_memberships.role_key` establishes `membership_roles` as the single role projection. This is partial remediation only. Append-only grant/revoke events, authenticated actor/authentication evidence, narrow command functions and direct-DML denial tests remain absent.
+- WS-DOM-03: guardian relationship and permission projections remain mutable records. They lack sufficient append-only grant/revoke history and trusted legal-authority revalidation. Q-007 remains open and no Iranian age/custody rules are inferred.
+
+## Contract delivered
+Specified event-sourced grant/revoke evidence, projection consistency, actor/evidence provenance, scoped authority, idempotency, event sequence concurrency, suspension/end behavior and fail-closed guardian permission checks. No legal policy values were invented.
+
+## Gate impact
+Design-only. No event DDL, command functions, API enforcement or executable governance tests were added. WS-DOM-02 and WS-DOM-03 remain HIGH and open. Phase 2 remains **NOT READY**. D-014 synthetic-only remains mandatory.
