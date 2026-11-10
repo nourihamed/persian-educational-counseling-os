@@ -26,6 +26,7 @@ DECLARE
   other_db text := current_setting('app.other_database');
   table_owner text := 'ws_'||k||'_table_owner';
   function_owner text := 'ws_'||k||'_function_owner';
+  governance_owner text := 'ws_'||k||'_governance_owner';
   runtime_role text := 'ws_'||k||'_runtime';
   worker_role text := 'ws_'||k||'_worker';
   exporter_role text := 'ws_'||k||'_exporter';
@@ -41,12 +42,12 @@ BEGIN
   END IF;
 
   SELECT count(*) INTO n FROM pg_roles
-   WHERE rolname IN (table_owner,function_owner,runtime_role,worker_role,exporter_role,
+   WHERE rolname IN (table_owner,function_owner,governance_owner,runtime_role,worker_role,exporter_role,
                      runtime_login,worker_login,exporter_login);
-  IF n<>8 THEN RAISE EXCEPTION 'FAIL WS-ROLE-01 expected eight per-Workspace roles, found %',n; END IF;
+  IF n<>9 THEN RAISE EXCEPTION 'FAIL WS-ROLE-01 expected nine per-Workspace roles, found %',n; END IF;
 
   SELECT count(*) INTO n FROM pg_roles
-   WHERE rolname IN (table_owner,function_owner,runtime_role,worker_role,exporter_role)
+   WHERE rolname IN (table_owner,function_owner,governance_owner,runtime_role,worker_role,exporter_role)
      AND (rolcanlogin OR rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls);
   IF n<>0 THEN RAISE EXCEPTION 'FAIL WS-ROLE-02 group/owner role has login or elevated attributes'; END IF;
 
@@ -66,7 +67,7 @@ BEGIN
     JOIN pg_roles member_role ON member_role.oid=m.member
     JOIN pg_roles granted_role ON granted_role.oid=m.roleid
    WHERE member_role.rolname IN (runtime_login,worker_login,exporter_login)
-     AND granted_role.rolname IN (table_owner,function_owner);
+     AND granted_role.rolname IN (table_owner,function_owner,governance_owner);
   IF n<>0 THEN RAISE EXCEPTION 'FAIL WS-ROLE-05 service login can assume owner/function-owner role'; END IF;
 
   SELECT string_agg(c.relname,',') INTO bad
@@ -77,8 +78,15 @@ BEGIN
 
   SELECT count(*) INTO n
     FROM pg_proc p JOIN pg_namespace ns ON ns.oid=p.pronamespace
-   WHERE ns.nspname='public' AND pg_get_userbyid(p.proowner)<>function_owner;
+   WHERE ns.nspname='public'
+     AND p.oid<>'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)'::regprocedure
+     AND pg_get_userbyid(p.proowner)<>function_owner;
   IF n<>0 THEN RAISE EXCEPTION 'FAIL WS-ROLE-07 functions not owned by non-login function owner: %',n; END IF;
+
+  IF (SELECT pg_get_userbyid(proowner) FROM pg_proc
+      WHERE oid='public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)'::regprocedure)<>governance_owner THEN
+    RAISE EXCEPTION 'FAIL WS-ROLE-07B governance materializer is not owned by dedicated governance owner';
+  END IF;
 
   IF has_schema_privilege(runtime_role,'public','CREATE')
      OR has_schema_privilege(worker_role,'public','CREATE')
@@ -143,7 +151,18 @@ BEGIN
      OR has_table_privilege(runtime_role,'public.workspace_governance_events','SELECT')
      OR has_table_privilege(runtime_role,'public.workspace_governance_events','INSERT')
      OR has_table_privilege(function_owner,'public.workspace_governance_events','INSERT')
+     OR NOT has_table_privilege(governance_owner,'public.workspace_governance_events','SELECT')
+     OR NOT has_table_privilege(governance_owner,'public.workspace_governance_events','INSERT')
+     OR NOT has_table_privilege(governance_owner,'public.membership_roles','INSERT')
+     OR NOT has_table_privilege(governance_owner,'public.membership_roles','DELETE')
+     OR NOT has_table_privilege(governance_owner,'public.membership_permissions','UPDATE')
+     OR NOT has_column_privilege(governance_owner,'public.workspace_memberships','status','UPDATE')
+     OR has_table_privilege(governance_owner,'public.student_guardian_links','UPDATE')
+     OR has_table_privilege(governance_owner,'public.guardian_permissions','UPDATE')
      OR has_function_privilege(runtime_role,'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)','EXECUTE')
+     OR has_function_privilege(worker_role,'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)','EXECUTE')
+     OR has_function_privilege(exporter_role,'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)','EXECUTE')
+     OR NOT has_function_privilege(governance_owner,'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)','EXECUTE')
      OR has_table_privilege(runtime_role,'public.students','TRUNCATE')
      OR NOT has_table_privilege(function_owner,'public.audit_events','INSERT')
      OR has_table_privilege(function_owner,'public.audit_events','UPDATE') THEN
