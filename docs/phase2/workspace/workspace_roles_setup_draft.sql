@@ -131,6 +131,20 @@ SELECT format('GRANT SELECT ON TABLE workspace_profile,credit_wallets,workspace_
 SELECT format('GRANT INSERT ON TABLE audit_events TO %I',
   'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
 
+-- Governance history is deny-by-default for all existing Workspace service roles.
+-- No runtime, worker, exporter or activation function owner may write/read the ledger
+-- or execute its append function until a dedicated trusted authorization adapter is reviewed.
+SELECT format('REVOKE ALL PRIVILEGES ON TABLE workspace_governance_events FROM %I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime',
+  'ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \\gexec
+SELECT format('REVOKE ALL ON FUNCTION append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz) FROM PUBLIC,%I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime',
+  'ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \\gexec
+
 -- Workers can process only in-app notification delivery state; no student-domain table access.
 SELECT format('GRANT SELECT,UPDATE ON TABLE in_app_notifications TO %I',
   'ws_'||current_setting('app.workspace_key')||'_worker') \gexec
