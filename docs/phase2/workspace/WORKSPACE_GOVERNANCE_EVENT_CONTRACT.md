@@ -111,3 +111,19 @@ The function is transferred to a dedicated non-login `governance_owner` per Work
 **Important gate boundary:** the function is an internal projection materializer, not an authorization decision engine. It does not prove the authenticity of `authn_event_ref` or `authority_ref`, decide which roles an actor may grant, prevent self-escalation by policy, or provide a trusted application adapter. No application role is granted EXECUTE. Do not connect a service until a separate signed/opaque assertion verifier, grantability matrix, actor/target/scope checks and concurrency contract are reviewed and tested.
 
 Synthetic CI now verifies event-to-projection atomic behavior, revocation, suspension invalidation, replay after actor suspension, and the dedicated owner privilege boundary. Guardian projections remain blocked. WS-DOM-02 is partially remediated, not closed; WS-DOM-03 remains HIGH. Phase 2 remains **NOT READY**.
+
+
+### 9.1 Lifecycle transition rules and verification
+
+The materializer enforces these state transitions against a locked membership row:
+- `membership_invited`: target must already be in `invited` state.
+- `membership_activated`: `invited → active`.
+- `membership_suspended`: `active → suspended`.
+- `membership_reactivated`: `suspended → active`.
+- `membership_ended`: any non-ended state → `ended`; `ended_at` is set from the event effective time.
+- Role/permission grants and scope changes require an active target membership. Revoke events remain allowed for an existing inactive target.
+- Reactivation does not restore roles or permissions removed on suspension; new grant events are required.
+
+Synthetic tests verify these transitions, reject invalid transitions and grants to suspended targets, and verify end timestamps. Latest CI run #519 passed all 13 workflow steps on commit `d45753924513f9920f714b966361b9697e8264d5`.
+
+The remaining limitation is unchanged: no application principal can execute the materializer; no trusted authentication/authority verifier or grantability policy exists. The successful CI proves the SQL draft and test assertions only, not end-to-end authorization security.
