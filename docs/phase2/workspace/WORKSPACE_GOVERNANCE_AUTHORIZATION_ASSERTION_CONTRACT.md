@@ -125,5 +125,5 @@ This contract closes neither trusted authorization nor guardian authority. The c
 
 - `WORKSPACE_GOVERNANCE_EVENT_CONTRACT.md`
 - `WORKSPACE_DOMAIN_SCHEMA_REVIEW.md`
-- `AUTHORIZATION_CONTRACT.md` (Phase 1 tenant/object authorization baseline)
-- `docs/phase2/PHASE2_OPEN_DECISIONS.md`
+- `../../phase1/AUTHORIZATION_CONTRACT.md` (Phase 1 tenant/object authorization baseline)
+- `../PHASE2_OPEN_DECISIONS.md`
