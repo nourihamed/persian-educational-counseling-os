@@ -256,3 +256,10 @@ Expanded `workspace_governance_event_tests.sql` to cover:
 Expanded `workspace_role_privilege_tests.sql` to verify the dedicated per-Workspace non-login `governance_owner`, ownership of the materializer, its narrowly scoped projection grants, no persistent schema CREATE, and no execute/event-table access for runtime, worker, exporter or activation function owner.
 
 Status: IMPLEMENTED IN WORK BRANCH / FRESH CI PENDING. Guardian projection tests and trusted authorization/API tests remain NOT IMPLEMENTED / NOT RUN. CI #474 passed only the previous ledger-only revision; do not carry that pass forward to these new changes.
+
+
+## Workspace governance projection tests — verification update (2026-11-10)
+
+Latest CI #519 passed all 13 workflow steps on `d45753924513f9920f714b966361b9697e8264d5`. The governance suite covers event sequence/idempotency, role and permission projection updates, scope changes, revocation, membership suspension/end/reactivation, invalid lifecycle transitions, inactive target grants, replay after actor suspension and append-only enforcement. Role tests verify dedicated governance-owner separation and deny application-role execution.
+
+Status: IMPLEMENTED IN BRANCH / CI PASS for SQL draft tests. This does not mean end-to-end authorization is implemented. Trusted assertion verification, role-grantability policy, API/RBAC/object authorization and guardian legal authority remain NOT IMPLEMENTED / NOT RUN.
