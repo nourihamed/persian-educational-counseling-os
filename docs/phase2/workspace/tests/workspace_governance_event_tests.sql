@@ -6,7 +6,8 @@ INSERT INTO workspace_profile(singleton,workspace_id,workspace_type)
 VALUES(true,'a9100000-0000-0000-0000-000000000001','organization');
 INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES
  ('b9100000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','active'),
- ('b9100000-0000-0000-0000-000000000002','c9100000-0000-0000-0000-000000000002','suspended');
+ ('b9100000-0000-0000-0000-000000000002','c9100000-0000-0000-0000-000000000002','suspended'),
+ ('b9100000-0000-0000-0000-000000000003','c9100000-0000-0000-0000-000000000003','active');
 
 DO $tests$
 DECLARE first_id uuid; first_seq bigint; replay_id uuid; replay_seq bigint;
@@ -42,7 +43,68 @@ BEGIN
         AND aggregate_id='b9100000-0000-0000-0000-000000000001')<>2 THEN
     RAISE EXCEPTION 'FAIL GOV-03 aggregate sequence did not advance';
   END IF;
-  RAISE NOTICE 'PASS GOV-01..03 event sequence and idempotent replay';
+  IF NOT EXISTS (SELECT 1 FROM membership_roles
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001' AND role_key='counselor') THEN
+    RAISE EXCEPTION 'FAIL GOV-09 role grant event did not update canonical projection';
+  END IF;
+  IF EXISTS (SELECT 1 FROM membership_roles
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001' AND role_key='counselor') THEN
+    RAISE EXCEPTION 'FAIL GOV-10 role revoke event did not remove canonical projection';
+  END IF;
+
+  PERFORM append_workspace_governance_event(
+    'd9100000-0000-0000-0000-000000000006','membership_permission',
+    'b9100000-0000-0000-0000-000000000001','permission_granted',
+    'b9100000-0000-0000-0000-000000000001','authn-event-6','authority-6',
+    'policy-v1','gov-permission-grant-1',decode(repeat('66',32),'hex'),
+    '{"permission_key":"student.read","resource_scope":{"student_ids":["s1"]}}'::jsonb,now());
+  IF NOT EXISTS (SELECT 1 FROM membership_permissions
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001'
+        AND permission_key='student.read'
+        AND resource_scope='{"student_ids":["s1"]}'::jsonb) THEN
+    RAISE EXCEPTION 'FAIL GOV-11 permission grant projection mismatch';
+  END IF;
+
+  PERFORM append_workspace_governance_event(
+    'd9100000-0000-0000-0000-000000000007','membership_permission',
+    'b9100000-0000-0000-0000-000000000001','permission_scope_changed',
+    'b9100000-0000-0000-0000-000000000001','authn-event-7','authority-7',
+    'policy-v1','gov-permission-scope-1',decode(repeat('77',32),'hex'),
+    '{"permission_key":"student.read","resource_scope":{"student_ids":["s1","s2"]}}'::jsonb,now());
+  IF NOT EXISTS (SELECT 1 FROM membership_permissions
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001'
+        AND permission_key='student.read'
+        AND resource_scope='{"student_ids":["s1","s2"]}'::jsonb) THEN
+    RAISE EXCEPTION 'FAIL GOV-12 permission scope change projection mismatch';
+  END IF;
+
+  PERFORM append_workspace_governance_event(
+    'd9100000-0000-0000-0000-000000000008','membership_permission',
+    'b9100000-0000-0000-0000-000000000001','permission_revoked',
+    'b9100000-0000-0000-0000-000000000001','authn-event-8',NULL,
+    'policy-v1','gov-permission-revoke-1',decode(repeat('88',32),'hex'),
+    '{"permission_key":"student.read"}'::jsonb,now());
+  IF EXISTS (SELECT 1 FROM membership_permissions
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001'
+        AND permission_key='student.read') THEN
+    RAISE EXCEPTION 'FAIL GOV-13 permission revoke projection mismatch';
+  END IF;
+
+  PERFORM append_workspace_governance_event(
+    'd9100000-0000-0000-0000-000000000009','membership',
+    'b9100000-0000-0000-0000-000000000001','membership_suspended',
+    'b9100000-0000-0000-0000-000000000003','authn-event-9',NULL,
+    'policy-v1','gov-membership-suspend-1',decode(repeat('99',32),'hex'),
+    '{"reason":"synthetic"}'::jsonb,now());
+  IF (SELECT status FROM workspace_memberships
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001')<>'suspended'
+     OR EXISTS (SELECT 1 FROM membership_roles
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001')
+     OR EXISTS (SELECT 1 FROM membership_permissions
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001') THEN
+    RAISE EXCEPTION 'FAIL GOV-14 suspension did not invalidate role/permission projections';
+  END IF;
+  RAISE NOTICE 'PASS GOV-01..14 event sequencing, idempotency and projection consistency';
 END $tests$;
 
 DO $negative$
