@@ -242,3 +242,17 @@ Removed scalar `workspace_memberships.role_key`; `membership_roles` is the sole 
 ## Authorization-table least-privilege regression tests (2026-11-09)
 
 Workspace role privilege tests now assert runtime and activation function owner cannot INSERT/UPDATE/DELETE membership, role, permission, branch, counselor-assignment or guardian authorization tables; runtime retains required SELECT. They also assert the activation function owner's column-level grants for state transitions and row-lock-only columns. Added wallet identity immutability test WS-CREDIT-WALLET-01. Status: IMPLEMENTED IN BRANCH / NOT RUN on latest SHA.
+
+
+## Workspace governance projection regression tests — 2026-11-10
+
+Expanded `workspace_governance_event_tests.sql` to cover:
+- role grant and revoke projection changes;
+- permission grant, scope change and revoke projection changes;
+- membership suspension invalidating role/permission projections;
+- idempotent replay after the original actor is suspended;
+- existing sequence, duplicate-key/payload mismatch, missing authority reference, inactive actor and append-only assertions.
+
+Expanded `workspace_role_privilege_tests.sql` to verify the dedicated per-Workspace non-login `governance_owner`, ownership of the materializer, its narrowly scoped projection grants, no persistent schema CREATE, and no execute/event-table access for runtime, worker, exporter or activation function owner.
+
+Status: IMPLEMENTED IN WORK BRANCH / FRESH CI PENDING. Guardian projection tests and trusted authorization/API tests remain NOT IMPLEMENTED / NOT RUN. CI #474 passed only the previous ledger-only revision; do not carry that pass forward to these new changes.
