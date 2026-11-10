@@ -500,3 +500,10 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Made the activation function owner read-only on authorization tables and narrowed its activation grants to column-level state/counter changes and lock-only columns.
 - Added immutable wallet identity trigger/test and expanded per-Workspace role privilege assertions.
 - Dedicated audited authorization-management functions and append-only grant/revocation event history remain open; latest changes await fresh CI.
+
+
+## 2026-11-10 — Product Owner approved Workspace role grantability matrix
+- Recorded the accepted MVP role matrix in `docs/phase2/workspace/PO_DECISION_ROLE_GRANTABILITY_MATRIX_2026-11-10.md`.
+- Organization Manager may invite, activate and revoke counselor memberships only within its own Workspace; Counselor cannot delegate; Branch Manager is operational-only within assigned Branch; other staff cannot delegate; Platform Admin is limited to narrow Governance authority, including Organization Manager appointment approval, without general Workspace write or student-data access.
+- Added deny-by-default, no-self-grant, no-privilege-escalation, strict scope, audit and revocation-freshness invariants to the trusted governance contract and linked the decision from Phase 2 exit tracking.
+- This closes the Product Owner policy decision only. Trusted verifier/adapter, proof receipt, API enforcement and executable acceptance tests remain unimplemented; Q-007 remains open; Phase 2 remains NOT READY; D-014 synthetic-only remains in force.
