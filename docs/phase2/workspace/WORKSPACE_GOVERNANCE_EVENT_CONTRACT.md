@@ -96,3 +96,18 @@ Not implemented and intentionally not implied:
 - No application role is granted EXECUTE on the append function yet.
 
 The CI test verifies ledger behavior only. WS-DOM-02/03 remain HIGH until the trusted command adapter, projection transaction boundary, authorization tests and Q-007 legal decision are complete.
+
+## 9. Projection materializer and ownership boundary — 2026-11-10
+
+The PostgreSQL draft now materializes the supported membership projections in the same transaction as the immutable event:
+- `role_granted` / `role_revoked` update `membership_roles`.
+- `permission_granted` / `permission_scope_changed` / `permission_revoked` update `membership_permissions`.
+- Membership lifecycle events update `workspace_memberships`; suspension/end remove current role and permission projections.
+- Guardian relationship/permission events fail closed and are not materialized pending Q-007 and trusted legal verification.
+- Idempotent replay returns the original event without reapplying projection effects, including after the original actor has since been suspended. Reuse with changed payload/actor/evidence/policy/effective time rejects.
+
+The function is transferred to a dedicated non-login `governance_owner` per Workspace, distinct from the activation `function_owner`. Its grants are limited to the event ledger and membership/role/permission projection tables/columns needed by this materializer. Runtime, worker, exporter and activation function owner receive no execute or event-table access. The owner has no persistent schema CREATE privilege.
+
+**Important gate boundary:** the function is an internal projection materializer, not an authorization decision engine. It does not prove the authenticity of `authn_event_ref` or `authority_ref`, decide which roles an actor may grant, prevent self-escalation by policy, or provide a trusted application adapter. No application role is granted EXECUTE. Do not connect a service until a separate signed/opaque assertion verifier, grantability matrix, actor/target/scope checks and concurrency contract are reviewed and tested.
+
+Synthetic CI now verifies event-to-projection atomic behavior, revocation, suspension invalidation, replay after actor suspension, and the dedicated owner privilege boundary. Guardian projections remain blocked. WS-DOM-02 is partially remediated, not closed; WS-DOM-03 remains HIGH. Phase 2 remains **NOT READY**.
