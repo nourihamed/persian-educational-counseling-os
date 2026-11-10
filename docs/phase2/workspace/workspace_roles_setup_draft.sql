@@ -23,6 +23,7 @@ DECLARE
   role_names text[] := ARRAY[
     'ws_'||k||'_table_owner',
     'ws_'||k||'_function_owner',
+    'ws_'||k||'_governance_owner',
     'ws_'||k||'_runtime',
     'ws_'||k||'_worker',
     'ws_'||k||'_exporter',
@@ -190,6 +191,26 @@ SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid
   'ws_'||current_setting('app.workspace_key')||'_worker',
   'ws_'||current_setting('app.workspace_key')||'_exporter',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+
+-- A dedicated non-login owner isolates the governance materializer from the broader
+-- activation function owner. It has only the minimum DML needed for supported projections.
+SELECT format('GRANT SELECT,INSERT ON TABLE workspace_governance_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \\gexec
+SELECT format('GRANT SELECT,INSERT,DELETE ON TABLE membership_roles TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \\gexec
+SELECT format('GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE membership_permissions TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \\gexec
+SELECT format('GRANT SELECT ON TABLE workspace_memberships TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \\gexec
+SELECT format('GRANT UPDATE(status,ended_at) ON TABLE workspace_memberships TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \\gexec
+SELECT format('ALTER FUNCTION append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz) OWNER TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \\gexec
+SELECT format('REVOKE ALL ON FUNCTION append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz) FROM PUBLIC,%I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime',
+  'ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \\gexec
 
 -- Default privileges remain deny-by-default for future migrations.
 SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC',
