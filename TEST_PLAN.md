@@ -268,3 +268,21 @@ Status: IMPLEMENTED IN BRANCH / CI PASS for SQL draft tests. This does not mean 
 ## Trusted governance assertion acceptance tests — 2026-11-10
 
 New design target: `docs/phase2/workspace/WORKSPACE_GOVERNANCE_AUTHORIZATION_ASSERTION_CONTRACT.md`. Required but NOT IMPLEMENTED / NOT RUN: signature/key/issuer/audience validation, exact actor-target-action-scope binding, role-grantability and anti-escalation, one-use proof receipt and concurrent replay, atomic receipt consumption + event/projection rollback, revoke-vs-read freshness, and verifier/adapter privilege isolation. No application role may receive EXECUTE until these tests pass.
+
+
+## Accepted Workspace role grantability regression matrix — 2026-11-10
+
+Product Owner decision: `docs/phase2/workspace/PO_DECISION_ROLE_GRANTABILITY_MATRIX_2026-11-10.md`.
+
+Required implementation tests (all NOT IMPLEMENTED / NOT RUN unless separately evidenced on an exact SHA):
+- Organization Manager invite/activate/revoke of counselor membership succeeds only within its own Workspace.
+- Organization Manager cannot appoint/approve another Organization Manager, self-grant, cross-Workspace grant or access every student's private records by role alone.
+- Platform Admin may approve initial/replacement Organization Manager appointment through a narrow Governance capability only; tests must deny general Workspace DML and student-data access through that capability.
+- Counselor role/permission delegation is denied; student reads are limited to assigned students.
+- Branch Manager is limited to operational actions within assigned Branch and cannot grant organization-level roles.
+- Other Workspace staff cannot delegate roles or permissions.
+- Deny-by-default, no self-grant, no equal/higher privilege escalation, no scope expansion, audit binding, replay rejection and revocation freshness are enforced.
+- Revocation must block subsequent API access, exports, background jobs and notifications; test cache/queue revalidation and the authorization linearization point.
+- Cross-Workspace/nonexistent targets preserve uniform 404 behavior; visible objects with forbidden actions return 403.
+
+Guardian/parent and student legal authority tests remain blocked by Q-007 and must fail closed. Transfer approval conflict-of-interest policy is separate and remains unresolved. These accepted role-policy tests do not constitute implementation or phase approval.
