@@ -20,6 +20,23 @@
 
 ---
 
+
+---
+
+# CURRENT SUPERVISOR WORK ADDENDUM — 2026-11-10
+
+The following design contracts were added on the Phase 2 work branch:
+- `docs/phase2/control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md` — mobile change proof, idempotency, HMAC alias coverage and atomicity.
+- `docs/phase2/transfer/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` — trusted principal, authority evidence, exact-case binding, revocation and cutover revalidation.
+- `docs/phase2/transfer/TRANSFER_SAGA_OUTBOX_INBOX_RECOVERY_CONTRACT.md` — cross-DB freeze/barrier, snapshot/staging, outbox/inbox, retries and forward-only recovery.
+- `docs/phase2/workspace/WORKSPACE_GOVERNANCE_EVENT_CONTRACT.md` — append-only membership/guardian governance events and projection controls.
+
+These are design/acceptance contracts only. No mobile-change SQL/API/verifier, transfer approval verifier/event-schema replacement, distributed Saga workers/controllers, or Workspace governance event schema/command functions have been implemented by these documentation commits. The latest CI for the new branch HEAD is not verified. The latest known successful CI evidence remains limited to its exact earlier SHA and test tree.
+
+The transfer SQL currently accepts three distinct approval kinds when reference strings are non-empty and timestamps valid; this does not prove identity/authority. The Workspace role scalar has been removed, but role grant/revoke event audit and direct-DML controls remain open. Guardian relationship/permission evidence remains mutable and Q-007 remains open.
+
+**Gate remains NOT READY.** D-014 synthetic-only remains in force. PR #12 remains unmerged; no main writes, no Phase 3.
+
 # HISTORICAL ADDENDUM
  — D-023 PRODUCTION / BACKUP INDEPENDENCE TARGET (superseded by D-024) (2026-10-23)
 
