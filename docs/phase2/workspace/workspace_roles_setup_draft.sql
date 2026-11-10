@@ -193,7 +193,7 @@ SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 
 SELECT format('GRANT CREATE,USAGE ON SCHEMA public TO %I',
-  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \\gexec
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \gexec
 
 -- A dedicated non-login owner isolates the governance materializer from the broader
 -- activation function owner. It has only the minimum DML needed for supported projections.
