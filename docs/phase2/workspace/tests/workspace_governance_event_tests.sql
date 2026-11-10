@@ -21,6 +21,10 @@ BEGIN
     '{"role_key":"counselor"}'::jsonb,TIMESTAMPTZ '2026-11-10 00:00:00+00') e;
   IF first_seq<>1 THEN RAISE EXCEPTION 'FAIL GOV-01 first event sequence must be 1'; END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM membership_roles
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001' AND role_key='counselor') THEN
+    RAISE EXCEPTION 'FAIL GOV-09 role grant event did not update canonical projection';
+  END IF;
   SELECT e.event_id,e.event_sequence INTO replay_id,replay_seq
   FROM append_workspace_governance_event(
     'd9100000-0000-0000-0000-000000000099','membership_role',
@@ -42,10 +46,6 @@ BEGIN
       WHERE aggregate_type='membership_role'
         AND aggregate_id='b9100000-0000-0000-0000-000000000001')<>2 THEN
     RAISE EXCEPTION 'FAIL GOV-03 aggregate sequence did not advance';
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM membership_roles
-      WHERE membership_id='b9100000-0000-0000-0000-000000000001' AND role_key='counselor') THEN
-    RAISE EXCEPTION 'FAIL GOV-09 role grant event did not update canonical projection';
   END IF;
   IF EXISTS (SELECT 1 FROM membership_roles
       WHERE membership_id='b9100000-0000-0000-0000-000000000001' AND role_key='counselor') THEN
