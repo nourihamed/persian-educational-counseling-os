@@ -18,7 +18,7 @@ BEGIN
     'b9100000-0000-0000-0000-000000000001','role_granted',
     'b9100000-0000-0000-0000-000000000001','authn-event-1','authority-assertion-1',
     'policy-v1','gov-role-grant-1',decode(repeat('11',32),'hex'),
-    '{"role_key":"counselor"}'::jsonb,now()) e;
+    '{"role_key":"counselor"}'::jsonb,TIMESTAMPTZ '2026-11-10 00:00:00+00') e;
   IF first_seq<>1 THEN RAISE EXCEPTION 'FAIL GOV-01 first event sequence must be 1'; END IF;
 
   SELECT e.event_id,e.event_sequence INTO replay_id,replay_seq
@@ -27,7 +27,7 @@ BEGIN
     'b9100000-0000-0000-0000-000000000001','role_granted',
     'b9100000-0000-0000-0000-000000000001','authn-event-1','authority-assertion-1',
     'policy-v1','gov-role-grant-1',decode(repeat('11',32),'hex'),
-    '{"role_key":"counselor"}'::jsonb,now()) e;
+    '{"role_key":"counselor"}'::jsonb,TIMESTAMPTZ '2026-11-10 00:00:00+00') e;
   IF replay_id<>first_id OR replay_seq<>first_seq THEN
     RAISE EXCEPTION 'FAIL GOV-02 idempotent replay did not return original event';
   END IF;
@@ -107,13 +107,29 @@ BEGIN
   RAISE NOTICE 'PASS GOV-01..14 event sequencing, idempotency and projection consistency';
 END $tests$;
 
+DO $replay_after_suspension$
+DECLARE replay_id uuid;
+BEGIN
+  SELECT e.event_id INTO replay_id
+  FROM append_workspace_governance_event(
+    'd9100000-0000-0000-0000-000000000099','membership_role',
+    'b9100000-0000-0000-0000-000000000001','role_granted',
+    'b9100000-0000-0000-0000-000000000001','authn-event-1','authority-assertion-1',
+    'policy-v1','gov-role-grant-1',decode(repeat('11',32),'hex'),
+    '{"role_key":"counselor"}'::jsonb,TIMESTAMPTZ '2026-11-10 00:00:00+00') e;
+  IF replay_id<>'d9100000-0000-0000-0000-000000000001'::uuid THEN
+    RAISE EXCEPTION 'FAIL GOV-15 replay after actor suspension did not return original event';
+  END IF;
+  RAISE NOTICE 'PASS GOV-15 idempotent replay remains stable after actor suspension';
+END $replay_after_suspension$;
+
 DO $negative$
 BEGIN
   BEGIN
     PERFORM append_workspace_governance_event(
       'd9100000-0000-0000-0000-000000000003','membership_role',
       'b9100000-0000-0000-0000-000000000001','role_granted',
-      'b9100000-0000-0000-0000-000000000001','authn-event-3',NULL,
+      'b9100000-0000-0000-0000-000000000003','authn-event-3',NULL,
       'policy-v1','gov-role-no-authority',decode(repeat('33',32),'hex'),
       '{"role_key":"organization_manager"}'::jsonb,now());
     RAISE EXCEPTION 'FAIL GOV-04 grant without authority reference unexpectedly succeeded';
@@ -137,7 +153,7 @@ BEGIN
     PERFORM append_workspace_governance_event(
       'd9100000-0000-0000-0000-000000000005','membership_role',
       'b9100000-0000-0000-0000-000000000001','role_revoked',
-      'b9100000-0000-0000-0000-000000000001','authn-event-5',NULL,
+      'b9100000-0000-0000-0000-000000000003','authn-event-5',NULL,
       'policy-v1','gov-role-grant-1',decode(repeat('55',32),'hex'),
       '{"role_key":"counselor"}'::jsonb,now());
     RAISE EXCEPTION 'FAIL GOV-06 idempotency payload mismatch unexpectedly succeeded';
