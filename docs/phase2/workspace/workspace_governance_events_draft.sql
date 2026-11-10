@@ -85,23 +85,6 @@ BEGIN
     RAISE EXCEPTION 'required governance event fields missing or invalid' USING ERRCODE='invalid_parameter_value';
   END IF;
 
-  IF p_actor_membership_id IS NOT NULL THEN
-    PERFORM 1 FROM public.workspace_memberships
-      WHERE membership_id=p_actor_membership_id AND status='active';
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'governance actor membership is not active' USING ERRCODE='insufficient_privilege';
-    END IF;
-    IF p_authn_event_ref IS NULL OR length(btrim(p_authn_event_ref))=0 THEN
-      RAISE EXCEPTION 'authenticated actor event reference is required' USING ERRCODE='invalid_parameter_value';
-    END IF;
-  END IF;
-
-  IF p_event_type IN ('role_granted','permission_granted','guardian_verified',
-                      'guardian_permission_granted','guardian_relationship_reinstated')
-     AND (p_authority_ref IS NULL OR length(btrim(p_authority_ref))=0) THEN
-    RAISE EXCEPTION 'authority evidence reference is required for grant/verification' USING ERRCODE='invalid_parameter_value';
-  END IF;
-
   -- Fail closed for guardian changes until Q-007 and trusted legal verification are approved.
   IF p_aggregate_type IN ('guardian_relationship','guardian_permission') THEN
     RAISE EXCEPTION 'guardian governance projection is blocked pending Q-007/legal verification'
@@ -163,6 +146,23 @@ BEGIN
     END IF;
     RETURN QUERY SELECT v_existing.event_id,v_existing.event_sequence;
     RETURN;
+  END IF;
+
+  IF p_actor_membership_id IS NOT NULL THEN
+    PERFORM 1 FROM public.workspace_memberships
+      WHERE membership_id=p_actor_membership_id AND status='active';
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'governance actor membership is not active' USING ERRCODE='insufficient_privilege';
+    END IF;
+    IF p_authn_event_ref IS NULL OR length(btrim(p_authn_event_ref))=0 THEN
+      RAISE EXCEPTION 'authenticated actor event reference is required' USING ERRCODE='invalid_parameter_value';
+    END IF;
+  END IF;
+
+  IF p_event_type IN ('role_granted','permission_granted','guardian_verified',
+                      'guardian_permission_granted','guardian_relationship_reinstated')
+     AND (p_authority_ref IS NULL OR length(btrim(p_authority_ref))=0) THEN
+    RAISE EXCEPTION 'authority evidence reference is required for grant/verification' USING ERRCODE='invalid_parameter_value';
   END IF;
 
   SELECT coalesce(max(e.event_sequence),0)+1 INTO v_sequence
