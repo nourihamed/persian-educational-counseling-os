@@ -186,6 +186,18 @@ Status for all: SPECIFIED AS GAPS / NOT IMPLEMENTED / NOT RUN. Do not mark domai
 See `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md`. OPS-HA-01..05, OPS-BACKUP-01..02, OPS-RESTORE-01..04 and OPS-CAP-01..03 are **NOT RUN** and require a representative isolated target environment. No CI result or local SQL test may be substituted for backup independence, restore, fencing, failover, split-brain, pool isolation or measured capacity evidence.
 
 
+
+## Additional Phase 2 contracts added — 2026-11-10
+
+The following test groups are now specified in companion contracts but are **NOT IMPLEMENTED / NOT RUN**:
+- CP-APPROVAL-06..10: exact case/student/direction/generation/payload binding; signed issuer/audience/nonce verification; append-only revocation/supersession; authority revalidation at cutover; revocation-vs-switch concurrency.
+- CP-SAGA-06..12: source freeze/write barrier; consistent snapshot and destination quarantine; transactional outbox crash/retry; inbox hash/generation fencing; crash recovery at each checkpoint; post-switch forward-only recovery; reconciliation without changing CP owner.
+- CP-CONTACT-05..09: trusted proof binding and single-use; all active/retiring aliases; conflict rollback; rotation/transfer lock-order race; outbox recovery.
+- WS-GOV-01..10: append-only membership role/permission grant/revoke events; role projection direct-DML denial; scope escalation/self-grant denial; guardian relationship/permission event history; revocation/expiry/dispute invalidation; concurrent grant/revoke/access linearization; event/projection drift detection.
+- WS-DOM-01..09 remain open per `WORKSPACE_DOMAIN_SCHEMA_REVIEW.md`; contracts do not constitute schema or executable test completion.
+
+CI status must be verified on the exact latest branch SHA before any PASS is reported. No historical run is transferable to later SQL/test changes.
+
 ## Q-007, retention and operational policy acceptance (2026-11-09)
 
 - Parent/guardian authority: `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md`; Q-007 remains OPEN pending Iran legal review and PO approval. All parent scope/age/dispute tests are NOT RUN.
