@@ -78,6 +78,34 @@ A versioned grantability matrix is required for at least:
 - other Workspace staff roles, if approved;
 - parent/guardian and student self-service principals.
 
+### 5.1 Accepted Product Owner rule — Organization Manager appointment
+
+**Accepted 2026-11-10:** Appointment or replacement of an Organization Manager requires approval by a Platform Admin only.
+
+- An Organization Manager may request or nominate a proposed replacement, but cannot approve or complete the appointment.
+- No second-Organization-Manager approval workflow is required.
+- Platform Admin is the sole approving authority for this specific high-impact role assignment.
+- The action must be authenticated, explicitly scoped to the target Organization/Workspace, and audited with actor, target, time, decision and policy version.
+- This rule does not grant Platform Admin unrestricted access to student data or general Workspace operations; existing least-privilege and Platform Admin restrictions remain in force.
+- This decision settles only Organization Manager appointment/replacement. It does not approve a complete role-to-role grantability matrix or authorize counselors/parents/students to delegate permissions.
+
+**Remaining Decision Required:** approve the exact role-to-role grant/revoke matrix for roles other than the Organization Manager appointment rule above, including whether a counselor may delegate any permission and which other permissions require additional approval.
+
+**Recommendation:** default deny; a principal may grant only explicitly delegated lower/equal-scope permissions listed in a versioned policy; no self-grant; no implicit authority from role names. Do not introduce a second-manager approval workflow for Organization Manager appointment.
+
+No role hierarchy or delegation rights are inferred by this contract beyond the accepted rule above.
+
+Q-007 remains open. Guardian verification, custody/age/student-objection and dispute rules must not be implemented from assumptions. Guardian relationship/permission event families continue to fail closed until legal policy and evidence-verification rules are approved.
+
+## 6. Required acceptance tests
+
+A versioned grantability matrix is required for at least:
+- Platform Admin / Platform Support (including explicit restrictions on cross-Workspace role changes);
+- Organization Manager;
+- Counselor / Branch-scoped counselor;
+- other Workspace staff roles, if approved;
+- parent/guardian and student self-service principals.
+
 **Decision Required:** approve the exact role-to-role grant/revoke matrix, including whether an Organization Manager may appoint another Organization Manager, whether a counselor may delegate any permission, and which permissions require dual approval.
 
 **Recommendation:** default deny; a principal may grant only explicitly delegated lower/equal-scope permissions listed in a versioned policy; no self-grant; no implicit authority from role names; high-impact manager and guardian authority changes require independent step-up and separate approval where defined by Product Owner policy.
