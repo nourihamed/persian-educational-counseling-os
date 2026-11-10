@@ -239,3 +239,12 @@ Added `ACTIVITY_CLASS_DOMAIN_CONTRACT.md`, `STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_
 ## Workspace authorization privilege correction (2026-11-09)
 
 The Workspace provisioning draft now grants runtime SELECT-only access to membership, role, permission, branch, counselor assignment and guardian relationship/permission tables. The activation function owner is also read-only on these authorization sources. Its DML grants are narrowed to activation needs and column-level lock-only grants; wallet identity is immutable. Catalog tests assert these boundaries. A dedicated audited authorization-management workflow and append-only grant/revoke events remain absent, so authorization changes are fail-closed/unavailable through runtime. Fresh CI for the current branch tree is not verified.
+
+
+## Workspace governance projection materializer — 2026-11-10
+
+Extended the Workspace governance event draft so supported role, permission and membership lifecycle events update their current-state projections in the same transaction as the append-only event. Membership suspension/end removes active role and permission projections. Idempotent replay is stable even after the original actor becomes suspended; mismatched replay intent is rejected. Guardian changes fail closed pending Q-007 and trusted legal verification.
+
+Provisioning now creates a dedicated non-login per-Workspace `governance_owner`, transfers the projection materializer to it, and grants only the required ledger/role/permission/membership DML. Runtime, worker, exporter and activation function owner have no execute/event-ledger access. No application role is granted execute.
+
+CI run #474 passed the previous event-ledger-only revision. The new projection/owner changes have been committed to the work branch and require a fresh CI run before they are considered verified. The materializer is not a trusted authorization service: authentication/authority references are not cryptographically verified, role-grantability/self-escalation policy is not enforced, and no API adapter exists. WS-DOM-02 remains HIGH/partially remediated; WS-DOM-03 remains HIGH. Phase 2 remains NOT READY. D-014 synthetic-only remains in force.
