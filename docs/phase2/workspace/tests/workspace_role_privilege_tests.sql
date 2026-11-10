@@ -90,7 +90,8 @@ BEGIN
 
   IF has_schema_privilege(runtime_role,'public','CREATE')
      OR has_schema_privilege(worker_role,'public','CREATE')
-     OR has_schema_privilege(exporter_role,'public','CREATE') THEN
+     OR has_schema_privilege(exporter_role,'public','CREATE')
+     OR has_schema_privilege(governance_owner,'public','CREATE') THEN
     RAISE EXCEPTION 'FAIL WS-ROLE-08 runtime/worker/exporter can CREATE in public schema';
   END IF;
 
@@ -151,6 +152,9 @@ BEGIN
      OR has_table_privilege(runtime_role,'public.workspace_governance_events','SELECT')
      OR has_table_privilege(runtime_role,'public.workspace_governance_events','INSERT')
      OR has_table_privilege(function_owner,'public.workspace_governance_events','INSERT')
+     OR has_table_privilege(function_owner,'public.workspace_governance_events','SELECT')
+     OR has_table_privilege(function_owner,'public.membership_roles','DELETE')
+     OR has_table_privilege(function_owner,'public.membership_permissions','DELETE')
      OR NOT has_table_privilege(governance_owner,'public.workspace_governance_events','SELECT')
      OR NOT has_table_privilege(governance_owner,'public.workspace_governance_events','INSERT')
      OR NOT has_table_privilege(governance_owner,'public.membership_roles','INSERT')
