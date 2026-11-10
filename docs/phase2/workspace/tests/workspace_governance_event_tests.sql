@@ -160,7 +160,7 @@ BEGIN
   BEGIN
     PERFORM append_workspace_governance_event(
       'd9100000-0000-0000-0000-000000000003','membership_role',
-      'b9100000-0000-0000-0000-000000000001','role_granted',
+      'b9100000-0000-0000-0000-000000000003','role_granted',
       'b9100000-0000-0000-0000-000000000003','authn-event-3',NULL,
       'policy-v1','gov-role-no-authority',decode(repeat('33',32),'hex'),
       '{"role_key":"organization_manager"}'::jsonb,now());
