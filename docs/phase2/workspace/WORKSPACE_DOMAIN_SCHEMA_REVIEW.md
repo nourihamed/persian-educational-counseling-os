@@ -113,3 +113,10 @@ A companion `WORKSPACE_GOVERNANCE_EVENT_CONTRACT.md` now specifies the target ev
 This review is a design/schema review, not an implementation approval. The HIGH findings WS-DOM-01 through WS-DOM-03 block acceptance of the current Workspace domain schema as complete. The MEDIUM findings must be resolved or explicitly deferred to a later authorized phase with documented dependencies and no false claim of Phase 2 completeness.
 
 **Phase 2 Gate: NOT READY.** D-014 synthetic-only restriction remains in force.
+
+
+### Remediation update — 2026-11-10 (governance event ledger draft)
+
+Added an executable PostgreSQL event-ledger draft and synthetic regression tests for append-only behavior, per-aggregate sequencing, idempotent replay, payload mismatch, missing authority reference and inactive actor rejection. CI now installs the ledger in Workspace test databases and checks that runtime/worker/exporter/activation-function roles have no event-table or append-function access.
+
+This is a partial schema/test improvement only. It does not update current role/permission/guardian projections and deliberately grants no service role permission to append events until a trusted authorization adapter and authority-verification contract are reviewed. WS-DOM-02 and WS-DOM-03 remain HIGH/open; Phase 2 remains NOT READY.
