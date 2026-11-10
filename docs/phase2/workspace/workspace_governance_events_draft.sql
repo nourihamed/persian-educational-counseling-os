@@ -181,7 +181,8 @@ BEGIN
     IF NOT FOUND THEN
       RAISE EXCEPTION 'membership lifecycle target does not exist' USING ERRCODE='no_data_found';
     END IF;
-    IF (p_event_type='membership_activated' AND v_target_status<>'invited')
+    IF (p_event_type='membership_invited' AND v_target_status<>'invited')
+       OR (p_event_type='membership_activated' AND v_target_status<>'invited')
        OR (p_event_type='membership_reactivated' AND v_target_status<>'suspended')
        OR (p_event_type='membership_suspended' AND v_target_status<>'active')
        OR (p_event_type='membership_ended' AND v_target_status='ended') THEN
