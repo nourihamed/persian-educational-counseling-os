@@ -136,3 +136,10 @@ These contracts are design targets only. The current SQL skeleton does not yet c
 - `CAPACITY_LIFECYCLE_CONTRACT.md` defines multi-dimensional capacity reservations, activation/archive/reactivation and transfer destination reservation boundaries.
 
 These contracts do not select unapproved product policy (refunds, suspension capacity, numeric limits, class scope) and do not claim implementation. Schema and tests remain incomplete.
+
+
+## 13. Trusted governance authorization assertions
+
+`WORKSPACE_GOVERNANCE_AUTHORIZATION_ASSERTION_CONTRACT.md` defines the separate verifier/adapter trust boundary required before any application role can invoke the membership governance materializer. It specifies exact actor, Workspace, target, action, scope, policy, payload and replay binding; single-use verification receipts; fail-closed behavior; and required cryptographic, authorization, concurrency and privilege tests.
+
+This is a design contract only. No assertion verifier, receipt schema, adapter credential or application EXECUTE grant exists. The role-to-role grantability matrix requires Product Owner approval; Q-007 remains open for guardian authority. WS-DOM-02/03 remain HIGH.
