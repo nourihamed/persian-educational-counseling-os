@@ -248,3 +248,17 @@ Extended the Workspace governance event draft so supported role, permission and 
 Provisioning now creates a dedicated non-login per-Workspace `governance_owner`, transfers the projection materializer to it, and grants only the required ledger/role/permission/membership DML. Runtime, worker, exporter and activation function owner have no execute/event-ledger access. No application role is granted execute.
 
 CI run #474 passed the previous event-ledger-only revision. The new projection/owner changes have been committed to the work branch and require a fresh CI run before they are considered verified. The materializer is not a trusted authorization service: authentication/authority references are not cryptographically verified, role-grantability/self-escalation policy is not enforced, and no API adapter exists. WS-DOM-02 remains HIGH/partially remediated; WS-DOM-03 remains HIGH. Phase 2 remains NOT READY. D-014 synthetic-only remains in force.
+
+
+## Workspace governance projection verification — 2026-11-10
+
+Latest CI run #519 passed all 13 steps on commit `d45753924513f9920f714b966361b9697e8264d5`:
+- Control Plane regression and global identity race tests;
+- Workspace schema and governance event/projection tests;
+- atomic activation, credit and capacity rollback;
+- concurrent activation and final-capacity-slot race;
+- per-Workspace role provisioning and cross-database denial.
+
+Governance SQL tests now verify transactional role/permission projections, membership lifecycle transition constraints, no stale grants after reactivation, end timestamp, idempotent replay after actor suspension, and denial of application-role access to the materializer. The dedicated governance owner is non-login and least-privileged.
+
+This remains a tested draft, not an approved production implementation. No application role has EXECUTE; cryptographic authority verification, role grantability/self-escalation policy, API adapter/object authorization, guardian legal policy (Q-007), and service-level concurrency tests remain open. Phase 2 remains NOT READY; D-014 synthetic-only remains in force.
