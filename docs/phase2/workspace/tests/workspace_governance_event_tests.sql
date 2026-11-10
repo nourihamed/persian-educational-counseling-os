@@ -123,6 +123,38 @@ BEGIN
   RAISE NOTICE 'PASS GOV-15 idempotent replay remains stable after actor suspension';
 END $replay_after_suspension$;
 
+DO $lifecycle$
+BEGIN
+  PERFORM append_workspace_governance_event(
+    'd9100000-0000-0000-0000-000000000010','membership',
+    'b9100000-0000-0000-0000-000000000001','membership_reactivated',
+    'b9100000-0000-0000-0000-000000000003','authn-event-10','authority-10',
+    'policy-v1','gov-membership-reactivate-1',decode(repeat('aa',32),'hex'),
+    '{"reason":"synthetic reactivation"}'::jsonb,TIMESTAMPTZ '2026-11-10 01:00:00+00');
+  IF (SELECT status FROM workspace_memberships
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001')<>'active'
+     OR EXISTS (SELECT 1 FROM membership_roles
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001')
+     OR EXISTS (SELECT 1 FROM membership_permissions
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001') THEN
+    RAISE EXCEPTION 'FAIL GOV-16 reactivation resurrected stale role/permission grants';
+  END IF;
+
+  PERFORM append_workspace_governance_event(
+    'd9100000-0000-0000-0000-000000000011','membership',
+    'b9100000-0000-0000-0000-000000000001','membership_ended',
+    'b9100000-0000-0000-0000-000000000003','authn-event-11','authority-11',
+    'policy-v1','gov-membership-end-1',decode(repeat('bb',32),'hex'),
+    '{"reason":"synthetic end"}'::jsonb,TIMESTAMPTZ '2026-11-10 02:00:00+00');
+  IF (SELECT status FROM workspace_memberships
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001')<>'ended'
+     OR (SELECT ended_at FROM workspace_memberships
+      WHERE membership_id='b9100000-0000-0000-0000-000000000001')<>TIMESTAMPTZ '2026-11-10 02:00:00+00' THEN
+    RAISE EXCEPTION 'FAIL GOV-17 membership end state/timestamp incorrect';
+  END IF;
+  RAISE NOTICE 'PASS GOV-16..17 reactivation does not resurrect grants; end timestamp is recorded';
+END $lifecycle$;
+
 DO $negative$
 BEGIN
   BEGIN
@@ -147,6 +179,30 @@ BEGIN
     RAISE EXCEPTION 'FAIL GOV-05 suspended actor unexpectedly succeeded';
   EXCEPTION WHEN insufficient_privilege THEN
     RAISE NOTICE 'PASS GOV-05 suspended actor rejected';
+  END;
+
+  BEGIN
+    PERFORM append_workspace_governance_event(
+      'd9100000-0000-0000-0000-000000000012','membership_role',
+      'b9100000-0000-0000-0000-000000000002','role_granted',
+      'b9100000-0000-0000-0000-000000000003','authn-event-12','authority-12',
+      'policy-v1','gov-role-grant-to-suspended',decode(repeat('cc',32),'hex'),
+      '{"role_key":"counselor"}'::jsonb,now());
+    RAISE EXCEPTION 'FAIL GOV-18 role grant to suspended target unexpectedly succeeded';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS GOV-18 role grant to suspended target rejected';
+  END;
+
+  BEGIN
+    PERFORM append_workspace_governance_event(
+      'd9100000-0000-0000-0000-000000000013','membership',
+      'b9100000-0000-0000-0000-000000000003','membership_reactivated',
+      'b9100000-0000-0000-0000-000000000003','authn-event-13','authority-13',
+      'policy-v1','gov-invalid-reactivation',decode(repeat('dd',32),'hex'),
+      '{"reason":"invalid transition"}'::jsonb,now());
+    RAISE EXCEPTION 'FAIL GOV-19 invalid membership transition unexpectedly succeeded';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'PASS GOV-19 invalid membership transition rejected';
   END;
 
   BEGIN
