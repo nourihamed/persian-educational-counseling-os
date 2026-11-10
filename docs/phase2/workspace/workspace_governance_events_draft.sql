@@ -82,7 +82,7 @@ BEGIN
      OR length(btrim(p_idempotency_key))=0 OR p_policy_version IS NULL
      OR length(btrim(p_policy_version))=0 OR p_payload_hash IS NULL
      OR octet_length(p_payload_hash)<>32 OR p_event_payload IS NULL
-     OR jsonb_typeof(p_event_payload)<>'object' OR p_effective_at IS NULL THEN
+     OR COALESCE(jsonb_typeof(p_event_payload),'')<>'object' OR p_effective_at IS NULL THEN
     RAISE EXCEPTION 'required governance event fields missing or invalid' USING ERRCODE='invalid_parameter_value';
   END IF;
 
@@ -95,22 +95,22 @@ BEGIN
   -- Validate event family and its exact projection payload before writing any event.
   IF p_event_type IN ('role_granted','role_revoked') THEN
     IF p_aggregate_type<>'membership_role'
-       OR jsonb_typeof(p_event_payload->'role_key')<>'string'
-       OR length(btrim(p_event_payload->>'role_key'))=0 THEN
+       OR COALESCE(jsonb_typeof(p_event_payload->'role_key'),'')<>'string'
+       OR COALESCE(length(btrim(p_event_payload->>'role_key')),0)=0 THEN
       RAISE EXCEPTION 'role event requires membership_role aggregate and non-empty role_key'
         USING ERRCODE='invalid_parameter_value';
     END IF;
     v_role_key:=p_event_payload->>'role_key';
   ELSIF p_event_type IN ('permission_granted','permission_revoked','permission_scope_changed') THEN
     IF p_aggregate_type<>'membership_permission'
-       OR jsonb_typeof(p_event_payload->'permission_key')<>'string'
-       OR length(btrim(p_event_payload->>'permission_key'))=0 THEN
+       OR COALESCE(jsonb_typeof(p_event_payload->'permission_key'),'')<>'string'
+       OR COALESCE(length(btrim(p_event_payload->>'permission_key')),0)=0 THEN
       RAISE EXCEPTION 'permission event requires membership_permission aggregate and non-empty permission_key'
         USING ERRCODE='invalid_parameter_value';
     END IF;
     v_permission_key:=p_event_payload->>'permission_key';
     IF p_event_type IN ('permission_granted','permission_scope_changed') THEN
-      IF jsonb_typeof(p_event_payload->'resource_scope')<>'object' THEN
+      IF COALESCE(jsonb_typeof(p_event_payload->'resource_scope'),'')<>'object' THEN
         RAISE EXCEPTION 'permission grant/scope change requires object resource_scope'
           USING ERRCODE='invalid_parameter_value';
       END IF;

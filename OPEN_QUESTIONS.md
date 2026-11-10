@@ -335,3 +335,13 @@ These accepted directions do not mean implementation or tests exist. Phase 2 rem
 ### Q-007 technical contract reference (2026-11-09)
 
 The high-level OQ-G Option A decision remains accepted: parent access is per child and per permission. The implementation-facing unresolved matrix is now captured in `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md`. It deliberately does not invent Iranian age thresholds, legal evidence, custody/dispute rules or student-objection rights. Qualified Iran legal review and explicit Product Owner approval remain required before Parent APIs or guardian transfer approval are enabled. Q-007 remains OPEN.
+
+## Platform Security open questions (Issue #13, Decision C — deferred; no answer assumed)
+- PS-1 Signature algorithm for assertions. Owner: Platform Security / Product Owner. Blocks production verification.
+- PS-2 Algorithm allowlist values. Owner: Platform Security. Blocks production verification.
+- PS-3 Issuer-key registry design and implementation. Owner: Platform Security.
+- PS-4 Key provisioning, storage, rotation and revocation procedures. Owner: Platform Security.
+- PS-5 Clock-skew allowance for not_before / expires_at. Owner: Product Owner with Platform Security.
+- PS-6 Certificate authority, trust store and mTLS identity model for the verifier-to-adapter channel. Owner: Platform Security.
+- PS-7 Deployment topology of the verifier service and the adapter. Owner: Platform Security / Product Owner.
+- PS-8 Revocation source for receipts and membership-revocation propagation across API, export, worker and notification handoffs. Owner: Product Owner / Platform Security. Blocks any end-to-end freshness claim.

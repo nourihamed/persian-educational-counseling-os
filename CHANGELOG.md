@@ -507,3 +507,8 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Organization Manager may invite, activate and revoke counselor memberships only within its own Workspace; Counselor cannot delegate; Branch Manager is operational-only within assigned Branch; other staff cannot delegate; Platform Admin is limited to narrow Governance authority, including Organization Manager appointment approval, without general Workspace write or student-data access.
 - Added deny-by-default, no-self-grant, no-privilege-escalation, strict scope, audit and revocation-freshness invariants to the trusted governance contract and linked the decision from Phase 2 exit tracking.
 - This closes the Product Owner policy decision only. Trusted verifier/adapter, proof receipt, API enforcement and executable acceptance tests remain unimplemented; Q-007 remains open; Phase 2 remains NOT READY; D-014 synthetic-only remains in force.
+
+### Phase 2 — Governance proof receipts and verifier boundary (Issue #13, synthetic draft)
+- Added `docs/phase2/workspace/receipts/`: receipt table with binding and single-use controls, verifier and adapter identities with narrow grants, atomic consume-and-apply command, verifier interface contract (production fail-closed; test double only), executable tests and concurrency checks.
+- Fixed NULL-unsafe payload validation in the governance event draft (six comparisons, COALESCE).
+- Not production implementation, not a migration, not a cryptographic verification, not an approval. Phase 2 gate: NOT READY pending independent Supervisor review.

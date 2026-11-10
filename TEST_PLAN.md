@@ -286,3 +286,9 @@ Required implementation tests (all NOT IMPLEMENTED / NOT RUN unless separately e
 - Cross-Workspace/nonexistent targets preserve uniform 404 behavior; visible objects with forbidden actions return 403.
 
 Guardian/parent and student legal authority tests remain blocked by Q-007 and must fail closed. Transfer approval conflict-of-interest policy is separate and remains unresolved. These accepted role-policy tests do not constitute implementation or phase approval.
+
+## Issue #13 — governance proof receipts (synthetic)
+- `receipts/tests/receipt_10_tests.sql`: role boundary (RC-01..05), adapter boundary (RC-06), storage constraints (RC-07..12), binding mismatches (RC-13..19), cross-Workspace and validity (RC-20..23), exactly-once consume and idempotency (RC-24..27), rollback and fail-closed (RC-28..30), catalog privileges (RC-31). Status: PASS in the local run recorded in the evidence file.
+- `receipts/tests/receipt_20_race.sh`: RR-01 (same assertion registered twice), RR-02 (same receipt and key consumed by two sessions). Status: PASS (5 of 5 local repeats).
+- `receipts/verifier_interface/tests/test_verifier_contract.py`: 10 verifier-boundary tests. Status: PASS (test double only).
+- Not run: GitHub Actions run for the commit; full RBAC matrix beyond receipt privileges; revocation freshness across service handoffs (NOT IMPLEMENTED).
