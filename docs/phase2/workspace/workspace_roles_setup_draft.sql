@@ -192,6 +192,9 @@ SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid
   'ws_'||current_setting('app.workspace_key')||'_exporter',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 
+SELECT format('GRANT CREATE,USAGE ON SCHEMA public TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \\gexec
+
 -- A dedicated non-login owner isolates the governance materializer from the broader
 -- activation function owner. It has only the minimum DML needed for supported projections.
 SELECT format('GRANT SELECT,INSERT ON TABLE workspace_governance_events TO %I',
@@ -205,6 +208,8 @@ SELECT format('GRANT SELECT ON TABLE workspace_memberships TO %I',
 SELECT format('GRANT UPDATE(status,ended_at) ON TABLE workspace_memberships TO %I',
   'ws_'||current_setting('app.workspace_key')||'_governance_owner') \gexec
 SELECT format('ALTER FUNCTION append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz) OWNER TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_governance_owner') \gexec
+SELECT format('REVOKE CREATE ON SCHEMA public FROM %I',
   'ws_'||current_setting('app.workspace_key')||'_governance_owner') \gexec
 SELECT format('REVOKE ALL ON FUNCTION append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz) FROM PUBLIC,%I,%I,%I,%I',
   'ws_'||current_setting('app.workspace_key')||'_runtime',
