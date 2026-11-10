@@ -88,6 +88,11 @@ Run evidence is synthetic and validates the SQL drafts only. It does not prove K
 - Define measured HA/failover, RPO/RTO, split-brain and backup/restore evidence (OQ-D).
 
 
+
+## Transfer approval identity and authority
+
+See `../transfer/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` for the trusted-principal, authority, exact-case binding, replay prevention, revocation and cutover revalidation contract. The current SQL schema stores references and an authority snapshot, but the switch function's non-empty-string checks do **not** authenticate those references or prove authority. This remains a HIGH finding; no trusted verifier or executable authority tests are implemented.
+
 ## Mobile contact change and reverification — design contract added
 
 `CONTACT_CHANGE_REVERIFICATION_CONTRACT.md` specifies the missing contact-change path. It requires step-up authentication, verified possession of the proposed number, a single-use proof bound to the exact student/Workspace/generation/contact fingerprint, all active/retiring HMAC aliases, active-key ciphertext, atomic uniqueness enforcement, idempotency, append-only audit and transactional outbox.
