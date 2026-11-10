@@ -95,25 +95,6 @@ BEGIN
     RAISE EXCEPTION 'FAIL WS-ROLE-08 runtime/worker/exporter can CREATE in public schema';
   END IF;
 
-  RAISE NOTICE 'GOV-PRIV-DIAG fn_owner_event_insert=%, fn_owner_event_select=%, fn_owner_role_delete=%, fn_owner_perm_delete=%, gov_owner_event_select=%, gov_owner_event_insert=%, gov_owner_role_insert=%, gov_owner_role_delete=%, gov_owner_perm_update=%, gov_owner_membership_status_update=%, gov_owner_guardian_link_update=%, gov_owner_guardian_perm_update=%, gov_owner_schema_create=%, gov_owner_execute=%, runtime_execute=%, worker_execute=%, exporter_execute=%',
-    has_table_privilege(function_owner,'public.workspace_governance_events','INSERT'),
-    has_table_privilege(function_owner,'public.workspace_governance_events','SELECT'),
-    has_table_privilege(function_owner,'public.membership_roles','DELETE'),
-    has_table_privilege(function_owner,'public.membership_permissions','DELETE'),
-    has_table_privilege(governance_owner,'public.workspace_governance_events','SELECT'),
-    has_table_privilege(governance_owner,'public.workspace_governance_events','INSERT'),
-    has_table_privilege(governance_owner,'public.membership_roles','INSERT'),
-    has_table_privilege(governance_owner,'public.membership_roles','DELETE'),
-    has_table_privilege(governance_owner,'public.membership_permissions','UPDATE'),
-    has_column_privilege(governance_owner,'public.workspace_memberships','status','UPDATE'),
-    has_table_privilege(governance_owner,'public.student_guardian_links','UPDATE'),
-    has_table_privilege(governance_owner,'public.guardian_permissions','UPDATE'),
-    has_schema_privilege(governance_owner,'public','CREATE'),
-    has_function_privilege(governance_owner,'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)','EXECUTE'),
-    has_function_privilege(runtime_role,'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)','EXECUTE'),
-    has_function_privilege(worker_role,'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)','EXECUTE'),
-    has_function_privilege(exporter_role,'public.append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz)','EXECUTE');
-
   IF NOT has_table_privilege(runtime_role,'public.students','SELECT')
      OR NOT has_table_privilege(runtime_role,'public.workspace_memberships','SELECT')
      OR NOT has_table_privilege(runtime_role,'public.membership_roles','SELECT')
