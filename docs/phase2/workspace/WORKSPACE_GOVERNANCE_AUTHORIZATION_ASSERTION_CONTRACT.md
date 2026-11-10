@@ -69,48 +69,42 @@ The intended boundary is a two-stage trusted handoff:
 
 The exact database role topology, receipt schema and verifier deployment are design targets only. Do not add EXECUTE grants until a separate review proves that only the intended adapter/verifier identities can reach these boundaries.
 
-## 5. Policy and unresolved Product Owner input
+## 5. Accepted Product Owner grantability policy
 
-A versioned grantability matrix is required for at least:
-- Platform Admin / Platform Support (including explicit restrictions on cross-Workspace role changes);
-- Organization Manager;
-- Counselor / Branch-scoped counselor;
-- other Workspace staff roles, if approved;
-- parent/guardian and student self-service principals.
+The Product Owner approved the MVP grantability matrix for the roles listed below on 2026-11-10. The authoritative decision record is `PO_DECISION_ROLE_GRANTABILITY_MATRIX_2026-11-10.md`.
 
-### 5.1 Accepted Product Owner rule — Organization Manager appointment
+| Principal / role | Allowed authority | Explicit restrictions |
+|---|---|---|
+| Platform Admin | Narrow Platform Governance operations, including approval of initial/replacement Organization Manager appointments | No general Workspace write access; no unrestricted student-data access; no implied authority to manage ordinary Workspace roles/permissions |
+| Organization Manager | Invite, activate and revoke counselor memberships inside their own Organization/Workspace | Cannot appoint/approve another Organization Manager; no cross-Workspace action; no automatic access to every student's private records |
+| Counselor | No role or permission delegation | Student access only to explicitly assigned students |
+| Branch Manager | Operational management within the assigned Branch | No organizational role-granting authority; no action outside assigned Branch scope |
+| Other Workspace staff | Operational access limited to explicitly assigned permissions and scope | No role or permission delegation |
+
+### 5.1 Organization Manager appointment
 
 **Accepted 2026-11-10:** Appointment or replacement of an Organization Manager requires approval by a Platform Admin only.
 
-- An Organization Manager may request or nominate a proposed replacement, but cannot approve or complete the appointment.
+- An existing Organization Manager may nominate/request a proposed replacement, but cannot approve or complete that appointment.
 - No second-Organization-Manager approval workflow is required.
-- Platform Admin is the sole approving authority for this specific high-impact role assignment.
-- The action must be authenticated, explicitly scoped to the target Organization/Workspace, and audited with actor, target, time, decision and policy version.
-- This rule does not grant Platform Admin unrestricted access to student data or general Workspace operations; existing least-privilege and Platform Admin restrictions remain in force.
-- This decision settles only Organization Manager appointment/replacement. It does not approve a complete role-to-role grantability matrix or authorize counselors/parents/students to delegate permissions.
+- The Platform Admin capability is narrowly scoped to this Governance action; it does not grant general Workspace write privileges or student-data access.
 
-**Remaining Decision Required:** approve the exact role-to-role grant/revoke matrix for roles other than the Organization Manager appointment rule above, including whether a counselor may delegate any permission and which other permissions require additional approval.
+### 5.2 Mandatory policy invariants
 
-**Recommendation:** default deny; a principal may grant only explicitly delegated lower/equal-scope permissions listed in a versioned policy; no self-grant; no implicit authority from role names. Do not introduce a second-manager approval workflow for Organization Manager appointment.
+1. Unspecified role grants, permission grants and delegation are denied by default.
+2. No principal may grant, activate or expand their own role or permissions.
+3. No actor may grant equal/higher privilege or expand scope beyond their own explicitly authorized scope.
+4. Organization Manager commands are confined to the manager's own Workspace; Branch Manager commands to the assigned Branch; Counselor student access to assigned students.
+5. Role assignment alone never grants access to all student records. Student-level access requires explicit relationship/assignment and object-level authorization.
+6. Invite, activation, revocation, replacement, rejection and scope changes must be authenticated, bound to exact actor/target/Workspace/scope/policy version and append-only audited.
+7. Revocation must prevent subsequent API reads/writes, exports, background jobs and notifications; caches and queued work must revalidate current authorization.
+8. Operational permissions never imply authority to delegate permissions.
 
-No role hierarchy or delegation rights are inferred by this contract beyond the accepted rule above.
-
-Q-007 remains open. Guardian verification, custody/age/student-objection and dispute rules must not be implemented from assumptions. Guardian relationship/permission event families continue to fail closed until legal policy and evidence-verification rules are approved.
+Q-007 remains open. Guardian verification, custody/age/student-objection and dispute rules must not be inferred from this matrix. Guardian relationship/permission event families continue to fail closed until legal policy and evidence-verification rules are approved.
 
 ## 6. Required acceptance tests
 
-The tests below are acceptance criteria for a future trusted verifier/adapter implementation. They do not imply that unresolved grantability rules have been approved. Role-specific positive cases must be added only after the Product Owner approves the corresponding matrix entries. Until then, unspecified grants and delegations must be denied.
-
-The test suite must cover these principal categories once their permitted actions are explicitly defined:
-- Platform Admin / Platform Support, with narrow governance scope and no implied cross-Workspace student-data access;
-- Organization Manager;
-- Counselor / Branch-scoped counselor;
-- other Workspace staff roles, if approved;
-- parent/guardian and student self-service principals.
-
-The accepted Organization Manager appointment rule in section 5.1 is controlling. Do not add a second-Manager approval or generic dual-approval requirement unless a separate Product Owner decision explicitly requires it. Q-007 remains open; guardian authority tests must remain fail-closed until legal policy and evidence-verification rules are approved.
-
-
+The tests below are acceptance criteria for a future trusted verifier/adapter implementation. The positive cases below reflect the accepted matrix; all unlisted grants and delegations must be denied.
 
 ### Cryptographic and identity binding
 - Invalid signature, unknown/revoked key, disallowed algorithm, issuer/audience mismatch and expired/not-yet-valid assertion reject.
@@ -121,6 +115,12 @@ The accepted Organization Manager appointment rule in section 5.1 is controlling
 ### Authorization / anti-escalation
 - Self-grant and equal/higher privilege grant reject.
 - Counselor cannot grant manager role or out-of-assignment scope.
+- Organization Manager can invite, activate and revoke counselor memberships only within the same Workspace.
+- Organization Manager cannot appoint/approve another Organization Manager, grant self, act cross-Workspace or access all student records by role alone.
+- Platform Admin can approve the narrowly scoped Organization Manager appointment/replacement but cannot use this authority for general Workspace DML or student-data access.
+- Branch Manager cannot grant organization-level roles or operate outside the assigned Branch.
+- Other Workspace staff cannot delegate roles/permissions.
+- Revocation blocks subsequent API reads/writes, exports, background jobs and notifications.
 - Organization manager cannot grant outside the approved matrix.
 - Cross-Workspace, non-existent and stale-generation targets reject without leaking existence.
 - Inactive target rejects grant/scope expansion; revoke remains possible where policy permits.
@@ -146,6 +146,8 @@ All tests remain NOT IMPLEMENTED / NOT RUN until executable schema and service-l
 This contract closes neither trusted authorization nor guardian authority. The current SQL materializer remains an internal projection mechanism, not an application authorization service. WS-DOM-02 and WS-DOM-03 remain HIGH. Phase 2 remains **NOT READY**; Phase 3 must not start.
 
 ## 8. Related contracts
+
+- `PO_DECISION_ROLE_GRANTABILITY_MATRIX_2026-11-10.md` — accepted role grantability matrix.
 
 - `WORKSPACE_GOVERNANCE_EVENT_CONTRACT.md`
 - `WORKSPACE_DOMAIN_SCHEMA_REVIEW.md`
