@@ -1267,3 +1267,20 @@ A dedicated audited authorization-management command/function owner and append-o
 
 ## Gate impact
 This addresses the excessive runtime DML grant in the draft but does not establish API authorization or complete authorization lifecycle. HIGH finding remains partially open pending exact-SHA CI and audited management workflow. Phase 2 remains **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Transfer Approval Identity & Authority (2026-11-10)
+
+## Scope
+Added `docs/phase2/transfer/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` and cross-linked it from the transfer workflow and Control Plane README.
+
+## HIGH finding confirmed in current SQL
+`transfer_approvals` stores `approver_ref`, `authn_event_ref`, and `authority_snapshot`, but these are text/JSON references. `switch_student_ownership` currently counts three distinct approval kinds with non-empty reference strings and validity timestamps. This does not cryptographically authenticate the issuer/subject, prove the principal's current authority, bind the approval payload to the exact student/source/destination/generation, or revalidate changed authority at cutover. A caller-supplied or forged non-empty string could satisfy the current database predicate if it reaches the privileged workflow boundary.
+
+## Required target
+Trusted issuer/audience-pinned assertion or equivalent opaque proof verification; exact-case/student/direction/generation/payload binding; single-use nonce; append-only approval and revocation events; authority validation at approval and immediately before cutover; guardian legal-authority matrix gated by Q-007; negative, replay, revocation-race and stale-assignment tests.
+
+## Gate impact
+The contract is design-only. No verifier, schema migration, API integration or executable approval-authority tests were implemented in this change. Existing transfer SQL tests do not close this finding. Transfer authority remains **NOT READY**. Synthetic-only D-014 remains mandatory.
