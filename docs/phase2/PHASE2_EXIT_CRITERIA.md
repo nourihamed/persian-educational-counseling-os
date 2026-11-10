@@ -146,3 +146,8 @@ Exit criteria still require:
 - fresh CI on the latest branch head.
 
 Until these pass, WS-DOM-02/03 remain HIGH and the phase gate remains **NOT READY**.
+
+
+### 11.1 Latest verification — 2026-11-10
+
+CI run #519 passed all 13 PostgreSQL workflow steps on commit `d45753924513f9920f714b966361b9697e8264d5`. Governance projection and role-privilege assertions passed. This is evidence for the SQL draft only. The remaining exit criteria listed above are still open; WS-DOM-02/03 remain HIGH and the phase gate remains **NOT READY**.
