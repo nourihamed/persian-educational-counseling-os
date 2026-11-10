@@ -1319,3 +1319,30 @@ Specified event-sourced grant/revoke evidence, projection consistency, actor/evi
 
 ## Gate impact
 Design-only. No event DDL, command functions, API enforcement or executable governance tests were added. WS-DOM-02 and WS-DOM-03 remain HIGH and open. Phase 2 remains **NOT READY**. D-014 synthetic-only remains mandatory.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Transactional Workspace Governance Projections (2026-11-10)
+
+## Scope
+Extended the append-only Workspace governance event function to atomically materialize membership role, permission and membership lifecycle projections. Added a dedicated per-Workspace non-login governance owner and synthetic tests.
+
+## Passed in the draft design
+- Role grant/revoke and permission grant/scope-change/revoke are applied in the same transaction as their immutable event.
+- Membership suspension/end removes current role and permission projections.
+- Same-intent idempotent replay returns the original event without repeating effects, including after the original actor is later suspended; mismatched replay intent rejects.
+- Guardian projection commands fail closed pending Q-007/legal verification.
+- The materializer owner is separated from activation function owner; service roles receive no execute/event-ledger access.
+
+## Remaining findings
+- HIGH: No cryptographic/issuer/subject/scope validation for authn/authority references; these are references, not proof.
+- HIGH: No role-grantability matrix, self-grant/privilege-escalation prevention policy, or trusted authorization service/API adapter.
+- HIGH: Guardian legal authority and permission projection remain unresolved (Q-007); guardian events are intentionally unsupported.
+- HIGH: No concurrent authorization-read vs revoke linearization/freshness test at the API/service boundary.
+
+## Verification status
+CI #474 passed the previous event-ledger-only commit. The projection materializer, dedicated owner provisioning and expanded tests are newer changes; fresh CI is pending. Do not mark them passed until the current branch head completes all workflow steps.
+
+## Recommendation
+Treat this as partial remediation only. Do not grant application execute or begin Phase 3. Phase 2 remains **NOT READY**; D-014 synthetic-only remains mandatory.
