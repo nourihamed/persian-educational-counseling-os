@@ -120,3 +120,11 @@ This review is a design/schema review, not an implementation approval. The HIGH 
 Added an executable PostgreSQL event-ledger draft and synthetic regression tests for append-only behavior, per-aggregate sequencing, idempotent replay, payload mismatch, missing authority reference and inactive actor rejection. CI now installs the ledger in Workspace test databases and checks that runtime/worker/exporter/activation-function roles have no event-table or append-function access.
 
 This is a partial schema/test improvement only. It does not update current role/permission/guardian projections and deliberately grants no service role permission to append events until a trusted authorization adapter and authority-verification contract are reviewed. WS-DOM-02 and WS-DOM-03 remain HIGH/open; Phase 2 remains NOT READY.
+
+### Remediation update — 2026-11-10 (transactional governance projections)
+
+The append-only event materializer now updates supported membership projections in the same transaction: role grant/revoke, permission grant/scope change/revoke, and membership lifecycle status. Suspension/end invalidates current role and permission projections. Guardian event families fail closed pending Q-007 and trusted legal verification.
+
+The function has a dedicated non-login per-Workspace `governance_owner`, separate from the activation function owner, with narrowly scoped grants. Runtime, worker, exporter and activation function owner cannot execute it or access the event ledger. Synthetic CI tests cover projection effects, idempotent replay after actor suspension, payload mismatch, inactive actor rejection and role privilege boundaries.
+
+This is still **not** an authorization command service. Authentication/authority references are not cryptographically verified, no grantability/self-escalation matrix is enforced, no application role can execute the function, and there is no API/service adapter. WS-DOM-02 remains HIGH/partially remediated; WS-DOM-03 remains HIGH. Phase 2 remains NOT READY.
