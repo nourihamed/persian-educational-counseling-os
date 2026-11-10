@@ -139,7 +139,7 @@ The Workspace event ledger now has a draft transactional projection materializer
 
 Exit criteria still require:
 - cryptographic or otherwise independently verifiable authentication and authority assertions bound to actor, target, action, scope, policy and event;
-- explicit role/permission grantability matrix and anti-self-escalation rules;
+- explicit role/permission grantability matrix and anti-self-escalation rules; **Product Owner policy decision now accepted 2026-11-10** in `workspace/PO_DECISION_ROLE_GRANTABILITY_MATRIX_2026-11-10.md`; enforcement, trusted adapter and executable tests remain NOT IMPLEMENTED;
 - trusted API/service adapter and object-level authorization tests;
 - concurrent revoke-vs-read freshness/linearization tests;
 - guardian legal authority, per-child permissions and revocation semantics after Q-007 is resolved;
