@@ -97,6 +97,13 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_activation_transactions.sql
           psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/tests/workspace_schema_tests.sql
 
+      - name: Test Workspace governance event ledger
+        run: |
+          createdb workspace_governance_test
+          psql -X -v ON_ERROR_STOP=1 -d workspace_governance_test -f docs/phase2/workspace/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_governance_test -f docs/phase2/workspace/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_governance_test -f docs/phase2/workspace/tests/workspace_governance_event_tests.sql
+
       - name: Test atomic activation, credit and capacity rollback
         run: |
           createdb workspace_activation_test
