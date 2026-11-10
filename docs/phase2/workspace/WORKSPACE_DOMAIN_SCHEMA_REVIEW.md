@@ -128,3 +128,10 @@ The append-only event materializer now updates supported membership projections 
 The function has a dedicated non-login per-Workspace `governance_owner`, separate from the activation function owner, with narrowly scoped grants. Runtime, worker, exporter and activation function owner cannot execute it or access the event ledger. Synthetic CI tests cover projection effects, idempotent replay after actor suspension, payload mismatch, inactive actor rejection and role privilege boundaries.
 
 This is still **not** an authorization command service. Authentication/authority references are not cryptographically verified, no grantability/self-escalation matrix is enforced, no application role can execute the function, and there is no API/service adapter. WS-DOM-02 remains HIGH/partially remediated; WS-DOM-03 remains HIGH. Phase 2 remains NOT READY.
+
+
+### Verification update — CI #519 (2026-11-10)
+
+The latest commit `d45753924513f9920f714b966361b9697e8264d5` passed the complete 13-step PostgreSQL workflow, including governance ledger/projection tests and per-Workspace privilege tests. Lifecycle transition tests verify invited→active, active→suspended, suspended→active, and end semantics; invalid transitions and role grants to suspended targets are rejected. Reactivation does not resurrect prior role/permission grants.
+
+This closes the SQL-draft test gap for the supported membership projections only. It does not close WS-DOM-02's trusted authorization/anti-escalation requirements or WS-DOM-03 guardian legal-authority requirements. Phase 2 remains NOT READY.
