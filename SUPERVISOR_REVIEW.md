@@ -1355,3 +1355,20 @@ Latest branch commit tested: `d45753924513f9920f714b966361b9697e8264d5`. GitHub 
 The SQL draft now enforces locked membership state transitions and rejects grants/scope changes for inactive targets. Reactivation does not resurrect old grants. A dedicated governance owner is isolated from the activation function owner; service roles cannot execute the materializer.
 
 **Independent review conclusion:** partial remediation verified at the PostgreSQL draft/test level. The trusted authorization service, cryptographic assertion validation, grantability/anti-escalation policy, API object-level authorization, guardian legal policy and concurrency at the service boundary remain HIGH. Phase 2 remains **NOT READY**; do not start Phase 3.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Trusted Governance Authorization Assertion Contract (2026-11-10)
+
+## Scope
+Added `docs/phase2/workspace/WORKSPACE_GOVERNANCE_AUTHORIZATION_ASSERTION_CONTRACT.md` to define the trusted verifier/adapter boundary before membership role/permission commands can be exposed to an application.
+
+## Review
+The contract requires a signed, versioned assertion bound to exact issuer, audience/Workspace, actor and active membership, authentication event/assurance, action, target, role/permission, canonical scope digest, authority basis, policy version, payload digest, nonce and bounded validity. It defines a single-use verification receipt and atomic consume + event + projection boundary. It explicitly prohibits runtime execute and leaves signature algorithm/key lifecycle to Platform Security rather than guessing.
+
+## Product Owner decision still required
+The exact role-to-role grantability/delegation matrix remains unresolved. Recommendation is default deny, no self-grant, no implicit delegation and no grant beyond explicitly delegated lower/equal scope. Organization Manager delegation and counselor delegation must be decided before adapter implementation.
+
+## Gate impact
+Contract only; no verifier, proof schema, adapter, credential, API or tests implemented. Q-007 guardian policy remains open. WS-DOM-02/03 remain HIGH; Phase 2 remains **NOT READY**.
