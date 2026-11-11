@@ -14,13 +14,14 @@ SELECT pg_sleep($2);
 BEGIN;
 INSERT INTO governance_proof_receipts(receipt_id,assertion_id,nonce_digest,issuer_id,audience,key_id,workspace_id,
   actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,target_membership_id,
-  role_or_permission_key,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,
+  role_or_permission_key,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,canonicalization_version,
   issued_at,not_before,expires_at,verifier_kind,verifier_outcome)
 VALUES('$3','f9100000-0000-0000-0000-0000000000a1',sha256(convert_to('rr-nonce-$1','UTF8')),'test-issuer','governance_adapter','k1',
   'a9100000-0000-0000-0000-000000000001','b9100000-0000-0000-0000-000000000001','authn-event-x','assurance-x',
   'role_granted','membership_role','b9100000-0000-0000-0000-000000000003','b9100000-0000-0000-0000-000000000003',
   'counselor',sha256(convert_to('scope-x','UTF8')),'authority-x','policy-v1','rr-key-$1',
-  sha256(convert_to('{"role_key":"counselor"}'::jsonb::text,'UTF8')), now()-interval '1 hour', now()-interval '1 minute', now()+interval '1 day',
+  receipt_payload_digest_v1('{"role_key":"counselor"}'::jsonb), 'receipt-canon-v1',
+  now()-interval '1 hour', now()-interval '1 minute', now()+interval '1 day',
   'external_independent_verifier','verified');
 SELECT pg_sleep(1);
 COMMIT;
@@ -55,5 +56,20 @@ echo "RR-02 exit A=$ea B=$eb ; events for key=$events (expected 1) ; returned ev
 if [ "$ea" = 0 ] && [ "$eb" = 0 ] && [ "$events" = 1 ] && [ "$ida" = "$idb" ] && [ -n "$ida" ]; then
   echo "PASS RR-02 (exactly one effect; both sessions return the original event)"
 else echo "FAIL RR-02"; cat "$W/c_b.log" | tail -3; fail=1; fi
+# ---- RR-03: two concurrent IDENTICAL retries of an already consumed receipt ----
+# Both must return the original event; the event count must not change (no second effect).
+before=$(psql -X -tA -d "$DB" -c "SELECT count(*) FROM workspace_governance_events WHERE idempotency_key='$KEY'")
+psql -X -v ON_ERROR_STOP=1 -q -d "$DB" -v tag=C -v receipt="$RID" -v key="$KEY" -v event=d9100000-0000-0000-0000-0000000000c3 \
+  -v sleep_before=0 -v hold=1 -v ws_adapter="$ADAPTER" -f "$DIR/receipt_session_consume.sql" > "$W/r3_c.log" 2>&1 & p3c=$!
+psql -X -v ON_ERROR_STOP=1 -q -d "$DB" -v tag=D -v receipt="$RID" -v key="$KEY" -v event=d9100000-0000-0000-0000-0000000000c4 \
+  -v sleep_before=0.2 -v hold=0 -v ws_adapter="$ADAPTER" -f "$DIR/receipt_session_consume.sql" > "$W/r3_d.log" 2>&1 & p3d=$!
+wait $p3c; e3c=$?; wait $p3d; e3d=$?
+after=$(psql -X -tA -d "$DB" -c "SELECT count(*) FROM workspace_governance_events WHERE idempotency_key='$KEY'")
+i3c=$(grep -oE '[0-9a-f]{8}-[0-9a-f-]{27}' "$W/r3_c.log" | head -1); i3d=$(grep -oE '[0-9a-f]{8}-[0-9a-f-]{27}' "$W/r3_d.log" | head -1)
+echo "RR-03 exit C=$e3c D=$e3d ; events before=$before after=$after ; returned C=$i3c D=$i3d (original=$ida)"
+if [ "$e3c" = 0 ] && [ "$e3d" = 0 ] && [ "$before" = "$after" ] && [ "$i3c" = "$ida" ] && [ "$i3d" = "$ida" ]; then
+  echo "PASS RR-03 (concurrent retries of a consumed receipt return the original event; no second effect)"
+else echo "FAIL RR-03"; fail=1; fi
+
 rm -rf "$W"
 exit $fail

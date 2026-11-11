@@ -41,3 +41,15 @@
 - GitHub Actions run for this commit: NOT RUN by the implementation agent (no push access from this environment). The workflow step was added and its YAML was parsed locally.
 - Full RBAC role-grantability matrix positive/negative cases beyond the receipt-related privileges: NOT RUN in this task.
 - Revocation freshness across service handoffs: NOT IMPLEMENTED.
+
+## Corrective patch (review findings M-01 to M-04) — status
+- **M-01 retry after expiry:** the consume function now validates the complete binding first. An identical retry of a consumed receipt returns the original event, even after expiry. An unconsumed expired receipt still fails closed. Tests: `tests/receipt_30_integrity_tests.sql` (M01-1 to M01-7b).
+- **M-02 state and metadata integrity:** consumed and revoked are terminal. Consumption metadata is written only by the registered→consumed transition, and must be complete. Revocation carries no metadata. NULL-safe checks; the CHECK that could be bypassed by NULL was replaced. The consumption event reference is a foreign key. Tests: M02-1 to M02-12 in `tests/receipt_30_integrity_tests.sql`.
+- **M-03 canonical payload contract:** `CANONICALIZATION_CONTRACT.md` defines `receipt-canon-v1`. Draft SQL: `receipt_00_canonical_payload_draft.sql`. Test-only reference: `verifier_interface/canonical/canonical_v1.py`. Shared vectors: `tests/receipt_40_canonical_vectors_tests.sql` and `canonical/test_vectors_v1.py`. Production implementation: DEFERRED.
+- **M-04 evidence:** see PROJECT_STATE.md and TEST_PLAN.md. CI runs of commit c87ce21 (#561, #562) were reported as successful by the Product Owner; they do not cover this corrective patch until a run for its own commit exists.
+- **Concurrency:** RR-01 (one winner for a shared assertion), RR-02 (exactly one effect for two sessions), RR-03 (concurrent identical retries after consumption return the original event with no second effect).
+
+## Still NOT implemented
+- Production cryptographic verification, signature algorithm, allowlist values, key registry, key lifecycle, clock-skew allowance, CA and trust store, mTLS operation: all DEFERRED (Platform Security PS-1 to PS-8).
+- Revocation freshness across API, export, worker and notification handoffs: NOT IMPLEMENTED.
+- Duplicate-key rejection at ingress: the SQL draft cannot enforce it (see contract section 6).

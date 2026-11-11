@@ -512,3 +512,10 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Added `docs/phase2/workspace/receipts/`: receipt table with binding and single-use controls, verifier and adapter identities with narrow grants, atomic consume-and-apply command, verifier interface contract (production fail-closed; test double only), executable tests and concurrency checks.
 - Fixed NULL-unsafe payload validation in the governance event draft (six comparisons, COALESCE).
 - Not production implementation, not a migration, not a cryptographic verification, not an approval. Phase 2 gate: NOT READY pending independent Supervisor review.
+
+### Issue #13 corrective patch (2026-11-11)
+- Retry of a consumed receipt returns the original result after expiry when the full binding matches; unconsumed expired receipts fail closed.
+- Receipt state machine made terminal for consumed and revoked; NULL-safe metadata checks; consumption event reference enforced by foreign key.
+- Canonical payload contract `receipt-canon-v1` added (contract, draft SQL, test-only reference, vectors).
+- Verifier test double checks the canonicalization version and the payload digest (not a signature check).
+- Workflow updated for the canonical contract and the new suites. Not production implementation; not an approval.

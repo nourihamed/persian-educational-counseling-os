@@ -274,3 +274,9 @@ Product Owner approved the MVP role grantability matrix on 2026-11-10; see `docs
 - Implemented as synthetic drafts: governance proof receipts, verifier and adapter identities, atomic consume-and-apply, verifier interface contract with fail-closed production path.
 - Executed locally: receipt suite, concurrency checks, verifier unit tests, governance suite (see evidence). Not executed: GitHub Actions for the commit; full RBAC matrix; revocation freshness (not implemented).
 - Open: Platform Security questions PS-1..PS-8 in OPEN_QUESTIONS.md. Phase 2 gate: NOT READY pending independent Supervisor review. Phase 3: not started. Real student data: prohibited (D-014).
+
+## Issue #13 corrective patch (2026-11-11, implementation agent; not a supervisor review)
+- Scope: review findings M-01 (retry after expiry), M-02 (state and metadata integrity), M-03 (canonical payload contract v1), M-04 (evidence reconciliation).
+- Local draft results for the exact patch: receipt suites, integrity suite, canonical vectors, concurrency (RR-01, RR-02, RR-03), verifier unit tests and canonical unit tests passed in local runs. See TEST_PLAN.md for per-test status and the evidence reference.
+- Not implemented: production cryptographic verifier and policy (deferred, PS-1..PS-8), mTLS, revocation freshness across services, production migrations.
+- Phase 2 gate: NOT READY pending independent supervisor review. Phase 3: not started. Real student data: prohibited (D-014). PR #12: Draft, open, not merged.

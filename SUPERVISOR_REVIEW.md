@@ -1372,3 +1372,9 @@ The Product Owner accepted the MVP role grantability matrix in `docs/phase2/work
 
 ## Gate impact
 Contract only; no verifier, proof schema, adapter, credential, API or tests implemented. Q-007 guardian policy remains open. WS-DOM-02/03 remain HIGH; Phase 2 remains **NOT READY**.
+
+## Implementation agent self-assessment — Issue #13 corrective patch (NOT a supervisor review)
+- Changes: see CHANGELOG and receipts/README.md.
+- Local runs: see TEST_PLAN.md (author-executed; not independently reproduced).
+- Known limitations: production verifier and cryptographic policy deferred (PS-1..PS-8); revocation freshness not implemented; duplicate-key rejection must occur at ingress; CI for this commit not yet observed.
+- Independent review: PENDING. This section records no supervisor approval.

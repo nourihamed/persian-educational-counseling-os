@@ -78,27 +78,30 @@ BEGIN
   IF r.idempotency_key IS DISTINCT FROM p_idempotency_key THEN
     RAISE EXCEPTION 'receipt binding mismatch: idempotency key' USING ERRCODE = 'check_violation';
   END IF;
-  IF sha256(convert_to(p_event_payload::text, 'UTF8')) IS DISTINCT FROM r.payload_digest THEN
+  -- Canonicalization version is bound to the receipt; an unknown version fails closed (contract M-03).
+  IF r.canonicalization_version IS DISTINCT FROM 'receipt-canon-v1' THEN
+    RAISE EXCEPTION 'unsupported canonicalization version' USING ERRCODE = 'check_violation';
+  END IF;
+  IF receipt_payload_digest_v1(p_event_payload) IS DISTINCT FROM r.payload_digest THEN
     RAISE EXCEPTION 'receipt binding mismatch: payload' USING ERRCODE = 'check_violation';
   END IF;
 
-  -- 4. Validity window (clock-skew allowance is a Platform Security decision; none is applied here).
-  IF now() < r.not_before OR now() >= r.expires_at THEN
-    RAISE EXCEPTION 'receipt is not valid at this time' USING ERRCODE = 'check_violation';
-  END IF;
-
-  -- 5. Status and single-use.
+  -- 4. Status. The FULL binding above has already been validated, so an identical retry of a
+  --    consumed receipt is recognised regardless of time (M-01). Revoked receipts fail closed.
   IF r.status = 'revoked' THEN
     RAISE EXCEPTION 'receipt is revoked' USING ERRCODE = 'insufficient_privilege';
   END IF;
   IF r.status = 'consumed' THEN
-    IF r.consumed_idempotency_key = p_idempotency_key THEN
-      -- Same receipt, same intent: return the original result without a second effect.
-      SELECT e.event_sequence INTO v_seq FROM public.workspace_governance_events e WHERE e.event_id = r.consumed_event_id;
-      RETURN QUERY SELECT r.consumed_event_id, v_seq;
-      RETURN;
-    END IF;
-    RAISE EXCEPTION 'receipt already consumed' USING ERRCODE = 'unique_violation';
+    -- Full binding (including idempotency key and payload digest) matched: return the original result.
+    -- No second effect; no time check (the original consumption was already authorised).
+    SELECT e.event_sequence INTO v_seq FROM public.workspace_governance_events e WHERE e.event_id = r.consumed_event_id;
+    RETURN QUERY SELECT r.consumed_event_id, v_seq;
+    RETURN;
+  END IF;
+
+  -- 5. Validity window applies ONLY to an unconsumed receipt. An unconsumed expired receipt fails closed.
+  IF now() < r.not_before OR now() >= r.expires_at THEN
+    RAISE EXCEPTION 'receipt is not valid at this time' USING ERRCODE = 'check_violation';
   END IF;
 
   -- 6. Idempotency key must not already belong to a different receipt's event.

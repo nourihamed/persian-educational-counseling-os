@@ -12,6 +12,9 @@ Synthetic data only (D-014). No key material, certificate or secret is defined h
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable, Mapping, Optional
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'canonical'))
+from canonical_v1 import CANON_VERSION, CanonicalizationError, payload_digest_v1
 
 
 class VerificationFailClosed(Exception):
@@ -33,7 +36,21 @@ def verify_production(assertion: Mapping, *, trusted_key_resolver, algorithm_all
 
 def verify_test_double(assertion: Mapping, *, trusted_keys: Iterable[str], algorithm_allowlist: Iterable[str],
                        audience: str, now: datetime) -> Verdict:
-    """TEST ONLY. Non-cryptographic rule checks. 'test_signature_ok' is a test-supplied flag, not a verification."""
+    """TEST ONLY. Non-cryptographic rule checks. 'test_signature_ok' is a test-supplied flag, not a verification.
+
+    Canonical payload binding (M-03): the canonicalization version must be receipt-canon-v1, and when the
+    payload is supplied its canonical SHA-256 fingerprint must equal the recorded payload_digest. This is a
+    byte-fingerprint check, not a signature check.
+    """
+    if assertion.get("canonicalization_version") != CANON_VERSION:
+        return Verdict(False, "unsupported_canonicalization_version")
+    if "payload" in assertion:
+        try:
+            recomputed = payload_digest_v1(assertion["payload"])
+        except CanonicalizationError:
+            return Verdict(False, "payload_not_canonicalizable")
+        if recomputed != assertion.get("payload_digest"):
+            return Verdict(False, "payload_digest_mismatch")
     if assertion.get("key_id") not in set(trusted_keys):
         return Verdict(False, "unknown_or_revoked_key")
     if assertion.get("alg") not in set(algorithm_allowlist):

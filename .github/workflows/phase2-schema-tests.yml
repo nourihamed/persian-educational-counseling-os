@@ -147,15 +147,19 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d receipt_test -f $W/workspace_activation_transactions.sql
           psql -X -v ON_ERROR_STOP=1 -d receipt_test -f $W/workspace_governance_events_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_test -f $R/receipt_00_canonical_payload_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d receipt_test -f $R/receipt_01_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/receipt_02_roles_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/receipt_03_consume_function_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_10_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_30_integrity_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_40_canonical_vectors_tests.sql
           createdb receipt_race
           psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_activation_transactions.sql
           psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_governance_events_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_race -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $R/receipt_00_canonical_payload_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $R/receipt_01_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_race -f $R/receipt_02_roles_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_race -f $R/receipt_03_consume_function_draft.sql
@@ -166,3 +170,5 @@ jobs:
         run: |
           cd docs/phase2/workspace/receipts/verifier_interface/tests
           python3 -m unittest -v test_verifier_contract.py
+          cd ../canonical
+          python3 -m unittest -v test_vectors_v1.py

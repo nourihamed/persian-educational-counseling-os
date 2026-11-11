@@ -52,11 +52,12 @@ RETURNS void LANGUAGE sql AS $$
   INSERT INTO governance_proof_receipts(receipt_id,assertion_id,nonce_digest,issuer_id,audience,key_id,workspace_id,
     actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,target_membership_id,
     role_or_permission_key,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,
+    canonicalization_version,
     issued_at,not_before,expires_at,verifier_kind,verifier_outcome)
   VALUES(p_receipt,p_assertion,sha256(convert_to(p_nonce,'UTF8')),'test-issuer','governance_adapter','test-key-1',p_ws,
     p_actor,'authn-event-x','assurance-x',p_action,p_agg_type,p_agg,p_target,p_key,
     sha256(convert_to('scope-x','UTF8')),'authority-x',p_policy,p_idem,
-    sha256(convert_to(p_payload::text,'UTF8')), p_nbf - interval '1 minute', p_nbf, p_exp,
+    receipt_payload_digest_v1(p_payload), 'receipt-canon-v1', p_nbf - interval '1 minute', p_nbf, p_exp,
     'external_independent_verifier','verified');
 $$;
 
@@ -72,13 +73,14 @@ DO $$ BEGIN
   INSERT INTO governance_proof_receipts(receipt_id,assertion_id,nonce_digest,issuer_id,audience,key_id,workspace_id,
     actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,target_membership_id,
     role_or_permission_key,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,
+    canonicalization_version,
     issued_at,not_before,expires_at,verifier_kind,verifier_outcome)
   VALUES('e9100000-0000-0000-0000-000000000002','f9100000-0000-0000-0000-000000000002',sha256(convert_to('nonce-2','UTF8')),
     'test-issuer','governance_adapter','test-key-1','a9100000-0000-0000-0000-000000000001',
     'b9100000-0000-0000-0000-000000000001','authn-event-x','assurance-x','role_granted','membership_role',
     'b9100000-0000-0000-0000-000000000003','b9100000-0000-0000-0000-000000000003','counselor',
     sha256(convert_to('scope-x','UTF8')),'authority-x','policy-v1','rc-idem-2',
-    sha256(convert_to('{"role_key":"counselor"}'::jsonb::text,'UTF8')),
+    receipt_payload_digest_v1('{"role_key":"counselor"}'::jsonb), 'receipt-canon-v1',
     now()-interval '2 hours',now()-interval '1 hour',now()+interval '1 day','external_independent_verifier','verified');
   RAISE NOTICE 'PASS RC-01 verifier_rt registers a receipt (INSERT only)';
 END $$;
@@ -129,20 +131,20 @@ RESET SESSION AUTHORIZATION;
 -- ---- RC-07..RC-12 storage constraints (verifier registration path, test-only inputs) ----
 SET SESSION AUTHORIZATION :"verifier_role";
 SELECT expect_error('RC-07 verifier_outcome other than verified is refused',
-  $q$INSERT INTO governance_proof_receipts(receipt_id,assertion_id,nonce_digest,issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,role_or_permission_key,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,issued_at,not_before,expires_at,verifier_kind,verifier_outcome)
-     VALUES(gen_random_uuid(),gen_random_uuid(),sha256(convert_to('n-7','UTF8')),'i','governance_adapter','k','a9100000-0000-0000-0000-000000000001','b9100000-0000-0000-0000-000000000001','a','b','role_granted','membership_role',gen_random_uuid(),'counselor',sha256('s'::bytea),'auth','policy-v1','k7',sha256('p'::bytea),now(),now(),now()+interval '1 day','external_independent_verifier','true')$q$, '23514');
+  $q$INSERT INTO governance_proof_receipts(receipt_id,assertion_id,nonce_digest,issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,role_or_permission_key,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,canonicalization_version,issued_at,not_before,expires_at,verifier_kind,verifier_outcome)
+     VALUES(gen_random_uuid(),gen_random_uuid(),sha256(convert_to('n-7','UTF8')),'i','governance_adapter','k','a9100000-0000-0000-0000-000000000001','b9100000-0000-0000-0000-000000000001','a','b','role_granted','membership_role',gen_random_uuid(),'counselor',sha256('s'::bytea),'auth','policy-v1','k7',sha256('p'::bytea),'receipt-canon-v1',now(),now(),now()+interval '1 day','external_independent_verifier','true')$q$, '23514');
 SELECT expect_error('RC-08 guardian-family receipt refused at storage (Q-007 open)',
-  $q$INSERT INTO governance_proof_receipts(receipt_id,assertion_id,nonce_digest,issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,issued_at,not_before,expires_at,verifier_kind,verifier_outcome)
-     VALUES(gen_random_uuid(),gen_random_uuid(),sha256(convert_to('n-8','UTF8')),'i','governance_adapter','k','a9100000-0000-0000-0000-000000000001','b9100000-0000-0000-0000-000000000001','a','b','guardian_granted','guardian_relationship',gen_random_uuid(),sha256('s'::bytea),'auth','policy-v1','k8',sha256('p'::bytea),now(),now(),now()+interval '1 day','external_independent_verifier','verified')$q$, '23514');
+  $q$INSERT INTO governance_proof_receipts(receipt_id,assertion_id,nonce_digest,issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,canonicalization_version,issued_at,not_before,expires_at,verifier_kind,verifier_outcome)
+     VALUES(gen_random_uuid(),gen_random_uuid(),sha256(convert_to('n-8','UTF8')),'i','governance_adapter','k','a9100000-0000-0000-0000-000000000001','b9100000-0000-0000-0000-000000000001','a','b','guardian_granted','guardian_relationship',gen_random_uuid(),sha256('s'::bytea),'auth','policy-v1','k8',sha256('p'::bytea),'receipt-canon-v1',now(),now(),now()+interval '1 day','external_independent_verifier','verified')$q$, '23514');
 SELECT expect_error('RC-09 expiry not after not-before is refused',
-  $q$INSERT INTO governance_proof_receipts(receipt_id,assertion_id,nonce_digest,issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,issued_at,not_before,expires_at,verifier_kind,verifier_outcome)
-     VALUES(gen_random_uuid(),gen_random_uuid(),sha256(convert_to('n-9','UTF8')),'i','governance_adapter','k','a9100000-0000-0000-0000-000000000001','b9100000-0000-0000-0000-000000000001','a','b','role_granted','membership_role',gen_random_uuid(),sha256('s'::bytea),'auth','policy-v1','k9',sha256('p'::bytea),now()-interval '2 hours',now()-interval '1 hour',now()-interval '2 hours','external_independent_verifier','verified')$q$, '23514');
+  $q$INSERT INTO governance_proof_receipts(receipt_id,assertion_id,nonce_digest,issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,scope_digest,authority_ref,policy_version,idempotency_key,payload_digest,canonicalization_version,issued_at,not_before,expires_at,verifier_kind,verifier_outcome)
+     VALUES(gen_random_uuid(),gen_random_uuid(),sha256(convert_to('n-9','UTF8')),'i','governance_adapter','k','a9100000-0000-0000-0000-000000000001','b9100000-0000-0000-0000-000000000001','a','b','role_granted','membership_role',gen_random_uuid(),sha256('s'::bytea),'auth','policy-v1','k9',sha256('p'::bytea),'receipt-canon-v1',now()-interval '2 hours',now()-interval '1 hour',now()-interval '2 hours','external_independent_verifier','verified')$q$, '23514');
 -- Uniqueness is a property of the constraint, not of a role: run as the table owner.
 RESET SESSION AUTHORIZATION;
 SELECT expect_error('RC-10 duplicate assertion_id is refused (single assertion, single receipt)',
-  $q$INSERT INTO governance_proof_receipts SELECT gen_random_uuid(), assertion_id, sha256(convert_to('other','UTF8')), issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,target_membership_id,role_or_permission_key,scope_digest,authority_ref,policy_version,'k10',payload_digest,issued_at,not_before,expires_at,verifier_kind,verifier_outcome FROM governance_proof_receipts WHERE receipt_id='e9100000-0000-0000-0000-000000000001'$q$, '23505', 'assertion_id');
+  $q$INSERT INTO governance_proof_receipts SELECT gen_random_uuid(), assertion_id, sha256(convert_to('other','UTF8')), issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,target_membership_id,role_or_permission_key,scope_digest,authority_ref,policy_version,'k10',payload_digest,canonicalization_version,issued_at,not_before,expires_at,verifier_kind,verifier_outcome FROM governance_proof_receipts WHERE receipt_id='e9100000-0000-0000-0000-000000000001'$q$, '23505', 'assertion_id');
 SELECT expect_error('RC-11 duplicate nonce digest is refused (replay guard)',
-  $q$INSERT INTO governance_proof_receipts SELECT gen_random_uuid(), gen_random_uuid(), nonce_digest, issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,target_membership_id,role_or_permission_key,scope_digest,authority_ref,policy_version,'k11',payload_digest,issued_at,not_before,expires_at,verifier_kind,verifier_outcome FROM governance_proof_receipts WHERE receipt_id='e9100000-0000-0000-0000-000000000001'$q$, '23505', 'nonce_digest');
+  $q$INSERT INTO governance_proof_receipts SELECT gen_random_uuid(), gen_random_uuid(), nonce_digest, issuer_id,audience,key_id,workspace_id,actor_membership_id,authn_event_ref,assurance_ref,action,aggregate_type,aggregate_id,target_membership_id,role_or_permission_key,scope_digest,authority_ref,policy_version,'k11',payload_digest,canonicalization_version,issued_at,not_before,expires_at,verifier_kind,verifier_outcome FROM governance_proof_receipts WHERE receipt_id='e9100000-0000-0000-0000-000000000001'$q$, '23505', 'nonce_digest');
 RESET SESSION AUTHORIZATION;
 
 -- Immutability and no-delete (owner-level guard; also denied to every runtime identity above).

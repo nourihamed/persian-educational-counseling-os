@@ -292,3 +292,19 @@ Guardian/parent and student legal authority tests remain blocked by Q-007 and mu
 - `receipts/tests/receipt_20_race.sh`: RR-01 (same assertion registered twice), RR-02 (same receipt and key consumed by two sessions). Status: PASS (5 of 5 local repeats).
 - `receipts/verifier_interface/tests/test_verifier_contract.py`: 10 verifier-boundary tests. Status: PASS (test double only).
 - Not run: GitHub Actions run for the commit; full RBAC matrix beyond receipt privileges; revocation freshness across service handoffs (NOT IMPLEMENTED).
+
+## Issue #13 corrective patch — test status (local author runs; NOT CI, NOT independently reproduced)
+| ID | What it checks | Where | Status |
+|---|---|---|---|
+| receipt_10 (RC-01..RC-31) | Role boundary, storage, binding, validity, single use, rollback, catalog | tests/receipt_10_tests.sql | PASS (44 notices, exit 0) |
+| M01-1..M01-7b | Retry before and after expiry, binding changes on retry, unconsumed expiry fail-closed | tests/receipt_30_integrity_tests.sql | PASS (exit 0) |
+| M02-1..M02-12 | State machine, metadata integrity, NULL bypass attempts, FK, immutable version | tests/receipt_30_integrity_tests.sql | PASS (exit 0) |
+| M03-V1..V10, M03-D1..D4, M03-R1..R3 | Canonical vectors, digests, fail-closed inputs | tests/receipt_40_canonical_vectors_tests.sql | PASS (exit 0) |
+| RR-01 | One winner for the same assertion | tests/receipt_20_race.sh | PASS |
+| RR-02 | Exactly one effect for two concurrent consumptions | tests/receipt_20_race.sh | PASS |
+| RR-03 | Concurrent identical retries after consumption return the original event | tests/receipt_20_race.sh | PASS |
+| verifier unit tests (15) | Rule checks, canonical version, digest binding (test double only) | verifier_interface/tests | PASS |
+| canonical unit tests (6) | Reference rules and vectors | verifier_interface/canonical | PASS |
+| CI for the corrective commit | Full workflow | GitHub Actions | NOT RUN until the commit is pushed |
+| Production verifier | — | — | NOT IMPLEMENTED (deferred) |
+| Revocation freshness across services | — | — | NOT IMPLEMENTED |
