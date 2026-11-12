@@ -327,3 +327,19 @@ Guardian/parent and student legal authority tests remain blocked by Q-007 and mu
 | Workflow | Steps 02 to 12 on a fresh PostgreSQL 16.15 database | ALL PASS (local run) |
 | GitHub Actions | postgres-draft-tests on 70e37d7 | success, runs 43158838826 and 43158833101 |
 | Not tested | Production verifier, signature, key lifecycle, mTLS, revocation propagation, owner/superuser bypass controls | NOT IMPLEMENTED or DEFERRED |
+
+## H-03 corrective — GUC replaced by privilege-backed grant (Supervisor finding; author-executed)
+| ID | Check | Status |
+|---|---|---|
+| H03-11 | governance owner (has UPDATE) sets receipt.consume_active to the target id, then direct registered→consumed is refused | PASS (23514, only the consume command) |
+| H03-12 | consume definer role sets receipt.consume_active, then direct transition is refused without a grant | PASS (23514) |
+| H03-13a/b/c | governance owner, verifier_rt and adapter cannot forge a consume grant | PASS (42501) |
+| H03-13d | adapter cannot read consume grants | PASS (42501) |
+| H03-14 | narrow privileges: grants writable only by the definer; definer owns the consume function; no role membership | PASS |
+| H03-15 / 15b | legitimate consume succeeds and releases its grant | PASS |
+| M02-2, M02-10 | metadata and foreign-key checks, now exercised with a same-transaction grant | PASS |
+| receipt_10, receipt_30, receipt_40 | regression | PASS (44, 21, 17 notices) |
+| receipt_50 | H-03 suite | PASS (21 notices) |
+| Full workflow steps 02 to 12 | fresh PostgreSQL 16.15 database | ALL PASS (local run) |
+| GitHub Actions | corrective commit | NOT YET RUN (pending push) |
+| M-05, M-06 | residual findings | OPEN (definitions not in implementation record) |

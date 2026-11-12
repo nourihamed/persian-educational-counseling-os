@@ -13,6 +13,7 @@ SET app.workspace_key = :'workspace_key';
 -- Owner = governance materializer (NOLOGIN). Caller identity is checked against the allowlist.
 SELECT 'ws_'||current_setting('app.workspace_key')||'_governance_owner' AS owner_role \gset
 SELECT 'ws_'||current_setting('app.workspace_key')||'_governance_adapter_rt' AS adapter_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_receipt_consume_definer' AS definer_role \gset
 
 BEGIN;
 CREATE FUNCTION consume_governance_receipt_and_apply(
@@ -127,19 +128,19 @@ BEGIN
     p_idempotency_key, r.payload_digest, p_event_payload, p_effective_at);
 
   -- 8. Mark consumed (single-use). The guard accepts this transition only for this receipt id.
-  PERFORM set_config('receipt.consume_active', p_receipt_id::text, true);
+  INSERT INTO public.receipt_consume_grants(receipt_id, txid) VALUES (p_receipt_id, txid_current());
   UPDATE public.governance_proof_receipts
      SET status = 'consumed', consumed_at = now(),
          consumed_event_id = v_ev.event_id, consumed_idempotency_key = p_idempotency_key
    WHERE receipt_id = p_receipt_id;
-  PERFORM set_config('receipt.consume_active', '', true);
+  DELETE FROM public.receipt_consume_grants WHERE receipt_id = p_receipt_id AND txid = txid_current();
 
   RETURN QUERY SELECT v_ev.event_id, v_ev.event_sequence;
 END;
 $body$;
 
 ALTER FUNCTION consume_governance_receipt_and_apply(uuid,uuid,text,text,uuid,uuid,text,bytea,text,text,jsonb,uuid,timestamptz)
-  OWNER TO :"owner_role";
+  OWNER TO :"definer_role";
 REVOKE ALL ON FUNCTION consume_governance_receipt_and_apply(uuid,uuid,text,text,uuid,uuid,text,bytea,text,text,jsonb,uuid,timestamptz)
   FROM PUBLIC, :"owner_role";
 GRANT EXECUTE ON FUNCTION consume_governance_receipt_and_apply(uuid,uuid,text,text,uuid,uuid,text,bytea,text,text,jsonb,uuid,timestamptz)

@@ -93,10 +93,8 @@ BEGIN
     END IF;
     RETURN NEW;
   ELSIF NEW.status = 'consumed' THEN
-    -- H-03: only the consume command (which sets receipt.consume_active to this receipt) may consume.
-    IF current_setting('receipt.consume_active', true) IS DISTINCT FROM NEW.receipt_id::text THEN
-      RAISE EXCEPTION 'only the consume command may transition a receipt to consumed' USING ERRCODE='check_violation';
-    END IF;
+    -- Consume-only authorisation is enforced by governance_proof_receipts_a_consume_grant (grant row written
+    -- only by the consume command's definer role). No session setting is consulted here.
     IF NEW.consumed_at IS NULL OR NEW.consumed_event_id IS NULL OR NEW.consumed_idempotency_key IS NULL THEN
       RAISE EXCEPTION 'incomplete consumption metadata' USING ERRCODE='check_violation';
     END IF;
@@ -112,6 +110,30 @@ BEGIN
   RAISE EXCEPTION 'illegal receipt transition % -> %', OLD.status, NEW.status USING ERRCODE='check_violation';
 END;
 $$;
+-- Transaction-scoped capability: the consume command inserts (receipt_id, txid_current()) before its UPDATE.
+-- Only the consume definer role has INSERT/DELETE on this table; no other identity can forge a grant.
+CREATE TABLE receipt_consume_grants (
+  receipt_id uuid NOT NULL REFERENCES governance_proof_receipts (receipt_id),
+  txid       bigint NOT NULL,
+  granted_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (receipt_id, txid)
+);
+CREATE FUNCTION receipt_consume_grant_guard() RETURNS trigger LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.receipt_consume_grants g
+                  WHERE g.receipt_id = NEW.receipt_id AND g.txid = txid_current()) THEN
+    RAISE EXCEPTION 'only the consume command may transition a receipt to consumed' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+-- Named to fire before governance_proof_receipts_guard (BEFORE triggers run in name order).
+CREATE TRIGGER governance_proof_receipts_a_consume_grant
+  BEFORE UPDATE ON governance_proof_receipts
+  FOR EACH ROW WHEN (OLD.status = 'registered' AND NEW.status = 'consumed')
+  EXECUTE FUNCTION receipt_consume_grant_guard();
+
 -- H-03: a receipt can enter the table ONLY as an initially registered receipt with no consumption metadata.
 CREATE FUNCTION receipt_insert_guard() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN

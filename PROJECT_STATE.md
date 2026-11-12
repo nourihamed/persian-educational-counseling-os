@@ -286,3 +286,10 @@ Product Owner approved the MVP role grantability matrix on 2026-11-10; see `docs
 - Executed: full workflow steps 02 to 12 locally on PostgreSQL 16.15 (all pass); GitHub Actions postgres-draft-tests success for 70e37d7 (runs 43158838826, 43158833101).
 - Not implemented: production verifier and cryptography (PS-1 to PS-8 deferred), mTLS, revocation policy and propagation, owner/superuser controls.
 - Phase 2 gate: NOT READY pending independent Supervisor review. Phase 3: not started. Real data: prohibited (D-014). PR #12: Draft, open, unmerged.
+
+## H-03 corrective status (implementation agent; not a supervisor review)
+- Supervisor HIGH finding addressed: consume-only transition no longer depends on the custom session setting. Authorisation is a transaction-scoped grant writable only by the consume definer role.
+- Executed locally: receipt_10 (44), receipt_30 (21), receipt_40 (17), receipt_50 (21), race RR-01..RR-03, verifier (15) and canonical (6) unit tests; full workflow steps 02 to 12 on a fresh PostgreSQL 16.15 database: ALL PASS.
+- Pending: push, GitHub Actions run for the corrective commit, independent Supervisor review.
+- Open: M-05 and M-06 (residual; definitions not in the implementation record). Revocation policy and propagation: deferred. Production verifier and cryptography (PS-1 to PS-8): deferred.
+- Phase 2 gate: NOT READY. Phase 3: unauthorized. Real data: prohibited (D-014). PR #12: Draft, open, unmerged.

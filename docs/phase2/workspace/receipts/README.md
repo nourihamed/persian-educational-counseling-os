@@ -56,8 +56,14 @@
 
 ## H-03 — receipt INSERT state-machine bypass (head 70e37d7)
 - Insert guard: a receipt enters the table only as status=registered with no consumption metadata. Direct INSERT of consumed or revoked receipts is refused, including with complete metadata and a valid event reference.
-- Consume-only transition: registered→consumed is accepted only when the consume command sets receipt.consume_active to that receipt id. Direct UPDATE is refused, including for the table owner.
+- Consume-only transition (CORRECTED, Supervisor finding): registered→consumed requires a transaction-scoped grant row (receipt_id, txid_current()) that only the consume definer role can write. The consume command inserts the grant, performs the UPDATE and deletes the grant in the same transaction. The governance owner, verifier_rt and adapter have no INSERT on the grant table. A session setting such as receipt.consume_active is NOT an authorisation and is no longer read anywhere; tests set it deliberately and still see refusal.
 - Revocation: registered→revoked is recorded in receipt_revocation_audit (append-only; revoked_by, revoked_at). No revocation policy or service is defined.
 - Consumed retry: the referenced event must match the receipt binding (idempotency key, aggregate, event type, actor, payload digest). Unrelated or inconsistent events are refused, never returned.
-- Suite: tests/receipt_50_h03_tests.sql, 12 PASS, run with the verifier_rt and adapter identities. Rollback-contained corruption cases simulate owner-level damage and confirm refusal.
-- Limits: owner/superuser can still alter session settings or disable triggers; that is deployment control, not a schema guarantee.
+- Suite: tests/receipt_50_h03_tests.sql, 21 PASS (H03-1..H03-15b), run with verifier_rt, adapter and definer/owner identities. Rollback-contained corruption cases simulate owner-level damage and confirm refusal.
+- Limits: a superuser or table owner can still disable triggers, alter grants or change ownership; that is deployment control, not a schema guarantee.
+- Revocation: unchanged. registered→revoked still uses the existing governance owner UPDATE and is audited. No revocation policy, authority or propagation is defined or implemented here.
+
+## Residual findings (kept OPEN; not claimed resolved)
+- M-05 and M-06: referenced in the Supervisor review. Their definitions are not part of the implementation record used for this correction, so this patch does not claim to resolve them.
+- Revocation authority and propagation across API, export, worker and notification: NOT IMPLEMENTED (deferred).
+- Production cryptography, verifier, key lifecycle, mTLS, PS-1 to PS-8: DEFERRED.

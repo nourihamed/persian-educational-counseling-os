@@ -11,6 +11,11 @@ SET app.workspace_key = :'workspace_key';
 SELECT 'ws_'||current_setting('app.workspace_key')||'_verifier_rt' AS verifier_role \gset
 SELECT 'ws_'||current_setting('app.workspace_key')||'_governance_adapter_rt' AS adapter_role \gset
 
+-- Role-name helper usable inside DO bodies (psql does not interpolate :vars inside dollar quotes).
+CREATE OR REPLACE FUNCTION ws_role(p_suffix text) RETURNS text LANGUAGE sql AS $$
+  SELECT 'ws_'||current_setting('app.workspace_key')||'_'||p_suffix
+$$;
+
 CREATE OR REPLACE FUNCTION expect_error(label text, stmt text, want text, want_msg text DEFAULT '')
 RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -121,4 +126,83 @@ DO $$ BEGIN
   END IF;
   RAISE NOTICE 'PASS H03-R rollbacks restored stored state and the guard trigger';
 END $$;
+SELECT 'ws_'||current_setting('app.workspace_key')||'_governance_owner' AS owner_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_receipt_consume_definer' AS definer_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_runtime' AS runtime_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_worker' AS worker_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_exporter' AS exporter_role \gset
+
+-- ---- H-03 corrective (Supervisor finding): a session setting is NOT an authorisation ----
+-- H03-11 / H03-12: an identity that HAS UPDATE privilege sets receipt.consume_active to the target id,
+-- then attempts a direct registered -> consumed transition. Must be refused: no consume grant exists.
+SELECT test_receipt_h('e9100000-0000-0000-0000-0000000000d8','f9100000-0000-0000-0000-0000000000d8','h03-n8','h03-key-8');
+SELECT test_receipt_h('e9100000-0000-0000-0000-0000000000d9','f9100000-0000-0000-0000-0000000000d9','h03-n9','h03-key-9');
+SET SESSION AUTHORIZATION :"owner_role";
+SELECT set_config('receipt.consume_active','e9100000-0000-0000-0000-0000000000d8',false);
+SELECT expect_error('H03-11 governance owner with UPDATE privilege cannot consume by setting receipt.consume_active',
+  $q$UPDATE governance_proof_receipts SET status='consumed', consumed_at=now(), consumed_event_id='d9100000-0000-0000-0000-0000000000c1', consumed_idempotency_key='h03-key-8' WHERE receipt_id='e9100000-0000-0000-0000-0000000000d8'$q$,
+  '23514', 'only the consume command');
+SELECT set_config('receipt.consume_active','',false);
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION :"definer_role";
+SELECT set_config('receipt.consume_active','e9100000-0000-0000-0000-0000000000d9',false);
+SELECT expect_error('H03-12 consume definer role cannot consume without its command-scoped grant, even with the setting',
+  $q$UPDATE governance_proof_receipts SET status='consumed', consumed_at=now(), consumed_event_id='d9100000-0000-0000-0000-0000000000c1', consumed_idempotency_key='h03-key-9' WHERE receipt_id='e9100000-0000-0000-0000-0000000000d9'$q$,
+  '23514', 'only the consume command');
+SELECT set_config('receipt.consume_active','',false);
+RESET SESSION AUTHORIZATION;
+
+-- H03-13: no identity other than the consume definer can write consume grants (forgery).
+SET SESSION AUTHORIZATION :"owner_role";
+SELECT expect_error('H03-13a governance owner cannot forge a consume grant',
+  $q$INSERT INTO receipt_consume_grants(receipt_id, txid) VALUES ('e9100000-0000-0000-0000-0000000000d8', txid_current())$q$, '42501');
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION :"verifier_role";
+SELECT expect_error('H03-13b verifier_rt cannot forge a consume grant',
+  $q$INSERT INTO receipt_consume_grants(receipt_id, txid) VALUES ('e9100000-0000-0000-0000-0000000000d8', txid_current())$q$, '42501');
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION :"adapter_role";
+SELECT expect_error('H03-13c adapter cannot forge a consume grant',
+  $q$INSERT INTO receipt_consume_grants(receipt_id, txid) VALUES ('e9100000-0000-0000-0000-0000000000d8', txid_current())$q$, '42501');
+SELECT expect_error('H03-13d adapter cannot read consume grants',
+  $q$SELECT count(*) FROM receipt_consume_grants$q$, '42501');
+RESET SESSION AUTHORIZATION;
+
+-- H03-14: narrow privileges retained (catalog). Runtime, worker, exporter, verifier and adapter hold no grant
+-- privilege; the governance owner cannot assume the definer; the definer owns the consume function.
+DO $$ BEGIN
+  IF has_table_privilege(ws_role('runtime'),'receipt_consume_grants','SELECT,INSERT,UPDATE,DELETE')
+  OR has_table_privilege(ws_role('worker'),'receipt_consume_grants','SELECT,INSERT,UPDATE,DELETE')
+  OR has_table_privilege(ws_role('exporter'),'receipt_consume_grants','SELECT,INSERT,UPDATE,DELETE')
+  OR has_table_privilege(ws_role('verifier_rt'),'receipt_consume_grants','SELECT,INSERT,UPDATE,DELETE')
+  OR has_table_privilege(ws_role('governance_adapter_rt'),'receipt_consume_grants','SELECT,INSERT,UPDATE,DELETE')
+  OR has_table_privilege(ws_role('governance_owner'),'receipt_consume_grants','INSERT,UPDATE,DELETE') THEN
+    RAISE EXCEPTION 'FAIL H03-14a: a non-definer identity holds a consume-grant privilege';
+  END IF;
+  IF NOT has_table_privilege(ws_role('receipt_consume_definer'),'receipt_consume_grants','INSERT,DELETE') THEN
+    RAISE EXCEPTION 'FAIL H03-14b: the consume definer lost its grant privileges';
+  END IF;
+  IF (SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE proname='consume_governance_receipt_and_apply') <> ws_role('receipt_consume_definer') THEN
+    RAISE EXCEPTION 'FAIL H03-14c: consume function is not owned by the definer role';
+  END IF;
+  IF pg_has_role(ws_role('governance_owner'), ws_role('receipt_consume_definer'), 'MEMBER') OR pg_has_role(ws_role('verifier_rt'), ws_role('receipt_consume_definer'), 'MEMBER')
+     OR pg_has_role(ws_role('governance_adapter_rt'), ws_role('receipt_consume_definer'), 'MEMBER') THEN
+    RAISE EXCEPTION 'FAIL H03-14d: a caller can assume the consume definer';
+  END IF;
+  RAISE NOTICE 'PASS H03-14 narrow privileges retained: grants writable only by the definer; definer owns the function; no role membership';
+END $$;
+
+-- H03-15: legitimate consume still succeeds through the command (grant scoped to its own transaction).
+SELECT test_receipt_h('e9100000-0000-0000-0000-0000000000da','f9100000-0000-0000-0000-0000000000da','h03-na','h03-key-a');
+SET SESSION AUTHORIZATION :"adapter_role";
+SELECT expect_ok('H03-15 the legitimate consume command still succeeds for a registered receipt',
+  $q$SELECT * FROM consume_governance_receipt_and_apply('e9100000-0000-0000-0000-0000000000da','b9100000-0000-0000-0000-000000000001','role_granted','membership_role','b9100000-0000-0000-0000-000000000003','b9100000-0000-0000-0000-000000000003','counselor',sha256(convert_to('scope-x','UTF8')),'policy-v1','h03-key-a','{"role_key":"counselor"}'::jsonb,'d9100000-0000-0000-0000-0000000000db',now())$q$);
+RESET SESSION AUTHORIZATION;
+DO $$ BEGIN
+  IF (SELECT count(*) FROM receipt_consume_grants WHERE receipt_id='e9100000-0000-0000-0000-0000000000da') <> 0 THEN
+    RAISE EXCEPTION 'FAIL H03-15b: consume grant not released after the command';
+  END IF;
+  RAISE NOTICE 'PASS H03-15b the command releases its grant (no residue)';
+END $$;
+
 DO $$ BEGIN RAISE NOTICE '=== H-03 SUITE COMPLETED (synthetic) ==='; END $$;

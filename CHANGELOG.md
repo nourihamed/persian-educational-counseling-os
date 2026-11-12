@@ -526,3 +526,9 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Revocation recorded in an append-only audit (revoked_by, revoked_at). No revocation policy or service introduced.
 - Consumed retry checks the referenced event against the receipt binding; inconsistent events are refused.
 - Regression suite receipt_50_h03_tests.sql (12 PASS). CI success on 70e37d7 is execution evidence only, not production approval.
+
+### H-03 corrective — privilege-backed consume boundary (Supervisor finding)
+- Replaced the session-setting authorisation (receipt.consume_active) with a transaction-scoped consume grant row, writable only by a dedicated consume definer role that owns the consume function.
+- Trigger governance_proof_receipts_a_consume_grant refuses registered→consumed without a grant from the same transaction, including for identities that hold UPDATE.
+- Added negative tests with setting-based attempts, grant forgery refusals for governance owner, verifier_rt and adapter, a catalog privilege check, and a legitimate consume that releases its grant.
+- Revocation unchanged and still deferred; M-05 and M-06 remain open residual findings.

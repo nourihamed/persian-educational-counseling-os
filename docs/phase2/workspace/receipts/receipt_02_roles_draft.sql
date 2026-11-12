@@ -20,7 +20,8 @@ DECLARE r text;
 BEGIN
   FOREACH r IN ARRAY ARRAY[
     'ws_'||current_setting('app.workspace_key')||'_verifier_rt',
-    'ws_'||current_setting('app.workspace_key')||'_governance_adapter_rt'] LOOP
+    'ws_'||current_setting('app.workspace_key')||'_governance_adapter_rt',
+    'ws_'||current_setting('app.workspace_key')||'_receipt_consume_definer'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=r) THEN
       EXECUTE format('CREATE ROLE %I NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS', r);
     END IF;
@@ -35,6 +36,7 @@ SELECT 'ws_'||current_setting('app.workspace_key')||'_governance_owner' AS owner
 SELECT 'ws_'||current_setting('app.workspace_key')||'_runtime' AS runtime_role \gset
 SELECT 'ws_'||current_setting('app.workspace_key')||'_worker' AS worker_role \gset
 SELECT 'ws_'||current_setting('app.workspace_key')||'_exporter' AS exporter_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_receipt_consume_definer' AS definer_role \gset
 
 -- Start from zero for the receipt table and the consume function.
 REVOKE ALL ON TABLE governance_proof_receipts FROM PUBLIC, :"runtime_role", :"worker_role", :"exporter_role", :"verifier_role", :"adapter_role";
@@ -49,6 +51,16 @@ GRANT SELECT, UPDATE ON TABLE governance_proof_receipts TO :"owner_role";
 GRANT SELECT ON TABLE receipt_adapter_allowlist TO :"owner_role";
 -- The consume function reads the Workspace identity (single row) to bind receipts to this Workspace.
 GRANT SELECT ON TABLE workspace_profile TO :"owner_role";
+-- H-03 (corrected): the consume definer owns the consume function and is the ONLY identity that can write
+-- consume grants. The governance owner keeps its existing revocation-related UPDATE but cannot grant consumption.
+REVOKE ALL ON TABLE receipt_consume_grants FROM PUBLIC, :"runtime_role", :"worker_role", :"exporter_role", :"verifier_role", :"adapter_role", :"owner_role";
+GRANT USAGE ON SCHEMA public TO :"definer_role";
+GRANT SELECT, INSERT, DELETE ON TABLE receipt_consume_grants TO :"definer_role";
+GRANT SELECT, UPDATE ON TABLE governance_proof_receipts TO :"definer_role";
+GRANT SELECT ON TABLE receipt_adapter_allowlist TO :"definer_role";
+GRANT SELECT ON TABLE workspace_profile TO :"definer_role";
+GRANT SELECT ON TABLE workspace_governance_events TO :"definer_role";
+GRANT EXECUTE ON FUNCTION append_workspace_governance_event(uuid,text,uuid,text,uuid,text,text,text,text,bytea,jsonb,timestamptz) TO :"definer_role";
 -- H-03: revocation audit is written by the governance owner only (no verifier, adapter or runtime access).
 REVOKE ALL ON TABLE receipt_revocation_audit FROM PUBLIC, :"runtime_role", :"worker_role", :"exporter_role", :"verifier_role", :"adapter_role";
 GRANT SELECT, INSERT ON TABLE receipt_revocation_audit TO :"owner_role";
