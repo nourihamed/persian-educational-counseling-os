@@ -280,3 +280,9 @@ Product Owner approved the MVP role grantability matrix on 2026-11-10; see `docs
 - Local draft results for the exact patch: receipt suites, integrity suite, canonical vectors, concurrency (RR-01, RR-02, RR-03), verifier unit tests and canonical unit tests passed in local runs. See TEST_PLAN.md for per-test status and the evidence reference.
 - Not implemented: production cryptographic verifier and policy (deferred, PS-1..PS-8), mTLS, revocation freshness across services, production migrations.
 - Phase 2 gate: NOT READY pending independent supervisor review. Phase 3: not started. Real student data: prohibited (D-014). PR #12: Draft, open, not merged.
+
+## H-03 status (head 70e37d7, implementation agent; not a supervisor review)
+- Implemented as draft: insert guard, consume-only transition, audited revocation, consistent consumed retry, verifier_rt negative tests.
+- Executed: full workflow steps 02 to 12 locally on PostgreSQL 16.15 (all pass); GitHub Actions postgres-draft-tests success for 70e37d7 (runs 43158838826, 43158833101).
+- Not implemented: production verifier and cryptography (PS-1 to PS-8 deferred), mTLS, revocation policy and propagation, owner/superuser controls.
+- Phase 2 gate: NOT READY pending independent Supervisor review. Phase 3: not started. Real data: prohibited (D-014). PR #12: Draft, open, unmerged.

@@ -308,3 +308,22 @@ Guardian/parent and student legal authority tests remain blocked by Q-007 and mu
 | CI for the corrective commit | Full workflow | GitHub Actions | NOT RUN until the commit is pushed |
 | Production verifier | — | — | NOT IMPLEMENTED (deferred) |
 | Revocation freshness across services | — | — | NOT IMPLEMENTED |
+
+## H-03 — receipt INSERT bypass and consumed-retry consistency (head 70e37d7; author-executed draft tests)
+| ID | Check | Status |
+|---|---|---|
+| H03-1 | verifier_rt INSERT with status=consumed and complete metadata is refused | PASS (SQLSTATE 23514) |
+| H03-2 | verifier_rt INSERT with status=revoked is refused | PASS (23514) |
+| H03-3 | verifier_rt ordinary registered INSERT is accepted | PASS |
+| H03-4 | owner-level registered→consumed outside the consume command is refused | PASS (23514) |
+| H03-5 | revocation is recorded with revoked_by and time | PASS |
+| H03-5b | revocation audit is append-only | PASS (23514) |
+| H03-6 | verifier_rt cannot revoke (no UPDATE) | PASS (42501) |
+| H03-7 | verifier_rt cannot write the revocation audit | PASS (42501) |
+| H03-8 | normal consume and exact retry return the same event | PASS |
+| H03-9 | consumed receipt pointing at an existing unrelated event is refused on retry (rolled back) | PASS (23514) |
+| H03-10 | inconsistent stored consumption idempotency key is refused on retry (rolled back) | PASS (23514) |
+| H03-R | rollbacks restored stored state and the guard trigger | PASS |
+| Workflow | Steps 02 to 12 on a fresh PostgreSQL 16.15 database | ALL PASS (local run) |
+| GitHub Actions | postgres-draft-tests on 70e37d7 | success, runs 43158838826 and 43158833101 |
+| Not tested | Production verifier, signature, key lifecycle, mTLS, revocation propagation, owner/superuser bypass controls | NOT IMPLEMENTED or DEFERRED |

@@ -519,3 +519,10 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Canonical payload contract `receipt-canon-v1` added (contract, draft SQL, test-only reference, vectors).
 - Verifier test double checks the canonicalization version and the payload digest (not a signature check).
 - Workflow updated for the canonical contract and the new suites. Not production implementation; not an approval.
+
+### Issue #13 H-03 correction (head 70e37d7)
+- Receipt INSERT accepts only initially registered receipts with no consumption metadata; consumed and revoked cannot be inserted directly.
+- registered→consumed only through the consume command for that receipt; direct owner-level UPDATE refused.
+- Revocation recorded in an append-only audit (revoked_by, revoked_at). No revocation policy or service introduced.
+- Consumed retry checks the referenced event against the receipt binding; inconsistent events are refused.
+- Regression suite receipt_50_h03_tests.sql (12 PASS). CI success on 70e37d7 is execution evidence only, not production approval.

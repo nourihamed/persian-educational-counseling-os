@@ -53,3 +53,11 @@
 - Production cryptographic verification, signature algorithm, allowlist values, key registry, key lifecycle, clock-skew allowance, CA and trust store, mTLS operation: all DEFERRED (Platform Security PS-1 to PS-8).
 - Revocation freshness across API, export, worker and notification handoffs: NOT IMPLEMENTED.
 - Duplicate-key rejection at ingress: the SQL draft cannot enforce it (see contract section 6).
+
+## H-03 — receipt INSERT state-machine bypass (head 70e37d7)
+- Insert guard: a receipt enters the table only as status=registered with no consumption metadata. Direct INSERT of consumed or revoked receipts is refused, including with complete metadata and a valid event reference.
+- Consume-only transition: registered→consumed is accepted only when the consume command sets receipt.consume_active to that receipt id. Direct UPDATE is refused, including for the table owner.
+- Revocation: registered→revoked is recorded in receipt_revocation_audit (append-only; revoked_by, revoked_at). No revocation policy or service is defined.
+- Consumed retry: the referenced event must match the receipt binding (idempotency key, aggregate, event type, actor, payload digest). Unrelated or inconsistent events are refused, never returned.
+- Suite: tests/receipt_50_h03_tests.sql, 12 PASS, run with the verifier_rt and adapter identities. Rollback-contained corruption cases simulate owner-level damage and confirm refusal.
+- Limits: owner/superuser can still alter session settings or disable triggers; that is deployment control, not a schema guarantee.
