@@ -91,9 +91,15 @@ SELECT test_receipt_i('e9100000-0000-0000-0000-0000000000c1','f9100000-0000-0000
 SELECT expect_error('M02-1 consumption metadata written while state stays registered',
   $q$UPDATE governance_proof_receipts SET consumed_at=now() WHERE receipt_id='e9100000-0000-0000-0000-0000000000c1'$q$,
   '23514', 'may only be written');
+SELECT expect_error('M02-2a a transition to consumed outside the consume command is refused (H-03)',
+  $q$UPDATE governance_proof_receipts SET status='consumed', consumed_at=now() WHERE receipt_id='e9100000-0000-0000-0000-0000000000c1'$q$,
+  '23514', 'only the consume command');
+-- Simulate the consume command's scope to exercise the metadata-completeness rule itself.
+SELECT set_config('receipt.consume_active','e9100000-0000-0000-0000-0000000000c1',false);
 SELECT expect_error('M02-2 incomplete consumption metadata on a transition to consumed',
   $q$UPDATE governance_proof_receipts SET status='consumed', consumed_at=now() WHERE receipt_id='e9100000-0000-0000-0000-0000000000c1'$q$,
   '23514', 'incomplete consumption metadata');
+SELECT set_config('receipt.consume_active','',false);
 SELECT expect_error('M02-6 NULL status cannot bypass the state machine (guard rejects before NOT NULL)',
   $q$UPDATE governance_proof_receipts SET status=NULL WHERE receipt_id='e9100000-0000-0000-0000-0000000000c1'$q$, '23514', 'illegal receipt transition');
 SELECT expect_error('M02-7 a consumed state cannot be inserted directly without metadata (CHECK, no NULL bypass)',
@@ -128,8 +134,10 @@ SELECT expect_error('M02-9 mutation after revocation is refused (revoked -> regi
 -- Consumption must reference an event that exists (FK, same Workspace database).
 SELECT test_receipt_i('e9100000-0000-0000-0000-0000000000c3','f9100000-0000-0000-0000-0000000000c3','m02-n3','m02-key-3',
   now()-interval '1 hour', now()+interval '1 day');
+SELECT set_config('receipt.consume_active','e9100000-0000-0000-0000-0000000000c3',false);
 SELECT expect_error('M02-10 consumption metadata pointing at a non-existent event is refused',
   $q$UPDATE governance_proof_receipts SET status='consumed', consumed_at=now(), consumed_event_id=gen_random_uuid(), consumed_idempotency_key='m02-key-3' WHERE receipt_id='e9100000-0000-0000-0000-0000000000c3'$q$, '23503');
+SELECT set_config('receipt.consume_active','',false);
 
 -- Binding columns (including the canonicalization version) cannot change after registration.
 SELECT expect_error('M02-11 canonicalization version is immutable after registration',

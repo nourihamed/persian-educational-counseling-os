@@ -49,6 +49,10 @@ GRANT SELECT, UPDATE ON TABLE governance_proof_receipts TO :"owner_role";
 GRANT SELECT ON TABLE receipt_adapter_allowlist TO :"owner_role";
 -- The consume function reads the Workspace identity (single row) to bind receipts to this Workspace.
 GRANT SELECT ON TABLE workspace_profile TO :"owner_role";
+-- H-03: revocation audit is written by the governance owner only (no verifier, adapter or runtime access).
+REVOKE ALL ON TABLE receipt_revocation_audit FROM PUBLIC, :"runtime_role", :"worker_role", :"exporter_role", :"verifier_role", :"adapter_role";
+GRANT SELECT, INSERT ON TABLE receipt_revocation_audit TO :"owner_role";
+GRANT USAGE ON SEQUENCE receipt_revocation_audit_audit_id_seq TO :"owner_role";
 
 -- Adapter: may call the consume function only (EXECUTE granted in receipt_03).
 -- It has no table privilege on receipts or events.

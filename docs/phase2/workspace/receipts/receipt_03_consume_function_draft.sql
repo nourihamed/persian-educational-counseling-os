@@ -92,10 +92,21 @@ BEGIN
     RAISE EXCEPTION 'receipt is revoked' USING ERRCODE = 'insufficient_privilege';
   END IF;
   IF r.status = 'consumed' THEN
-    -- Full binding (including idempotency key and payload digest) matched: return the original result.
-    -- No second effect; no time check (the original consumption was already authorised).
-    SELECT e.event_sequence INTO v_seq FROM public.workspace_governance_events e WHERE e.event_id = r.consumed_event_id;
-    RETURN QUERY SELECT r.consumed_event_id, v_seq;
+    -- H-03: the stored consumption must be CONSISTENT with the receipt binding and the referenced event.
+    -- Never return an unrelated event.
+    SELECT e.* INTO v_ev FROM public.workspace_governance_events e WHERE e.event_id = r.consumed_event_id;
+    IF NOT FOUND
+       OR v_ev.idempotency_key IS DISTINCT FROM r.consumed_idempotency_key
+       OR v_ev.idempotency_key IS DISTINCT FROM r.idempotency_key
+       OR v_ev.aggregate_type IS DISTINCT FROM r.aggregate_type
+       OR v_ev.aggregate_id IS DISTINCT FROM r.aggregate_id
+       OR v_ev.event_type IS DISTINCT FROM r.action
+       OR v_ev.actor_membership_id IS DISTINCT FROM r.actor_membership_id
+       OR v_ev.payload_hash IS DISTINCT FROM r.payload_digest THEN
+      RAISE EXCEPTION 'consumed receipt is inconsistent with its consumption event' USING ERRCODE='check_violation';
+    END IF;
+    -- Full binding matched and the event is consistent: return the original result.
+    RETURN QUERY SELECT v_ev.event_id, v_ev.event_sequence;
     RETURN;
   END IF;
 
@@ -115,11 +126,13 @@ BEGIN
     p_actor_membership_id, r.authn_event_ref, r.authority_ref, r.policy_version,
     p_idempotency_key, r.payload_digest, p_event_payload, p_effective_at);
 
-  -- 8. Mark consumed (single-use).
+  -- 8. Mark consumed (single-use). The guard accepts this transition only for this receipt id.
+  PERFORM set_config('receipt.consume_active', p_receipt_id::text, true);
   UPDATE public.governance_proof_receipts
      SET status = 'consumed', consumed_at = now(),
          consumed_event_id = v_ev.event_id, consumed_idempotency_key = p_idempotency_key
    WHERE receipt_id = p_receipt_id;
+  PERFORM set_config('receipt.consume_active', '', true);
 
   RETURN QUERY SELECT v_ev.event_id, v_ev.event_sequence;
 END;

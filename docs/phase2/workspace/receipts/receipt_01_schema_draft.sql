@@ -93,11 +93,17 @@ BEGIN
     END IF;
     RETURN NEW;
   ELSIF NEW.status = 'consumed' THEN
+    -- H-03: only the consume command (which sets receipt.consume_active to this receipt) may consume.
+    IF current_setting('receipt.consume_active', true) IS DISTINCT FROM NEW.receipt_id::text THEN
+      RAISE EXCEPTION 'only the consume command may transition a receipt to consumed' USING ERRCODE='check_violation';
+    END IF;
     IF NEW.consumed_at IS NULL OR NEW.consumed_event_id IS NULL OR NEW.consumed_idempotency_key IS NULL THEN
       RAISE EXCEPTION 'incomplete consumption metadata' USING ERRCODE='check_violation';
     END IF;
     RETURN NEW;
   ELSIF NEW.status = 'revoked' THEN
+    -- Revocation is audited (who, when). No revocation policy or service is defined here.
+    INSERT INTO receipt_revocation_audit(receipt_id, revoked_by) VALUES (OLD.receipt_id, session_user);
     IF NEW.consumed_at IS NOT NULL OR NEW.consumed_event_id IS NOT NULL OR NEW.consumed_idempotency_key IS NOT NULL THEN
       RAISE EXCEPTION 'revocation must not carry consumption metadata' USING ERRCODE='check_violation';
     END IF;
@@ -106,12 +112,40 @@ BEGIN
   RAISE EXCEPTION 'illegal receipt transition % -> %', OLD.status, NEW.status USING ERRCODE='check_violation';
 END;
 $$;
+-- H-03: a receipt can enter the table ONLY as an initially registered receipt with no consumption metadata.
+CREATE FUNCTION receipt_insert_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.status IS DISTINCT FROM 'registered'
+     OR NEW.consumed_at IS NOT NULL OR NEW.consumed_event_id IS NOT NULL OR NEW.consumed_idempotency_key IS NOT NULL THEN
+    RAISE EXCEPTION 'only an initially registered receipt without consumption metadata may be inserted'
+      USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER governance_proof_receipts_insert_guard
+  BEFORE INSERT ON governance_proof_receipts
+  FOR EACH ROW EXECUTE FUNCTION receipt_insert_guard();
+
 CREATE TRIGGER governance_proof_receipts_guard
   BEFORE UPDATE OR DELETE ON governance_proof_receipts
   FOR EACH ROW EXECUTE FUNCTION receipt_guard();
 
 -- Allowlist of identities that may call the consume function. Owned by the table owner;
 -- no runtime, worker, exporter, verifier or adapter role can write it.
+-- Append-only audit of revocations (who, when).
+CREATE TABLE receipt_revocation_audit (
+  audit_id     bigserial PRIMARY KEY,
+  receipt_id   uuid NOT NULL REFERENCES governance_proof_receipts (receipt_id),
+  revoked_by   name NOT NULL,
+  revoked_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE FUNCTION receipt_revocation_audit_append_only() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'receipt_revocation_audit is append-only' USING ERRCODE='check_violation'; END;
+$$;
+CREATE TRIGGER receipt_revocation_audit_guard BEFORE UPDATE OR DELETE ON receipt_revocation_audit
+  FOR EACH ROW EXECUTE FUNCTION receipt_revocation_audit_append_only();
+
 CREATE TABLE receipt_adapter_allowlist (
   role_name text PRIMARY KEY
 );
