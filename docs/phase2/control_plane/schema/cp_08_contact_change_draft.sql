@@ -114,6 +114,7 @@ DECLARE
   v_maintenance boolean;
   v_owner uuid; v_gen bigint; v_life text;
   v_payload jsonb;
+  v_event_id uuid;
   v_claim public.enrollment_claims%ROWTYPE;
   v_claims integer;
   v_proof public.contact_change_proofs%ROWTYPE;
@@ -251,13 +252,21 @@ BEGIN
          old_fingerprints,new_fingerprints,cipher_key_version,ownership_generation,outcome)
   VALUES (gen_random_uuid(),p_idempotency_key,p_student_id,v_claim.claim_id,p_proof_id,v_proof.authn_event_ref,
           v_old,v_new,p_cipher_key_version,v_gen,'applied');
+  v_event_id := gen_random_uuid();
   v_payload := jsonb_build_object('student_id',p_student_id::text,'command',p_idempotency_key,
                                   'ownership_generation',v_gen);
   INSERT INTO public.outbox_events(event_id,case_id,event_type,schema_version,payload,payload_hash,
-                                   student_id,ownership_generation,correlation_id)
-  VALUES (gen_random_uuid(),NULL,'student_contact_changed',1,v_payload,
-          sha256(convert_to(v_payload::text,'UTF8')),p_student_id,v_gen,
+                                   student_id,source_workspace_id,ownership_generation,correlation_id)
+  VALUES (v_event_id,NULL,'student_contact_changed',1,v_payload,
+          sha256(convert_to(v_payload::text,'UTF8')),p_student_id,v_owner,v_gen,
           md5(p_idempotency_key)::uuid);
+  -- C-01: this event has exactly one required recipient, the Workspace that currently owns the student.
+  IF to_regclass('public.outbox_event_recipients') IS NOT NULL THEN
+    INSERT INTO public.outbox_event_recipients(event_id,workspace_id,recipient_role)
+    VALUES (v_event_id,v_owner,'owner');
+    SET CONSTRAINTS public.outbox_event_requires_recipient IMMEDIATE;
+    SET CONSTRAINTS public.outbox_event_requires_recipient DEFERRED;
+  END IF;
   RETURN 'applied';
 END;
 $$;
