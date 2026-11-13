@@ -237,7 +237,7 @@ CREATE TABLE transfer_approval_revocations (
 CREATE VIEW transfer_approvals_current AS
   SELECT a.* FROM transfer_approvals a
    WHERE NOT EXISTS (SELECT 1 FROM transfer_approval_revocations r WHERE r.approval_id = a.approval_id)
-     AND a.verified_at <= now() AND (a.valid_until IS NULL OR a.valid_until > now());
+     AND a.verified_at <= clock_timestamp() AND (a.valid_until IS NULL OR a.valid_until > clock_timestamp());
 
 CREATE FUNCTION guard_transfer_approval_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
 BEGIN
@@ -256,11 +256,11 @@ CREATE TRIGGER transfer_approval_revocations_immutable
 -- per (case, kind): a replacement is accepted only after the previous one is revoked or expired.
 CREATE FUNCTION guard_transfer_approval_insert() RETURNS trigger LANGUAGE plpgsql AS $body$
 BEGIN
-  PERFORM 1 FROM transfer_cases WHERE case_id = NEW.case_id FOR UPDATE;
-  IF EXISTS (SELECT 1 FROM transfer_approvals a
+  PERFORM 1 FROM public.transfer_cases WHERE case_id = NEW.case_id FOR UPDATE;
+  IF EXISTS (SELECT 1 FROM public.transfer_approvals a
               WHERE a.case_id = NEW.case_id AND a.approval_kind = NEW.approval_kind
-                AND NOT EXISTS (SELECT 1 FROM transfer_approval_revocations r WHERE r.approval_id = a.approval_id)
-                AND (a.valid_until IS NULL OR a.valid_until > now())) THEN
+                AND NOT EXISTS (SELECT 1 FROM public.transfer_approval_revocations r WHERE r.approval_id = a.approval_id)
+                AND (a.valid_until IS NULL OR a.valid_until > clock_timestamp())) THEN
     RAISE EXCEPTION 'a current % approval already exists for this transfer case; revoke it before recording a replacement', NEW.approval_kind
       USING ERRCODE='unique_violation';
   END IF;
@@ -270,15 +270,85 @@ CREATE TRIGGER transfer_approvals_one_current
   BEFORE INSERT ON transfer_approvals
   FOR EACH ROW EXECUTE FUNCTION guard_transfer_approval_insert();
 
+-- PD-2026-11-13-C — separation of approval duties.
+-- Default rule: one person may not satisfy incompatible approval kinds for the same transfer.
+-- The ONLY contemplated exception is 'source_destination_owner' (the source counselor is also the owner of
+-- the destination Workspace). Its approval authority and exact boundary are DEFERRED, so the exception is
+-- disabled and the transfer fails closed when it would be needed. The CHECK below makes an enabled row
+-- unstorable: enabling it is a reviewable schema change, not DML, and no role - including any Platform
+-- Admin role - can turn it on. No conflict-resolution authority is granted to anyone by this table.
+CREATE TABLE transfer_approval_conflict_exceptions (
+    exception_case       text PRIMARY KEY CHECK (exception_case IN ('source_destination_owner')),
+    enabled              boolean NOT NULL DEFAULT false,
+    authority_decision_ref text,     -- the recorded decision that would permit it; none exists yet
+    recorded_at          timestamptz NOT NULL DEFAULT now(),
+    CHECK (enabled = false),                                  -- DEFERRED: fail closed
+    CHECK (authority_decision_ref IS NULL OR enabled)          -- no decision reference without an enabled rule
+);
+INSERT INTO transfer_approval_conflict_exceptions (exception_case) VALUES ('source_destination_owner');
+
+CREATE FUNCTION guard_transfer_approval_separation() RETURNS trigger LANGUAGE plpgsql AS $body$
+DECLARE v_other text; v_exception_enabled boolean;
+BEGIN
+  SELECT a.approval_kind INTO v_other
+    FROM public.transfer_approvals a
+   WHERE a.case_id = NEW.case_id
+     AND a.approver_ref = NEW.approver_ref
+     AND a.approval_kind <> NEW.approval_kind
+     AND NOT EXISTS (SELECT 1 FROM public.transfer_approval_revocations r WHERE r.approval_id = a.approval_id)
+     AND (a.valid_until IS NULL OR a.valid_until > clock_timestamp())
+   LIMIT 1;
+  IF v_other IS NULL THEN
+    RETURN NEW;
+  END IF;
+  SELECT enabled INTO v_exception_enabled
+    FROM public.transfer_approval_conflict_exceptions WHERE exception_case = 'source_destination_owner';
+  IF v_exception_enabled IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'approver already holds the % approval for this transfer: one person cannot satisfy incompatible approval kinds (the source_destination_owner exception is disabled)', v_other
+      USING ERRCODE='check_violation';
+  END IF;
+  -- Unreachable while the exception is disabled. Even if it were enabled, there is no approved independent
+  -- authority to evaluate it here, so the transfer still fails closed rather than self-approving.
+  RAISE EXCEPTION 'the source_destination_owner exception has no approved enforcement authority; transfer fails closed'
+    USING ERRCODE='check_violation';
+END; $body$;
+CREATE TRIGGER transfer_approvals_separation
+  BEFORE INSERT ON transfer_approvals
+  FOR EACH ROW EXECUTE FUNCTION guard_transfer_approval_separation();
+
+-- The recorded authority snapshot must name the side of the case the approval kind belongs to. This is a
+-- structural cross-Workspace check on the stored evidence; it does NOT verify the authority itself.
+CREATE FUNCTION guard_transfer_approval_side() RETURNS trigger LANGUAGE plpgsql AS $body$
+DECLARE v_src uuid; v_dst uuid; v_claimed uuid;
+BEGIN
+  SELECT source_workspace_id, destination_workspace_id INTO v_src, v_dst
+    FROM public.transfer_cases WHERE case_id = NEW.case_id;
+  BEGIN
+    v_claimed := (NEW.authority_snapshot->>'workspace_id')::uuid;
+  EXCEPTION WHEN invalid_text_representation THEN
+    RAISE EXCEPTION 'authority_snapshot.workspace_id is not a uuid' USING ERRCODE='check_violation';
+  END;
+  IF NEW.approval_kind = 'fee_confirmation' AND v_claimed IS DISTINCT FROM v_src THEN
+    RAISE EXCEPTION 'fee confirmation must be recorded by the SOURCE Workspace of this case' USING ERRCODE='check_violation';
+  END IF;
+  IF NEW.approval_kind = 'destination_acceptance' AND v_claimed IS DISTINCT FROM v_dst THEN
+    RAISE EXCEPTION 'destination acceptance must be recorded by the DESTINATION Workspace of this case' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER transfer_approvals_side
+  BEFORE INSERT ON transfer_approvals
+  FOR EACH ROW EXECUTE FUNCTION guard_transfer_approval_side();
+
 CREATE FUNCTION guard_transfer_approval_revocation_insert() RETURNS trigger LANGUAGE plpgsql AS $body$
 DECLARE v_case uuid;
 BEGIN
-  SELECT case_id INTO v_case FROM transfer_approvals WHERE approval_id = NEW.approval_id;
-  PERFORM 1 FROM transfer_cases WHERE case_id = v_case FOR UPDATE;
+  SELECT case_id INTO v_case FROM public.transfer_approvals WHERE approval_id = NEW.approval_id;
+  PERFORM 1 FROM public.transfer_cases WHERE case_id = v_case FOR UPDATE;
   RETURN NEW;
 END; $body$;
 CREATE TRIGGER transfer_approval_revocations_serialise
-  BEFORE INSERT ON transfer_approval_revocations
+  BEFORE INSERT ON public.transfer_approval_revocations
   FOR EACH ROW EXECUTE FUNCTION guard_transfer_approval_revocation_insert();
 
 -- Idempotency / command deduplication for ownership-changing commands.
@@ -291,43 +361,70 @@ CREATE TABLE command_log (
 );
 
 -- Inbox deduplication ledger. Consumers insert event_id once and reject stale generations.
-CREATE TABLE inbox_events (
-    event_id uuid PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES workspaces(workspace_id),
-    student_id uuid NOT NULL REFERENCES platform_students(student_id),
-    ownership_generation bigint NOT NULL CHECK (ownership_generation >= 1),
-    received_at timestamptz NOT NULL DEFAULT now(),
-    processed_at timestamptz
-);
-
--- Transactional outbox: written in the same transaction as the ownership switch.
+-- Transfer Saga event envelope. The row is written in the SAME transaction as the state change it reports
+-- and is then COMPLETELY immutable: delivery state lives in outbox_deliveries (cp_12), never here.
+--   schema_version   consumers reject an envelope version they do not understand
+--   payload_hash     transport integrity of the stored payload (see cp_12 for what this hash is and is not)
+--   correlation_id   one Saga run; causation_id is the event this one was caused by, if any
+-- The payload carries identifiers and generations only, never personal data.
 CREATE TABLE outbox_events (
     event_id     uuid PRIMARY KEY,
     case_id      uuid REFERENCES transfer_cases (case_id),
-    event_type   text NOT NULL,
-    payload      jsonb NOT NULL DEFAULT '{}'::jsonb,   -- ids and generations only; no personal data
+    event_type   text NOT NULL CHECK (length(btrim(event_type)) > 0),
+    schema_version integer NOT NULL CHECK (schema_version >= 1),
+    payload      jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(payload) = 'object'),
+    payload_hash bytea NOT NULL CHECK (octet_length(payload_hash) = 32),
+    student_id   uuid NOT NULL REFERENCES platform_students (student_id),
+    source_workspace_id      uuid REFERENCES workspaces (workspace_id),
+    destination_workspace_id uuid REFERENCES workspaces (workspace_id),
+    ownership_generation bigint NOT NULL CHECK (ownership_generation >= 1),
+    correlation_id uuid NOT NULL,
+    causation_id   uuid,
     created_at   timestamptz NOT NULL DEFAULT now(),
-    published_at timestamptz
+    CHECK (source_workspace_id IS NULL OR destination_workspace_id IS NULL
+           OR source_workspace_id <> destination_workspace_id)
 );
+CREATE INDEX outbox_events_student_generation ON outbox_events (student_id, ownership_generation);
+CREATE INDEX outbox_events_correlation ON outbox_events (correlation_id);
 
 CREATE FUNCTION guard_outbox_event_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
 BEGIN
-  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'outbox events are immutable' USING ERRCODE='check_violation'; END IF;
-  IF NEW.event_id IS DISTINCT FROM OLD.event_id
-     OR NEW.case_id IS DISTINCT FROM OLD.case_id
-     OR NEW.event_type IS DISTINCT FROM OLD.event_type
-     OR NEW.payload IS DISTINCT FROM OLD.payload
-     OR NEW.created_at IS DISTINCT FROM OLD.created_at
-     OR (OLD.published_at IS NOT NULL AND NEW.published_at IS DISTINCT FROM OLD.published_at)
-     OR (OLD.published_at IS NULL AND NEW.published_at IS NULL) THEN
-    RAISE EXCEPTION 'outbox payload is immutable; only null-to-published timestamp is allowed'
-      USING ERRCODE='check_violation';
-  END IF;
-  RETURN NEW;
+  RAISE EXCEPTION 'outbox events are immutable; delivery state belongs in outbox_deliveries'
+    USING ERRCODE='check_violation';
 END; $body$;
 CREATE TRIGGER outbox_events_immutable
   BEFORE UPDATE OR DELETE ON outbox_events
   FOR EACH ROW EXECUTE FUNCTION guard_outbox_event_mutation();
+
+-- The envelope hash is verified against the payload actually stored, so a producer cannot record an
+-- envelope whose hash does not describe its own payload.
+CREATE FUNCTION guard_outbox_payload_hash() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  IF NEW.payload_hash <> sha256(convert_to(NEW.payload::text, 'UTF8')) THEN
+    RAISE EXCEPTION 'outbox payload_hash does not match the stored payload' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER outbox_events_payload_hash
+  BEFORE INSERT ON outbox_events
+  FOR EACH ROW EXECUTE FUNCTION guard_outbox_payload_hash();
+
+-- What a Workspace reported back about one delivered event. One row per (event, workspace): a second
+-- report for the same pair is a duplicate acknowledgement and must not create a second row.
+-- The outcome is the Workspace's own recorded result; the Control Plane does not re-derive it.
+CREATE TABLE inbox_events (
+    event_id uuid NOT NULL REFERENCES outbox_events (event_id),
+    workspace_id uuid NOT NULL REFERENCES workspaces(workspace_id),
+    student_id uuid NOT NULL REFERENCES platform_students(student_id),
+    ownership_generation bigint NOT NULL CHECK (ownership_generation >= 1),
+    outcome text NOT NULL CHECK (outcome IN ('applied','ignored_stale','quarantined_future','rejected_payload')),
+    outcome_reason text,
+    received_at timestamptz NOT NULL DEFAULT now(),
+    processed_at timestamptz,
+    PRIMARY KEY (event_id, workspace_id)
+);
+
+-- Transactional outbox: written in the same transaction as the ownership switch.
 
 -- Append-only audit of ownership changes (fencing history).
 CREATE TABLE ownership_history (

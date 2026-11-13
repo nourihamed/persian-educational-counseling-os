@@ -386,3 +386,47 @@ Guardian/parent and student legal authority tests remain blocked by Q-007 and mu
 | Reactivation, suspension capacity, transfer reservations | — | — | NOT IMPLEMENTED (policy open) |
 | Saga outbox/inbox reconciliation | — | — | NOT IMPLEMENTED |
 | GitHub Actions for this commit | — | — | NOT RUN until pushed |
+
+## Product Owner decisions PD-2026-11-13-A..F — third batch (2026-11-14; author-executed, NOT independently reproduced)
+
+PostgreSQL 16.15, local run on a cleared cluster; every database created fresh for its step. All 18 runnable
+workflow steps completed (ALL_STEPS_PASSED, 476 PASS assertion lines) plus the Python verifier unit tests.
+
+| ID | Check | Where | Status |
+|---|---|---|---|
+| AVQ-01..04 | Membership/order uniqueness, orphan version, empty item reference | workspace/tests/workspace_assessment_version_question_tests.sql | PASS |
+| AVQ-05..08 | Publication gates: membership count vs question_count, contiguous order, adaptive delivery refused, valid publish | same | PASS |
+| AVQ-09..13 | Published membership immutable (add/change/reorder/remove) and no re-parenting | same | PASS |
+| AVQ-14..17 | Attempt policy must equal the published version policy; cross-version, wrong-version and wrong-order responses refused | same | PASS |
+| AVQ-18..22 | One answer per question, submission requires full coverage, membership is the authority | same | PASS |
+| WS-ROLE-16/17 | Runtime grant shape on version questions; runtime **holds** the grant and is still refused on a published version | workspace/tests/workspace_role_privilege_tests.sql | PASS |
+| ACT-01..10 | Typed source per activity kind; source required; only the matching column; no two sources | workspace/tests/workspace_activity_source_tests.sql | PASS |
+| ACT-11..16 | Non-existent source, cross-student source, non-participant class session, invalid participation rows | same | PASS |
+| ACT-17..21 | No duplicate schedule per source; student and kind immutable; own fields still editable | same | PASS |
+| ACT-22..26 | Referenced domain records cannot be deleted; removing the schedule keeps the record; no polymorphic column | same | PASS |
+| CRD-01..07 | Entitlement recorded at activation; archive inside the window compensates once; reserved credit is not spendable by another student | workspace/tests/workspace_credit_entitlement_tests.sql | PASS |
+| CRD-08..13 | Free reactivation re-consumes the SAME credit with no new debit; period not extended; replay; one capacity slot; no second compensation | same | PASS |
+| CRD-14/15 | Window bracketed to one second on both sides of 168 hours | same | PASS |
+| CRD-16..18 | Reactivation without a reserved entitlement and after the original period ends are refused, leaving no partial state | same | PASS |
+| CRD-19/20 | Reactivation that cannot reserve capacity rolls back enrollment, assignment, capacity, entitlement and log together | same | PASS |
+| CRD-21..27 | Entitlement row integrity and the wallet balance identity | same | PASS |
+| WS-REACT-RACE-01 | Two concurrent reactivations on one reserved entitlement; deterministic coordination through the student row lock (no timing sleep); exactly one succeeds | workspace/tests/workspace_reactivation_race.sh | PASS |
+| SEP-01..05 | Only `cp_transfer_approval_executor` may record approval evidence; superuser, runtime and the switch executor are refused | control_plane/tests/cp_37_approval_separation_tests.sql | PASS |
+| SEP-06..13 | Recording, replay, assertion-content conflict, Workspace side binding, expiry and future-verification refusal | same | PASS |
+| SEP-12b/14/16/17 | The same person cannot hold two incompatible current approval kinds; three distinct approvers complete the set | same | PASS |
+| SEP-18..22 | The `source_destination_owner` exception is present, disabled, and cannot be enabled by any DML | same | PASS |
+| SEP-23..29 | Revocation idempotency, post-switch immutability, switch fails closed, ownership unchanged | same | PASS |
+| SAGA-01..08 | Switch and envelope are one transaction; refused switch leaves nothing; envelope immutable; hash must describe the payload | control_plane/tests/cp_38_saga_outbox_tests.sql | PASS |
+| SAGA-09..16 | Lease exclusion, non-holder refused, explicit lease duration, retry on the SAME event id, attempt count never decreases | same | PASS |
+| SAGA-17..22 | Acknowledgement per workspace, idempotent, conflicting outcome refused, terminal | same | PASS |
+| SAGA-23..30 | Dead-letter is an operator action, idempotent; re-drive returns the same event id; both attributed; audit append-only | same | PASS |
+| SAGA-31..34 | The dispatcher cannot write events, change delivery rows, change ownership or switch ownership | same | PASS |
+| INB-01..06 | Consumer identity boundary; bad hash, unsupported schema and not-addressed events recorded without effect | workspace/tests/workspace_inbox_tests.sql | PASS |
+| INB-07..15 | Stale ignored, future quarantined, destination applies exactly N+1, duplicate returns the recorded outcome, out-of-order never rewinds | same | PASS |
+| INB-16..19 | The fence blocks later local commands; the source projection is ended and its assignments closed | same | PASS |
+| INB-20..22 | Inbox append-only; the Workspace database holds no Control Plane ownership table | same | PASS |
+| Saga service behaviour: freeze/drain, in-flight barrier, snapshot consistency, destination staging, dispatcher crash at each checkpoint, lease expiry under partition, chaos/outage/restore/failover, projection-drift repair | — | — | NOT IMPLEMENTED (SPEC-ONLY, contract section 10) |
+| Signed cross-service wire format for Saga envelopes | — | — | NOT IMPLEMENTED (deferred, PS-1..PS-4) |
+| Quarantine resolution and re-application | — | — | NOT IMPLEMENTED (OQ-SAGA-2 open) |
+| Contact change vs HMAC rotation / vs ownership switch, concurrent | — | — | NOT RUN |
+| GitHub Actions for this commit | — | — | NOT VERIFIED by the implementation agent (no Actions access) |

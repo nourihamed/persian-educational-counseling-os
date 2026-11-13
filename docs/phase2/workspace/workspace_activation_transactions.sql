@@ -15,6 +15,7 @@ DECLARE
   v_amount bigint;
   v_kind text;
   v_balance bigint;
+  v_held bigint;
 BEGIN
   PERFORM 1 FROM public.credit_wallets
    WHERE wallet_id=NEW.wallet_id
@@ -47,12 +48,42 @@ BEGIN
   SELECT COALESCE(sum(amount),0) INTO v_balance
     FROM public.credit_transactions
    WHERE wallet_id=NEW.wallet_id;
-  IF v_balance + NEW.amount < 0 THEN
-    RAISE EXCEPTION 'insufficient student credit: balance %, requested debit %',v_balance,-NEW.amount
-      USING ERRCODE='check_violation';
+
+  -- PD-2026-11-13-D: a credit returned by a compensating reversal is bound to the student it was spent on.
+  -- It stays out of the spendable balance in BOTH entitlement states, so it can never fund another
+  -- student's activation, and it never exists as wallet balance and reserved entitlement at the same time.
+  SELECT COALESCE(sum(e.credit_amount),0) INTO v_held
+    FROM public.student_entitlements e
+    JOIN public.credit_transactions d ON d.transaction_id=e.debit_transaction_id
+   WHERE d.wallet_id=NEW.wallet_id
+     AND e.reversal_transaction_id IS NOT NULL;
+
+  IF v_balance - v_held + NEW.amount < 0 THEN
+    RAISE EXCEPTION 'insufficient student credit: balance %, reserved for named students %, requested debit %',
+      v_balance,v_held,-NEW.amount USING ERRCODE='check_violation';
   END IF;
   RETURN NEW;
 END; $body$;
+
+-- Spendable balance = ledger balance minus every credit that a compensating reversal has bound to a student.
+CREATE OR REPLACE VIEW credit_wallet_balances AS
+SELECT w.wallet_id,
+       COALESCE((SELECT sum(t.amount) FROM public.credit_transactions t WHERE t.wallet_id=w.wallet_id),0)::bigint
+         AS ledger_balance,
+       COALESCE((SELECT sum(e.credit_amount) FROM public.student_entitlements e
+                   JOIN public.credit_transactions d ON d.transaction_id=e.debit_transaction_id
+                  WHERE d.wallet_id=w.wallet_id AND e.reversal_transaction_id IS NOT NULL AND e.state='reserved'),0)::bigint
+         AS reserved_credits,
+       COALESCE((SELECT sum(e.credit_amount) FROM public.student_entitlements e
+                   JOIN public.credit_transactions d ON d.transaction_id=e.debit_transaction_id
+                  WHERE d.wallet_id=w.wallet_id AND e.reversal_transaction_id IS NOT NULL AND e.state='consumed'),0)::bigint
+         AS recommitted_credits,
+       (COALESCE((SELECT sum(t.amount) FROM public.credit_transactions t WHERE t.wallet_id=w.wallet_id),0)
+        - COALESCE((SELECT sum(e.credit_amount) FROM public.student_entitlements e
+                      JOIN public.credit_transactions d ON d.transaction_id=e.debit_transaction_id
+                     WHERE d.wallet_id=w.wallet_id AND e.reversal_transaction_id IS NOT NULL),0))::bigint
+         AS available_balance
+  FROM public.credit_wallets w;
 
 CREATE TRIGGER credit_transaction_insert_guard
   BEFORE INSERT ON public.credit_transactions
@@ -79,6 +110,7 @@ CREATE TABLE activation_command_log (
   expected_generation bigint NOT NULL CHECK (expected_generation>=1),
   debit_amount bigint NOT NULL CHECK (debit_amount>0),
   actor_membership_id uuid NOT NULL REFERENCES workspace_memberships(membership_id),
+  entitlement_period_end timestamptz NOT NULL,
   recorded_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -97,7 +129,8 @@ CREATE FUNCTION activate_student_enrollment(
   p_wallet_id uuid,
   p_expected_generation bigint,
   p_debit_amount bigint,
-  p_actor_membership_id uuid
+  p_actor_membership_id uuid,
+  p_entitlement_period_end timestamptz
 ) RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -112,6 +145,8 @@ DECLARE
   v_generation bigint;
   v_responsible_count integer;
   v_credit_key text;
+  v_debit_id uuid;
+  v_now timestamptz;
 BEGIN
   IF p_idempotency_key IS NULL OR length(p_idempotency_key)=0
      OR p_enrollment_id IS NULL OR p_wallet_id IS NULL
@@ -121,12 +156,17 @@ BEGIN
     RAISE EXCEPTION 'activation command arguments are invalid'
       USING ERRCODE='invalid_parameter_value';
   END IF;
+  v_now := clock_timestamp();
+  IF p_entitlement_period_end IS NULL OR p_entitlement_period_end <= v_now THEN
+    RAISE EXCEPTION 'activation requires an entitlement period ending in the future'
+      USING ERRCODE='invalid_parameter_value';
+  END IF;
   v_credit_key := 'activation:' || p_idempotency_key;
 
   INSERT INTO public.activation_command_log(
-    idempotency_key,enrollment_id,wallet_id,expected_generation,debit_amount,actor_membership_id
+    idempotency_key,enrollment_id,wallet_id,expected_generation,debit_amount,actor_membership_id,entitlement_period_end
   ) VALUES (
-    p_idempotency_key,p_enrollment_id,p_wallet_id,p_expected_generation,p_debit_amount,p_actor_membership_id
+    p_idempotency_key,p_enrollment_id,p_wallet_id,p_expected_generation,p_debit_amount,p_actor_membership_id,p_entitlement_period_end
   )
   ON CONFLICT(idempotency_key) DO NOTHING;
   GET DIAGNOSTICS v_inserted=ROW_COUNT;
@@ -140,7 +180,8 @@ BEGIN
        OR v_existing.wallet_id<>p_wallet_id
        OR v_existing.expected_generation<>p_expected_generation
        OR v_existing.debit_amount<>p_debit_amount
-       OR v_existing.actor_membership_id<>p_actor_membership_id THEN
+       OR v_existing.actor_membership_id<>p_actor_membership_id
+       OR v_existing.entitlement_period_end<>p_entitlement_period_end THEN
       RAISE EXCEPTION 'activation idempotency key reused with different intent'
         USING ERRCODE='unique_violation';
     END IF;
@@ -217,6 +258,14 @@ BEGIN
   ) VALUES (
     gen_random_uuid(),p_wallet_id,'activation_debit',-p_debit_amount,v_credit_key,
     v_student_id,p_actor_membership_id,'student activation'
+  ) RETURNING transaction_id INTO v_debit_id;
+
+  -- PD-2026-11-13-D: the entitlement period is declared by the caller at activation and is then immutable.
+  -- The database neither chooses nor derives a duration; it only refuses to restart or extend one.
+  INSERT INTO public.student_entitlements(
+    entitlement_id,student_id,debit_transaction_id,credit_amount,activated_at,period_end,state
+  ) VALUES (
+    gen_random_uuid(),v_student_id,v_debit_id,p_debit_amount,v_now,p_entitlement_period_end,'consumed'
   );
 
   PERFORM public.adjust_workspace_capacity(
@@ -252,7 +301,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz) FROM PUBLIC;
 REVOKE ALL ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) FROM PUBLIC;
 
 COMMIT;

@@ -357,3 +357,44 @@ The Product Owner has now selected fixed immutable assessment question sets (MVP
 - **Activity:** specialized entities remain authoritative; Activity is shared scheduling/tracking, not a generic replacement.
 
 Q-007 and Q-020 remain open. PS-1..PS-8 remain deferred to Platform Security. No unresolved legal, cryptographic, key-lifecycle or production authority question is closed by this supplement.
+
+## New open questions raised by the 2026-11-14 implementation (none decided by the implementation)
+
+### OQ-CRD-1 — semantics of the 7-day credit-return window
+**Question:** is the window an exact 168-hour interval from the stored activation timestamp (as implemented), or local calendar-day boundaries in Asia/Tehran? Is the boundary inclusive (as implemented)?
+**Why it matters:** it decides whether an archive near the edge returns credit.
+**Recommended option:** keep the 168-hour inclusive interval — it is timezone-independent and matches "7 calendar days from the original activation timestamp".
+**Alternatives:** local midnight boundaries in Asia/Tehran; exclusive boundary.
+**Impact:** one comparison in `archive_student_enrollment()` plus CRD-14/15.
+**Authority:** Product Owner.
+
+### OQ-CRD-2 — disposition of a reserved entitlement after its original period ends
+**Question:** released to the wallet, forfeited, or resolved by a manual adjustment?
+**Why it matters:** today such credits stay reserved indefinitely (fail-closed). They are visible in `expired_reserved_entitlements` but nothing releases them.
+**Recommended option:** decide before any pilot billing; do not auto-release.
+**Impact:** billing reconciliation and counselor trust.
+**Authority:** Product Owner with Finance.
+
+### OQ-CRD-3 — source of the entitlement duration
+**Question:** where does `period_end` come from — the purchased plan, the product, or each activation?
+**Why it matters:** `activate_student_enrollment()` now requires the caller to supply it, so without a decided source every caller invents one.
+**Recommended option:** attach it to the purchased plan/product in the billing phase.
+**Authority:** Product Owner.
+
+### OQ-SAGA-1 — canonical wire format and signing for Saga envelopes
+**Question:** what canonical form and signature protect an envelope between the Control Plane and a Workspace?
+**Why it matters:** `payload_hash` is a transport integrity check over the stored jsonb rendering only. It is not `receipt-canon-v1`, not cross-language canonical, and not proof of authenticity.
+**Recommended option:** define together with PS-1..PS-4 before any cross-service deployment.
+**Authority:** Platform Security.
+
+### OQ-SAGA-2 — resolution of a quarantined inbox event
+**Question:** who re-applies an event that was quarantined as too far ahead, once the local projection catches up, and under what authority and audit?
+**Why it matters:** quarantined events currently stay quarantined; they are visible but never applied.
+**Recommended option:** an operator command with audit, designed together with the OQ-E thresholds.
+**Authority:** Product Owner with Operations.
+
+### OQ-ASM-1 — item-bank ownership and the meaning of `item_ref`
+**Question:** what is the authoritative question/item source, and what identifier does `item_ref` carry?
+**Why it matters:** uniqueness of question membership within a version relies on it; no item bank is modelled in Phase 2.
+**Recommended option:** model the item bank when assessment authoring is implemented.
+**Authority:** Educational domain owner.

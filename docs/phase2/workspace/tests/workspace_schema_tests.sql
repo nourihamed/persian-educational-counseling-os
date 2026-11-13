@@ -58,13 +58,21 @@ VALUES ('d4000000-0000-0000-0000-000000000001','Topic quiz','e3000000-0000-0000-
 -- WS-DOM-01 fixture: draft version -> published -> started attempt -> 10 explicit responses -> atomic submission -> analysed.
 INSERT INTO test_definition_versions(version_id,test_id,version_no,question_count,scoring_policy_snapshot)
 VALUES ('d4100000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001',1,10,'{"negative_marking":true,"version":"v1"}'::jsonb);
+INSERT INTO test_definition_version_questions(version_question_id,version_id,question_no,item_ref,topic_id)
+SELECT ('d4200000-0000-0000-0000-0000000000'||lpad(g::text,2,'0'))::uuid,'d4100000-0000-0000-0000-000000000001',g,'synthetic-item-v1-'||g,
+       CASE WHEN g=1 THEN 'a4000000-0000-0000-0000-000000000001'::uuid ELSE NULL END
+  FROM generate_series(1,10) g;
 UPDATE test_definition_versions SET status='published', published_at=now() WHERE version_id='d4100000-0000-0000-0000-000000000001';
 INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot)
 VALUES ('e4000000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',now()-interval '15 minutes',10,'{"negative_marking":true,"version":"v1"}'::jsonb);
-INSERT INTO test_responses(response_id,attempt_id,question_no,topic_id,response_state,time_spent_seconds,error_reason)
-VALUES ('f4000000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',1,'a4000000-0000-0000-0000-000000000001','wrong',50,'concept');
-INSERT INTO test_responses(response_id,attempt_id,question_no,response_state)
-SELECT gen_random_uuid(),'e4000000-0000-0000-0000-000000000001',g, CASE WHEN g=2 THEN 'blank' ELSE 'correct' END FROM generate_series(2,10) g;
+INSERT INTO test_responses(response_id,attempt_id,definition_version_id,version_question_id,question_no,response_state,time_spent_seconds,error_reason)
+VALUES ('f4000000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000001',
+        'd4200000-0000-0000-0000-000000000001',1,'wrong',50,'concept');
+INSERT INTO test_responses(response_id,attempt_id,definition_version_id,version_question_id,question_no,response_state)
+SELECT gen_random_uuid(),'e4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000001',q.version_question_id,q.question_no,
+       CASE WHEN q.question_no=2 THEN 'blank' ELSE 'correct' END
+  FROM test_definition_version_questions q
+ WHERE q.version_id='d4100000-0000-0000-0000-000000000001' AND q.question_no BETWEEN 2 AND 10;
 SELECT submit_test_attempt('e4000000-0000-0000-0000-000000000001',8,1,1,75,'synthetic-submit-1',sha256('synthetic-payload-1'::bytea));
 UPDATE test_attempts SET state='analysed' WHERE attempt_id='e4000000-0000-0000-0000-000000000001';
 INSERT INTO exams(exam_id,student_id,title,exam_at,scoring_policy_snapshot)

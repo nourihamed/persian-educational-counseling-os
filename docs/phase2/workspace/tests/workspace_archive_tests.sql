@@ -43,10 +43,10 @@ VALUES(gen_random_uuid(),'c9600000-0000-0000-0000-000000000001','grant',100,'arc
 INSERT INTO workspace_capacity_counters(dimension_key,current_value,max_value) VALUES('active_students',0,2);
 
 SET SESSION AUTHORIZATION :"runtime_role";
-SELECT activate_student_enrollment('ar-act-1','a9600000-0000-0000-0000-000000000001','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001');
-SELECT activate_student_enrollment('ar-act-2','a9600000-0000-0000-0000-000000000002','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001');
+SELECT activate_student_enrollment('ar-act-1','a9600000-0000-0000-0000-000000000001','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
+SELECT activate_student_enrollment('ar-act-2','a9600000-0000-0000-0000-000000000002','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
 SELECT ar_err('ARC-01 capacity is full before any archive (third activation rejected)',
- $q$SELECT activate_student_enrollment('ar-act-3','a9600000-0000-0000-0000-000000000003','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001')$q$,'23514','capacity unavailable');
+ $q$SELECT activate_student_enrollment('ar-act-3','a9600000-0000-0000-0000-000000000003','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz)$q$,'23514','capacity unavailable');
 SELECT ar_err('ARC-02 stale ownership generation rejected',
  $q$SELECT archive_student_enrollment('ar-1','a9600000-0000-0000-0000-000000000001',2,'b9500000-0000-0000-0000-000000000001','offboarding')$q$,'23514','stale local ownership');
 SELECT ar_err('ARC-03 an inactive member cannot archive',
@@ -77,15 +77,22 @@ DO $t$ BEGIN
      OR (SELECT count(*) FROM counselor_assignments WHERE enrollment_id='a9600000-0000-0000-0000-000000000001' AND state='ended' AND ended_at IS NOT NULL)<>1
      OR EXISTS (SELECT 1 FROM counselor_assignments WHERE enrollment_id='a9600000-0000-0000-0000-000000000001' AND state='active') THEN RAISE EXCEPTION 'FAIL ARC-11'; END IF;
   RAISE NOTICE 'PASS ARC-11 historical enrollment and assignment rows preserved (ended, not deleted)';
-  IF (SELECT count(*) FROM credit_transactions WHERE student_id='e9500000-0000-0000-0000-000000000001')<>1 THEN RAISE EXCEPTION 'FAIL ARC-12'; END IF;
-  RAISE NOTICE 'PASS ARC-12 archive made no credit movement (only the original activation debit exists)';
+  -- PD-2026-11-13-D: this archive happened inside the 7-day window, so exactly one compensating reversal
+  -- exists and the returned credit is bound to this student (it is NOT spendable wallet balance).
+  IF (SELECT count(*) FROM credit_transactions WHERE student_id='e9500000-0000-0000-0000-000000000001')<>2
+     OR (SELECT count(*) FROM credit_transactions WHERE student_id='e9500000-0000-0000-0000-000000000001'
+          AND transaction_kind='reversal' AND idempotency_key='archive-return:ar-1')<>1 THEN RAISE EXCEPTION 'FAIL ARC-12 ledger'; END IF;
+  IF (SELECT count(*) FROM student_entitlements WHERE student_id='e9500000-0000-0000-0000-000000000001'
+       AND state='reserved' AND reversal_transaction_id IS NOT NULL)<>1 THEN RAISE EXCEPTION 'FAIL ARC-12 entitlement'; END IF;
+  IF (SELECT reserved_credits FROM credit_wallet_balances WHERE wallet_id='c9600000-0000-0000-0000-000000000001')<>10 THEN RAISE EXCEPTION 'FAIL ARC-12 reserved'; END IF;
+  RAISE NOTICE 'PASS ARC-12 archive inside the window wrote one compensating reversal and reserved the credit for the same student';
   IF (SELECT count(*) FROM audit_events WHERE event_type='student.archive' AND correlation_id='ar-1')<>1 THEN RAISE EXCEPTION 'FAIL ARC-13'; END IF;
   RAISE NOTICE 'PASS ARC-13 exactly one archive audit event';
   IF EXISTS (SELECT 1 FROM capacity_counter_reconciliation WHERE NOT consistent) THEN RAISE EXCEPTION 'FAIL ARC-14'; END IF;
   RAISE NOTICE 'PASS ARC-14 capacity counter equals the sum of its event ledger';
 END $t$;
 SET SESSION AUTHORIZATION :"runtime_role";
-SELECT activate_student_enrollment('ar-act-3','a9600000-0000-0000-0000-000000000003','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001');
+SELECT activate_student_enrollment('ar-act-3','a9600000-0000-0000-0000-000000000003','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
 RESET SESSION AUTHORIZATION;
 DO $t$ BEGIN
   IF (SELECT state FROM enrollments WHERE enrollment_id='a9600000-0000-0000-0000-000000000003')<>'active'

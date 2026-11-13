@@ -35,8 +35,10 @@ UPDATE transfer_cases SET state='staged_verified' WHERE case_id='d4500000-0000-0
 UPDATE transfer_cases SET source_freeze_token='freeze-e',source_frozen_at=now(),final_snapshot_ref='snapshot-e',final_snapshot_at=now(),snapshot_manifest_hash=decode(repeat('ee',32),'hex'),destination_validation_ref='validation-e',destination_validated_at=now() WHERE case_id='d4500000-0000-0000-0000-000000000001';
 UPDATE transfer_cases SET state='cutover_frozen' WHERE case_id='d4500000-0000-0000-0000-000000000001';
 INSERT INTO transfer_approvals(approval_id,assertion_id,nonce_digest,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
-SELECT gen_random_uuid(),gen_random_uuid(),sha256(convert_to('exe-'||k,'UTF8')),'d4500000-0000-0000-0000-000000000001',k,'ev-exe-'||k,'subject-'||k,'authn-'||k,'{"synthetic":true}'::jsonb,now()
-  FROM unnest(ARRAY['guardian_consent','fee_confirmation','destination_acceptance']) k;
+SELECT gen_random_uuid(),gen_random_uuid(),sha256(convert_to('exe-'||k,'UTF8')),'d4500000-0000-0000-0000-000000000001',k,'ev-exe-'||k,'subject-'||k,'authn-'||k,
+       jsonb_build_object('synthetic',true,'workspace_id',CASE k WHEN 'fee_confirmation' THEN c.source_workspace_id WHEN 'destination_acceptance' THEN c.destination_workspace_id END),now()
+  FROM unnest(ARRAY['guardian_consent','fee_confirmation','destination_acceptance']) k,
+       transfer_cases c WHERE c.case_id='d4500000-0000-0000-0000-000000000001';
 SET SESSION AUTHORIZATION cp_transfer_executor;
 SELECT switch_student_ownership('d4500000-0000-0000-0000-000000000001');
 RESET SESSION AUTHORIZATION;

@@ -180,7 +180,7 @@ BEGIN
   END IF;
 
   IF NOT has_function_privilege(runtime_role,
-       'public.activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid)','EXECUTE')
+       'public.activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz)','EXECUTE')
      OR has_function_privilege(runtime_role,
        'public.adjust_workspace_capacity(text,integer,text,uuid,uuid,text)','EXECUTE')
      OR NOT has_function_privilege(function_owner,
@@ -198,7 +198,7 @@ BEGIN
     FROM pg_proc p
     CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) acl
    WHERE p.oid IN (
-     'public.activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid)'::regprocedure,
+     'public.activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz)'::regprocedure,
      'public.adjust_workspace_capacity(text,integer,text,uuid,uuid,text)'::regprocedure
    )
      AND acl.grantee=0 AND acl.privilege_type='EXECUTE';
@@ -219,5 +219,35 @@ BEGIN
     RAISE EXCEPTION 'FAIL WS-ROLE-15 unexpected runtime privilege on assessment tables';
   END IF;
 
-  RAISE NOTICE 'PASS WS-ROLE-01..15 per-Workspace ownership, role, grant and database isolation assertions';
+  IF NOT has_table_privilege(runtime_role,'public.test_definition_version_questions','INSERT')
+     OR has_table_privilege(runtime_role,'public.test_definition_version_questions','DELETE') THEN
+    RAISE EXCEPTION 'FAIL WS-ROLE-16 unexpected runtime privilege on version question membership';
+  END IF;
+
+  RAISE NOTICE 'PASS WS-ROLE-01..16 per-Workspace ownership, role, grant and database isolation assertions';
 END $role_test$;
+
+-- WS-ROLE-17: the runtime role HOLDS INSERT/UPDATE on question membership, and is still refused by the
+-- trigger once the version is published. Privilege is not the boundary; the guard is.
+DO $pub$
+DECLARE runtime_role text := 'ws_'||current_setting('app.workspace_key')||'_runtime'; v uuid; q uuid; ok boolean := false;
+BEGIN
+  SELECT q2.version_id, q2.version_question_id INTO v, q
+    FROM public.test_definition_version_questions q2
+    JOIN public.test_definition_versions dv ON dv.version_id=q2.version_id AND dv.status='published' LIMIT 1;
+  IF v IS NULL THEN
+    RAISE NOTICE 'SKIP WS-ROLE-17 no published version in this database';
+    RETURN;
+  END IF;
+  BEGIN
+    EXECUTE format('SET LOCAL ROLE %I', runtime_role);
+    BEGIN
+      EXECUTE format('UPDATE public.test_definition_version_questions SET item_ref=%L WHERE version_question_id=%L','role-forged',q);
+    EXCEPTION WHEN check_violation THEN ok := true;
+    END;
+    RESET ROLE;
+  EXCEPTION WHEN OTHERS THEN RESET ROLE; RAISE;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL WS-ROLE-17 runtime role changed published question membership'; END IF;
+  RAISE NOTICE 'PASS WS-ROLE-17 runtime role holds the grant but cannot change published question membership';
+END $pub$;

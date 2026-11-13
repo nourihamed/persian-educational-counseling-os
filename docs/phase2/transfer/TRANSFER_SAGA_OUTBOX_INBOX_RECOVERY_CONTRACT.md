@@ -152,3 +152,43 @@ These are acceptance specifications until executable service, database, chaos an
 ## 11. Gate impact
 
 This contract makes the cross-database protocol reviewable but does not implement it. Current SQL drafts cover only the Control Plane ownership switch and local synthetic assertions; they do not prove source freeze/drain, snapshot consistency, destination staging, outbox/inbox delivery or recovery across separate databases. Distributed transfer remains a HIGH finding and Phase 2 remains **NOT READY** until implementation boundaries, schemas, test contracts and operational decisions are reconciled and independently reviewed.
+
+## Implementation status — 2026-11-14 (draft SQL, synthetic; not an approval)
+
+**Implemented and tested at the database level**
+
+Control Plane (`cp_01_schema_draft.sql`, `cp_12_saga_outbox_delivery.sql`): the outbox envelope now carries
+`schema_version`, `payload_hash`, `student_id`, source and destination Workspace, `ownership_generation`,
+`correlation_id` and `causation_id`, and the event row is completely immutable — `published_at` was removed
+and delivery state moved out. `outbox_deliveries` holds the delivery state machine, attempts and the
+dispatcher lease; `outbox_delivery_audit` is an append-only trail of every dead-letter and re-drive;
+`claim_outbox_events` / `record_outbox_sent` / `acknowledge_outbox_event` / `release_outbox_lease` are the
+dispatcher commands and `dead_letter_outbox_event` / `redrive_outbox_event` are operator actions the
+dispatcher cannot call. `inbox_events` became the acknowledgement ledger keyed `(event_id, workspace_id)`.
+
+Workspace (`workspace_inbox_projection.sql`): `workspace_inbox_events` is append-only and keyed by the
+Control Plane event id; `apply_inbox_event()` records the inbox row and the projection change in one local
+transaction, accepts exactly N+1 at the destination, ignores an older or equal generation as stale,
+quarantines a further-ahead generation, rejects an event addressed to another Workspace or whose hash does
+not describe its payload, and on the source side fences the enrollment at the new generation, ends it and
+closes its active counselor assignments.
+
+Section 10 items covered by executable tests: duplicate, out-of-order, stale and future events; atomic
+inbox insert + projection update; the CP switch and outbox insert as one transaction under failure
+injection; re-drive and dead-letter auditable; retry of the same event id after a lease release; no consumer
+can change Control Plane ownership; after the switch the source side is denied.
+
+**NOT implemented — these remain acceptance specifications**
+
+Source freeze and drain; the in-flight transaction barrier; snapshot consistency at the watermark and
+category exclusion; destination staging visibility and attachment checks; real dispatcher crash before send,
+after send before ack, and during lease expiry; process crash at every Saga checkpoint; load, outage,
+restore and failover; reconciliation detection and repair of projection drift; resolution of a quarantined
+event (OQ-SAGA-2); and a signed cross-service wire format (OQ-SAGA-1, PS-1..PS-4).
+
+**Explicitly not claimed:** there is no distributed transaction between the two databases. `payload_hash` is
+transport integrity over the stored jsonb rendering, not `receipt-canon-v1` and not proof of authenticity.
+No lease duration, retry count, backoff or dead-letter threshold is chosen: each is a caller argument with
+no default, because OQ-E is open.
+
+Tests: SAGA-01..SAGA-34, INB-01..INB-22 (executed on PostgreSQL 16.15).

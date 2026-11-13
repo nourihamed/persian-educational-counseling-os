@@ -389,7 +389,7 @@ CREATE TABLE activities (
   activity_id uuid PRIMARY KEY,
   student_id uuid NOT NULL REFERENCES students(student_id),
   topic_id uuid REFERENCES topics(topic_id),
-  activity_kind text NOT NULL CHECK (activity_kind IN ('study','homework','review','test','class_followup','custom')),
+  activity_kind text NOT NULL CHECK (activity_kind IN ('study','homework','review','test','exam','class_followup','custom')),
   title text NOT NULL,
   description text,
   due_at timestamptz,
@@ -445,7 +445,25 @@ CREATE TABLE test_definition_versions (
   UNIQUE(version_id, test_id),
   CHECK ((status='published') = (published_at IS NOT NULL))
 );
+-- PD-2026-11-13-A: a published version carries its exact question membership AND order.
+-- question_count is only a consistency check; these rows are the authoritative membership list.
+-- item_ref is the stable identifier of the question in the counselor's own item source; the item bank
+-- itself is NOT modelled in Phase 2 and no item-bank ownership rule is decided here.
+CREATE TABLE test_definition_version_questions (
+  version_question_id uuid PRIMARY KEY,
+  version_id uuid NOT NULL REFERENCES test_definition_versions(version_id),
+  question_no integer NOT NULL CHECK (question_no>0),
+  item_ref text NOT NULL CHECK (length(btrim(item_ref))>0),
+  topic_id uuid REFERENCES topics(topic_id),      -- authoritative topic of the question (responses do not carry their own)
+  UNIQUE (version_id, question_no),               -- unique order within the version
+  UNIQUE (version_id, item_ref),                  -- unique membership within the version
+  UNIQUE (version_question_id, version_id),
+  UNIQUE (version_question_id, version_id, question_no)   -- FK target for responses
+);
+CREATE INDEX test_definition_version_questions_version_idx ON test_definition_version_questions(version_id, question_no);
+
 CREATE FUNCTION test_definition_version_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE n_q integer; n_min integer; n_max integer;
 BEGIN
   IF TG_OP='INSERT' THEN
     IF NEW.status<>'draft' THEN
@@ -460,10 +478,51 @@ BEGIN
   IF (NEW.version_id,NEW.test_id,NEW.version_no) IS DISTINCT FROM (OLD.version_id,OLD.test_id,OLD.version_no) THEN
     RAISE EXCEPTION 'definition version identity is immutable' USING ERRCODE='check_violation';
   END IF;
+  IF NEW.status='published' THEN
+    -- MVP gate (PD-2026-11-13-A): per-attempt/adaptive delivery is NOT approved. Fail closed; the column
+    -- stays as a reserved extension point and must not be read as permission to deliver variable sets.
+    IF NEW.delivery_mode<>'fixed' THEN
+      RAISE EXCEPTION 'delivery_mode % cannot be published: per-attempt delivery requires a separate Product Owner decision', NEW.delivery_mode
+        USING ERRCODE='check_violation';
+    END IF;
+    SELECT count(*), COALESCE(min(question_no),0), COALESCE(max(question_no),0) INTO n_q, n_min, n_max
+      FROM public.test_definition_version_questions WHERE version_id=NEW.version_id;
+    IF n_q<>NEW.question_count THEN
+      RAISE EXCEPTION 'version has % question rows but question_count is %; membership is the authority', n_q, NEW.question_count
+        USING ERRCODE='check_violation';
+    END IF;
+    IF n_q=0 OR n_min<>1 OR n_max<>n_q THEN
+      RAISE EXCEPTION 'published question order must be exactly 1..% (found min %, max %)', n_q, n_min, n_max
+        USING ERRCODE='check_violation';
+    END IF;
+  END IF;
   RETURN NEW;
 END; $$;
 CREATE TRIGGER test_definition_versions_guard BEFORE INSERT OR UPDATE OR DELETE ON test_definition_versions
   FOR EACH ROW EXECUTE FUNCTION test_definition_version_guard();
+
+-- Membership/order may change only while the owning version is a draft. The check is role-independent:
+-- it binds every writer, including the runtime role, not only the command functions.
+-- FOR SHARE on the version row serialises against a concurrent publish.
+CREATE FUNCTION test_definition_version_question_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE v_status text; v_id uuid;
+BEGIN
+  IF TG_OP='UPDATE' AND NEW.version_id IS DISTINCT FROM OLD.version_id THEN
+    RAISE EXCEPTION 'a version question cannot be moved to another version' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP='UPDATE' AND NEW.version_question_id IS DISTINCT FROM OLD.version_question_id THEN
+    RAISE EXCEPTION 'version_question_id is immutable' USING ERRCODE='check_violation';
+  END IF;
+  v_id := CASE WHEN TG_OP='DELETE' THEN OLD.version_id ELSE NEW.version_id END;
+  SELECT status INTO v_status FROM public.test_definition_versions WHERE version_id=v_id FOR SHARE;
+  IF v_status IS DISTINCT FROM 'draft' THEN
+    RAISE EXCEPTION 'question membership/order of a % definition version is immutable', COALESCE(v_status,'missing')
+      USING ERRCODE='check_violation';
+  END IF;
+  RETURN CASE WHEN TG_OP='DELETE' THEN OLD ELSE NEW END;
+END; $$;
+CREATE TRIGGER test_definition_version_questions_guard BEFORE INSERT OR UPDATE OR DELETE ON test_definition_version_questions
+  FOR EACH ROW EXECUTE FUNCTION test_definition_version_question_guard();
 
 CREATE TABLE test_attempts (
   attempt_id uuid PRIMARY KEY,
@@ -482,6 +541,8 @@ CREATE TABLE test_attempts (
   submission_idempotency_key text,
   submission_payload_hash bytea CHECK (submission_payload_hash IS NULL OR octet_length(submission_payload_hash)=32),
   FOREIGN KEY (definition_version_id, test_id) REFERENCES test_definition_versions(version_id, test_id),
+  UNIQUE (attempt_id, definition_version_id),   -- FK target: a response can only cite its own attempt's version
+  UNIQUE (attempt_id, student_id),              -- FK target: an Activity cites a source of its OWN student
   UNIQUE (submission_idempotency_key),
   CHECK ((state IN ('submitted','analysed')) = (submitted_at IS NOT NULL)),
   CHECK (state NOT IN ('submitted','analysed') OR (
@@ -493,15 +554,25 @@ CREATE TABLE test_attempts (
          correct_count=0 AND wrong_count=0 AND blank_count=0 AND score IS NULL
          AND submission_idempotency_key IS NULL AND submission_payload_hash IS NULL))
 );
+-- A response names the exact question of the exact version the attempt was started on. The two composite
+-- foreign keys make cross-version substitution impossible declaratively, without a trigger:
+--   (attempt_id, definition_version_id)                -> the attempt's own version
+--   (version_question_id, definition_version_id, no)   -> a question of that same version, at its own order
+-- Field ownership: topic belongs to test_definition_version_questions, not to the response.
 CREATE TABLE test_responses (
   response_id uuid PRIMARY KEY,
   attempt_id uuid NOT NULL REFERENCES test_attempts(attempt_id),
+  definition_version_id uuid NOT NULL,
+  version_question_id uuid NOT NULL,
   question_no integer NOT NULL CHECK (question_no>0),
-  topic_id uuid REFERENCES topics(topic_id),
   response_state text NOT NULL CHECK (response_state IN ('correct','wrong','blank')),
   time_spent_seconds integer CHECK (time_spent_seconds IS NULL OR time_spent_seconds>=0),
   error_reason text CHECK (error_reason IN ('concept','memory','careless','time','strategy','unknown','custom')),
   custom_error_reason text,
+  FOREIGN KEY (attempt_id, definition_version_id) REFERENCES test_attempts(attempt_id, definition_version_id),
+  FOREIGN KEY (version_question_id, definition_version_id, question_no)
+    REFERENCES test_definition_version_questions(version_question_id, version_id, question_no),
+  UNIQUE(attempt_id,version_question_id),
   UNIQUE(attempt_id,question_no),
   -- A custom reason needs a non-empty description; a description is only allowed for a custom reason (NULL-safe).
   CHECK ((error_reason IS NOT DISTINCT FROM 'custom') = (custom_error_reason IS NOT NULL AND length(btrim(custom_error_reason))>0))
@@ -516,13 +587,19 @@ BEGIN
     IF NEW.state<>'started' THEN
       RAISE EXCEPTION 'a test attempt must be created in state started' USING ERRCODE='check_violation';
     END IF;
-    SELECT status, delivery_mode, question_count INTO v FROM test_definition_versions
-     WHERE version_id=NEW.definition_version_id FOR SHARE;
+    SELECT status, delivery_mode, question_count, scoring_policy_snapshot INTO v
+      FROM test_definition_versions WHERE version_id=NEW.definition_version_id FOR SHARE;
     IF v.status IS DISTINCT FROM 'published' THEN
       RAISE EXCEPTION 'an attempt requires a published definition version' USING ERRCODE='check_violation';
     END IF;
     IF v.delivery_mode='fixed' AND NEW.question_count<>v.question_count THEN
       RAISE EXCEPTION 'attempt question_count % differs from fixed definition version count %', NEW.question_count, v.question_count
+        USING ERRCODE='check_violation';
+    END IF;
+    -- PD-2026-11-13-A: the scoring policy is derived from the published version, never from caller-supplied
+    -- attempt data. The database stores and compares the snapshot; it does not compute or validate a score.
+    IF NEW.scoring_policy_snapshot IS DISTINCT FROM v.scoring_policy_snapshot THEN
+      RAISE EXCEPTION 'attempt scoring policy snapshot differs from the published version policy'
         USING ERRCODE='check_violation';
     END IF;
     RETURN NEW;
@@ -643,8 +720,33 @@ CREATE TABLE class_sessions (
   ends_at timestamptz NOT NULL,
   timezone_name text NOT NULL,
   join_or_location_ref text,
-  CHECK (ends_at>starts_at)
+  CHECK (ends_at>starts_at),
+  UNIQUE (class_session_id, class_id)
 );
+-- Who takes part in a class, and in each of its sessions. These rows are what makes a class-follow-up
+-- Activity referentially valid for a given student: a student who is not a participant of the session's
+-- class cannot have an Activity pointing at that session.
+CREATE TABLE class_participants (
+  class_id uuid NOT NULL REFERENCES classes(class_id),
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  state text NOT NULL CHECK (state IN ('enrolled','withdrawn')),
+  enrolled_at timestamptz NOT NULL DEFAULT now(),
+  withdrawn_at timestamptz,
+  PRIMARY KEY (class_id, student_id),
+  CHECK ((state='withdrawn') = (withdrawn_at IS NOT NULL))
+);
+CREATE TABLE class_session_participants (
+  class_session_id uuid NOT NULL,
+  class_id uuid NOT NULL,
+  student_id uuid NOT NULL,
+  attendance text NOT NULL CHECK (attendance IN ('expected','attended','absent','excused')),
+  recorded_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (class_session_id, student_id),
+  UNIQUE (class_session_id, student_id),
+  FOREIGN KEY (class_session_id, class_id) REFERENCES class_sessions(class_session_id, class_id),
+  FOREIGN KEY (class_id, student_id) REFERENCES class_participants(class_id, student_id)
+);
+
 CREATE TABLE assignments (
   assignment_id uuid PRIMARY KEY,
   student_id uuid NOT NULL REFERENCES students(student_id),
@@ -653,7 +755,8 @@ CREATE TABLE assignments (
   due_at timestamptz,
   state text NOT NULL CHECK (state IN ('assigned','in_progress','submitted','reviewed','overdue','cancelled')),
   created_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (assignment_id, student_id)
 );
 CREATE TABLE reviews (
   review_id uuid PRIMARY KEY,
@@ -662,7 +765,8 @@ CREATE TABLE reviews (
   scheduled_at timestamptz NOT NULL,
   cadence_days integer CHECK (cadence_days IS NULL OR cadence_days>0),
   state text NOT NULL CHECK (state IN ('scheduled','completed','missed','cancelled')),
-  completed_at timestamptz
+  completed_at timestamptz,
+  UNIQUE (review_id, student_id)
 );
 CREATE TABLE daily_routines (
   routine_id uuid PRIMARY KEY,
@@ -894,6 +998,78 @@ CREATE TRIGGER credit_reversal_guard
   BEFORE INSERT ON credit_transactions
   FOR EACH ROW EXECUTE FUNCTION validate_credit_reversal();
 
+-- PD-2026-11-13-D — Student Credit entitlement.
+-- One row per activation that spent credit. It records WHICH student the credit was spent on, WHEN the
+-- original activation happened (the start of the 7-calendar-day reversal window) and WHEN the original
+-- entitlement period ends. The period end is supplied by the caller: no entitlement duration is decided
+-- here, and the database never derives, extends or restarts it.
+--   state 'consumed' : the credit is spent on this student's enrollment.
+--   state 'reserved' : the enrollment was archived inside the reversal window, the original debit has been
+--                      compensated in the ledger, and the returned credit is bound to THIS student.
+-- A reversed entitlement (reversal_transaction_id IS NOT NULL) keeps holding its credit in both states, so
+-- the returned credit never becomes generally spendable wallet balance (see view credit_wallet_balances).
+CREATE TABLE student_entitlements (
+  entitlement_id uuid PRIMARY KEY,
+  student_id uuid NOT NULL REFERENCES students(student_id),
+  debit_transaction_id uuid NOT NULL UNIQUE REFERENCES credit_transactions(transaction_id),
+  credit_amount bigint NOT NULL CHECK (credit_amount>0),
+  activated_at timestamptz NOT NULL,
+  period_end timestamptz NOT NULL,
+  state text NOT NULL CHECK (state IN ('consumed','reserved')),
+  reversal_transaction_id uuid UNIQUE REFERENCES credit_transactions(transaction_id),
+  reserved_at timestamptz,
+  reconsumed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (period_end > activated_at),
+  CHECK (state<>'reserved' OR reserved_at IS NOT NULL),   -- reserved_at is kept as history after re-consumption
+  CHECK (state<>'reserved' OR reversal_transaction_id IS NOT NULL)
+);
+CREATE INDEX student_entitlements_student_idx ON student_entitlements(student_id, state);
+
+CREATE FUNCTION student_entitlement_guard() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  IF TG_OP='DELETE' THEN
+    RAISE EXCEPTION 'student entitlements are not deletable' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP='INSERT' THEN
+    IF NEW.state<>'consumed' OR NEW.reversal_transaction_id IS NOT NULL OR NEW.reconsumed_at IS NOT NULL THEN
+      RAISE EXCEPTION 'an entitlement is created as consumed, without compensation metadata' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
+  -- The original period can never be restarted or extended, and the credit cannot change student.
+  IF (NEW.entitlement_id,NEW.student_id,NEW.debit_transaction_id,NEW.credit_amount,NEW.activated_at,NEW.period_end)
+     IS DISTINCT FROM
+     (OLD.entitlement_id,OLD.student_id,OLD.debit_transaction_id,OLD.credit_amount,OLD.activated_at,OLD.period_end) THEN
+    RAISE EXCEPTION 'entitlement identity, amount, activation time and period end are immutable' USING ERRCODE='check_violation';
+  END IF;
+  IF OLD.reversal_transaction_id IS NOT NULL
+     AND NEW.reversal_transaction_id IS DISTINCT FROM OLD.reversal_transaction_id THEN
+    RAISE EXCEPTION 'the compensating ledger entry of an entitlement is immutable' USING ERRCODE='check_violation';
+  END IF;
+  IF OLD.state='consumed' AND NEW.state='reserved' THEN
+    IF NOT EXISTS (SELECT 1 FROM public.credit_transactions t
+                    WHERE t.transaction_id=NEW.reversal_transaction_id
+                      AND t.transaction_kind='reversal'
+                      AND t.related_transaction_id=NEW.debit_transaction_id
+                      AND t.student_id IS NOT DISTINCT FROM NEW.student_id) THEN
+      RAISE EXCEPTION 'reserving an entitlement requires its own compensating reversal of the original debit'
+        USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  ELSIF OLD.state='reserved' AND NEW.state='consumed' THEN
+    IF NEW.reconsumed_at IS NULL THEN
+      RAISE EXCEPTION 'reactivation must record reconsumed_at' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  ELSIF OLD.state=NEW.state THEN
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'illegal entitlement transition % -> %', OLD.state, NEW.state USING ERRCODE='check_violation';
+END; $body$;
+CREATE TRIGGER student_entitlements_guard BEFORE INSERT OR UPDATE OR DELETE ON student_entitlements
+  FOR EACH ROW EXECUTE FUNCTION student_entitlement_guard();
+
 CREATE FUNCTION reject_ledger_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
 BEGIN
   RAISE EXCEPTION 'credit_transactions is append-only' USING ERRCODE='check_violation';
@@ -901,6 +1077,70 @@ END; $body$;
 CREATE TRIGGER credit_transactions_append_only
   BEFORE UPDATE OR DELETE ON credit_transactions
   FOR EACH ROW EXECUTE FUNCTION reject_ledger_mutation();
+
+-- ======================================================================================================
+-- PD-2026-11-13-B — Activity is the shared scheduling/tracking/execution layer over AUTHORITATIVE
+-- specialized entities. The link is one typed, foreign-key-backed column per source kind. There is no
+-- source_type/source_id pair: an unrestricted polymorphic reference cannot be checked by the database and
+-- is not an acceptable substitute for referential integrity.
+--
+-- Field ownership (the Activity never duplicates these):
+--   Test attempt   -> test_attempts        owns version, denominator, counters, score, submission evidence
+--   Exam           -> exams/exam_results   owns schedule, scoring policy and results
+--   Class session  -> class_sessions       owns time, timezone and joining/location reference
+--   Assignment     -> assignments          owns due date and submission state
+--   Review         -> reviews              owns cadence, scheduled time and completion
+-- The Activity owns only its own scheduling and execution fields: title, due_at, priority, state.
+-- Each source foreign key carries student_id, so an Activity can only cite a source of its OWN student.
+-- ======================================================================================================
+ALTER TABLE activities
+  ADD COLUMN test_attempt_id    uuid,
+  ADD COLUMN exam_id            uuid,
+  ADD COLUMN class_session_id   uuid,
+  ADD COLUMN assignment_id      uuid,
+  ADD COLUMN review_id          uuid,
+  ADD CONSTRAINT activities_test_attempt_fk
+    FOREIGN KEY (test_attempt_id, student_id)  REFERENCES test_attempts(attempt_id, student_id),
+  ADD CONSTRAINT activities_exam_fk
+    FOREIGN KEY (exam_id, student_id)          REFERENCES exams(exam_id, student_id),
+  ADD CONSTRAINT activities_class_session_fk
+    FOREIGN KEY (class_session_id, student_id) REFERENCES class_session_participants(class_session_id, student_id),
+  ADD CONSTRAINT activities_assignment_fk
+    FOREIGN KEY (assignment_id, student_id)    REFERENCES assignments(assignment_id, student_id),
+  ADD CONSTRAINT activities_review_fk
+    FOREIGN KEY (review_id, student_id)        REFERENCES reviews(review_id, student_id),
+  -- Exactly the column that matches activity_kind is set, and no other.
+  ADD CONSTRAINT activities_single_typed_source CHECK (
+    (CASE WHEN test_attempt_id  IS NOT NULL THEN 1 ELSE 0 END
+   + CASE WHEN exam_id          IS NOT NULL THEN 1 ELSE 0 END
+   + CASE WHEN class_session_id IS NOT NULL THEN 1 ELSE 0 END
+   + CASE WHEN assignment_id    IS NOT NULL THEN 1 ELSE 0 END
+   + CASE WHEN review_id        IS NOT NULL THEN 1 ELSE 0 END)
+   = CASE WHEN activity_kind IN ('test','exam','class_followup','homework','review') THEN 1 ELSE 0 END),
+  ADD CONSTRAINT activities_source_matches_kind CHECK (
+       (activity_kind = 'test')           = (test_attempt_id  IS NOT NULL)
+   AND (activity_kind = 'exam')           = (exam_id          IS NOT NULL)
+   AND (activity_kind = 'class_followup') = (class_session_id IS NOT NULL)
+   AND (activity_kind = 'homework')       = (assignment_id    IS NOT NULL)
+   AND (activity_kind = 'review')         = (review_id        IS NOT NULL));
+-- One Activity per source record: the shared layer never forks a domain record into two schedules.
+CREATE UNIQUE INDEX activities_one_per_test_attempt  ON activities(test_attempt_id)  WHERE test_attempt_id  IS NOT NULL;
+CREATE UNIQUE INDEX activities_one_per_exam          ON activities(exam_id)          WHERE exam_id          IS NOT NULL;
+CREATE UNIQUE INDEX activities_one_per_class_session ON activities(class_session_id,student_id) WHERE class_session_id IS NOT NULL;
+CREATE UNIQUE INDEX activities_one_per_assignment    ON activities(assignment_id)    WHERE assignment_id    IS NOT NULL;
+CREATE UNIQUE INDEX activities_one_per_review        ON activities(review_id)        WHERE review_id        IS NOT NULL;
+
+-- The student of an Activity is immutable: moving an Activity to another student would silently detach it
+-- from the source record the foreign key validated.
+CREATE FUNCTION activity_student_immutable() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  IF NEW.student_id IS DISTINCT FROM OLD.student_id OR NEW.activity_kind IS DISTINCT FROM OLD.activity_kind THEN
+    RAISE EXCEPTION 'the student and kind of an activity are immutable' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER activities_student_kind_immutable BEFORE UPDATE ON activities
+  FOR EACH ROW EXECUTE FUNCTION activity_student_immutable();
 
 COMMIT;
 

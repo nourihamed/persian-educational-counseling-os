@@ -124,3 +124,24 @@ All listed tests are specifications until executable service/database tests are 
 ## 9. Gate impact
 
 This contract is a Phase 2 design target only. It does not prove identity, legal authority, production cryptographic verification or runtime authorization. The current approval schema is not sufficient as-is and must be reconciled before approval-related implementation is accepted. The Control Plane and Phase 2 Gate remain **NOT READY**. D-014 synthetic-only restriction remains in force.
+
+## Implementation status — 2026-11-14 (draft SQL, synthetic; not an approval)
+
+Implemented: separation of duties (one person may not hold two incompatible current approval kinds for the
+same transfer); `transfer_approval_conflict_exceptions` holding the single contemplated
+`source_destination_owner` case with `CHECK (enabled = false)`, so enabling it is a reviewable schema change
+and not DML, and the guard still fails closed even if a row were enabled; a structural side check binding
+`fee_confirmation` to the case's source Workspace and `destination_acceptance` to its destination;
+`record_transfer_approval()` and `revoke_transfer_approval()` as the only way to write approval evidence,
+restricted to `cp_transfer_approval_executor`; expiry evaluated with `clock_timestamp()` after the case row
+is locked, in the insert guard, the `transfer_approvals_current` view and the switch's approval count.
+
+No Platform Admin override exists anywhere, and none was granted.
+
+The database verifies the shape, side, separation and freshness of recorded evidence and which identity may
+record it. It does NOT verify that an assertion is authentic, that a person holds guardian or legal
+authority (Q-007), or that a fee was paid.
+
+Still open: the approval authority for the exception; Q-007; the reason-code taxonomy.
+
+Tests: SEP-01..SEP-29, APR-01..13, APR-RACE-01, APR-SWITCH-01 (executed).

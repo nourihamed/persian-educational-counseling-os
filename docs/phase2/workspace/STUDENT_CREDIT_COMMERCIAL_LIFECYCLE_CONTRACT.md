@@ -83,3 +83,23 @@ All tests remain NOT IMPLEMENTED / NOT RUN beyond the current synthetic wallet/a
 - If the original entitlement period has ended, reactivation requires a new credit debit under the applicable policy.
 
 The exact entitlement representation and atomic archive/reactivation/debit/capacity transaction remain implementation requirements and must be tested for concurrency and double-use. This does not approve checkout, payment provider, or full refund/chargeback implementation.
+
+## Implementation status — 2026-11-14 (draft SQL, synthetic; not an approval)
+
+Implemented: `student_entitlements` (student, original debit, amount, activation time, period end, state,
+compensating reversal) with an immutability guard that makes the period impossible to restart or extend;
+`credit_wallet_balances` where `available = ledger − reserved − recommitted`; a reserved-aware debit guard so
+a returned credit can never fund another student; archive inside the window writing exactly one compensating
+reversal; `reactivate_student_enrollment()` consuming the SAME returned credit with no new debit, one
+capacity slot and full rollback on failure; `expired_reserved_entitlements` for visibility.
+
+Window semantics as implemented: an exact 168-hour interval from the stored activation timestamptz, boundary
+inclusive, independent of the session time zone. This is recorded as OQ-CRD-1, not assumed to be final.
+
+The entitlement duration is NOT chosen by the database: `activate_student_enrollment()` requires the caller
+to supply `p_entitlement_period_end` and refuses an activation without a future period (OQ-CRD-3).
+
+Still open: what happens to a reserved entitlement once its period ends (OQ-CRD-2); purchase, renewal,
+refund and chargeback execution; the payment reconciliation boundary. None of these is implemented.
+
+Tests: CRD-01..CRD-27, WS-REACT-RACE-01, ARC-01..17 (executed).

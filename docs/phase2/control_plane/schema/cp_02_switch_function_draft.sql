@@ -23,6 +23,7 @@ DECLARE
     v_owner     uuid;
     v_gen       bigint;
     v_approvals integer;
+    v_payload jsonb;
     v_new_gen   bigint;
     v_claim_count integer;
     v_alias_count integer;
@@ -47,8 +48,8 @@ BEGIN
       FROM public.transfer_approvals a
      WHERE case_id = p_case_id
        AND NOT EXISTS (SELECT 1 FROM public.transfer_approval_revocations r WHERE r.approval_id = a.approval_id)
-       AND (valid_until IS NULL OR valid_until > now())
-       AND verified_at <= now()
+       AND (valid_until IS NULL OR valid_until > clock_timestamp())
+       AND verified_at <= clock_timestamp()
        AND authn_event_ref <> ''
        AND approver_ref <> '';
     IF v_approvals <> 3 THEN
@@ -132,11 +133,17 @@ BEGIN
 
     UPDATE public.transfer_cases SET state = 'ownership_switched', updated_at = now() WHERE case_id = p_case_id;
 
-    INSERT INTO public.outbox_events (event_id, case_id, event_type, payload)
-    VALUES (gen_random_uuid(), p_case_id, 'ownership_switched',
-            jsonb_build_object('student_id', v_case.student_id,
-                               'to_workspace_id', v_case.destination_workspace_id,
-                               'generation', v_new_gen));
+    -- Switch and outbox row are one transaction: either both are durable or neither is.
+    v_payload := jsonb_build_object('student_id', v_case.student_id::text,
+                                    'from_workspace_id', v_case.source_workspace_id::text,
+                                    'to_workspace_id', v_case.destination_workspace_id::text,
+                                    'generation', v_new_gen);
+    INSERT INTO public.outbox_events (
+      event_id, case_id, event_type, schema_version, payload, payload_hash, student_id,
+      source_workspace_id, destination_workspace_id, ownership_generation, correlation_id, causation_id)
+    VALUES (gen_random_uuid(), p_case_id, 'ownership_switched', 1, v_payload,
+            sha256(convert_to(v_payload::text,'UTF8')), v_case.student_id,
+            v_case.source_workspace_id, v_case.destination_workspace_id, v_new_gen, p_case_id, NULL);
 
     -- Deferred coverage triggers would otherwise run at COMMIT as the CALLER; an executor role has no table access,
     -- so the command would fail for its own executor. Run them here, in this function's security context.

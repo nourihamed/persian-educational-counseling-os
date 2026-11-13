@@ -54,7 +54,7 @@ BEGIN
   result_id:=activate_student_enrollment(
     'activate-one','a8200000-0000-0000-0000-000000000001',
     'c8200000-0000-0000-0000-000000000001',1,40,
-    'b8100000-0000-0000-0000-000000000001');
+    'b8100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
   IF result_id<>'a8200000-0000-0000-0000-000000000001' THEN
     RAISE EXCEPTION 'FAIL WS-ACT-01 returned wrong enrollment';
   END IF;
@@ -81,7 +81,7 @@ END $assert$;
 SELECT activate_student_enrollment(
   'activate-one','a8200000-0000-0000-0000-000000000001',
   'c8200000-0000-0000-0000-000000000001',1,40,
-  'b8100000-0000-0000-0000-000000000001');
+  'b8100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
 DO $assert$ BEGIN
   IF (SELECT count(*) FROM audit_events WHERE event_type='student.activation' AND target_id='a8200000-0000-0000-0000-000000000001')<>1 THEN
     RAISE EXCEPTION 'FAIL WS-ACT-05B idempotent replay duplicated the audit event';
@@ -90,15 +90,15 @@ DO $assert$ BEGIN
 END $assert$;
 
 SELECT ws_activation_expect_error('WS-ACT-06 same key with different debit is rejected',
-  $q$SELECT activate_student_enrollment('activate-one','a8200000-0000-0000-0000-000000000001','c8200000-0000-0000-0000-000000000001',1,41,'b8100000-0000-0000-0000-000000000001')$q$,
+  $q$SELECT activate_student_enrollment('activate-one','a8200000-0000-0000-0000-000000000001','c8200000-0000-0000-0000-000000000001',1,41,'b8100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz)$q$,
   '23505');
 SELECT ws_activation_expect_error('WS-ACT-07 second key cannot double-activate the same enrollment',
-  $q$SELECT activate_student_enrollment('activate-one-again','a8200000-0000-0000-0000-000000000001','c8200000-0000-0000-0000-000000000001',1,10,'b8100000-0000-0000-0000-000000000001')$q$,
+  $q$SELECT activate_student_enrollment('activate-one-again','a8200000-0000-0000-0000-000000000001','c8200000-0000-0000-0000-000000000001',1,10,'b8100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz)$q$,
   '23514');
 
 -- Insufficient credit must roll back the command log and leave enrollment/capacity untouched.
 SELECT ws_activation_expect_error('WS-ACT-08 insufficient credit rejects activation',
-  $q$SELECT activate_student_enrollment('activate-insufficient','a8200000-0000-0000-0000-000000000002','c8200000-0000-0000-0000-000000000001',1,70,'b8100000-0000-0000-0000-000000000001')$q$,
+  $q$SELECT activate_student_enrollment('activate-insufficient','a8200000-0000-0000-0000-000000000002','c8200000-0000-0000-0000-000000000001',1,70,'b8100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz)$q$,
   '23514');
 DO $assert$
 BEGIN
@@ -113,7 +113,7 @@ END $assert$;
 
 -- Capacity failure after a provisional debit must roll back the debit and command record too.
 SELECT ws_activation_expect_error('WS-ACT-10 full capacity rejects activation',
-  $q$SELECT activate_student_enrollment('activate-capacity','a8200000-0000-0000-0000-000000000003','c8200000-0000-0000-0000-000000000001',1,10,'b8100000-0000-0000-0000-000000000001')$q$,
+  $q$SELECT activate_student_enrollment('activate-capacity','a8200000-0000-0000-0000-000000000003','c8200000-0000-0000-0000-000000000001',1,10,'b8100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz)$q$,
   '23514');
 DO $assert$
 BEGIN
@@ -129,13 +129,13 @@ BEGIN
 END $assert$;
 
 SELECT ws_activation_expect_error('WS-ACT-12 stale generation rejects activation',
-  $q$SELECT activate_student_enrollment('activate-stale','a8200000-0000-0000-0000-000000000004','c8200000-0000-0000-0000-000000000001',2,10,'b8100000-0000-0000-0000-000000000001')$q$,
+  $q$SELECT activate_student_enrollment('activate-stale','a8200000-0000-0000-0000-000000000004','c8200000-0000-0000-0000-000000000001',2,10,'b8100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz)$q$,
   '23514');
 SELECT ws_activation_expect_error('WS-ACT-13 no accepted responsible counselor rejects activation',
-  $q$SELECT activate_student_enrollment('activate-no-counselor','a8200000-0000-0000-0000-000000000004','c8200000-0000-0000-0000-000000000001',1,10,'b8100000-0000-0000-0000-000000000001')$q$,
+  $q$SELECT activate_student_enrollment('activate-no-counselor','a8200000-0000-0000-0000-000000000004','c8200000-0000-0000-0000-000000000001',1,10,'b8100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz)$q$,
   '23514');
 SELECT ws_activation_expect_error('WS-ACT-14 suspended Workspace member cannot activate',
-  $q$SELECT activate_student_enrollment('activate-suspended-actor','a8200000-0000-0000-0000-000000000004','c8200000-0000-0000-0000-000000000001',1,10,'b8100000-0000-0000-0000-000000000002')$q$,
+  $q$SELECT activate_student_enrollment('activate-suspended-actor','a8200000-0000-0000-0000-000000000004','c8200000-0000-0000-0000-000000000001',1,10,'b8100000-0000-0000-0000-000000000002','2099-01-01 00:00:00+00'::timestamptz)$q$,
   '42501');
 
 -- Direct ledger inserts cannot make the wallet balance negative.

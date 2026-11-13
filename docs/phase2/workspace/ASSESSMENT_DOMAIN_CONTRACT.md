@@ -101,3 +101,20 @@ No unapproved scoring formula or product behavior is invented here.
 The version must persist its exact question membership and order in a normalized relation (e.g. test_definition_version_questions). Enforce uniqueness of question membership and order within a version, and ensure each response references a question belonging to the exact attempt's definition version. question_count is a consistency check, not a substitute for the actual membership list. Published version membership/order is immutable.
 
 A future adaptive/per-attempt mode requires a separate Product Owner decision and must persist the exact delivered question IDs/order per attempt before any response is accepted. Do not infer or enable adaptive behavior from the existing draft delivery_mode field.
+
+## Implementation status — 2026-11-14 (draft SQL, synthetic; not an approval)
+
+Implemented in `workspace_schema_draft.sql`: `test_definition_version_questions` with unique membership
+(`version_id, item_ref`) and unique order (`version_id, question_no`); publication requires the membership
+count to equal `question_count` and the order to be exactly `1..n`; published membership and order are
+immutable to every writer; a response is bound by composite foreign keys to a question of its own attempt's
+version at that question's own order; the attempt's scoring-policy snapshot must equal the published
+version's. Publishing a `per_attempt` version is refused — the column stays only as a reserved extension
+point and is not permission to deliver variable sets.
+
+Field ownership: the topic belongs to the version question; `test_responses` no longer carries its own.
+
+Still open: item-bank ownership and the meaning of `item_ref` (OQ-ASM-1); per-subject exam results;
+versioned test analysis; the custom error taxonomy. The database still does not compute or validate a score.
+
+Tests: AVQ-01..AVQ-22, WS-ROLE-16/17, ASM-01..30, ASM-RACE-01 (all executed on PostgreSQL 16.15).

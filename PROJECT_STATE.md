@@ -16,6 +16,15 @@
 - **Real data:** Prohibited under D-014. Synthetic data only until independent tenant isolation/auth/RLS/migration/backup/restore/file/API tests pass and the Product Owner gives explicit written approval.
 - **Phase 3:** Not authorized. Do not start Phase 3 or merge PRs based on documentation or draft SQL creation alone.
 
+### Update 2026-11-14 — approved Product Owner decisions implemented (draft SQL)
+
+- **Decisions implemented:** PD-2026-11-13-A (fixed assessment question set), B (specialized entities plus a shared Activity layer), C (approval separation with the exception disabled and fail-closed), D (7-day credit return window, student-bound reserved credit, reactivation only inside the original period), F (MEDIUM scope allocation). See `docs/phase2/IMPLEMENTATION_RESPONSE_2026-11-14.md`.
+- **Last open HIGH closed at the schema level:** the Saga outbox envelope, delivery state/lease/dead-letter/re-drive, and the Workspace inbox with generation fencing are now reconciled with the Control Plane DDL and tested. The **service-level** Saga behaviour (freeze/drain, snapshot, staging, dispatcher crash, chaos, drift repair) remains SPEC-ONLY.
+- **Signature change:** `activate_student_enrollment()` takes a seventh parameter, the entitlement period end. Every call site, grant and role assertion was updated. The database chooses no entitlement duration.
+- **New open questions:** OQ-CRD-1 (window semantics), OQ-CRD-2 (reserved credit after the period ends), OQ-CRD-3 (source of the entitlement duration), OQ-SAGA-1 (signed wire format), OQ-SAGA-2 (quarantine resolution), OQ-ASM-1 (item bank). None was decided by the implementation.
+- **Still open, unchanged:** Q-007, Q-020, PS-1..PS-8, the transfer exception approval authority, OQ-D/OQ-E numeric objectives, M-05 and M-06 definitions, disposition of PR #8–#11, and bringing PR #12 up to date with `main`.
+- **Last local verification:** PostgreSQL 16.15, cleared cluster, all 18 runnable workflow steps passed (476 PASS assertion lines) plus the Python verifier unit tests. **CI for the pushed commit is NOT verified by the implementation agent** — this session has no GitHub Actions access.
+
 **Current Gate: NOT READY.** This PR is a draft design/schema delivery vehicle, not phase approval.
 
 ---

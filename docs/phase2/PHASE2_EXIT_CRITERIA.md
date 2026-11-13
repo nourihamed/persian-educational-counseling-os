@@ -43,15 +43,15 @@ A design contract is not implementation evidence. A draft SQL test is not runtim
 - WS-DOM-03 guardian relationship/permission auditability and authority proof.
 - Transfer approval table cannot preserve revoked and replacement approvals as separate immutable events.
 - Contact-change has no schema/function/test draft yet; current contract is specification only.
-- Durable Saga event schema and command/outbox/inbox boundaries need final reconciliation with current Control Plane DDL.
+- ~~Durable Saga event schema and command/outbox/inbox boundaries need final reconciliation with current Control Plane DDL.~~ **Schema reconciled and tested 2026-11-14** (`cp_12_saga_outbox_delivery.sql`, `workspace_inbox_projection.sql`, SAGA-01..34, INB-01..22). The **service-level** behaviour in contract section 10 stays SPEC-ONLY. Closure is the Supervisor's call, not the implementation's.
 - Workspace lifecycle and capacity archive/reactivation transitions need explicit schema and tests.
 - Final-capacity-slot concurrency test needs a fresh successful CI result.
 
 ### MEDIUM
-- Assessment definition/versioning and per-subject exam results/custom error taxonomy.
+- Assessment definition/versioning: **version question membership/order implemented and tested 2026-11-14** (PD-2026-11-13-A, AVQ-01..22). Per-subject exam results and the custom error taxonomy remain open.
 - Curriculum subtopics, normalized planning constraints and explicit PlanItem relation.
-- Canonical activity taxonomy and class participant/recurrence model.
-- Credit purchase/refund/renewal data model and payment reconciliation boundary.
+- Activity taxonomy and class participants: **implemented and tested 2026-11-14** (PD-2026-11-13-B, ACT-01..26; `class_participants`, `class_session_participants`). Recurrence rules remain open.
+- Credit lifecycle: **archive return window, student-bound reserved entitlement and reactivation implemented and tested 2026-11-14** (PD-2026-11-13-D, CRD-01..27). Purchase, renewal, refund execution and the payment reconciliation boundary remain deferred to Phase 21/22 per PD-2026-11-13-F.
 - File scan/quarantine and notification generation/permission fencing.
 - Retention policy schema integration and Q-007/Q-020 ownership decisions.
 

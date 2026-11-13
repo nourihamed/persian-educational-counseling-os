@@ -116,7 +116,7 @@ SELECT format('REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %I,%
 -- authorization remains mandatory in the API; these grants are not a substitute for RBAC.
 SELECT format(
   'GRANT SELECT,INSERT,UPDATE ON TABLE %s TO %I',
-  'program_templates,program_versions,student_plans,student_plan_versions,subjects,chapters,topics,student_topic_mastery,activities,study_sessions,test_definitions,test_definition_versions,test_attempts,test_responses,exams,exam_results,classes,class_sessions,assignments,reviews,daily_routines,progress_snapshots,risk_assessments,counselor_notes,private_file_objects,notification_preferences,in_app_notifications',
+  'program_templates,program_versions,student_plans,student_plan_versions,subjects,chapters,topics,student_topic_mastery,activities,study_sessions,test_definitions,test_definition_versions,test_definition_version_questions,test_attempts,test_responses,exams,exam_results,classes,class_sessions,class_participants,class_session_participants,assignments,reviews,daily_routines,progress_snapshots,risk_assessments,counselor_notes,private_file_objects,notification_preferences,in_app_notifications',
   'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
 -- Authorization source tables are read-only to the general runtime role.
 -- Membership, role, permission, branch, counselor assignment and guardian grants
@@ -157,10 +157,10 @@ SELECT format('GRANT SELECT ON TABLE notification_preferences TO %I',
 
 -- SECURITY DEFINER activation function owner has only the DML needed for its transaction.
 SELECT format(
-  'GRANT SELECT ON TABLE enrollments,students,counselor_assignments,workspace_memberships,credit_wallets,credit_transactions,activation_command_log,workspace_capacity_counters,capacity_events TO %I',
+  'GRANT SELECT ON TABLE enrollments,students,counselor_assignments,workspace_memberships,credit_wallets,credit_transactions,activation_command_log,workspace_capacity_counters,capacity_events,student_entitlements TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format(
-  'GRANT INSERT ON TABLE credit_transactions,activation_command_log,capacity_events,audit_events TO %I',
+  'GRANT INSERT ON TABLE credit_transactions,activation_command_log,capacity_events,audit_events,student_entitlements TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format(
   'GRANT UPDATE(student_id) ON TABLE students TO %I',
@@ -175,19 +175,25 @@ SELECT format(
 -- Append-only/immutable triggers reject any actual change to these lock-only columns.
 SELECT format('GRANT UPDATE(wallet_id) ON TABLE credit_wallets TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+-- The entitlement row is the only credit object the command owner may transition (reserve/re-consume).
+-- Identity, amount, activation time and period end stay immutable through the row guard.
+SELECT format('GRANT UPDATE(state,reserved_at,reconsumed_at,reversal_transaction_id) ON TABLE student_entitlements TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT SELECT ON TABLE student_entitlements TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
 SELECT format('GRANT UPDATE(transaction_id) ON TABLE credit_transactions TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT UPDATE(idempotency_key) ON TABLE activation_command_log TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT EXECUTE ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
-SELECT format('GRANT EXECUTE ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid) TO %I',
+SELECT format('GRANT EXECUTE ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz) TO %I',
   'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
 SELECT format('REVOKE ALL ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) FROM PUBLIC,%I,%I,%I',
   'ws_'||current_setting('app.workspace_key')||'_runtime',
   'ws_'||current_setting('app.workspace_key')||'_worker',
   'ws_'||current_setting('app.workspace_key')||'_exporter') \gexec
-SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid) FROM PUBLIC,%I,%I,%I',
+SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz) FROM PUBLIC,%I,%I,%I',
   'ws_'||current_setting('app.workspace_key')||'_worker',
   'ws_'||current_setting('app.workspace_key')||'_exporter',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
@@ -204,6 +210,52 @@ SELECT format('GRANT EXECUTE ON FUNCTION archive_student_enrollment(text,uuid,bi
 SELECT format('REVOKE ALL ON FUNCTION archive_student_enrollment(text,uuid,bigint,uuid,text) FROM PUBLIC,%I,%I,%I',
   'ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT SELECT,INSERT ON TABLE reactivation_command_log TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT UPDATE(idempotency_key) ON TABLE reactivation_command_log TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT INSERT ON TABLE enrollments,counselor_assignments TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT UPDATE(state,started_at) ON TABLE enrollments TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT EXECUTE ON FUNCTION reactivate_student_enrollment(text,uuid,uuid,bigint,uuid,uuid) TO %I','ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+SELECT format('REVOKE ALL ON FUNCTION reactivate_student_enrollment(text,uuid,uuid,bigint,uuid,uuid) FROM PUBLIC,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+\endif
+
+-- Saga inbox (workspace_inbox_projection.sql). Applied only when that draft is loaded.
+SELECT to_regprocedure('apply_inbox_event(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid)') IS NOT NULL AS has_inbox \gset
+\if :has_inbox
+DO $inbox_role$
+DECLARE r text := 'ws_'||current_setting('app.workspace_key')||'_inbox_owner';
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=r) THEN
+    EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS', r);
+  END IF;
+END $inbox_role$;
+SELECT format('ALTER FUNCTION apply_inbox_event(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) OWNER TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+SELECT format('GRANT SELECT ON TABLE workspace_profile,students,enrollments,counselor_assignments TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+-- Row-lock privilege only; workspace_inbox_events is append-only through its trigger.
+SELECT format('GRANT UPDATE(event_id) ON TABLE workspace_inbox_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+SELECT format('GRANT SELECT,INSERT ON TABLE workspace_inbox_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+-- Column-scoped: the inbox may move the local fence and close assignments, nothing else.
+SELECT format('GRANT UPDATE(ownership_generation,state,ended_at) ON TABLE enrollments TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+SELECT format('GRANT UPDATE(state,ended_at) ON TABLE counselor_assignments TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+-- Row-lock privilege only (PostgreSQL requires UPDATE for SELECT ... FOR UPDATE). The student_id column
+-- is immutable through students_primary_key_immutable, so this grant conveys no ability to change it.
+SELECT format('GRANT UPDATE(student_id) ON TABLE students TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+-- The background worker is the consumer identity; it holds no direct write access to the inbox table.
+SELECT format('GRANT EXECUTE ON FUNCTION apply_inbox_event(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_worker') \gexec
+SELECT format('REVOKE ALL ON FUNCTION apply_inbox_event(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) FROM PUBLIC,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_exporter','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT SELECT ON TABLE workspace_inbox_events TO %I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker') \gexec
+SELECT format('GRANT SELECT ON quarantined_inbox_events TO %I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker') \gexec
 \endif
 
 SELECT format('GRANT CREATE,USAGE ON SCHEMA public TO %I',

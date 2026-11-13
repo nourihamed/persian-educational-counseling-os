@@ -85,3 +85,21 @@ No product policy is selected here.
 **Approved direction:** specialized domain entities with a shared Activity scheduling/tracking layer.
 
 Test/Exam, Class/ClassSession, Assignment and Review remain authoritative typed entities. Activity may reference or project their scheduling/execution context through typed FK-backed relations. Do not use Activity as a generic substitute for domain records and do not introduce an unrestricted polymorphic source_type/source_id without referential integrity.
+
+## Implementation status — 2026-11-14 (draft SQL, synthetic; not an approval)
+
+Implemented: five typed, foreign-key-backed source columns on `activities` (`test_attempt_id`, `exam_id`,
+`class_session_id`, `assignment_id`, `review_id`) and no `source_type`/`source_id` pair. Each foreign key
+carries `student_id`, so an Activity can only cite a source of its own student. Two CHECK constraints force
+exactly the column matching `activity_kind` to be set; partial unique indexes prevent a second Activity for
+the same source record; student and kind are immutable after creation. `class_participants` and
+`class_session_participants` make a class-follow-up Activity valid only for a student who takes part in that
+session's class. `exam` is now an activity kind of its own.
+
+Field ownership is stated in the schema: the specialized entity owns its domain fields; the Activity owns
+title, due date, priority and state.
+
+Still open: class recurrence rules, and the remaining activity kinds named in the Master Prompt that have no
+specialized entity yet (flashcards, remediation, routine test, project).
+
+Tests: ACT-01..ACT-26 (executed).

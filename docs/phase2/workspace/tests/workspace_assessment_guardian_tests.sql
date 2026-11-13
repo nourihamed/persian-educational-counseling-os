@@ -42,6 +42,9 @@ SELECT wx_err('ASM-03 published version cannot be deleted',
  $q$DELETE FROM test_definition_versions WHERE version_id='d4100000-0000-0000-0000-000000000001'$q$,'23514','immutable');
 INSERT INTO test_definition_versions(version_id,test_id,version_no,question_count,scoring_policy_snapshot)
 VALUES ('d4100000-0000-0000-0000-000000000002','d4000000-0000-0000-0000-000000000001',2,3,'{"negative_marking":false,"version":"v2"}'::jsonb);
+INSERT INTO test_definition_version_questions(version_question_id,version_id,question_no,item_ref)
+SELECT ('d4210000-0000-0000-0000-0000000000'||lpad(g::text,2,'0'))::uuid,'d4100000-0000-0000-0000-000000000002',g,'synthetic-item-v2-'||g
+  FROM generate_series(1,3) g;
 SELECT wx_err('ASM-04 attempt on a draft version rejected',
  $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{}'::jsonb)$q$,'23514','published definition version');
 UPDATE test_definition_versions SET status='published', published_at=now() WHERE version_id='d4100000-0000-0000-0000-000000000002';
@@ -57,17 +60,17 @@ SELECT wx_err('ASM-07 fixed-delivery attempt with a different question_count rej
 INSERT INTO test_definitions(test_id,title,subject_id,test_kind,scoring_policy_snapshot)
 SELECT 'd4000000-0000-0000-0000-000000000002','Other quiz',subject_id,'educational','{}'::jsonb FROM test_definitions WHERE test_id='d4000000-0000-0000-0000-000000000001';
 SELECT wx_err('ASM-08 attempt/version/test linkage must agree (version of another test)',
- $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{}'::jsonb)$q$,'23503');
+ $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{"negative_marking":false,"version":"v2"}'::jsonb)$q$,'23503');
 INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot)
 VALUES ('e4000000-0000-0000-0000-000000000002','d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{"negative_marking":false,"version":"v2"}'::jsonb);
 -- Responses while started
-INSERT INTO test_responses(response_id,attempt_id,question_no,response_state) VALUES
- ('f4000000-0000-0000-0000-000000000011','e4000000-0000-0000-0000-000000000002',1,'correct'),
- ('f4000000-0000-0000-0000-000000000012','e4000000-0000-0000-0000-000000000002',2,'wrong');
+INSERT INTO test_responses(response_id,attempt_id,definition_version_id,version_question_id,question_no,response_state) VALUES
+ ('f4000000-0000-0000-0000-000000000011','e4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','d4210000-0000-0000-0000-000000000001',1,'correct'),
+ ('f4000000-0000-0000-0000-000000000012','e4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','d4210000-0000-0000-0000-000000000002',2,'wrong');
 SELECT wx_err('ASM-09 duplicate response for the same question rejected',
- $q$INSERT INTO test_responses(response_id,attempt_id,question_no,response_state) VALUES (gen_random_uuid(),'e4000000-0000-0000-0000-000000000002',2,'blank')$q$,'23505');
+ $q$INSERT INTO test_responses(response_id,attempt_id,definition_version_id,version_question_id,question_no,response_state) VALUES (gen_random_uuid(),'e4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','d4210000-0000-0000-0000-000000000002',2,'blank')$q$,'23505');
 SELECT wx_err('ASM-10 question_no outside the delivered set rejected',
- $q$INSERT INTO test_responses(response_id,attempt_id,question_no,response_state) VALUES (gen_random_uuid(),'e4000000-0000-0000-0000-000000000002',4,'blank')$q$,'23514','outside');
+ $q$INSERT INTO test_responses(response_id,attempt_id,definition_version_id,version_question_id,question_no,response_state) VALUES (gen_random_uuid(),'e4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','d4210000-0000-0000-0000-000000000003',4,'blank')$q$,'23514','outside');
 SELECT wx_err('ASM-11 custom error reason requires a description',
  $q$UPDATE test_responses SET error_reason='custom' WHERE response_id='f4000000-0000-0000-0000-000000000012'$q$,'23514');
 SELECT wx_err('ASM-12 a description without the custom reason is rejected',
@@ -83,7 +86,7 @@ DO $t$ BEGIN
   IF (SELECT state FROM test_attempts WHERE attempt_id='e4000000-0000-0000-0000-000000000002')<>'started' THEN RAISE EXCEPTION 'FAIL ASM-16'; END IF;
   RAISE NOTICE 'PASS ASM-16 rejected submission left the attempt started (no partial finalization)';
 END $t$;
-INSERT INTO test_responses(response_id,attempt_id,question_no,response_state) VALUES ('f4000000-0000-0000-0000-000000000013','e4000000-0000-0000-0000-000000000002',3,'blank');
+INSERT INTO test_responses(response_id,attempt_id,definition_version_id,version_question_id,question_no,response_state) VALUES ('f4000000-0000-0000-0000-000000000013','e4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','d4210000-0000-0000-0000-000000000003',3,'blank');
 SELECT wx_err('ASM-17 counters that differ from the responses rejected (2,1,0 vs 1,1,1)',
  $q$SELECT submit_test_attempt('e4000000-0000-0000-0000-000000000002',2,1,0,66,'k-2',sha256('p2'::bytea))$q$,'23514','differ from responses');
 SELECT wx_err('ASM-18 counters that do not sum to the denominator rejected by any writer (direct UPDATE)',
@@ -105,7 +108,7 @@ SELECT wx_err('ASM-23 submitted response cannot be changed',
 SELECT wx_err('ASM-24 submitted response cannot be deleted',
  $q$DELETE FROM test_responses WHERE response_id='f4000000-0000-0000-0000-000000000013'$q$,'23514','immutable once');
 SELECT wx_err('ASM-25 response cannot be added after submission',
- $q$INSERT INTO test_responses(response_id,attempt_id,question_no,response_state) VALUES (gen_random_uuid(),'e4000000-0000-0000-0000-000000000001',3,'blank')$q$,'23514','immutable once');
+ $q$INSERT INTO test_responses(response_id,attempt_id,definition_version_id,version_question_id,question_no,response_state) VALUES (gen_random_uuid(),'e4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000001','d4200000-0000-0000-0000-000000000003',3,'blank')$q$,'23514','immutable once');
 SELECT wx_err('ASM-26 submitted counters and score cannot be rewritten',
  $q$UPDATE test_attempts SET score=100 WHERE attempt_id='e4000000-0000-0000-0000-000000000002'$q$,'23514');
 SELECT wx_err('ASM-27 scoring snapshot of an attempt is immutable',

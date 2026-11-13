@@ -18,7 +18,12 @@ END; $t$;
 CREATE OR REPLACE FUNCTION ax_approval(p_id uuid, p_case uuid, p_kind text, p_tag text,
   p_verified timestamptz DEFAULT now(), p_until timestamptz DEFAULT NULL) RETURNS void LANGUAGE sql AS $t$
   INSERT INTO transfer_approvals(approval_id,assertion_id,nonce_digest,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at,valid_until)
-  VALUES (p_id, gen_random_uuid(), sha256(convert_to('nonce-'||p_tag,'UTF8')), p_case, p_kind, 'ev-'||p_tag, 'subject-'||p_tag, 'authn-'||p_tag, '{"synthetic":true}'::jsonb, p_verified, p_until);
+  SELECT p_id, gen_random_uuid(), sha256(convert_to('nonce-'||p_tag,'UTF8')), p_case, p_kind, 'ev-'||p_tag, 'subject-'||p_tag, 'authn-'||p_tag,
+         jsonb_build_object('synthetic',true,'workspace_id',
+           CASE p_kind WHEN 'fee_confirmation' THEN c.source_workspace_id
+                       WHEN 'destination_acceptance' THEN c.destination_workspace_id END),
+         p_verified, p_until
+    FROM transfer_cases c WHERE c.case_id = p_case;
 $t$;
 
 -- Close the stale case and open a valid one for the same student (W2 -> W3, expected generation 2).
