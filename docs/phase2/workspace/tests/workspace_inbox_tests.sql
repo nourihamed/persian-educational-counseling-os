@@ -11,6 +11,7 @@ SET app.workspace_key = :'workspace_key';
 SELECT 'ws_'||current_setting('app.workspace_key')||'_runtime' AS runtime_role \gset
 SELECT 'ws_'||current_setting('app.workspace_key')||'_worker'  AS worker_role \gset
 SELECT 'ws_'||current_setting('app.workspace_key')||'_synth_exec' AS synth_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_synth_inbox' AS inbox_role \gset
 CREATE OR REPLACE FUNCTION ib_err(label text, stmt text, want text, want_msg text DEFAULT '')
 RETURNS void LANGUAGE plpgsql AS $t$
 BEGIN
@@ -32,7 +33,7 @@ DECLARE p jsonb;
 BEGIN
   p := jsonb_build_object('student_id',p_student::text,'from_workspace_id',p_src::text,
                           'to_workspace_id',p_dst::text,'generation',p_gen);
-  RETURN public.apply_inbox_event(p_event,p_schema,p_type,p,sha256(convert_to(p::text,'UTF8')),
+  RETURN public.apply_inbox_event_synthetic(p_event,p_schema,p_type,p,sha256(convert_to(p::text,'UTF8')),
                                   p_student,p_src,p_dst,p_gen,'c0000000-0000-0000-0000-000000000001');
 END; $t$;
 
@@ -62,13 +63,29 @@ RESET SESSION AUTHORIZATION;
 SET SESSION AUTHORIZATION :"worker_role";
 SELECT ib_err('INB-02 the consumer identity may not write an inbox row directly',
  $q$INSERT INTO workspace_inbox_events(event_id,schema_version,event_type,payload,payload_hash,platform_student_id,ownership_generation,correlation_id,outcome) VALUES (gen_random_uuid(),1,'forged','{}'::jsonb,sha256(convert_to('{}','UTF8')),'f1b00000-0000-0000-0000-000000000001',9,gen_random_uuid(),'applied')$q$,'42501');
+-- H-05: the worker holds the production-intended entry point and it FAILS CLOSED. A self-consistent
+-- payload hash is not authentication, so an unauthenticated event cannot move the ownership projection.
+SELECT ib_err('INB-02a the worker''s production-intended application path fails closed (no verified transport)',
+ $q$SELECT apply_inbox_event('d1b00000-0000-0000-0000-0000000000f1',1,'ownership_switched','{}'::jsonb,sha256(convert_to('{}','UTF8')),'f1b00000-0000-0000-0000-000000000001','a1b00000-0000-0000-0000-000000000009','a1b00000-0000-0000-0000-000000000001',2,gen_random_uuid())$q$,'0A000','no approved verified transport');
+SELECT ib_err('INB-02b the worker cannot reach the synthetic application path',
+ $q$SELECT apply_inbox_event_synthetic('d1b00000-0000-0000-0000-0000000000f2',1,'ownership_switched','{}'::jsonb,sha256(convert_to('{}','UTF8')),'f1b00000-0000-0000-0000-000000000001','a1b00000-0000-0000-0000-000000000009','a1b00000-0000-0000-0000-000000000001',2,gen_random_uuid())$q$,'42501');
+SELECT ib_err('INB-02c the worker cannot reach the transport gate itself',
+ $q$SELECT assert_inbox_transport_verified('d1b00000-0000-0000-0000-0000000000f3')$q$,'42501');
 RESET SESSION AUTHORIZATION;
+DO $t$ BEGIN
+  IF (SELECT ownership_generation FROM enrollments WHERE enrollment_id='a1c00000-0000-0000-0000-000000000001')<>1
+     OR EXISTS (SELECT 1 FROM workspace_inbox_events WHERE event_id IN
+                ('d1b00000-0000-0000-0000-0000000000f1','d1b00000-0000-0000-0000-0000000000f2')) THEN
+    RAISE EXCEPTION 'FAIL INB-02d the fail-closed path left an inbox row or moved the fence';
+  END IF;
+  RAISE NOTICE 'PASS INB-02a/b/c/d the operational consumer cannot apply an unauthenticated event, and nothing was recorded';
+END $t$;
 
 -- ============================ rejected envelopes ============================
-SET SESSION AUTHORIZATION :"worker_role";
+SET SESSION AUTHORIZATION :"inbox_role";
 DO $t$ DECLARE r text; p jsonb; BEGIN
   p := jsonb_build_object('generation',2);
-  r := apply_inbox_event('d1b00000-0000-0000-0000-00000000000a',1,'ownership_switched',p,sha256('a different payload'::bytea),
+  r := apply_inbox_event_synthetic('d1b00000-0000-0000-0000-00000000000a',1,'ownership_switched',p,sha256('a different payload'::bytea),
        'f1b00000-0000-0000-0000-000000000001','a1b00000-0000-0000-0000-000000000009','a1b00000-0000-0000-0000-000000000001',2,'c0000000-0000-0000-0000-000000000001');
   IF r<>'rejected_payload' THEN RAISE EXCEPTION 'FAIL INB-03: %',r; END IF;
   RAISE NOTICE 'PASS INB-03 an envelope whose hash does not describe its payload is rejected, not applied';
@@ -89,7 +106,7 @@ DO $t$ BEGIN
 END $t$;
 
 -- ============================ stale and future generations ============================
-SET SESSION AUTHORIZATION :"worker_role";
+SET SESSION AUTHORIZATION :"inbox_role";
 DO $t$ DECLARE r text; BEGIN
   r := ib_apply('d1b00000-0000-0000-0000-000000000011','f1b00000-0000-0000-0000-000000000001','a1b00000-0000-0000-0000-000000000009','a1b00000-0000-0000-0000-000000000001',1);
   IF r<>'ignored_stale' THEN RAISE EXCEPTION 'FAIL INB-07: %',r; END IF;
@@ -108,7 +125,7 @@ DO $t$ BEGIN
 END $t$;
 
 -- ============================ the destination advances to exactly N+1 ============================
-SET SESSION AUTHORIZATION :"worker_role";
+SET SESSION AUTHORIZATION :"inbox_role";
 DO $t$ DECLARE r text; BEGIN
   r := ib_apply('d1b00000-0000-0000-0000-000000000021','f1b00000-0000-0000-0000-000000000001','a1b00000-0000-0000-0000-000000000009','a1b00000-0000-0000-0000-000000000001',2);
   IF r<>'applied' THEN RAISE EXCEPTION 'FAIL INB-10: %',r; END IF;
@@ -131,7 +148,7 @@ DO $t$ BEGIN
   END IF;
   RAISE NOTICE 'PASS INB-12 inbox row and projection moved together exactly once (at-least-once delivery, once-only effect)';
 END $t$;
-SET SESSION AUTHORIZATION :"worker_role";
+SET SESSION AUTHORIZATION :"inbox_role";
 SELECT ib_err('INB-13 the same event id with different content is refused',
  $q$SELECT ib_apply('d1b00000-0000-0000-0000-000000000021','f1b00000-0000-0000-0000-000000000001','a1b00000-0000-0000-0000-000000000009','a1b00000-0000-0000-0000-000000000001',3)$q$,'23505','different content');
 DO $t$ DECLARE r text; BEGIN
@@ -155,7 +172,7 @@ SELECT ib_err('INB-16 a command using the pre-transfer generation is now refused
 RESET SESSION AUTHORIZATION;
 
 -- ============================ the source side is fenced and ended ============================
-SET SESSION AUTHORIZATION :"worker_role";
+SET SESSION AUTHORIZATION :"inbox_role";
 DO $t$ DECLARE r text; BEGIN
   r := ib_apply('d1b00000-0000-0000-0000-000000000031','f1b00000-0000-0000-0000-000000000001','a1b00000-0000-0000-0000-000000000001','a1b00000-0000-0000-0000-000000000009',3);
   IF r<>'applied' THEN RAISE EXCEPTION 'FAIL INB-17: %',r; END IF;
@@ -189,4 +206,4 @@ DO $t$ DECLARE n integer; BEGIN
   IF n<>0 THEN RAISE EXCEPTION 'FAIL INB-22: the Workspace database holds % Control Plane ownership table(s)',n; END IF;
   RAISE NOTICE 'PASS INB-22 the Workspace database has no global ownership table: a consumer cannot change Control Plane ownership';
 END $t$;
-SELECT 'WORKSPACE INBOX TESTS COMPLETED (INB-01..INB-22)' AS result;
+SELECT 'WORKSPACE INBOX TESTS COMPLETED (INB-01..INB-22, including the H-05 fail-closed boundary)' AS result;

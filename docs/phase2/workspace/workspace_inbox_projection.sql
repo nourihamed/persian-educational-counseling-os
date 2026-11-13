@@ -9,6 +9,12 @@
 -- WHAT THIS IS NOT
 --   * It is NOT a distributed transaction with the Control Plane. The two databases are separate; this
 --     side only guarantees that its own inbox row and its own projection move together.
+--   * H-05 — payload_hash IS NOT AUTHENTICATION. It proves only that the payload handed to this command
+--     matches the digest handed with it. It does not prove who sent the event, that the Control Plane sent
+--     it, or that it was not replaced in transit. Anyone able to call the command could forge a
+--     self-consistent envelope. Production verification and a signed wire format are deferred
+--     (OQ-SAGA-1, PS-1..PS-4), so the production-intended entry point FAILS CLOSED and no operational
+--     identity can move the ownership projection from an unauthenticated event.
 --   * The Workspace database holds no global ownership. Applying an event NEVER changes Control Plane
 --     ownership - there is nothing here that could. It only moves this Workspace's local fence.
 --   * No retry, timeout or quarantine-resolution policy is chosen here. A quarantined event stays
@@ -52,9 +58,15 @@ CREATE VIEW quarantined_inbox_events AS
          outcome_reason, received_at
     FROM workspace_inbox_events WHERE outcome = 'quarantined_future';
 
+-- H-05 — SYNTHETIC APPLICATION PATH (D-014).
+-- This command applies an event on the strength of an unauthenticated envelope. It is NOT an operational
+-- path: it exists so the fencing, deduplication and atomicity rules can be tested, and it is granted to
+-- exactly one identity, ws_<key>_synth_inbox. The production-intended entry point is apply_inbox_event(),
+-- below, which refuses until an approved trusted transport exists.
+--
 -- Returns the recorded outcome. A re-delivery of the same event returns that same outcome and changes
 -- nothing; the same event id with different content is refused rather than silently re-interpreted.
-CREATE FUNCTION apply_inbox_event(
+CREATE FUNCTION apply_inbox_event_synthetic(
   p_event_id uuid,
   p_schema_version integer,
   p_event_type text,
@@ -179,6 +191,49 @@ BEGIN
   RETURN v_outcome;
 END;
 $$;
+REVOKE ALL ON FUNCTION apply_inbox_event_synthetic(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) FROM PUBLIC;
+
+-- ======================================================================================================
+-- H-05 — production-intended application, FAIL CLOSED.
+-- An event may move this Workspace's ownership fence only if its origin has been verified by an approved
+-- trusted transport. No such transport is approved: the algorithm, key custody, trust store and channel
+-- identity are Platform Security questions PS-1..PS-4 and PS-6, and the signed envelope format is
+-- OQ-SAGA-1. The gate below therefore refuses, and nothing in this file invents a cryptographic algorithm,
+-- key, certificate or trust policy. When the boundary is approved, this gate is replaced by a call into it;
+-- the body of the application logic does not change.
+-- ======================================================================================================
+CREATE FUNCTION assert_inbox_transport_verified(p_event_id uuid) RETURNS void
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'no approved verified transport exists for inbox events (OQ-SAGA-1; PS-1..PS-4, PS-6): event % cannot be applied', p_event_id
+    USING ERRCODE='feature_not_supported';
+END; $$;
+
+CREATE FUNCTION apply_inbox_event(
+  p_event_id uuid,
+  p_schema_version integer,
+  p_event_type text,
+  p_payload jsonb,
+  p_payload_hash bytea,
+  p_platform_student_id uuid,
+  p_source_workspace_id uuid,
+  p_destination_workspace_id uuid,
+  p_ownership_generation bigint,
+  p_correlation_id uuid
+) RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path=pg_catalog,pg_temp
+AS $$
+BEGIN
+  PERFORM public.assert_inbox_transport_verified(p_event_id);
+  -- Unreachable while the gate refuses. The hash is an integrity check, never authentication, so it is
+  -- deliberately NOT accepted as a substitute for a verified origin.
+  RETURN public.apply_inbox_event_synthetic(p_event_id,p_schema_version,p_event_type,p_payload,p_payload_hash,
+            p_platform_student_id,p_source_workspace_id,p_destination_workspace_id,p_ownership_generation,
+            p_correlation_id);
+END; $$;
 REVOKE ALL ON FUNCTION apply_inbox_event(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION assert_inbox_transport_verified(uuid) FROM PUBLIC;
 
 COMMIT;

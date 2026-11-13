@@ -236,7 +236,7 @@ SELECT format('REVOKE ALL ON FUNCTION reactivate_student_enrollment(text,uuid,uu
 \endif
 
 -- Saga inbox (workspace_inbox_projection.sql). Applied only when that draft is loaded.
-SELECT to_regprocedure('apply_inbox_event(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid)') IS NOT NULL AS has_inbox \gset
+SELECT to_regprocedure('apply_inbox_event_synthetic(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid)') IS NOT NULL AS has_inbox \gset
 \if :has_inbox
 DO $inbox_role$
 DECLARE r text := 'ws_'||current_setting('app.workspace_key')||'_inbox_owner';
@@ -245,7 +245,11 @@ BEGIN
     EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS', r);
   END IF;
 END $inbox_role$;
+SELECT format('ALTER FUNCTION apply_inbox_event_synthetic(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) OWNER TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
 SELECT format('ALTER FUNCTION apply_inbox_event(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) OWNER TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+SELECT format('ALTER FUNCTION assert_inbox_transport_verified(uuid) OWNER TO %I',
   'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
 SELECT format('GRANT SELECT ON TABLE workspace_profile,students,enrollments,counselor_assignments TO %I',
   'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
@@ -263,11 +267,27 @@ SELECT format('GRANT UPDATE(state,ended_at) ON TABLE counselor_assignments TO %I
 -- is immutable through students_primary_key_immutable, so this grant conveys no ability to change it.
 SELECT format('GRANT UPDATE(student_id) ON TABLE students TO %I',
   'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
--- The background worker is the consumer identity; it holds no direct write access to the inbox table.
+-- H-05: the background worker is the consumer identity, and it gets ONLY the production-intended entry
+-- point, which fails closed until an approved verified transport exists. The synthetic application path
+-- belongs to one dedicated test identity and is unreachable for every operational role.
 SELECT format('GRANT EXECUTE ON FUNCTION apply_inbox_event(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) TO %I',
   'ws_'||current_setting('app.workspace_key')||'_worker') \gexec
 SELECT format('REVOKE ALL ON FUNCTION apply_inbox_event(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) FROM PUBLIC,%I,%I,%I',
   'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_exporter','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+DO $synth_inbox$
+DECLARE r text := 'ws_'||current_setting('app.workspace_key')||'_synth_inbox';
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=r) THEN
+    EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS', r);
+  END IF;
+END $synth_inbox$;
+SELECT format('GRANT EXECUTE ON FUNCTION apply_inbox_event_synthetic(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_synth_inbox') \gexec
+SELECT format('REVOKE ALL ON FUNCTION apply_inbox_event_synthetic(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid) FROM PUBLIC,%I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('REVOKE ALL ON FUNCTION assert_inbox_transport_verified(uuid) FROM PUBLIC,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter') \gexec
 SELECT format('GRANT SELECT ON TABLE workspace_inbox_events TO %I,%I',
   'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker') \gexec
 SELECT format('GRANT SELECT ON quarantined_inbox_events TO %I,%I',
