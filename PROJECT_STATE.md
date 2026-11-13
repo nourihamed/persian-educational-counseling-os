@@ -1,4 +1,35 @@
-# CURRENT PROJECT STATE — PHASE 2 RECONCILIATION (2026-11-09)
+# CURRENT PROJECT STATE — PHASE 2 (updated 2026-11-14)
+
+**Document date:** 2026-11-14. **Branch HEAD this document describes:** `db3fbdf2ba1fe1d2a0fba2163c5e2c367054272d`
+on `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, Draft, open, **unmerged**).
+**Phase 2 gate: NOT READY. Phase 3: NOT AUTHORIZED.** D-014 synthetic-only remains in force.
+
+## Verification status at this HEAD — local and CI are reported separately
+
+| Kind | What it is | Result at `db3fbdf` |
+|---|---|---|
+| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — all 18 runnable steps, **511 PASS assertion lines**, plus the Python verifier-contract unit tests (`OK`) |
+| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 at this exact SHA | **success** — run [43504583054](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43504583054), job 132158760370 (a companion run, 43504575056, also succeeded) |
+
+Both results above were produced at `db3fbdf`. Documentation-only commits made on top of it change no SQL
+and no test, so they do not invalidate these results; any commit that touches SQL or tests requires a fresh
+local run and a fresh Actions run at its own SHA.
+
+The two are different kinds of evidence and neither substitutes for the other. The local run is executed by
+the implementation agent and is not independently reproduced. The Actions run is executed by CI at the exact
+SHA. **Neither is approval of Phase 2, of production security, or of anything beyond the draft SQL and
+synthetic test suites they execute.**
+
+Open decisions that this HEAD does **not** close, and which no local or CI result can close:
+**OQ-CRD-2** (disposition of a reserved entitlement after its original period ends) and **OQ-CRD-3** (the
+authoritative source of the entitlement duration) both remain **OPEN**; the production-intended activation
+path stays fail-closed while OQ-CRD-3 is open. OQ-CRD-1 is RESOLVED (Product Owner, 2026-11-14). Q-007,
+Q-020, OQ-SAGA-1, OQ-SAGA-2, OQ-ASM-1, PS-1..PS-8, the transfer exception approval authority and the
+OQ-D/OQ-E numeric objectives all remain open.
+
+---
+
+## Historical reconciliation notes (2026-11-09 onward)
 
 - **Phase 0:** CLOSED; historical documentation foundation.
 - **Phase 1:** APPROVED for design/documentation only under D-024. This is not runtime security approval.
@@ -11,7 +42,7 @@
 - **Security:** Control Plane executor roles and Workspace per-database role/CONNECT boundaries have catalog tests. Production login identities, KMS/HSM, real secret binding, API authorization, object-level access, connection-pool isolation and target-environment verification remain unimplemented/unverified. The previous shared non-login Control Plane function-owner role has been split into transfer, rotation and identity-admission owners; the draft SQL and catalog assertions passed PostgreSQL 16 GitHub Actions run #222 at exact branch HEAD `2f605051440b4198794e710283f0a6d852983316`. Production credentials, KMS/HSM and target-environment verification remain open.
 - **Transfer:** MVP direction remains source write-freeze + final snapshot + destination staging/validation + atomic Control Plane ownership switch. Three cumulative approvals remain mandatory. Approval identity/authority and distributed Saga contracts are now documented in `docs/phase2/control_plane/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` and `docs/phase2/transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md`. The DB switch is not a cross-database atomic transaction; trusted verifier, append-only re-approval schema, durable publisher/consumer, freeze/drain, staging importer and crash recovery remain unimplemented.
 - **Initial identity admission:** cp_07 defines atomic student/ownership/claim/contact-index/alias admission, idempotency and active/retiring HMAC alias coverage. Contact-change/reverification design contract is now documented in `docs/phase2/control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md`; SQL function, proof verifier, API and executable tests remain unimplemented. Database tests cannot prove that trusted service HMAC values derive from the same canonical E.164.
-- **Tests:** GitHub Actions run [#231](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/42653297866) completed SUCCESS on PostgreSQL 16 at exact PR #12 HEAD `2104eea56806a6f82b405090bc9cbfbd675d2aec`. It passed split-owner role catalog assertions, Workspace UUID immutability/lock-only privilege checks, Control Plane transfer/rotation/claim-admission suites and races, Workspace schema/activation/credit/capacity/audit suites, activation race and per-Workspace role/CONNECT checks. GitHub Actions Run #336 completed SUCCESS on PostgreSQL 16 at exact SHA `52bd0347b3aba4f816d996065122ed0d362bae5f`. It includes the new `WS-CAP-RACE-01` test (two different enrollments competing for the final active-student slot) and all previously wired CP/Workspace SQL suites. Subsequent commits `bdec471`, `56f9d71`, `892a796`, `cabda5f`, `264d72f`, `12afe98`, `f72f024`, `8e9910e`, `55d4145` and `72263f8` changed the Workspace role source/test fixtures and documentation; Run #336 does NOT cover those later SQL/test changes. No successful CI is yet verified for current branch HEAD. This is synthetic draft-SQL evidence only, not API/runtime/production approval.
+- **Tests:** superseded by the "Verification status at this HEAD" table above. For history: run #231 covered PR #12 HEAD `2104eea56806a6f82b405090bc9cbfbd675d2aec` and run #336 covered SHA `52bd0347b3aba4f816d996065122ed0d362bae5f`; both predate the Control Plane executor-identity fix, the per-recipient Saga delivery redesign and the credit entitlement work, so neither covers the current schema. Do not cite them as evidence for this HEAD. All draft-SQL evidence is synthetic (D-014) and is not API, runtime or production approval.
 - **Crosswalk:** D-028 onward are NOT assigned. Any proposed D-028…D-062 sequence remains withdrawn pending collision-free crosswalk and individual PO approval. OQ-A through OQ-G/OQ-F1..F3 are accepted at policy/direction level; Q-007 remains open for detailed legal/age-based authorization.
 - **Real data:** Prohibited under D-014. Synthetic data only until independent tenant isolation/auth/RLS/migration/backup/restore/file/API tests pass and the Product Owner gives explicit written approval.
 - **Phase 3:** Not authorized. Do not start Phase 3 or merge PRs based on documentation or draft SQL creation alone.
