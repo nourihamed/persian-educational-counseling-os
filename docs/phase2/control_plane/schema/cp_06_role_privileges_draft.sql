@@ -53,6 +53,8 @@ ALTER TABLE enrollment_claims OWNER TO cp_table_owner;
 ALTER TABLE enrollment_claim_identity_aliases OWNER TO cp_table_owner;
 ALTER TABLE transfer_cases OWNER TO cp_table_owner;
 ALTER TABLE transfer_approvals OWNER TO cp_table_owner;
+ALTER TABLE transfer_approval_revocations OWNER TO cp_table_owner;
+ALTER VIEW transfer_approvals_current OWNER TO cp_table_owner;
 ALTER TABLE command_log OWNER TO cp_table_owner;
 ALTER TABLE identity_admission_commands OWNER TO cp_table_owner;
 ALTER TABLE inbox_events OWNER TO cp_table_owner;
@@ -75,7 +77,7 @@ REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM
   cp_transfer_function_owner,cp_rotation_function_owner,cp_identity_admission_function_owner;
 
 -- Transfer owner: only the records read/written by transfer commands and their transition guard.
-GRANT SELECT ON transfer_cases,transfer_approvals,student_ownership,enrollment_claims,
+GRANT SELECT ON transfer_cases,transfer_approvals,transfer_approval_revocations,student_ownership,enrollment_claims,
   identity_write_gate,mobile_hmac_key_versions,enrollment_claim_identity_aliases,student_contact_index,
   transfer_state_transitions,command_log TO cp_transfer_function_owner;
 -- FOR SHARE requires UPDATE privilege on at least one column. singleton is CHECK-constrained TRUE,

@@ -24,7 +24,7 @@ BEGIN
   WHERE ns.nspname='public'
     AND c.relname IN ('workspaces','platform_students','student_contact_index','mobile_encryption_key_versions',
       'mobile_hmac_key_versions','identity_write_gate','student_ownership','enrollment_claims',
-      'enrollment_claim_identity_aliases','transfer_cases','transfer_approvals','command_log',
+      'enrollment_claim_identity_aliases','transfer_cases','transfer_approvals','transfer_approval_revocations','command_log',
       'inbox_events','outbox_events','ownership_history','transfer_state_transitions','identity_admission_commands')
     AND pg_get_userbyid(c.relowner)<>'cp_table_owner';
   IF bad IS NOT NULL THEN RAISE EXCEPTION 'FAIL CP-ROLE-02 tables not owned by cp_table_owner: %',bad; END IF;

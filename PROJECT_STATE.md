@@ -293,3 +293,9 @@ Product Owner approved the MVP role grantability matrix on 2026-11-10; see `docs
 - Pending: push, GitHub Actions run for the corrective commit, independent Supervisor review.
 - Open: M-05 and M-06 (residual; definitions not in the implementation record). Revocation policy and propagation: deferred. Production verifier and cryptography (PS-1 to PS-8): deferred.
 - Phase 2 gate: NOT READY. Phase 3: unauthorized. Real data: prohibited (D-014). PR #12: Draft, open, unmerged.
+
+## Exit-findings batch status (2026-11-13, implementation agent; not a supervisor review)
+- Implemented as drafts with executable tests: WS-DOM-01 (assessment reconciliation), WS-DOM-03 (guardian event history), Control Plane approval/revocation events. WS-DOM-02: evidence offered, no new code.
+- Details and limits: `docs/phase2/IMPLEMENTATION_RESPONSE_2026-11-13.md`; per-test status: `TEST_PLAN.md`.
+- Still open against `docs/phase2/PHASE2_EXIT_CRITERIA.md`: approval-recording command, contact-change schema, Saga event schema reconciliation, Workspace lifecycle/capacity transitions, WS-DOM-04 remainder, MEDIUM items, PR #8–#11 disposition, PR #12 behind main, M-05/M-06 definitions, all Product Owner / Platform Security decisions.
+- Phase 2 gate: NOT READY. Phase 3: unauthorized. Real data: prohibited (D-014). PR #12: Draft, open, unmerged.

@@ -343,3 +343,25 @@ Guardian/parent and student legal authority tests remain blocked by Q-007 and mu
 | Full workflow steps 02 to 12 | fresh PostgreSQL 16.15 database | ALL PASS (local run) |
 | GitHub Actions | corrective commit | NOT YET RUN (pending push) |
 | M-05, M-06 | residual findings | OPEN (definitions not in implementation record) |
+
+## Phase 2 exit findings — implementation batch (2026-11-13; author-executed, NOT independently reproduced)
+| ID | Check | Where | Status |
+|---|---|---|---|
+| ASM-01..03 | Definition version: created as draft; published version immutable and undeletable | workspace/tests/workspace_assessment_guardian_tests.sql | PASS |
+| ASM-04..08 | Attempt needs a published version; starts as `started`; fixed-delivery denominator; attempt/version/test linkage; publishing a new version does not change existing attempts | same | PASS |
+| ASM-09..14 | Duplicate response, out-of-range question, custom error reason rules, counters frozen while started | same | PASS |
+| ASM-15..22 | Submission: missing response, counter mismatch, direct UPDATE path, missing score, accepted submission, idempotent replay, key reuse with different payload | same | PASS |
+| ASM-23..30 | Submitted attempt and responses immutable; analysis cannot rewrite; no cancel or delete after submission | same | PASS |
+| ASM-RACE-01 | Response change racing with submission: stale submission waits, then is rejected | workspace/tests/workspace_assessment_submit_race.sh | PASS; sensitivity checked once (with the attempt row lock removed in a scratch copy the test FAILS) |
+| GDN-01..04 | Guardian events append-only; verified needs evidence; event bound to its own transaction | workspace/tests/workspace_assessment_guardian_tests.sql | PASS |
+| GDN-05,07,13,14 | Link/permission change without its event rejected at constraint check | same | PASS |
+| GDN-06,08..11,17,18 | revoked ⇔ revoked_at; permission immutable; no deletes; identity immutable; revoked link terminal; permission needs a verified link | same | PASS |
+| GDN-12,15,16 | Effective view follows link state; history preserved after revocation | same | PASS |
+| WS-ROLE-14,15 | Runtime has no privilege on guardian history; expected privileges on assessment tables | workspace/tests/workspace_role_privilege_tests.sql | PASS |
+| APR-01..13 | One current approval per kind; assertion and nonce replay rejected; approvals and revocations append-only; revoked or expired approval does not satisfy the switch; replacement keeps history | control_plane/tests/cp_35_approval_event_tests.sql | PASS |
+| APR-RACE-01 | Revocation racing with the ownership switch: switch waits, then is rejected | control_plane/tests/cp_36_approval_revocation_race.sh | PASS (no lock-removal sensitivity run was done for this race) |
+| APR-SWITCH-01 | Switch succeeds with three current approvals; all historical approval events kept | same | PASS |
+| Full workflow, steps 02–12 | Fresh PostgreSQL 16.15 cluster, local socket | .github/workflows/phase2-schema-tests.yml | ALL PASS (local run) |
+| GitHub Actions for this commit | — | — | NOT RUN until pushed |
+| Score formula recomputation, guardian legal authority, approval signature verification | — | — | NOT IMPLEMENTED (service / Phase 4 / verifier) |
+| Approval-recording command, contact-change, Saga schema, Workspace lifecycle, WS-DOM-04 remainder | — | — | NOT IMPLEMENTED (open exit findings) |

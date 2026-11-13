@@ -55,10 +55,18 @@ INSERT INTO study_sessions(study_session_id,student_id,activity_id,started_at,en
 VALUES ('c4000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','b4000000-0000-0000-0000-000000000001',now()-interval '30 minutes',now(),30,28,'completed');
 INSERT INTO test_definitions(test_id,title,subject_id,topic_id,test_kind,scoring_policy_snapshot)
 VALUES ('d4000000-0000-0000-0000-000000000001','Topic quiz','e3000000-0000-0000-0000-000000000001','a4000000-0000-0000-0000-000000000001','educational','{"negative_marking":true,"version":"v1"}'::jsonb);
-INSERT INTO test_attempts(attempt_id,test_id,student_id,state,started_at,submitted_at,correct_count,wrong_count,blank_count,score,scoring_policy_snapshot)
-VALUES ('e4000000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','analysed',now()-interval '15 minutes',now(),8,1,1,75,'{"negative_marking":true,"version":"v1"}'::jsonb);
+-- WS-DOM-01 fixture: draft version -> published -> started attempt -> 10 explicit responses -> atomic submission -> analysed.
+INSERT INTO test_definition_versions(version_id,test_id,version_no,question_count,scoring_policy_snapshot)
+VALUES ('d4100000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001',1,10,'{"negative_marking":true,"version":"v1"}'::jsonb);
+UPDATE test_definition_versions SET status='published', published_at=now() WHERE version_id='d4100000-0000-0000-0000-000000000001';
+INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot)
+VALUES ('e4000000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',now()-interval '15 minutes',10,'{"negative_marking":true,"version":"v1"}'::jsonb);
 INSERT INTO test_responses(response_id,attempt_id,question_no,topic_id,response_state,time_spent_seconds,error_reason)
 VALUES ('f4000000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',1,'a4000000-0000-0000-0000-000000000001','wrong',50,'concept');
+INSERT INTO test_responses(response_id,attempt_id,question_no,response_state)
+SELECT gen_random_uuid(),'e4000000-0000-0000-0000-000000000001',g, CASE WHEN g=2 THEN 'blank' ELSE 'correct' END FROM generate_series(2,10) g;
+SELECT submit_test_attempt('e4000000-0000-0000-0000-000000000001',8,1,1,75,'synthetic-submit-1',sha256('synthetic-payload-1'::bytea));
+UPDATE test_attempts SET state='analysed' WHERE attempt_id='e4000000-0000-0000-0000-000000000001';
 INSERT INTO exams(exam_id,student_id,title,exam_at,scoring_policy_snapshot)
 VALUES ('a5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','Synthetic exam',now(),'{"negative_marking":true}'::jsonb);
 INSERT INTO exam_results(exam_result_id,exam_id,student_id,correct_count,wrong_count,blank_count,score,scoring_policy_snapshot)
@@ -95,10 +103,18 @@ VALUES ('b7000000-0000-0000-0000-000000000001','student','e1000000-0000-0000-000
 
 SELECT ws_expect_error('WS-ASSIGN-01 second responsible counselor rejected','INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at) VALUES (gen_random_uuid(),''a2000000-0000-0000-0000-000000000001'',''b1000000-0000-0000-0000-000000000002'',true,''active'',now())','23505');
 
+-- WS-DOM-03 fixture: projection rows and their events are written in ONE transaction (commit-time rule).
+BEGIN;
 INSERT INTO student_guardian_links(link_id,student_id,guardian_platform_user_id,relationship_type,verification_state,legal_authority_ref,verified_at)
 VALUES ('c2000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','c1000000-0000-0000-0000-000000000003','parent','verified','synthetic-authority-ref',now());
+INSERT INTO guardian_link_events(event_id,link_id,event_type,actor_ref,authn_event_ref,evidence_ref,policy_version,effective_at) VALUES
+ (gen_random_uuid(),'c2000000-0000-0000-0000-000000000001','link_created','synthetic-actor','synthetic-authn-1',NULL,'synthetic-policy-v1',now()),
+ (gen_random_uuid(),'c2000000-0000-0000-0000-000000000001','verified','synthetic-actor','synthetic-authn-1','synthetic-evidence-1','synthetic-policy-v1',now());
 INSERT INTO guardian_permissions(permission_id,guardian_link_id,scope_key,authority_ref,valid_from)
 VALUES ('d2000000-0000-0000-0000-000000000001','c2000000-0000-0000-0000-000000000001','progress.read','synthetic-authority-ref',now());
+INSERT INTO guardian_permission_events(event_id,permission_id,event_type,actor_ref,authn_event_ref,authority_ref,policy_version,effective_from)
+VALUES (gen_random_uuid(),'d2000000-0000-0000-0000-000000000001','granted','synthetic-actor','synthetic-authn-1','synthetic-authority-ref','synthetic-policy-v1',now());
+COMMIT;
 
 INSERT INTO program_templates(template_id,name,status) VALUES ('e2000000-0000-0000-0000-000000000001','Synthetic Template','draft');
 INSERT INTO program_versions(program_version_id,template_id,version_no,content,status)

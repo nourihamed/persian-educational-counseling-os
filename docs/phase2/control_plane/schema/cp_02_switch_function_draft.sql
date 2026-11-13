@@ -44,9 +44,9 @@ BEGIN
     END IF;
 
     SELECT count(DISTINCT approval_kind) INTO v_approvals
-      FROM public.transfer_approvals
+      FROM public.transfer_approvals a
      WHERE case_id = p_case_id
-       AND revoked_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM public.transfer_approval_revocations r WHERE r.approval_id = a.approval_id)
        AND (valid_until IS NULL OR valid_until > now())
        AND verified_at <= now()
        AND authn_event_ref <> ''

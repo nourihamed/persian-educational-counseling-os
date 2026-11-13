@@ -127,13 +127,13 @@ UPDATE transfer_cases SET state='staged_verified' WHERE case_id='d0000000-0000-0
 UPDATE transfer_cases SET source_freeze_token='freeze-1',source_frozen_at=now(),final_snapshot_ref='snapshot-1',final_snapshot_at=now(),snapshot_manifest_hash=decode(repeat('aa',32),'hex'),destination_validation_ref='validation-1',destination_validated_at=now() WHERE case_id='d0000000-0000-0000-0000-000000000002';
 UPDATE transfer_cases SET state='cutover_frozen' WHERE case_id='d0000000-0000-0000-0000-000000000002';
 SELECT expect_error('CP-CASE-IMM-02 freeze/snapshot evidence is write-once','UPDATE transfer_cases SET final_snapshot_ref=''tampered-snapshot'' WHERE case_id=''d0000000-0000-0000-0000-000000000002''','23514');
-INSERT INTO transfer_approvals(approval_id,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
+INSERT INTO transfer_approvals(approval_id,assertion_id,nonce_digest,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
 VALUES
- (gen_random_uuid(),'d0000000-0000-0000-0000-000000000002','guardian_consent','ev-g1','guardian-subject','authn-g1','{"relationship":"verified","legal_authority":"verified","scope":"transfer"}',now()),
- (gen_random_uuid(),'d0000000-0000-0000-0000-000000000002','destination_acceptance','ev-d1','destination-subject','authn-d1','{"workspace":"destination","permission":"transfer_accept"}',now());
+ (gen_random_uuid(),gen_random_uuid(),sha256(convert_to(gen_random_uuid()::text,'UTF8')),'d0000000-0000-0000-0000-000000000002','guardian_consent','ev-g1','guardian-subject','authn-g1','{"relationship":"verified","legal_authority":"verified","scope":"transfer"}',now()),
+ (gen_random_uuid(),gen_random_uuid(),sha256(convert_to(gen_random_uuid()::text,'UTF8')),'d0000000-0000-0000-0000-000000000002','destination_acceptance','ev-d1','destination-subject','authn-d1','{"workspace":"destination","permission":"transfer_accept"}',now());
 SELECT expect_error('CP-APP-01 missing prior counselor fee confirmation blocks switch','SELECT switch_student_ownership(''d0000000-0000-0000-0000-000000000002'')','23514');
-INSERT INTO transfer_approvals(approval_id,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
-VALUES (gen_random_uuid(),'d0000000-0000-0000-0000-000000000002','fee_confirmation','ev-f1','prior-counselor-subject','authn-f1','{"source_assignment":"verified","fee_confirmation":true}',now());
+INSERT INTO transfer_approvals(approval_id,assertion_id,nonce_digest,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
+VALUES (gen_random_uuid(),gen_random_uuid(),sha256(convert_to(gen_random_uuid()::text,'UTF8')),'d0000000-0000-0000-0000-000000000002','fee_confirmation','ev-f1','prior-counselor-subject','authn-f1','{"source_assignment":"verified","fee_confirmation":true}',now());
 SELECT expect_error('CP-APP-02 approval evidence cannot be rewritten','UPDATE transfer_approvals SET approver_ref=''forged-subject'' WHERE case_id=''d0000000-0000-0000-0000-000000000002'' AND approval_kind=''guardian_consent''','23514');
 
 -- Stale generation is rejected before any partial write.
@@ -164,11 +164,11 @@ UPDATE transfer_cases SET state='staging' WHERE case_id='d0000000-0000-0000-0000
 UPDATE transfer_cases SET state='staged_verified' WHERE case_id='d0000000-0000-0000-0000-000000000003';
 UPDATE transfer_cases SET source_freeze_token='freeze-3',source_frozen_at=now(),final_snapshot_ref='snapshot-3',final_snapshot_at=now(),snapshot_manifest_hash=decode(repeat('bb',32),'hex'),destination_validation_ref='validation-3',destination_validated_at=now() WHERE case_id='d0000000-0000-0000-0000-000000000003';
 UPDATE transfer_cases SET state='cutover_frozen' WHERE case_id='d0000000-0000-0000-0000-000000000003';
-INSERT INTO transfer_approvals(approval_id,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
+INSERT INTO transfer_approvals(approval_id,assertion_id,nonce_digest,case_id,approval_kind,evidence_ref,approver_ref,authn_event_ref,authority_snapshot,verified_at)
 VALUES
- (gen_random_uuid(),'d0000000-0000-0000-0000-000000000003','guardian_consent','ev-g3','guardian3','authn-g3','{"relationship":"verified"}',now()),
- (gen_random_uuid(),'d0000000-0000-0000-0000-000000000003','fee_confirmation','ev-f3','counselor3','authn-f3','{"source_assignment":"verified"}',now()),
- (gen_random_uuid(),'d0000000-0000-0000-0000-000000000003','destination_acceptance','ev-d3','dest3','authn-d3','{"permission":"verified"}',now());
+ (gen_random_uuid(),gen_random_uuid(),sha256(convert_to(gen_random_uuid()::text,'UTF8')),'d0000000-0000-0000-0000-000000000003','guardian_consent','ev-g3','guardian3','authn-g3','{"relationship":"verified"}',now()),
+ (gen_random_uuid(),gen_random_uuid(),sha256(convert_to(gen_random_uuid()::text,'UTF8')),'d0000000-0000-0000-0000-000000000003','fee_confirmation','ev-f3','counselor3','authn-f3','{"source_assignment":"verified"}',now()),
+ (gen_random_uuid(),gen_random_uuid(),sha256(convert_to(gen_random_uuid()::text,'UTF8')),'d0000000-0000-0000-0000-000000000003','destination_acceptance','ev-d3','dest3','authn-d3','{"permission":"verified"}',now());
 SELECT expect_error('CP-FENCE-02 stale source Workspace rejected','SELECT switch_student_ownership(''d0000000-0000-0000-0000-000000000003'')','23514');
 
 DO $$ BEGIN RAISE NOTICE '=== CONTROL PLANE REGRESSION SUITE COMPLETED (synthetic) ==='; END $$;

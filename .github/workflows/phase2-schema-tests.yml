@@ -57,6 +57,8 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_06_role_privileges_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/tests/cp_10_constraint_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/tests/cp_35_approval_event_tests.sql
+          bash docs/phase2/control_plane/tests/cp_36_approval_revocation_race.sh control_plane_test
 
       - name: Apply Control Plane drafts and run concurrent global-identity race
         run: |
@@ -97,6 +99,8 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_activation_transactions.sql
           psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_governance_events_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/tests/workspace_schema_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/tests/workspace_assessment_guardian_tests.sql
+          bash docs/phase2/workspace/tests/workspace_assessment_submit_race.sh workspace_test
 
       - name: Test Workspace governance event ledger
         run: |

@@ -532,3 +532,9 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Trigger governance_proof_receipts_a_consume_grant refuses registered→consumed without a grant from the same transaction, including for identities that hold UPDATE.
 - Added negative tests with setting-based attempts, grant forgery refusals for governance owner, verifier_rt and adapter, a catalog privilege check, and a legitimate consume that releases its grant.
 - Revocation unchanged and still deferred; M-05 and M-06 remain open residual findings.
+
+### Phase 2 exit findings — implementation batch (2026-11-13)
+- WS-DOM-01: immutable published test definition versions, attempt/response reconciliation at submission, immutable submitted attempts, idempotent `submit_test_attempt()`, custom error reason with description.
+- WS-DOM-03: append-only guardian link and permission events; projection changes require their event in the same transaction; effective-permission view.
+- Control Plane: transfer approvals are immutable events; revocation is a separate append-only event; replacement approvals keep history; one current approval per kind; revocation and switch serialise on the transfer case.
+- Drafts and tests only. No scoring formula, no guardian legal matrix, no approval-recording command, no production migration. Not an approval.

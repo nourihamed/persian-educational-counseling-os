@@ -135,7 +135,8 @@ CREATE TABLE student_guardian_links (
   verified_at timestamptz,
   revoked_at timestamptz,
   UNIQUE(student_id, guardian_platform_user_id),
-  CHECK (verification_state <> 'verified' OR (verified_at IS NOT NULL AND legal_authority_ref IS NOT NULL))
+  CHECK (verification_state <> 'verified' OR (verified_at IS NOT NULL AND legal_authority_ref IS NOT NULL)),
+  CHECK ((verification_state = 'revoked') = (revoked_at IS NOT NULL))          -- WS-DOM-03
 );
 
 CREATE TABLE guardian_permissions (
@@ -153,6 +154,144 @@ CREATE TABLE guardian_permissions (
 CREATE INDEX guardian_permissions_active_lookup
   ON guardian_permissions(guardian_link_id, scope_key, valid_from, valid_until)
   WHERE revoked_at IS NULL;
+
+-- WS-DOM-03: append-only history. The two tables above are projections; every state change of a projection
+-- must be accompanied, in the SAME transaction, by an event row carrying actor, authentication-event and
+-- evidence references and the policy version. References are opaque: the database does not verify identity or
+-- legal authority (Phase 4 / Q-007). No age/legal matrix is encoded here.
+CREATE TABLE guardian_link_events (
+  event_id uuid PRIMARY KEY,
+  link_id uuid NOT NULL REFERENCES student_guardian_links(link_id),
+  event_type text NOT NULL CHECK (event_type IN ('link_created','verified','revoked')),
+  actor_ref text NOT NULL CHECK (length(btrim(actor_ref))>0),
+  authn_event_ref text NOT NULL CHECK (length(btrim(authn_event_ref))>0),
+  evidence_ref text,
+  policy_version text NOT NULL CHECK (length(btrim(policy_version))>0),
+  effective_at timestamptz NOT NULL,
+  recorded_at timestamptz NOT NULL DEFAULT now(),
+  txid bigint NOT NULL DEFAULT txid_current(),
+  CHECK (event_type <> 'verified' OR (evidence_ref IS NOT NULL AND length(btrim(evidence_ref))>0))
+);
+CREATE TABLE guardian_permission_events (
+  event_id uuid PRIMARY KEY,
+  permission_id uuid NOT NULL REFERENCES guardian_permissions(permission_id),
+  event_type text NOT NULL CHECK (event_type IN ('granted','revoked')),
+  actor_ref text NOT NULL CHECK (length(btrim(actor_ref))>0),
+  authn_event_ref text NOT NULL CHECK (length(btrim(authn_event_ref))>0),
+  authority_ref text NOT NULL CHECK (length(btrim(authority_ref))>0),
+  policy_version text NOT NULL CHECK (length(btrim(policy_version))>0),
+  effective_from timestamptz NOT NULL,
+  effective_until timestamptz,
+  recorded_at timestamptz NOT NULL DEFAULT now(),
+  txid bigint NOT NULL DEFAULT txid_current(),
+  CHECK (effective_until IS NULL OR effective_until > effective_from)
+);
+CREATE FUNCTION guardian_events_append_only() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP='INSERT' THEN
+    IF NEW.txid IS DISTINCT FROM txid_current() THEN
+      RAISE EXCEPTION 'guardian event txid must be the current transaction' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION '% is append-only', TG_TABLE_NAME USING ERRCODE='check_violation';
+END; $$;
+CREATE TRIGGER guardian_link_events_guard BEFORE INSERT OR UPDATE OR DELETE ON guardian_link_events
+  FOR EACH ROW EXECUTE FUNCTION guardian_events_append_only();
+CREATE TRIGGER guardian_permission_events_guard BEFORE INSERT OR UPDATE OR DELETE ON guardian_permission_events
+  FOR EACH ROW EXECUTE FUNCTION guardian_events_append_only();
+
+-- Projection rules (row level).
+CREATE FUNCTION guardian_link_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP='DELETE' THEN
+    RAISE EXCEPTION 'guardian links are never deleted; revoke instead' USING ERRCODE='check_violation';
+  END IF;
+  IF (NEW.link_id,NEW.student_id,NEW.guardian_platform_user_id) IS DISTINCT FROM (OLD.link_id,OLD.student_id,OLD.guardian_platform_user_id) THEN
+    RAISE EXCEPTION 'guardian link identity is immutable' USING ERRCODE='check_violation';
+  END IF;
+  IF OLD.verification_state='revoked' THEN
+    RAISE EXCEPTION 'a revoked guardian link is terminal; a new verification needs a new link decision' USING ERRCODE='check_violation';
+  END IF;
+  IF NOT ((OLD.verification_state,NEW.verification_state) IN (('unverified','unverified'),('unverified','verified'),
+          ('unverified','revoked'),('verified','verified'),('verified','revoked'))) THEN
+    RAISE EXCEPTION 'illegal guardian link transition % -> %', OLD.verification_state, NEW.verification_state USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $$;
+CREATE TRIGGER student_guardian_links_guard BEFORE UPDATE OR DELETE ON student_guardian_links
+  FOR EACH ROW EXECUTE FUNCTION guardian_link_guard();
+
+CREATE FUNCTION guardian_permission_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE st text;
+BEGIN
+  IF TG_OP='DELETE' THEN
+    RAISE EXCEPTION 'guardian permissions are never deleted; revoke instead' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP='INSERT' THEN
+    SELECT verification_state INTO st FROM student_guardian_links WHERE link_id=NEW.guardian_link_id FOR SHARE;
+    IF st IS DISTINCT FROM 'verified' THEN
+      RAISE EXCEPTION 'a permission requires a currently verified guardian link (state %)', COALESCE(st,'missing') USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.revoked_at IS NOT NULL THEN
+      RAISE EXCEPTION 'a permission cannot be created already revoked' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
+  -- UPDATE: the only permitted change is a single revocation.
+  IF (NEW.permission_id,NEW.guardian_link_id,NEW.scope_key,NEW.granted_by_membership_id,NEW.authority_ref,NEW.valid_from,NEW.valid_until,NEW.created_at)
+     IS DISTINCT FROM
+     (OLD.permission_id,OLD.guardian_link_id,OLD.scope_key,OLD.granted_by_membership_id,OLD.authority_ref,OLD.valid_from,OLD.valid_until,OLD.created_at)
+     OR OLD.revoked_at IS NOT NULL OR NEW.revoked_at IS NULL THEN
+    RAISE EXCEPTION 'a guardian permission is immutable except for one revocation' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $$;
+CREATE TRIGGER guardian_permissions_guard BEFORE INSERT OR UPDATE OR DELETE ON guardian_permissions
+  FOR EACH ROW EXECUTE FUNCTION guardian_permission_guard();
+
+-- Commit-time rule: no projection state change without its event in the same transaction.
+CREATE FUNCTION guardian_link_requires_event() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE want text;
+BEGIN
+  IF TG_OP='INSERT' THEN
+    -- A link may be inserted already verified (import of a verified decision): then both events are required.
+    IF NOT EXISTS (SELECT 1 FROM guardian_link_events e WHERE e.link_id=NEW.link_id AND e.event_type='link_created' AND e.txid=txid_current()) THEN
+      RAISE EXCEPTION 'guardian link % has no link_created event in this transaction', NEW.link_id USING ERRCODE='check_violation';
+    END IF;
+    want := CASE WHEN NEW.verification_state='unverified' THEN NULL ELSE NEW.verification_state END;
+  ELSE
+    want := CASE WHEN NEW.verification_state IS DISTINCT FROM OLD.verification_state THEN NEW.verification_state END;
+  END IF;
+  IF want IS NOT NULL AND NOT EXISTS (SELECT 1 FROM guardian_link_events e
+       WHERE e.link_id=NEW.link_id AND e.event_type=want AND e.txid=txid_current()) THEN
+    RAISE EXCEPTION 'guardian link % changed to % without a % event in this transaction', NEW.link_id, want, want USING ERRCODE='check_violation';
+  END IF;
+  RETURN NULL;
+END; $$;
+CREATE CONSTRAINT TRIGGER student_guardian_links_require_event AFTER INSERT OR UPDATE ON student_guardian_links
+  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION guardian_link_requires_event();
+
+CREATE FUNCTION guardian_permission_requires_event() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE want text := CASE WHEN TG_OP='INSERT' THEN 'granted' ELSE 'revoked' END;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM guardian_permission_events e
+       WHERE e.permission_id=NEW.permission_id AND e.event_type=want AND e.txid=txid_current()) THEN
+    RAISE EXCEPTION 'guardian permission % has no % event in this transaction', NEW.permission_id, want USING ERRCODE='check_violation';
+  END IF;
+  RETURN NULL;
+END; $$;
+CREATE CONSTRAINT TRIGGER guardian_permissions_require_event AFTER INSERT OR UPDATE ON guardian_permissions
+  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION guardian_permission_requires_event();
+
+-- A stored permission is effective only while its link is verified and the time window is open.
+-- This view is the ONLY read shape that may be used for a guardian access decision inside the Workspace DB;
+-- the service must still revalidate identity and legal authority at use (Phase 4, Q-007).
+CREATE VIEW guardian_permissions_effective AS
+  SELECT p.permission_id, p.guardian_link_id, l.student_id, l.guardian_platform_user_id, p.scope_key, p.valid_from, p.valid_until
+    FROM guardian_permissions p JOIN student_guardian_links l ON l.link_id=p.guardian_link_id
+   WHERE p.revoked_at IS NULL AND l.verification_state='verified'
+     AND p.valid_from <= now() AND (p.valid_until IS NULL OR p.valid_until > now());
 
 CREATE TABLE program_templates (
   template_id uuid PRIMARY KEY,
@@ -287,19 +426,72 @@ CREATE TABLE test_definitions (
   created_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+-- WS-DOM-01: immutable published definition version; attempts bind to exactly one version.
+-- delivery_mode: 'fixed' => attempt.question_count must equal the version's question_count;
+-- 'per_attempt' => the attempt carries its own delivered count (adaptive delivery is NOT approved for MVP;
+-- the value exists so the schema does not preclude it; see PHASE2_OPEN_DECISIONS "Assessment semantics").
+CREATE TABLE test_definition_versions (
+  version_id uuid PRIMARY KEY,
+  test_id uuid NOT NULL REFERENCES test_definitions(test_id),
+  version_no integer NOT NULL CHECK (version_no>0),
+  status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published')),
+  delivery_mode text NOT NULL DEFAULT 'fixed' CHECK (delivery_mode IN ('fixed','per_attempt')),
+  question_count integer NOT NULL CHECK (question_count>0),
+  time_limit_seconds integer CHECK (time_limit_seconds IS NULL OR time_limit_seconds>0),
+  scoring_policy_snapshot jsonb NOT NULL CHECK (jsonb_typeof(scoring_policy_snapshot)='object'),
+  published_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(test_id, version_no),
+  UNIQUE(version_id, test_id),
+  CHECK ((status='published') = (published_at IS NOT NULL))
+);
+CREATE FUNCTION test_definition_version_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP='INSERT' THEN
+    IF NEW.status<>'draft' THEN
+      RAISE EXCEPTION 'a definition version must be created as draft' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF OLD.status='published' THEN
+    RAISE EXCEPTION 'published test definition version is immutable' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+  IF (NEW.version_id,NEW.test_id,NEW.version_no) IS DISTINCT FROM (OLD.version_id,OLD.test_id,OLD.version_no) THEN
+    RAISE EXCEPTION 'definition version identity is immutable' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $$;
+CREATE TRIGGER test_definition_versions_guard BEFORE INSERT OR UPDATE OR DELETE ON test_definition_versions
+  FOR EACH ROW EXECUTE FUNCTION test_definition_version_guard();
+
 CREATE TABLE test_attempts (
   attempt_id uuid PRIMARY KEY,
   test_id uuid NOT NULL REFERENCES test_definitions(test_id),
+  definition_version_id uuid NOT NULL,
   student_id uuid NOT NULL REFERENCES students(student_id),
-  state text NOT NULL CHECK (state IN ('started','submitted','analysed','cancelled')),
+  state text NOT NULL DEFAULT 'started' CHECK (state IN ('started','submitted','analysed','cancelled')),
   started_at timestamptz NOT NULL,
   submitted_at timestamptz,
+  question_count integer NOT NULL CHECK (question_count>0),   -- authoritative denominator for this attempt
   correct_count integer NOT NULL DEFAULT 0 CHECK (correct_count>=0),
   wrong_count integer NOT NULL DEFAULT 0 CHECK (wrong_count>=0),
   blank_count integer NOT NULL DEFAULT 0 CHECK (blank_count>=0),
-  score numeric(7,3),
-  scoring_policy_snapshot jsonb NOT NULL,
-  CHECK ((state IN ('submitted','analysed')) = (submitted_at IS NOT NULL))
+  score numeric(7,3),                                          -- computed by the service; NOT validated by the database
+  scoring_policy_snapshot jsonb NOT NULL CHECK (jsonb_typeof(scoring_policy_snapshot)='object'),
+  submission_idempotency_key text,
+  submission_payload_hash bytea CHECK (submission_payload_hash IS NULL OR octet_length(submission_payload_hash)=32),
+  FOREIGN KEY (definition_version_id, test_id) REFERENCES test_definition_versions(version_id, test_id),
+  UNIQUE (submission_idempotency_key),
+  CHECK ((state IN ('submitted','analysed')) = (submitted_at IS NOT NULL)),
+  CHECK (state NOT IN ('submitted','analysed') OR (
+         correct_count + wrong_count + blank_count = question_count
+         AND score IS NOT NULL
+         AND submission_idempotency_key IS NOT NULL AND length(btrim(submission_idempotency_key))>0
+         AND submission_payload_hash IS NOT NULL)),
+  CHECK (state IN ('submitted','analysed') OR (
+         correct_count=0 AND wrong_count=0 AND blank_count=0 AND score IS NULL
+         AND submission_idempotency_key IS NULL AND submission_payload_hash IS NULL))
 );
 CREATE TABLE test_responses (
   response_id uuid PRIMARY KEY,
@@ -308,9 +500,111 @@ CREATE TABLE test_responses (
   topic_id uuid REFERENCES topics(topic_id),
   response_state text NOT NULL CHECK (response_state IN ('correct','wrong','blank')),
   time_spent_seconds integer CHECK (time_spent_seconds IS NULL OR time_spent_seconds>=0),
-  error_reason text CHECK (error_reason IN ('concept','memory','careless','time','strategy','unknown')),
-  UNIQUE(attempt_id,question_no)
+  error_reason text CHECK (error_reason IN ('concept','memory','careless','time','strategy','unknown','custom')),
+  custom_error_reason text,
+  UNIQUE(attempt_id,question_no),
+  -- A custom reason needs a non-empty description; a description is only allowed for a custom reason (NULL-safe).
+  CHECK ((error_reason IS NOT DISTINCT FROM 'custom') = (custom_error_reason IS NOT NULL AND length(btrim(custom_error_reason))>0))
 );
+
+-- Attempt lifecycle. The submission invariant is checked by the trigger itself against the stored responses,
+-- so it holds for ANY writer (it does not depend on which function or role performs the UPDATE).
+CREATE FUNCTION test_attempt_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE v record; n_total integer; n_c integer; n_w integer; n_b integer; n_max integer;
+BEGIN
+  IF TG_OP='INSERT' THEN
+    IF NEW.state<>'started' THEN
+      RAISE EXCEPTION 'a test attempt must be created in state started' USING ERRCODE='check_violation';
+    END IF;
+    SELECT status, delivery_mode, question_count INTO v FROM test_definition_versions
+     WHERE version_id=NEW.definition_version_id FOR SHARE;
+    IF v.status IS DISTINCT FROM 'published' THEN
+      RAISE EXCEPTION 'an attempt requires a published definition version' USING ERRCODE='check_violation';
+    END IF;
+    IF v.delivery_mode='fixed' AND NEW.question_count<>v.question_count THEN
+      RAISE EXCEPTION 'attempt question_count % differs from fixed definition version count %', NEW.question_count, v.question_count
+        USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF TG_OP='DELETE' THEN
+    IF OLD.state IN ('submitted','analysed') THEN
+      RAISE EXCEPTION 'a submitted test attempt cannot be deleted' USING ERRCODE='check_violation';
+    END IF;
+    RETURN OLD;
+  END IF;
+  IF (NEW.attempt_id,NEW.test_id,NEW.definition_version_id,NEW.student_id,NEW.question_count,NEW.started_at,NEW.scoring_policy_snapshot)
+     IS DISTINCT FROM
+     (OLD.attempt_id,OLD.test_id,OLD.definition_version_id,OLD.student_id,OLD.question_count,OLD.started_at,OLD.scoring_policy_snapshot) THEN
+    RAISE EXCEPTION 'test attempt identity, denominator and scoring snapshot are immutable' USING ERRCODE='check_violation';
+  END IF;
+  IF OLD.state='started' AND NEW.state IN ('started','cancelled') THEN
+    RETURN NEW;   -- table CHECK keeps counters at zero and score NULL
+  ELSIF OLD.state='started' AND NEW.state='submitted' THEN
+    SELECT count(*), count(*) FILTER (WHERE response_state='correct'), count(*) FILTER (WHERE response_state='wrong'),
+           count(*) FILTER (WHERE response_state='blank'), COALESCE(max(question_no),0)
+      INTO n_total, n_c, n_w, n_b, n_max FROM test_responses WHERE attempt_id=NEW.attempt_id;
+    IF n_total<>NEW.question_count OR n_max<>NEW.question_count THEN
+      RAISE EXCEPTION 'submission rejected: % responses for % delivered questions (highest question_no %)', n_total, NEW.question_count, n_max
+        USING ERRCODE='check_violation';
+    END IF;
+    IF (NEW.correct_count,NEW.wrong_count,NEW.blank_count) IS DISTINCT FROM (n_c,n_w,n_b) THEN
+      RAISE EXCEPTION 'submission rejected: counters (%,%,%) differ from responses (%,%,%)',
+        NEW.correct_count,NEW.wrong_count,NEW.blank_count,n_c,n_w,n_b USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  ELSIF OLD.state='submitted' AND NEW.state='analysed' THEN
+    IF (NEW.submitted_at,NEW.correct_count,NEW.wrong_count,NEW.blank_count,NEW.score,NEW.submission_idempotency_key,NEW.submission_payload_hash)
+       IS DISTINCT FROM
+       (OLD.submitted_at,OLD.correct_count,OLD.wrong_count,OLD.blank_count,OLD.score,OLD.submission_idempotency_key,OLD.submission_payload_hash) THEN
+      RAISE EXCEPTION 'analysis must not rewrite the submitted attempt' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'illegal test attempt change % -> % (submitted attempts are immutable)', OLD.state, NEW.state USING ERRCODE='check_violation';
+END; $$;
+CREATE TRIGGER test_attempts_guard BEFORE INSERT OR UPDATE OR DELETE ON test_attempts
+  FOR EACH ROW EXECUTE FUNCTION test_attempt_guard();
+
+-- Responses can change only while the attempt is started. FOR SHARE on the attempt serialises against a concurrent submission.
+CREATE FUNCTION test_response_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE st text; qc integer; aid uuid;
+BEGIN
+  aid := CASE WHEN TG_OP='DELETE' THEN OLD.attempt_id ELSE NEW.attempt_id END;
+  IF TG_OP='UPDATE' AND NEW.attempt_id IS DISTINCT FROM OLD.attempt_id THEN
+    RAISE EXCEPTION 'a response cannot move to another attempt' USING ERRCODE='check_violation';
+  END IF;
+  SELECT state, question_count INTO st, qc FROM test_attempts WHERE attempt_id=aid FOR SHARE;
+  IF st IS DISTINCT FROM 'started' THEN
+    RAISE EXCEPTION 'responses are immutable once the attempt is %', COALESCE(st,'missing') USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP<>'DELETE' AND NEW.question_no>qc THEN
+    RAISE EXCEPTION 'question_no % is outside the % delivered questions', NEW.question_no, qc USING ERRCODE='check_violation';
+  END IF;
+  RETURN CASE WHEN TG_OP='DELETE' THEN OLD ELSE NEW END;
+END; $$;
+CREATE TRIGGER test_responses_guard BEFORE INSERT OR UPDATE OR DELETE ON test_responses
+  FOR EACH ROW EXECUTE FUNCTION test_response_guard();
+
+-- Atomic, idempotent submission. SECURITY INVOKER: it adds no privilege; the trigger above is the integrity boundary.
+-- p_score is the service-computed score (formula per the approved policy snapshot; the database does not recompute it).
+CREATE FUNCTION submit_test_attempt(p_attempt_id uuid, p_correct integer, p_wrong integer, p_blank integer,
+  p_score numeric, p_idempotency_key text, p_payload_hash bytea) RETURNS text LANGUAGE plpgsql AS $$
+DECLARE a test_attempts%ROWTYPE;
+BEGIN
+  SELECT * INTO a FROM test_attempts WHERE attempt_id=p_attempt_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'test attempt % not found', p_attempt_id USING ERRCODE='no_data_found'; END IF;
+  IF a.state IN ('submitted','analysed') THEN
+    IF a.submission_idempotency_key=p_idempotency_key AND a.submission_payload_hash IS NOT DISTINCT FROM p_payload_hash THEN
+      RETURN 'replayed';
+    END IF;
+    RAISE EXCEPTION 'attempt already submitted; idempotency key or payload differs' USING ERRCODE='unique_violation';
+  END IF;
+  UPDATE test_attempts SET state='submitted', submitted_at=now(), correct_count=p_correct, wrong_count=p_wrong,
+         blank_count=p_blank, score=p_score, submission_idempotency_key=p_idempotency_key, submission_payload_hash=p_payload_hash
+   WHERE attempt_id=p_attempt_id;
+  RETURN 'submitted';
+END; $$;
 
 CREATE TABLE exams (
   exam_id uuid PRIMARY KEY,

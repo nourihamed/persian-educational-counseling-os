@@ -204,5 +204,20 @@ BEGIN
      AND acl.grantee=0 AND acl.privilege_type='EXECUTE';
   IF n<>0 THEN RAISE EXCEPTION 'FAIL WS-ROLE-13 PUBLIC retains EXECUTE on privileged Workspace functions'; END IF;
 
-  RAISE NOTICE 'PASS WS-ROLE-01..13 per-Workspace ownership, role, grant and database isolation assertions';
+  -- WS-DOM-01 / WS-DOM-03: guardian history tables are fail-closed for every runtime identity (no grant at all);
+  -- the assessment version table is writable by the runtime like the other educational tables.
+  IF has_table_privilege(runtime_role,'public.guardian_link_events','SELECT,INSERT,UPDATE,DELETE')
+     OR has_table_privilege(runtime_role,'public.guardian_permission_events','SELECT,INSERT,UPDATE,DELETE')
+     OR has_table_privilege(runtime_role,'public.guardian_permissions_effective','INSERT,UPDATE,DELETE') THEN
+    RAISE EXCEPTION 'FAIL WS-ROLE-14 runtime holds a privilege on guardian history';
+  END IF;
+  IF NOT has_table_privilege(runtime_role,'public.test_definition_versions','SELECT')
+     OR NOT has_table_privilege(runtime_role,'public.test_definition_versions','INSERT')
+     OR has_table_privilege(runtime_role,'public.test_definition_versions','DELETE')
+     OR has_table_privilege(runtime_role,'public.test_attempts','DELETE')
+     OR has_table_privilege(runtime_role,'public.test_responses','DELETE') THEN
+    RAISE EXCEPTION 'FAIL WS-ROLE-15 unexpected runtime privilege on assessment tables';
+  END IF;
+
+  RAISE NOTICE 'PASS WS-ROLE-01..15 per-Workspace ownership, role, grant and database isolation assertions';
 END $role_test$;

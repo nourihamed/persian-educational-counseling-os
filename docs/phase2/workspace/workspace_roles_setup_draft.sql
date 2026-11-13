@@ -116,7 +116,7 @@ SELECT format('REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %I,%
 -- authorization remains mandatory in the API; these grants are not a substitute for RBAC.
 SELECT format(
   'GRANT SELECT,INSERT,UPDATE ON TABLE %s TO %I',
-  'program_templates,program_versions,student_plans,student_plan_versions,subjects,chapters,topics,student_topic_mastery,activities,study_sessions,test_definitions,test_attempts,test_responses,exams,exam_results,classes,class_sessions,assignments,reviews,daily_routines,progress_snapshots,risk_assessments,counselor_notes,private_file_objects,notification_preferences,in_app_notifications',
+  'program_templates,program_versions,student_plans,student_plan_versions,subjects,chapters,topics,student_topic_mastery,activities,study_sessions,test_definitions,test_definition_versions,test_attempts,test_responses,exams,exam_results,classes,class_sessions,assignments,reviews,daily_routines,progress_snapshots,risk_assessments,counselor_notes,private_file_objects,notification_preferences,in_app_notifications',
   'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
 -- Authorization source tables are read-only to the general runtime role.
 -- Membership, role, permission, branch, counselor assignment and guardian grants

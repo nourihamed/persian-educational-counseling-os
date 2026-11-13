@@ -206,44 +206,80 @@ CREATE TRIGGER transfer_cases_identity_guard
 -- Cumulative approvals: all three kinds must exist before the ownership switch (D-026/D-027/PO-8).
 CREATE TABLE transfer_approvals (
     approval_id     uuid PRIMARY KEY,
+    assertion_id    uuid NOT NULL UNIQUE,           -- one verified assertion, one approval event
+    nonce_digest    bytea NOT NULL UNIQUE CHECK (octet_length(nonce_digest) = 32),  -- replay guard; nonce itself not stored
     case_id         uuid NOT NULL REFERENCES transfer_cases (case_id),
     approval_kind   text NOT NULL CHECK (approval_kind IN ('guardian_consent', 'fee_confirmation', 'destination_acceptance')),
     evidence_ref    text NOT NULL,                  -- opaque reference; no personal document content
-    approver_ref    text NOT NULL,                  -- stable authenticated subject, not caller-supplied authority
-    authn_event_ref text NOT NULL,                  -- reference to verified authentication/step-up event
+    approver_ref    text NOT NULL CHECK (length(btrim(approver_ref)) > 0),      -- stable authenticated subject, not caller-supplied authority
+    authn_event_ref text NOT NULL CHECK (length(btrim(authn_event_ref)) > 0),   -- reference to verified authentication/step-up event
     authority_snapshot jsonb NOT NULL,              -- verified relationship/assignment/destination authority snapshot
     verified_at     timestamptz NOT NULL,
     valid_until     timestamptz,
-    revoked_at      timestamptz,
     recorded_at     timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (case_id, approval_kind),
     UNIQUE (evidence_ref),
     CHECK (valid_until IS NULL OR valid_until > verified_at)
 );
+-- History is kept: several approval events may exist per (case, kind) over time. No UNIQUE(case_id, approval_kind).
+CREATE INDEX transfer_approvals_case_kind ON transfer_approvals (case_id, approval_kind);
+
+-- A revocation is its own immutable event; it never rewrites the approval it refers to.
+CREATE TABLE transfer_approval_revocations (
+    revocation_id   uuid PRIMARY KEY,
+    approval_id     uuid NOT NULL UNIQUE REFERENCES transfer_approvals (approval_id),  -- at most one revocation per approval
+    actor_ref       text NOT NULL CHECK (length(btrim(actor_ref)) > 0),
+    authn_event_ref text NOT NULL CHECK (length(btrim(authn_event_ref)) > 0),
+    reason_code     text NOT NULL CHECK (length(btrim(reason_code)) > 0),               -- opaque code; the reason taxonomy is not defined here
+    recorded_at     timestamptz NOT NULL DEFAULT now()
+);
+
+-- Current = not revoked and inside its validity window. Authority freshness is revalidated by the workflow (Phase 4).
+CREATE VIEW transfer_approvals_current AS
+  SELECT a.* FROM transfer_approvals a
+   WHERE NOT EXISTS (SELECT 1 FROM transfer_approval_revocations r WHERE r.approval_id = a.approval_id)
+     AND a.verified_at <= now() AND (a.valid_until IS NULL OR a.valid_until > now());
 
 CREATE FUNCTION guard_transfer_approval_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
 BEGIN
-  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'transfer approvals are immutable; use revocation' USING ERRCODE='check_violation'; END IF;
-  IF NEW.approval_id IS DISTINCT FROM OLD.approval_id
-     OR NEW.case_id IS DISTINCT FROM OLD.case_id
-     OR NEW.approval_kind IS DISTINCT FROM OLD.approval_kind
-     OR NEW.evidence_ref IS DISTINCT FROM OLD.evidence_ref
-     OR NEW.approver_ref IS DISTINCT FROM OLD.approver_ref
-     OR NEW.authn_event_ref IS DISTINCT FROM OLD.authn_event_ref
-     OR NEW.authority_snapshot IS DISTINCT FROM OLD.authority_snapshot
-     OR NEW.verified_at IS DISTINCT FROM OLD.verified_at
-     OR NEW.valid_until IS DISTINCT FROM OLD.valid_until
-     OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
-     OR (OLD.revoked_at IS NOT NULL AND NEW.revoked_at IS DISTINCT FROM OLD.revoked_at)
-     OR (OLD.revoked_at IS NULL AND NEW.revoked_at IS NULL) THEN
-    RAISE EXCEPTION 'approval evidence is immutable; only one-way revocation is allowed'
-      USING ERRCODE='check_violation';
-  END IF;
-  RETURN NEW;
+  RAISE EXCEPTION '% is append-only; record a revocation event or a new approval instead', TG_TABLE_NAME
+    USING ERRCODE='check_violation';
 END; $body$;
 CREATE TRIGGER transfer_approvals_immutable
   BEFORE UPDATE OR DELETE ON transfer_approvals
   FOR EACH ROW EXECUTE FUNCTION guard_transfer_approval_mutation();
+CREATE TRIGGER transfer_approval_revocations_immutable
+  BEFORE UPDATE OR DELETE ON transfer_approval_revocations
+  FOR EACH ROW EXECUTE FUNCTION guard_transfer_approval_mutation();
+
+-- Recording and revoking serialise on the transfer case row (the same lock the ownership switch takes):
+-- whichever commits first decides whether the approval is valid at cutover. At most one CURRENT approval
+-- per (case, kind): a replacement is accepted only after the previous one is revoked or expired.
+CREATE FUNCTION guard_transfer_approval_insert() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  PERFORM 1 FROM transfer_cases WHERE case_id = NEW.case_id FOR UPDATE;
+  IF EXISTS (SELECT 1 FROM transfer_approvals a
+              WHERE a.case_id = NEW.case_id AND a.approval_kind = NEW.approval_kind
+                AND NOT EXISTS (SELECT 1 FROM transfer_approval_revocations r WHERE r.approval_id = a.approval_id)
+                AND (a.valid_until IS NULL OR a.valid_until > now())) THEN
+    RAISE EXCEPTION 'a current % approval already exists for this transfer case; revoke it before recording a replacement', NEW.approval_kind
+      USING ERRCODE='unique_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER transfer_approvals_one_current
+  BEFORE INSERT ON transfer_approvals
+  FOR EACH ROW EXECUTE FUNCTION guard_transfer_approval_insert();
+
+CREATE FUNCTION guard_transfer_approval_revocation_insert() RETURNS trigger LANGUAGE plpgsql AS $body$
+DECLARE v_case uuid;
+BEGIN
+  SELECT case_id INTO v_case FROM transfer_approvals WHERE approval_id = NEW.approval_id;
+  PERFORM 1 FROM transfer_cases WHERE case_id = v_case FOR UPDATE;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER transfer_approval_revocations_serialise
+  BEFORE INSERT ON transfer_approval_revocations
+  FOR EACH ROW EXECUTE FUNCTION guard_transfer_approval_revocation_insert();
 
 -- Idempotency / command deduplication for ownership-changing commands.
 CREATE TABLE command_log (
