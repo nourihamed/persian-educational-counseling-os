@@ -26,7 +26,7 @@ INSERT INTO credit_wallets(wallet_id,unit_code) VALUES('cf200000-0000-0000-0000-
 INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,reason)
 VALUES(gen_random_uuid(),'cf200000-0000-0000-0000-000000000001','grant',50,'reactivation-race-opening','synthetic opening credit');
 INSERT INTO workspace_capacity_counters(dimension_key,current_value,max_value) VALUES('active_students',0,5);
-SELECT activate_student_enrollment('rr-act','af200000-0000-0000-0000-000000000001',
+SELECT activate_student_enrollment_synthetic('rr-act','af200000-0000-0000-0000-000000000001',
   'cf200000-0000-0000-0000-000000000001',1,5,'bf100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
 SELECT archive_student_enrollment('rr-arc','af200000-0000-0000-0000-000000000001',1,
   'bf100000-0000-0000-0000-000000000001','race fixture');

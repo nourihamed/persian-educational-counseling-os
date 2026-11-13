@@ -187,13 +187,29 @@ SELECT format('GRANT UPDATE(idempotency_key) ON TABLE activation_command_log TO 
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT EXECUTE ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) TO %I',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
-SELECT format('GRANT EXECUTE ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz) TO %I',
+-- H-02: the Runtime gets ONLY the production-intended path, which fails closed while OQ-CRD-3 is open.
+SELECT format('GRANT EXECUTE ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid) TO %I',
   'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+-- The caller-supplied-period command is synthetic (D-014) and belongs to one dedicated test identity.
+DO $synth_role$
+DECLARE r text := 'ws_'||current_setting('app.workspace_key')||'_synth_exec';
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=r) THEN
+    EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS', r);
+  END IF;
+END $synth_role$;
+SELECT format('GRANT EXECUTE ON FUNCTION activate_student_enrollment_synthetic(text,uuid,uuid,bigint,bigint,uuid,timestamptz) TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_synth_exec') \gexec
+SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment_synthetic(text,uuid,uuid,bigint,bigint,uuid,timestamptz) FROM PUBLIC,%I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker',
+  'ws_'||current_setting('app.workspace_key')||'_exporter','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('REVOKE ALL ON FUNCTION resolve_student_entitlement_period(uuid,bigint,timestamptz) FROM PUBLIC,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter') \gexec
 SELECT format('REVOKE ALL ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) FROM PUBLIC,%I,%I,%I',
   'ws_'||current_setting('app.workspace_key')||'_runtime',
   'ws_'||current_setting('app.workspace_key')||'_worker',
   'ws_'||current_setting('app.workspace_key')||'_exporter') \gexec
-SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz) FROM PUBLIC,%I,%I,%I',
+SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid) FROM PUBLIC,%I,%I,%I',
   'ws_'||current_setting('app.workspace_key')||'_worker',
   'ws_'||current_setting('app.workspace_key')||'_exporter',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec

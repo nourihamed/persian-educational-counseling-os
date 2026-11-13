@@ -246,12 +246,19 @@ jobs:
           W=docs/phase2/workspace
           K=a1000000000000000000000000000011
           createdb -h localhost -U postgres workspace_credit_test
+          createdb -h localhost -U postgres workspace_credit_lock_race
           psql -X -v ON_ERROR_STOP=1 -d workspace_credit_test -f $W/workspace_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d workspace_credit_test -f $W/workspace_activation_transactions.sql
           psql -X -v ON_ERROR_STOP=1 -d workspace_credit_test -f $W/workspace_governance_events_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d workspace_credit_test -f $W/workspace_archive_transactions.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_credit_test -f $W/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_credit_test -f $W/tests/workspace_credit_entitlement_tests.sql
+          KL=a1000000000000000000000000000012
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions; do
+            psql -X -v ON_ERROR_STOP=1 -d workspace_credit_lock_race -f $W/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$KL -d workspace_credit_lock_race -f $W/workspace_roles_setup_draft.sql
+          bash $W/tests/workspace_credit_lock_boundary_race.sh workspace_credit_lock_race $KL
         env:
           PGHOST: localhost
           PGUSER: postgres

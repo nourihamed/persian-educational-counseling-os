@@ -6,6 +6,7 @@
 SET app.workspace_key = :'workspace_key';
 SELECT 'ws_'||current_setting('app.workspace_key')||'_runtime' AS runtime_role \gset
 SELECT 'ws_'||current_setting('app.workspace_key')||'_worker' AS worker_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_synth_exec' AS synth_role \gset
 CREATE OR REPLACE FUNCTION ar_err(label text, stmt text, want text, want_msg text DEFAULT '')
 RETURNS void LANGUAGE plpgsql AS $t$
 BEGIN
@@ -42,11 +43,13 @@ INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount
 VALUES(gen_random_uuid(),'c9600000-0000-0000-0000-000000000001','grant',100,'archive-fixture-grant','synthetic opening credit');
 INSERT INTO workspace_capacity_counters(dimension_key,current_value,max_value) VALUES('active_students',0,2);
 
-SET SESSION AUTHORIZATION :"runtime_role";
-SELECT activate_student_enrollment('ar-act-1','a9600000-0000-0000-0000-000000000001','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
-SELECT activate_student_enrollment('ar-act-2','a9600000-0000-0000-0000-000000000002','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
+SET SESSION AUTHORIZATION :"synth_role";
+SELECT activate_student_enrollment_synthetic('ar-act-1','a9600000-0000-0000-0000-000000000001','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
+SELECT activate_student_enrollment_synthetic('ar-act-2','a9600000-0000-0000-0000-000000000002','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
 SELECT ar_err('ARC-01 capacity is full before any archive (third activation rejected)',
- $q$SELECT activate_student_enrollment('ar-act-3','a9600000-0000-0000-0000-000000000003','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz)$q$,'23514','capacity unavailable');
+ $q$SELECT activate_student_enrollment_synthetic('ar-act-3','a9600000-0000-0000-0000-000000000003','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz)$q$,'23514','capacity unavailable');
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION :"runtime_role";
 SELECT ar_err('ARC-02 stale ownership generation rejected',
  $q$SELECT archive_student_enrollment('ar-1','a9600000-0000-0000-0000-000000000001',2,'b9500000-0000-0000-0000-000000000001','offboarding')$q$,'23514','stale local ownership');
 SELECT ar_err('ARC-03 an inactive member cannot archive',
@@ -91,8 +94,8 @@ DO $t$ BEGIN
   IF EXISTS (SELECT 1 FROM capacity_counter_reconciliation WHERE NOT consistent) THEN RAISE EXCEPTION 'FAIL ARC-14'; END IF;
   RAISE NOTICE 'PASS ARC-14 capacity counter equals the sum of its event ledger';
 END $t$;
-SET SESSION AUTHORIZATION :"runtime_role";
-SELECT activate_student_enrollment('ar-act-3','a9600000-0000-0000-0000-000000000003','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
+SET SESSION AUTHORIZATION :"synth_role";
+SELECT activate_student_enrollment_synthetic('ar-act-3','a9600000-0000-0000-0000-000000000003','c9600000-0000-0000-0000-000000000001',1,10,'b9500000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
 RESET SESSION AUTHORIZATION;
 DO $t$ BEGIN
   IF (SELECT state FROM enrollments WHERE enrollment_id='a9600000-0000-0000-0000-000000000003')<>'active'

@@ -11,6 +11,7 @@
 \set ON_ERROR_STOP on
 SET app.workspace_key = :'workspace_key';
 SELECT 'ws_'||current_setting('app.workspace_key')||'_runtime' AS runtime_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_synth_exec' AS synth_role \gset
 CREATE OR REPLACE FUNCTION cr_err(label text, stmt text, want text, want_msg text DEFAULT '')
 RETURNS void LANGUAGE plpgsql AS $t$
 BEGIN
@@ -58,10 +59,13 @@ VALUES(gen_random_uuid(),'c7600000-0000-0000-0000-000000000001','grant',100,'cre
 INSERT INTO workspace_capacity_counters(dimension_key,current_value,max_value) VALUES('active_students',0,3);
 
 -- ============================ activation records one entitlement ============================
-SET SESSION AUTHORIZATION :"runtime_role";
-SELECT activate_student_enrollment('cr-act-a','a7600000-0000-0000-0000-00000000000a','c7600000-0000-0000-0000-000000000001',1,10,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
-SELECT cr_err('CRD-01 activation without a future entitlement period rejected',
- $q$SELECT activate_student_enrollment('cr-act-bad','a7600000-0000-0000-0000-00000000000b','c7600000-0000-0000-0000-000000000001',1,10,'b7500000-0000-0000-0000-000000000001',now()-interval '1 day')$q$,'22023','ending in the future');
+SET SESSION AUTHORIZATION :"synth_role";
+SELECT activate_student_enrollment_synthetic('cr-act-a','a7600000-0000-0000-0000-00000000000a','c7600000-0000-0000-0000-000000000001',1,10,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
+-- H-04: the period is validated against the wall clock read after the locks, inside the command.
+SELECT cr_err('CRD-01 activation whose entitlement period has already ended is rejected',
+ $q$SELECT activate_student_enrollment_synthetic('cr-act-bad','a7600000-0000-0000-0000-00000000000b','c7600000-0000-0000-0000-000000000001',1,10,'b7500000-0000-0000-0000-000000000001',now()-interval '1 day')$q$,'23514','before this activation committed');
+SELECT cr_err('CRD-01b activation without any entitlement period is rejected',
+ $q$SELECT activate_student_enrollment_synthetic('cr-act-null','a7600000-0000-0000-0000-00000000000b','c7600000-0000-0000-0000-000000000001',1,10,'b7500000-0000-0000-0000-000000000001',NULL)$q$,'22023','entitlement period end');
 RESET SESSION AUTHORIZATION;
 DO $t$ DECLARE e public.student_entitlements%ROWTYPE; BEGIN
   SELECT * INTO e FROM student_entitlements WHERE student_id='e7500000-0000-0000-0000-00000000000a';
@@ -91,10 +95,10 @@ SELECT cr_err('CRD-05 the original activation debit cannot be edited or deleted'
  $q$DELETE FROM credit_transactions WHERE transaction_kind='activation_debit'$q$,'23514','append-only');
 
 -- ============================ reserved credit is not spendable by anyone else ============================
-SET SESSION AUTHORIZATION :"runtime_role";
+SET SESSION AUTHORIZATION :"synth_role";
 SELECT cr_err('CRD-06 the reserved credit cannot fund another student''s activation',
- $q$SELECT activate_student_enrollment('cr-act-d','a7600000-0000-0000-0000-00000000000d','c7600000-0000-0000-0000-000000000001',1,95,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days')$q$,'23514','reserved for named students');
-SELECT activate_student_enrollment('cr-act-d2','a7600000-0000-0000-0000-00000000000d','c7600000-0000-0000-0000-000000000001',1,90,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
+ $q$SELECT activate_student_enrollment_synthetic('cr-act-d','a7600000-0000-0000-0000-00000000000d','c7600000-0000-0000-0000-000000000001',1,95,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days')$q$,'23514','reserved for named students');
+SELECT activate_student_enrollment_synthetic('cr-act-d2','a7600000-0000-0000-0000-00000000000d','c7600000-0000-0000-0000-000000000001',1,90,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
 RESET SESSION AUTHORIZATION;
 DO $t$ BEGIN
   IF (SELECT available_balance FROM credit_wallet_balances WHERE wallet_id='c7600000-0000-0000-0000-000000000001')<>0 THEN RAISE EXCEPTION 'FAIL CRD-07'; END IF;
@@ -163,10 +167,10 @@ VALUES ('a7600000-0000-0000-0000-00000000000e','e7500000-0000-0000-0000-00000000
 INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at)
 VALUES (gen_random_uuid(),'a7600000-0000-0000-0000-00000000000e','b7500000-0000-0000-0000-000000000001',true,'active',now());
 
-SET SESSION AUTHORIZATION :"runtime_role";
-SELECT activate_student_enrollment('cr-act-b','a7600000-0000-0000-0000-00000000000b','c7600000-0000-0000-0000-000000000001',1,5,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
-SELECT activate_student_enrollment('cr-act-c','a7600000-0000-0000-0000-00000000000c','c7600000-0000-0000-0000-000000000001',1,5,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
-SELECT activate_student_enrollment('cr-act-e','a7600000-0000-0000-0000-00000000000e','c7600000-0000-0000-0000-000000000001',1,5,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
+SET SESSION AUTHORIZATION :"synth_role";
+SELECT activate_student_enrollment_synthetic('cr-act-b','a7600000-0000-0000-0000-00000000000b','c7600000-0000-0000-0000-000000000001',1,5,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
+SELECT activate_student_enrollment_synthetic('cr-act-c','a7600000-0000-0000-0000-00000000000c','c7600000-0000-0000-0000-000000000001',1,5,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
+SELECT activate_student_enrollment_synthetic('cr-act-e','a7600000-0000-0000-0000-00000000000e','c7600000-0000-0000-0000-000000000001',1,5,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days');
 RESET SESSION AUTHORIZATION;
 -- The boundary is bracketed to one second: B has one second of window left, C passed it one second ago.
 -- An exactly-equal instant cannot be observed against a wall clock; the comparison operator in the command
@@ -249,4 +253,27 @@ DO $t$ DECLARE b record; BEGIN
   RAISE NOTICE 'PASS CRD-27 wallet view identity holds: available = ledger - reserved - recommitted (ledger %, reserved %, recommitted %, available %)',
     b.ledger_balance,b.reserved_credits,b.recommitted_credits,b.available_balance;
 END $t$;
-SELECT 'STUDENT CREDIT ENTITLEMENT TESTS COMPLETED (CRD-01..CRD-27)' AS result;
+-- ============================ H-02: the production-intended activation path fails closed ============================
+INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state)
+VALUES ('e7500000-0000-0000-0000-00000000000f','f7500000-0000-0000-0000-00000000000f','Credit F','grade_10','active');
+INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state)
+VALUES ('a7600000-0000-0000-0000-00000000000f','e7500000-0000-0000-0000-00000000000f',1,'requested');
+INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at)
+VALUES (gen_random_uuid(),'a7600000-0000-0000-0000-00000000000f','b7500000-0000-0000-0000-000000000001',true,'active',now());
+SET SESSION AUTHORIZATION :"runtime_role";
+SELECT cr_err('CRD-28 the production-intended activation path fails closed: no approved entitlement period source',
+ $q$SELECT activate_student_enrollment('cr-act-f','a7600000-0000-0000-0000-00000000000f','c7600000-0000-0000-0000-000000000001',1,1,'b7500000-0000-0000-0000-000000000001')$q$,'0A000','OQ-CRD-3');
+SELECT cr_err('CRD-29 the Runtime cannot reach the synthetic caller-supplied-period command',
+ $q$SELECT activate_student_enrollment_synthetic('cr-act-f2','a7600000-0000-0000-0000-00000000000f','c7600000-0000-0000-0000-000000000001',1,1,'b7500000-0000-0000-0000-000000000001',now()+interval '30 days')$q$,'42501');
+SELECT cr_err('CRD-30 the Runtime cannot reach the entitlement period resolver directly',
+ $q$SELECT resolve_student_entitlement_period('e7500000-0000-0000-0000-00000000000f',1,now())$q$,'42501');
+RESET SESSION AUTHORIZATION;
+DO $t$ BEGIN
+  IF (SELECT state FROM enrollments WHERE enrollment_id='a7600000-0000-0000-0000-00000000000f')<>'requested'
+     OR EXISTS (SELECT 1 FROM student_entitlements WHERE student_id='e7500000-0000-0000-0000-00000000000f')
+     OR EXISTS (SELECT 1 FROM activation_command_log WHERE idempotency_key IN ('cr-act-f','cr-act-f2')) THEN
+    RAISE EXCEPTION 'FAIL CRD-31 the refused activation left partial state';
+  END IF;
+  RAISE NOTICE 'PASS CRD-31 the fail-closed activation created no enrollment state, entitlement or command row';
+END $t$;
+SELECT 'STUDENT CREDIT ENTITLEMENT TESTS COMPLETED (CRD-01..CRD-31)' AS result;

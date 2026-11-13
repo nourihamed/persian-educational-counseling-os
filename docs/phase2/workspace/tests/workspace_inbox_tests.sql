@@ -10,6 +10,7 @@
 SET app.workspace_key = :'workspace_key';
 SELECT 'ws_'||current_setting('app.workspace_key')||'_runtime' AS runtime_role \gset
 SELECT 'ws_'||current_setting('app.workspace_key')||'_worker'  AS worker_role \gset
+SELECT 'ws_'||current_setting('app.workspace_key')||'_synth_exec' AS synth_role \gset
 CREATE OR REPLACE FUNCTION ib_err(label text, stmt text, want text, want_msg text DEFAULT '')
 RETURNS void LANGUAGE plpgsql AS $t$
 BEGIN
@@ -49,8 +50,8 @@ INSERT INTO credit_wallets(wallet_id,unit_code) VALUES('c1c00000-0000-0000-0000-
 INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,reason)
 VALUES(gen_random_uuid(),'c1c00000-0000-0000-0000-000000000001','grant',50,'inbox-fixture-grant','synthetic opening credit');
 INSERT INTO workspace_capacity_counters(dimension_key,current_value,max_value) VALUES('active_students',0,5);
-SET SESSION AUTHORIZATION :"runtime_role";
-SELECT activate_student_enrollment('ib-act','a1c00000-0000-0000-0000-000000000001','c1c00000-0000-0000-0000-000000000001',1,5,'b1b00000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
+SET SESSION AUTHORIZATION :"synth_role";
+SELECT activate_student_enrollment_synthetic('ib-act','a1c00000-0000-0000-0000-000000000001','c1c00000-0000-0000-0000-000000000001',1,5,'b1b00000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
 RESET SESSION AUTHORIZATION;
 
 -- ============================ only the consumer identity may apply events ============================

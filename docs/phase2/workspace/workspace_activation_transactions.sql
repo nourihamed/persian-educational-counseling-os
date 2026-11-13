@@ -123,7 +123,13 @@ CREATE TRIGGER activation_command_log_append_only
   BEFORE UPDATE OR DELETE ON activation_command_log
   FOR EACH ROW EXECUTE FUNCTION reject_activation_command_mutation();
 
-CREATE FUNCTION activate_student_enrollment(
+-- H-02 — ENTITLEMENT PERIOD SOURCE IS NOT APPROVED (OQ-CRD-3).
+-- This command accepts the entitlement period end from its caller. A Runtime identity that could call it
+-- would be able to extend a student's original entitlement by supplying an arbitrary timestamp, so it is
+-- NOT an operational path: it exists for synthetic fixtures only (D-014) and is granted exclusively to
+-- ws_<key>_synth_exec. The production-intended entry point is
+-- activate_student_enrollment(), below, which fails closed until the Product Owner approves a source.
+CREATE FUNCTION activate_student_enrollment_synthetic(
   p_idempotency_key text,
   p_enrollment_id uuid,
   p_wallet_id uuid,
@@ -156,9 +162,8 @@ BEGIN
     RAISE EXCEPTION 'activation command arguments are invalid'
       USING ERRCODE='invalid_parameter_value';
   END IF;
-  v_now := clock_timestamp();
-  IF p_entitlement_period_end IS NULL OR p_entitlement_period_end <= v_now THEN
-    RAISE EXCEPTION 'activation requires an entitlement period ending in the future'
+  IF p_entitlement_period_end IS NULL THEN
+    RAISE EXCEPTION 'activation requires an entitlement period end'
       USING ERRCODE='invalid_parameter_value';
   END IF;
   v_credit_key := 'activation:' || p_idempotency_key;
@@ -240,6 +245,15 @@ BEGIN
       USING ERRCODE='insufficient_privilege';
   END IF;
 
+  -- H-04: the authoritative activation timestamp is read ONCE, after every required row lock is held, and
+  -- the entitlement period is validated against THAT timestamp. The same value is then used for the
+  -- enrollment start, the entitlement row and the audit record, so the three cannot disagree.
+  v_now := clock_timestamp();
+  IF p_entitlement_period_end <= v_now THEN
+    RAISE EXCEPTION 'the entitlement period ended at % before this activation committed at %',
+      p_entitlement_period_end, v_now USING ERRCODE='check_violation';
+  END IF;
+
   SELECT count(*) INTO v_responsible_count
     FROM public.counselor_assignments
    WHERE enrollment_id=p_enrollment_id
@@ -273,7 +287,7 @@ BEGIN
   );
 
   UPDATE public.enrollments
-     SET state='active',started_at=COALESCE(started_at,now())
+     SET state='active',started_at=COALESCE(started_at,v_now)
    WHERE enrollment_id=p_enrollment_id
      AND ownership_generation=p_expected_generation
      AND state IN ('requested','awaiting_consent');
@@ -293,7 +307,9 @@ BEGIN
       'wallet_id',p_wallet_id,
       'credit_unit','CRD',
       'debit_amount',p_debit_amount,
-      'ownership_generation',p_expected_generation
+      'ownership_generation',p_expected_generation,
+      'activated_at',v_now,
+      'entitlement_period_end',p_entitlement_period_end
     )
   );
 
@@ -301,7 +317,55 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz) FROM PUBLIC;
+REVOKE ALL ON FUNCTION activate_student_enrollment_synthetic(text,uuid,uuid,bigint,bigint,uuid,timestamptz) FROM PUBLIC;
+
+-- ======================================================================================================
+-- H-02 — production-intended activation, FAIL CLOSED.
+-- Where does a student's entitlement period come from? That is OQ-CRD-3 and it is unresolved. No source is
+-- invented here: the resolver refuses, so the production-intended path cannot establish entitlement
+-- validity and therefore cannot activate. When the Product Owner approves a source, the resolver is
+-- replaced by a lookup against that authoritative, versioned record and the resolved value is SNAPSHOTTED
+-- into student_entitlements.period_end, which is already immutable and can never be restarted or extended.
+--
+-- Recommendation only, not an approved decision: derive the period from the purchased Plan/Product version
+-- that funded the activation, and store both the resolved period end and the plan version that produced it.
+-- ======================================================================================================
+CREATE FUNCTION resolve_student_entitlement_period(p_student_id uuid, p_debit_amount bigint, p_now timestamptz)
+RETURNS timestamptz
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'no approved entitlement period source exists (OQ-CRD-3); activation cannot establish entitlement validity'
+    USING ERRCODE='feature_not_supported';
+END; $$;
+
+CREATE FUNCTION activate_student_enrollment(
+  p_idempotency_key text,
+  p_enrollment_id uuid,
+  p_wallet_id uuid,
+  p_expected_generation bigint,
+  p_debit_amount bigint,
+  p_actor_membership_id uuid
+) RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path=pg_catalog,pg_temp
+AS $$
+DECLARE v_student_id uuid; v_period_end timestamptz; v_now timestamptz;
+BEGIN
+  -- The locks that the activation itself needs are taken by the inner command. This entry point only
+  -- resolves the entitlement period from an authoritative source, and there is none yet, so it stops here.
+  SELECT student_id INTO v_student_id FROM public.enrollments WHERE enrollment_id=p_enrollment_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'enrollment % not found', p_enrollment_id USING ERRCODE='foreign_key_violation';
+  END IF;
+  v_now := clock_timestamp();
+  v_period_end := public.resolve_student_entitlement_period(v_student_id, p_debit_amount, v_now);
+  RETURN public.activate_student_enrollment_synthetic(
+    p_idempotency_key, p_enrollment_id, p_wallet_id, p_expected_generation, p_debit_amount,
+    p_actor_membership_id, v_period_end);
+END; $$;
+REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION resolve_student_entitlement_period(uuid,bigint,timestamptz) FROM PUBLIC;
 REVOKE ALL ON FUNCTION adjust_workspace_capacity(text,integer,text,uuid,uuid,text) FROM PUBLIC;
 
 COMMIT;

@@ -34,7 +34,7 @@ if [ "$?" -ne 0 ]; then echo "FAIL WS-CAP-RACE fixture setup"; exit 2; fi
 
 cat > "$W/a.sql" <<'SQL'
 BEGIN;
-SELECT activate_student_enrollment(
+SELECT activate_student_enrollment_synthetic(
  'capacity-race-a','aa200000-0000-0000-0000-000000000001',
  'cc200000-0000-0000-0000-000000000001',1,8,
  'bb100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
@@ -44,7 +44,7 @@ SQL
 cat > "$W/b.sql" <<'SQL'
 SELECT pg_sleep(0.2);
 BEGIN;
-SELECT activate_student_enrollment(
+SELECT activate_student_enrollment_synthetic(
  'capacity-race-b','aa200000-0000-0000-0000-000000000002',
  'cc200000-0000-0000-0000-000000000001',1,8,
  'bb100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);

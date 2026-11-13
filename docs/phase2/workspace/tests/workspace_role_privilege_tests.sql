@@ -180,7 +180,7 @@ BEGIN
   END IF;
 
   IF NOT has_function_privilege(runtime_role,
-       'public.activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz)','EXECUTE')
+       'public.activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid)','EXECUTE')
      OR has_function_privilege(runtime_role,
        'public.adjust_workspace_capacity(text,integer,text,uuid,uuid,text)','EXECUTE')
      OR NOT has_function_privilege(function_owner,
@@ -198,7 +198,7 @@ BEGIN
     FROM pg_proc p
     CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) acl
    WHERE p.oid IN (
-     'public.activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid,timestamptz)'::regprocedure,
+     'public.activate_student_enrollment(text,uuid,uuid,bigint,bigint,uuid)'::regprocedure,
      'public.adjust_workspace_capacity(text,integer,text,uuid,uuid,text)'::regprocedure
    )
      AND acl.grantee=0 AND acl.privilege_type='EXECUTE';
@@ -219,12 +219,22 @@ BEGIN
     RAISE EXCEPTION 'FAIL WS-ROLE-15 unexpected runtime privilege on assessment tables';
   END IF;
 
+  -- H-02: the Runtime holds only the fail-closed production path, never the synthetic one.
+  IF has_function_privilege(runtime_role,
+       'public.activate_student_enrollment_synthetic(text,uuid,uuid,bigint,bigint,uuid,timestamptz)','EXECUTE')
+     OR has_function_privilege(runtime_role,'public.resolve_student_entitlement_period(uuid,bigint,timestamptz)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL WS-ROLE-18 runtime holds the synthetic activation path';
+  END IF;
+  IF NOT has_function_privilege('ws_'||current_setting('app.workspace_key')||'_synth_exec',
+       'public.activate_student_enrollment_synthetic(text,uuid,uuid,bigint,bigint,uuid,timestamptz)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL WS-ROLE-19 the synthetic activation identity lost its own grant';
+  END IF;
   IF NOT has_table_privilege(runtime_role,'public.test_definition_version_questions','INSERT')
      OR has_table_privilege(runtime_role,'public.test_definition_version_questions','DELETE') THEN
     RAISE EXCEPTION 'FAIL WS-ROLE-16 unexpected runtime privilege on version question membership';
   END IF;
 
-  RAISE NOTICE 'PASS WS-ROLE-01..16 per-Workspace ownership, role, grant and database isolation assertions';
+  RAISE NOTICE 'PASS WS-ROLE-01..19 per-Workspace ownership, role, grant and database isolation assertions';
 END $role_test$;
 
 -- WS-ROLE-17: the runtime role HOLDS INSERT/UPDATE on question membership, and is still refused by the

@@ -84,12 +84,13 @@ BEGIN
     RAISE EXCEPTION 'archive actor is not an active Workspace member' USING ERRCODE='insufficient_privilege';
   END IF;
 
-  -- Credit treatment is decided from the ORIGINAL activation timestamp, under the entitlement row lock,
-  -- with an actual wall-clock reading (not the transaction start time).
-  v_now := clock_timestamp();
+  -- H-01: the reversal window is decided from the ORIGINAL activation timestamp, and the wall clock is
+  -- read ONLY AFTER the entitlement row lock has been acquired. Reading it earlier would mean that a
+  -- command which waited on the lock for longer than the remaining window still saw the window as open.
   SELECT * INTO v_ent FROM public.student_entitlements
    WHERE student_id=v_student_id AND state='consumed'
    ORDER BY activated_at DESC LIMIT 1 FOR UPDATE;
+  v_now := clock_timestamp();
   IF FOUND THEN
     IF v_ent.reversal_transaction_id IS NULL THEN
       IF v_now <= v_ent.activated_at + interval '168 hours' THEN

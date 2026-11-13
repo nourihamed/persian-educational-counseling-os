@@ -30,7 +30,7 @@ if [ "$?" -ne 0 ]; then echo "FAIL WS-ACT-RACE fixture setup"; exit 2; fi
 
 cat > "$W/a.sql" <<'SQL'
 BEGIN;
-SELECT activate_student_enrollment(
+SELECT activate_student_enrollment_synthetic(
   'race-activation-a','a9200000-0000-0000-0000-000000000001',
   'c9200000-0000-0000-0000-000000000001',1,8,
   'b9100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
@@ -41,7 +41,7 @@ SQL
 cat > "$W/b.sql" <<'SQL'
 SELECT pg_sleep(0.4);
 BEGIN;
-SELECT activate_student_enrollment(
+SELECT activate_student_enrollment_synthetic(
   'race-activation-b','a9200000-0000-0000-0000-000000000001',
   'c9200000-0000-0000-0000-000000000001',1,8,
   'b9100000-0000-0000-0000-000000000001','2099-01-01 00:00:00+00'::timestamptz);
