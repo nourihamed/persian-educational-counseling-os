@@ -110,7 +110,9 @@ GRANT UPDATE (workspace_id) ON workspaces TO cp_identity_admission_function_owne
 -- FOR UPDATE on the append-only admission command requires UPDATE on a column.
 -- The existing BEFORE UPDATE trigger rejects all mutations, so this grant permits locking only.
 GRANT UPDATE (idempotency_key) ON identity_admission_commands TO cp_identity_admission_function_owner;
-GRANT EXECUTE ON FUNCTION assert_claim_alias_coverage(uuid)
+-- assert_all is needed because inserting contact-index rows queues the all-claims coverage check, which the
+-- admission command now runs inside its own security context (read-only assertion).
+GRANT EXECUTE ON FUNCTION assert_claim_alias_coverage(uuid),assert_all_claim_alias_coverage()
   TO cp_identity_admission_function_owner;
 
 -- Assign each SECURITY DEFINER family to its own non-login owner.

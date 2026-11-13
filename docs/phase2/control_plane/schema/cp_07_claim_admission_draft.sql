@@ -193,6 +193,10 @@ BEGIN
     );
   END LOOP;
 
+  -- Deferred coverage triggers would otherwise run at COMMIT as the CALLER; an executor role has no table access,
+  -- so the command would fail for its own executor. Run them here, in this function's security context.
+  SET CONSTRAINTS public.enrollment_claim_alias_coverage_claim, public.enrollment_claim_alias_coverage_alias, public.contact_index_alias_coverage IMMEDIATE;
+  SET CONSTRAINTS public.enrollment_claim_alias_coverage_claim, public.enrollment_claim_alias_coverage_alias, public.contact_index_alias_coverage DEFERRED;
   RETURN p_claim_id;
 END;
 $$;

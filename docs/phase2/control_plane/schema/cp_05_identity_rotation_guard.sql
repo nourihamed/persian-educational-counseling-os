@@ -163,6 +163,10 @@ BEGIN
      SET state='active', activated_at=now(), retired_at=NULL
    WHERE key_version=p_new_key_version;
   PERFORM public.assert_all_claim_alias_coverage();
+  -- Deferred coverage triggers would otherwise run at COMMIT as the CALLER; an executor role has no table access,
+  -- so the command would fail for its own executor. Run them here, in this function's security context.
+  SET CONSTRAINTS public.hmac_key_version_alias_coverage IMMEDIATE;
+  SET CONSTRAINTS public.hmac_key_version_alias_coverage DEFERRED;
 
   UPDATE public.identity_write_gate
      SET maintenance_mode=false, changed_at=now()
@@ -198,6 +202,10 @@ BEGIN
   DELETE FROM public.enrollment_claim_identity_aliases WHERE key_version=p_old_key_version;
   DELETE FROM public.student_contact_index WHERE key_version=p_old_key_version;
   PERFORM public.assert_all_claim_alias_coverage();
+  -- Deferred coverage triggers would otherwise run at COMMIT as the CALLER; an executor role has no table access,
+  -- so the command would fail for its own executor. Run them here, in this function's security context.
+  SET CONSTRAINTS public.hmac_key_version_alias_coverage, public.enrollment_claim_alias_coverage_alias, public.contact_index_alias_coverage IMMEDIATE;
+  SET CONSTRAINTS public.hmac_key_version_alias_coverage, public.enrollment_claim_alias_coverage_alias, public.contact_index_alias_coverage DEFERRED;
   UPDATE public.identity_write_gate
      SET maintenance_mode=false, changed_at=now()
    WHERE singleton=true;

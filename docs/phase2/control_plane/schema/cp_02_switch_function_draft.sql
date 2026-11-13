@@ -138,6 +138,10 @@ BEGIN
                                'to_workspace_id', v_case.destination_workspace_id,
                                'generation', v_new_gen));
 
+    -- Deferred coverage triggers would otherwise run at COMMIT as the CALLER; an executor role has no table access,
+    -- so the command would fail for its own executor. Run them here, in this function's security context.
+    SET CONSTRAINTS public.enrollment_claim_alias_coverage_claim, public.enrollment_claim_alias_coverage_alias IMMEDIATE;
+    SET CONSTRAINTS public.enrollment_claim_alias_coverage_claim, public.enrollment_claim_alias_coverage_alias DEFERRED;
     RETURN v_new_gen;
 END;
 $$;

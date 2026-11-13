@@ -299,3 +299,9 @@ Product Owner approved the MVP role grantability matrix on 2026-11-10; see `docs
 - Details and limits: `docs/phase2/IMPLEMENTATION_RESPONSE_2026-11-13.md`; per-test status: `TEST_PLAN.md`.
 - Still open against `docs/phase2/PHASE2_EXIT_CRITERIA.md`: approval-recording command, contact-change schema, Saga event schema reconciliation, Workspace lifecycle/capacity transitions, WS-DOM-04 remainder, MEDIUM items, PR #8–#11 disposition, PR #12 behind main, M-05/M-06 definitions, all Product Owner / Platform Security decisions.
 - Phase 2 gate: NOT READY. Phase 3: unauthorized. Real data: prohibited (D-014). PR #12: Draft, open, unmerged.
+
+## Exit-findings second batch (2026-11-13, implementation agent; not a supervisor review)
+- Fixed a HIGH defect: Control Plane commands were unusable under their executor roles (deferred triggers ran as the caller). Now covered by `cp_45`.
+- Implemented as drafts with tests: contact change (`cp_08`, `cp_09`, `cp_40`, `cp_46`), Workspace archive with capacity release.
+- Open: Saga outbox/inbox reconciliation, approval-recording command, reactivation and policy-dependent capacity rows, WS-DOM-04 remainder, MEDIUM items, M-05/M-06, PR #8–#11, PR #12 behind main, all Product Owner / Platform Security decisions.
+- Phase 2 gate: NOT READY. Phase 3: unauthorized. Real data: prohibited (D-014). PR #12: Draft, open, unmerged.

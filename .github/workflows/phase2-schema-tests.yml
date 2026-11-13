@@ -177,3 +177,31 @@ jobs:
           python3 -m unittest -v test_verifier_contract.py
           cd ../canonical
           python3 -m unittest -v test_vectors_v1.py
+
+      - name: Control Plane commands under real executor roles; contact change and its race (synthetic)
+        run: |
+          C=docs/phase2/control_plane
+          for DB in control_plane_executor_test control_plane_contact_test; do
+            createdb $DB
+            for f in cp_01_schema_draft cp_05_identity_rotation_guard cp_07_claim_admission_draft cp_02_switch_function_draft cp_03_transfer_transitions_draft cp_04_transfer_command_idempotency cp_06_role_privileges_draft; do
+              psql -X -v ON_ERROR_STOP=1 -d $DB -f $C/schema/$f.sql
+            done
+          done
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_executor_test -f $C/tests/cp_45_executor_identity_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/schema/cp_08_contact_change_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/schema/cp_09_contact_change_roles_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/tests/cp_30_role_privilege_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/tests/cp_40_contact_change_tests.sql
+          bash $C/tests/cp_46_contact_change_race.sh control_plane_contact_test
+
+      - name: Workspace archive and capacity release under the runtime role (synthetic)
+        run: |
+          W=docs/phase2/workspace
+          K=a1000000000000000000000000000009
+          createdb workspace_archive_test
+          psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_archive_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_archive_test -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_archive_test -f $W/tests/workspace_archive_tests.sql

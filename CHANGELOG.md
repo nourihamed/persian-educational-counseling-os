@@ -538,3 +538,9 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - WS-DOM-03: append-only guardian link and permission events; projection changes require their event in the same transaction; effective-permission view.
 - Control Plane: transfer approvals are immutable events; revocation is a separate append-only event; replacement approvals keep history; one current approval per kind; revocation and switch serialise on the transfer case.
 - Drafts and tests only. No scoring formula, no guardian legal matrix, no approval-recording command, no production migration. Not an approval.
+
+### Phase 2 exit findings — second batch (2026-11-13)
+- Fixed: Control Plane commands failed under their own executor roles because deferred alias-coverage triggers ran at commit as the caller. Each command now runs them in its own security context. New suite calls every command as its real executor.
+- Added: contact-change draft (one-time proof, atomic command, audit, outbox, separate role family) with tests and a race test.
+- Added: Workspace archive command with atomic capacity release, idempotency and a counter-reconciliation view, with tests under the runtime role.
+- Drafts and synthetic data only. No credit policy on archive, no reactivation, no production verifier. Not an approval.

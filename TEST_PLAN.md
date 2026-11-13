@@ -365,3 +365,24 @@ Guardian/parent and student legal authority tests remain blocked by Q-007 and mu
 | GitHub Actions for this commit | — | — | NOT RUN until pushed |
 | Score formula recomputation, guardian legal authority, approval signature verification | — | — | NOT IMPLEMENTED (service / Phase 4 / verifier) |
 | Approval-recording command, contact-change, Saga schema, Workspace lifecycle, WS-DOM-04 remainder | — | — | NOT IMPLEMENTED (open exit findings) |
+
+## Phase 2 exit findings — second batch (2026-11-13; author-executed, NOT independently reproduced)
+| ID | Check | Where | Status |
+|---|---|---|---|
+| EXE-01 | Initial admission commits when called by `cp_identity_admission_executor` | control_plane/tests/cp_45_executor_identity_tests.sql | PASS (failed before the fix: permission denied at commit) |
+| EXE-02 | Ownership switch commits when called by `cp_transfer_executor` | same | PASS |
+| EXE-03, EXE-04 | HMAC rotation completion and version retirement commit when called by `cp_rotation_executor` | same | PASS |
+| EXE-05 | Duplicate mobile+grade still rejected for the executor | same | PASS |
+| CC-01..08 | Proof registration boundary, purpose, nonce replay, immutability, no delete | control_plane/tests/cp_40_contact_change_tests.sql | PASS |
+| CC-09..13 | Runtime, verifier and executor role boundary | same | PASS |
+| CC-14..25 | Stale generation, wrong owner, wrong contact, wrong student, alias coverage, cipher key, unknown proof, maintenance gate; nothing written | same | PASS |
+| CC-26, CC-27 | Duplicate number in the same grade across Workspaces: rejected with full rollback | same | PASS |
+| CC-28..37 | Valid change, replay, key reuse, consumed proof, atomic replacement, audit, outbox, no plaintext column, append-only | same | PASS |
+| CC-38..40 | Same number in another grade allowed; expired and revoked proofs rejected | same | PASS |
+| CC-41/42 | Catalog isolation of the contact-change role family | same | PASS |
+| CC-RACE-01 | Two students change to the same number concurrently: one winner | control_plane/tests/cp_46_contact_change_race.sh | PASS (3 local repeats) |
+| ARC-01..17 | Archive: preconditions, role boundary, one slot released, replay, no underflow, history kept, no credit movement, audit, ledger reconciliation, slot reusable | workspace/tests/workspace_archive_tests.sql | PASS |
+| Contact change vs HMAC rotation / vs ownership switch, concurrent | — | — | NOT RUN |
+| Reactivation, suspension capacity, transfer reservations | — | — | NOT IMPLEMENTED (policy open) |
+| Saga outbox/inbox reconciliation | — | — | NOT IMPLEMENTED |
+| GitHub Actions for this commit | — | — | NOT RUN until pushed |

@@ -192,6 +192,20 @@ SELECT format('REVOKE ALL ON FUNCTION activate_student_enrollment(text,uuid,uuid
   'ws_'||current_setting('app.workspace_key')||'_exporter',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 
+-- Archive command (workspace_archive_transactions.sql). Applied only when that draft is loaded.
+SELECT to_regprocedure('archive_student_enrollment(text,uuid,bigint,uuid,text)') IS NOT NULL AS has_archive \gset
+\if :has_archive
+SELECT format('GRANT SELECT,INSERT ON TABLE archive_command_log TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT UPDATE(idempotency_key) ON TABLE archive_command_log TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT UPDATE(state,ended_at) ON TABLE enrollments TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT UPDATE(state,ended_at) ON TABLE counselor_assignments TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT UPDATE(lifecycle_state,archived_at) ON TABLE students TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT EXECUTE ON FUNCTION archive_student_enrollment(text,uuid,bigint,uuid,text) TO %I','ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+SELECT format('REVOKE ALL ON FUNCTION archive_student_enrollment(text,uuid,bigint,uuid,text) FROM PUBLIC,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+\endif
+
 SELECT format('GRANT CREATE,USAGE ON SCHEMA public TO %I',
   'ws_'||current_setting('app.workspace_key')||'_governance_owner') \gexec
 
