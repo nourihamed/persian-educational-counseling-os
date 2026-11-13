@@ -116,3 +116,9 @@ These should be presented as explicit Product Owner/security decisions with meas
 This contract documents architecture and acceptance criteria only. No provider, replica, backup service, KMS/HSM, failover controller, restore drill or capacity measurement is implemented or verified. Phase 2 design can specify these boundaries, but operational acceptance remains a later environment gate.
 
 **Phase 2 Gate: NOT READY.** D-014 remains in force; synthetic data only.
+
+## Product Owner clarification — OQ-D, 2026-11-13
+
+Previously accepted OQ-D Option A remains controlling: independent Control Plane primary/replica plus independently controlled encrypted backups and restore drills. A manual promotion procedure may be used during the initial pilot, but it does not replace the replica or independent backup architecture.
+
+Any promotion must first prove the old primary is fenced and unable to accept writes, verify the replica's replay/consistency position, establish a single writer, audit the operator/evidence, and quarantine the old primary. RPO/RTO, replication mode and lag tolerance, exact fencing mechanism, promotion thresholds and split-brain drills remain open. This clarification does not approve a production failover design or hosting topology.

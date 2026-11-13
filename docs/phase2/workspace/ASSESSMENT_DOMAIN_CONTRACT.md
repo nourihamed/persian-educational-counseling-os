@@ -93,3 +93,11 @@ All tests remain specifications until executable schema/service tests are implem
 No unapproved scoring formula or product behavior is invented here.
 
 **Gate impact:** WS-DOM-01 and WS-DOM-04 remain open until the current schema is reconciled with this contract and the required integrity tests pass. Phase 2 remains NOT READY.
+
+## Product Owner decision overlay — 2026-11-13
+
+**Approved MVP semantics:** fixed question membership and order per published TestDefinitionVersion. Adaptive or per-attempt variable delivery is not enabled in MVP.
+
+The version must persist its exact question membership and order in a normalized relation (e.g. test_definition_version_questions). Enforce uniqueness of question membership and order within a version, and ensure each response references a question belonging to the exact attempt's definition version. question_count is a consistency check, not a substitute for the actual membership list. Published version membership/order is immutable.
+
+A future adaptive/per-attempt mode requires a separate Product Owner decision and must persist the exact delivered question IDs/order per attempt before any response is accepted. Do not infer or enable adaptive behavior from the existing draft delivery_mode field.

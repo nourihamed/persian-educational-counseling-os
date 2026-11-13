@@ -72,3 +72,14 @@ All tests remain NOT IMPLEMENTED / NOT RUN beyond the current synthetic wallet/a
 - Invoice/tax requirements and responsible legal/finance reviewer.
 
 **Gate impact:** Credit activation/debit foundation exists in draft SQL, but commercial lifecycle remains incomplete. Phase 2 remains NOT READY.
+
+## Product Owner decision overlay — 2026-11-13: archive and reactivation
+
+- Archive within **7 calendar days from the original activation timestamp** qualifies for a compensating credit-return entry.
+- After that 7-day window, no automatic credit return is allowed.
+- Free reactivation of the same student is allowed only until the end of the **original entitlement period**. Archiving/reactivating does not restart or extend that period.
+- A returned credit backing free reactivation must be recorded as a student-bound reserved entitlement. It must not simultaneously increase generally spendable wallet balance or be usable for another student's activation.
+- The ledger remains append-only. The original activation debit is never edited/deleted; return is a separate idempotent compensating entry bound to the original debit, student and entitlement.
+- If the original entitlement period has ended, reactivation requires a new credit debit under the applicable policy.
+
+The exact entitlement representation and atomic archive/reactivation/debit/capacity transaction remain implementation requirements and must be tested for concurrency and double-use. This does not approve checkout, payment provider, or full refund/chargeback implementation.

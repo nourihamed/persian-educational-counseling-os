@@ -79,3 +79,9 @@ All tests remain NOT IMPLEMENTED / NOT RUN until schema and service boundaries a
 No product policy is selected here.
 
 **Gate impact:** WS-DOM-06 and WS-DOM-07 remain open until schema reconciliation and tests. Phase 2 remains NOT READY.
+
+## Product Owner decision overlay — 2026-11-13
+
+**Approved direction:** specialized domain entities with a shared Activity scheduling/tracking layer.
+
+Test/Exam, Class/ClassSession, Assignment and Review remain authoritative typed entities. Activity may reference or project their scheduling/execution context through typed FK-backed relations. Do not use Activity as a generic substitute for domain records and do not introduce an unrestricted polymorphic source_type/source_id without referential integrity.

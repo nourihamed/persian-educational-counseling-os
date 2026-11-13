@@ -549,3 +549,47 @@ These identifiers are deliberately OQ labels pending the collision-free D-number
 PR #12 branch work adds technical proposals for Workspace DB, Control Plane, transfer workflow, API authorization, HMAC rotation and idempotency. These are not Product Owner decisions and are not assigned D-identifiers. OQ-A through OQ-F3 and OQ-G remain recorded under their approved labels pending the collision-free crosswalk required by OQ-C. The earlier proposed D-028…D-062 sequence is withdrawn as unapproved. See `docs/phase2/architecture/RECONCILIATION_CROSSWALK.md`.
 
 Technical status: Control Plane and Workspace SQL are drafts; revised tests NOT RUN; HMAC rotation enforcement, KMS/HSM, authenticated approval verification, dedicated role/grant design, full Workspace schema and Saga runtime remain incomplete. Phase 2 NOT READY. D-014 remains in force.
+
+## Phase 2 — Product Owner Decision Supplement (2026-11-13)
+
+**Authority:** Explicit Product Owner decisions and clarifications in the 2026-11-13 conversation. These decisions are recorded without assigning D-numbers, in accordance with OQ-C. They are policy decisions, not evidence of implementation or gate approval.
+
+### PD-2026-11-13-A — Assessment semantics: fixed immutable question set (Option A)
+- MVP uses a fixed question set and fixed order per published TestDefinitionVersion.
+- The published version must persist immutable question membership and order; a question_count alone is insufficient.
+- Add/require a version-question relation (e.g. test_definition_version_questions) and enforce response-to-version-question consistency with database constraints.
+- Per-attempt/adaptive delivery is not enabled in MVP. A future variable-delivery mode requires a separate Product Owner decision; the schema may reserve a safe extension point.
+- Existing scoring policy snapshots remain immutable and must be derived from the published version, not caller-supplied attempt data.
+
+### PD-2026-11-13-B — Activity model: specialized domain entities plus shared Activity layer (Option B)
+- Activity is the shared scheduling/tracking/execution layer.
+- Test, Exam, Class/ClassSession, Assignment and Review remain specialized authoritative domain entities with typed, referentially valid links.
+- An unrestricted polymorphic source_type/source_id is not an acceptable substitute for referential integrity.
+
+### PD-2026-11-13-C — Transfer approval conflict: default separation with a narrow, disabled exception
+- Default rule: one person may not satisfy incompatible transfer approval kinds.
+- The only proposed exception case is where the source counselor and the owner of the destination Workspace are the same person.
+- This exception is **not enabled for execution**. Its independent approval authority and exact authority boundary are deferred; no Platform Admin authority is implied or granted by this decision.
+- Until a separate authority decision and trusted enforcement are approved, the transfer must fail closed if the exception would be required.
+- Guardian/legal-authority approval, source counselor fee-receipt confirmation and destination Workspace acceptance remain cumulative requirements, subject to this narrow unresolved exception policy.
+
+### PD-2026-11-13-D — Student Credit archive/reactivation: 7-calendar-day reversal window
+- Archiving within 7 calendar days from the original activation timestamp qualifies for the approved credit-return path; after that window no automatic credit return is allowed.
+- Reactivation of the same student without a new debit is allowed only within the original entitlement period. Archive/reactivation does not restart or extend that period.
+- A returned credit used to support free reactivation must be represented as a student-bound reserved entitlement, not as simultaneously spendable general-wallet balance. It cannot fund another student's activation while reserved.
+- The ledger remains append-only: debit and compensating reversal are separate immutable entries. Reversal must be idempotent and tied to the exact original debit and student/entitlement.
+- Any case where the original entitlement period has expired requires a new credit debit/entitlement under the applicable policy.
+- This decision does not approve commercial checkout, payment provider or full refund/chargeback implementation.
+
+### PD-2026-11-13-E — Control Plane HA clarification (OQ-D remains Option A)
+- Previously accepted OQ-D Option A is preserved: independent Control Plane infrastructure, primary plus replica, independently controlled encrypted backups and restore drills.
+- Manual promotion may be used as the conservative pilot operational procedure, but it does not replace or remove the replica or independent backups.
+- Promotion requires verified fencing of the old primary, replica consistency/replay-position assessment, single-writer assurance, audit, and quarantine of the old primary.
+- RPO/RTO, replication mode/lag, promotion thresholds, fencing implementation and split-brain drills remain unresolved and require Platform Security/Operations evidence and Product Owner approval where business objectives are involved.
+
+### PD-2026-11-13-F — Phase 2 MEDIUM scope allocation
+- Keep schema/domain foundations in Phase 2: Transfer Saga and Outbox/Inbox; exam and per-subject result structures; versioned test analysis; base Plan/PlanItem and versioning; Curriculum/Subtopic; Activity/Class/ClassParticipant; Student Credit ledger and entitlement; base file and notification security contracts.
+- Defer provider/operational implementations: checkout/payment/refund execution, malware scanning/quarantine operations, SMS/Telegram providers, hosting/provider selection, production verifier cryptography and key lifecycle.
+- Deferral does not remove required base schema, tenant ownership, authorization, audit, idempotency or security contracts.
+
+**Status note:** These decisions do not close Q-007, Q-020, PS-1..PS-8, transfer exception approval authority, numeric OQ-D objectives, or any implementation/test finding. D-014 synthetic-only restriction remains. Phase 2 remains NOT READY.

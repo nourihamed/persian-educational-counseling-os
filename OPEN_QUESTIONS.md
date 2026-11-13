@@ -345,3 +345,15 @@ The high-level OQ-G Option A decision remains accepted: parent access is per chi
 - PS-6 Certificate authority, trust store and mTLS identity model for the verifier-to-adapter channel. Owner: Platform Security.
 - PS-7 Deployment topology of the verifier service and the adapter. Owner: Platform Security / Product Owner.
 - PS-8 Revocation source for receipts and membership-revocation propagation across API, export, worker and notification handoffs. Owner: Product Owner / Platform Security. Blocks any end-to-end freshness claim.
+
+## Phase 2 decision clarification — 2026-11-13 (no new D-number)
+
+The Product Owner has now selected fixed immutable assessment question sets (MVP), specialized Activity-linked domain entities, the narrow transfer conflict exception case, and the 7-day Student Credit archive-return window with original-period-only reactivation. See the 2026-11-13 supplement in DECISION_LOG.md.
+
+- **Transfer approval conflict:** the only exception case under consideration is when the source counselor and destination Workspace owner are the same person. The exception remains disabled until an independent approval authority and its exact scope are separately approved. No Platform Admin authority is implied. Fail closed when the exception would be needed.
+- **Student Credit:** the 7-calendar-day window is measured from original activation. Free reactivation is limited to the original entitlement period and does not renew it. Returned credit must be reserved for the same student and unavailable for another student's activation.
+- **OQ-D:** prior Option A remains controlling. Manual promotion is a possible pilot runbook procedure only; primary/replica and independent encrypted backup direction remains. RPO/RTO, replication mode/lag, fencing and split-brain controls remain open.
+- **Assessment:** fixed version-level question membership/order is MVP. Adaptive/per-attempt delivery is not enabled; immutable version-question rows and response FK integrity are required.
+- **Activity:** specialized entities remain authoritative; Activity is shared scheduling/tracking, not a generic replacement.
+
+Q-007 and Q-020 remain open. PS-1..PS-8 remain deferred to Platform Security. No unresolved legal, cryptographic, key-lifecycle or production authority question is closed by this supplement.

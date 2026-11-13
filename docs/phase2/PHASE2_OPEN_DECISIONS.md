@@ -47,3 +47,18 @@
 - This register does not authorize Phase 3, production deployment, merging, or real student data.
 
 **Current status: NOT READY.**
+
+## Product Owner decisions resolved/clarified on 2026-11-13
+
+These are now approved at the product-policy level and must be reflected in the contracts/schema. They do not constitute implementation evidence.
+
+| Topic | Approved direction | Still open / fail-closed boundary |
+|---|---|---|
+| Assessment semantics | Fixed immutable question set and order per published version for MVP; adaptive/per-attempt delivery disabled | Schema must persist version-question membership/order and enforce response FK consistency; adaptive mode needs a separate decision |
+| Activity | Specialized Test/Exam/Class/Assignment/Review entities plus shared Activity scheduling/tracking layer | Exact taxonomy and detailed subtype links must be reconciled with MVP scope |
+| Transfer approval conflict | Default incompatible approvals separated; only contemplated exception is source counselor = destination Workspace owner | Exception disabled until independent approver and exact authority are approved; no implied Platform Admin privilege |
+| Student Credit archive/reactivation | Archive within 7 calendar days of original activation permits compensating credit return; free reactivation only within original entitlement period | Returned credit is reserved for same student and cannot be spent elsewhere; after original period, new debit required |
+| OQ-D HA | Existing Option A preserved; manual promotion may be pilot runbook procedure | Replica, independent backup and restore drills remain; RPO/RTO, replication/lag, fencing and split-brain evidence remain open |
+| MEDIUM scope | Supervisor's base-schema/security-contract allocation accepted | Deferred provider/operational implementations must not remove required base ownership, audit, authorization or idempotency contracts |
+
+The transfer exception authority remains a Product Owner/specialist decision item. Q-007 and Q-020 remain open. Production verifier/key policy remains deferred to Platform Security. Phase 2 remains NOT READY.

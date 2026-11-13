@@ -142,3 +142,11 @@ These require Product Owner/legal/security decisions. The design must keep polic
 ## 9. Gate impact
 
 This contract is design-only and closes no runtime security finding. Existing SQL checks for non-empty `approver_ref` and `authn_event_ref` do not satisfy this contract. Control Plane transfer authority remains **NOT READY** until trusted identity/authorization integration, immutable approval-event schema, cutover revalidation, executable abuse/replay/race tests and independent review are complete.
+
+## Product Owner decision overlay — 2026-11-13: approval conflict
+
+Default policy is that one person must not satisfy incompatible approval kinds for the same transfer. The only exception case contemplated by the Product Owner is when the source counselor and the owner of the destination Workspace are the same person.
+
+**This exception is disabled and fail-closed pending a separate decision** that identifies an independent approval authority and defines its exact scope, evidence, freshness and audit requirements. This overlay does not grant Platform Admin any new authority. Until that authority is approved and implemented, a transfer requiring this exception cannot proceed.
+
+All cumulative approval requirements remain in force; this clarification does not waive guardian/legal authority, source counselor fee-receipt attestation or destination acceptance. Q-007 remains open and guardian-dependent operations remain fail-closed.
