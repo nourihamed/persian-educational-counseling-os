@@ -550,6 +550,28 @@ PR #12 branch work adds technical proposals for Workspace DB, Control Plane, tra
 
 Technical status: Control Plane and Workspace SQL are drafts; revised tests NOT RUN; HMAC rotation enforcement, KMS/HSM, authenticated approval verification, dedicated role/grant design, full Workspace schema and Saga runtime remain incomplete. Phase 2 NOT READY. D-014 remains in force.
 
+## Phase 2 — Product Owner Clarification (2026-11-14)
+
+**Authority:** explicit Product Owner clarification in the 2026-11-14 conversation, relayed with the
+Supervisor's final review corrections. Recorded without a D-number, in accordance with OQ-C. It is a policy
+clarification, not evidence of implementation quality and not gate approval.
+
+### OQ-CRD-1 — credit reversal window: exact 168-hour interval, inclusive boundary (RESOLVED)
+- The 7-calendar-day reversal window of PD-2026-11-13-D is an **exact 168-hour interval** measured from the
+  stored activation timestamp.
+- The boundary is **inclusive**: an archive at exactly `activation + 168 hours` qualifies for the
+  compensating credit return.
+- The interval form is deliberate: the verdict does not depend on the session time zone. Local
+  calendar-day boundaries in Asia/Tehran were considered and not chosen.
+- This clarification resolves OQ-CRD-1 only. **OQ-CRD-2** (disposition of a reserved entitlement after its
+  original period ends) and **OQ-CRD-3** (the authoritative source of the entitlement duration) remain
+  OPEN, and the production-intended activation path stays fail-closed until OQ-CRD-3 is decided.
+- Nothing else is approved by this clarification. Q-007, Q-020, PS-1..PS-8, the transfer exception approval
+  authority and the OQ-D/OQ-E numeric objectives remain open. D-014 remains in force. Phase 2 remains
+  NOT READY and Phase 3 remains unauthorized.
+
+---
+
 ## Phase 2 — Product Owner Decision Supplement (2026-11-13)
 
 **Authority:** Explicit Product Owner decisions and clarifications in the 2026-11-13 conversation. These decisions are recorded without assigning D-numbers, in accordance with OQ-C. They are policy decisions, not evidence of implementation or gate approval.

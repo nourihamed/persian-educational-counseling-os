@@ -7,15 +7,30 @@
 --     reversal and binds the returned credit to that student as a reserved entitlement;
 --   * archive after the window moves no credit;
 --   * reactivation is free only until the end of the ORIGINAL entitlement period and never extends it.
--- The 7-day window is evaluated as an exact 168-hour interval from the stored activation timestamptz, so it
--- does not depend on the session time zone. The boundary is INCLUSIVE (archive exactly at +168h still
--- qualifies). If the Product Owner means local calendar-day boundaries in Asia/Tehran instead, this is a
--- one-line policy change and is recorded as an open clarification, not an assumption.
+-- OQ-CRD-1 is RESOLVED (Product Owner, 2026-11-14): the 7-day window is an EXACT 168-hour interval from the
+-- stored activation timestamptz, with an INCLUSIVE boundary. Archive exactly at activation + 168 hours still
+-- qualifies. The interval form makes the result independent of the session time zone, and the comparison
+-- lives in one place, credit_reversal_eligible(), so the rule is testable without the command around it.
 -- NOT decided here (open Product Owner decisions, deliberately not implemented):
 --   * what happens to a reserved entitlement once its original period ends (release, forfeit or manual
 --     adjustment) — the credit stays reserved and is reported by view expired_reserved_entitlements;
 --   * capacity treatment of a SUSPENDED enrollment (this command refuses to archive from 'suspended').
 BEGIN;
+
+-- OQ-CRD-1 (RESOLVED 2026-11-14). One place where the approved rule lives, taking explicit timestamps so
+-- the boundary itself can be tested exactly, including equality, without a lock wait or a wall clock.
+-- IMMUTABLE and side-effect free: these are a statement of the policy, not a decision point.
+CREATE FUNCTION credit_reversal_window_end(p_activated_at timestamptz) RETURNS timestamptz
+LANGUAGE sql IMMUTABLE STRICT AS $$
+  SELECT p_activated_at + interval '168 hours'
+$$;
+
+CREATE FUNCTION credit_reversal_eligible(p_activated_at timestamptz, p_at timestamptz) RETURNS boolean
+LANGUAGE sql IMMUTABLE STRICT AS $$
+  SELECT p_at <= public.credit_reversal_window_end(p_activated_at)
+$$;
+REVOKE ALL ON FUNCTION credit_reversal_window_end(timestamptz) FROM PUBLIC;
+REVOKE ALL ON FUNCTION credit_reversal_eligible(timestamptz,timestamptz) FROM PUBLIC;
 
 CREATE TABLE archive_command_log (
   idempotency_key text PRIMARY KEY CHECK (length(btrim(idempotency_key))>0),
@@ -93,7 +108,8 @@ BEGIN
   v_now := clock_timestamp();
   IF FOUND THEN
     IF v_ent.reversal_transaction_id IS NULL THEN
-      IF v_now <= v_ent.activated_at + interval '168 hours' THEN
+      -- v_now was read after the entitlement row lock (H-01). Only the COMPARISON is delegated.
+      IF public.credit_reversal_eligible(v_ent.activated_at, v_now) THEN
         SELECT wallet_id INTO v_wallet FROM public.credit_transactions WHERE transaction_id=v_ent.debit_transaction_id;
         INSERT INTO public.credit_transactions(
           transaction_id,wallet_id,transaction_kind,amount,idempotency_key,

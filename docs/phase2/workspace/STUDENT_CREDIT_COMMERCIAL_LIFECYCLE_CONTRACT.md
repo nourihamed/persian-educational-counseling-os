@@ -93,8 +93,10 @@ a returned credit can never fund another student; archive inside the window writ
 reversal; `reactivate_student_enrollment()` consuming the SAME returned credit with no new debit, one
 capacity slot and full rollback on failure; `expired_reserved_entitlements` for visibility.
 
-Window semantics as implemented: an exact 168-hour interval from the stored activation timestamptz, boundary
-inclusive, independent of the session time zone. This is recorded as OQ-CRD-1, not assumed to be final.
+Window semantics, **APPROVED by the Product Owner on 2026-11-14 (OQ-CRD-1 RESOLVED)**: an exact 168-hour
+interval from the stored activation timestamptz, boundary **inclusive**, independent of the session time
+zone. The rule lives in `credit_reversal_window_end()` / `credit_reversal_eligible()` and is tested to the
+microsecond, including equality at the deadline (CRD-32..CRD-38).
 
 The entitlement duration is NOT chosen by the database: `activate_student_enrollment()` requires the caller
 to supply `p_entitlement_period_end` and refuses an activation without a future period (OQ-CRD-3).

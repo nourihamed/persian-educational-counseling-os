@@ -62,7 +62,7 @@ closure is the independent Supervisor's call. Nothing here claims Phase 2 is app
 | Per-subject exam results and the custom error taxonomy | **NOT IMPLEMENTED** | Named in the assessment contract; no schema in this batch. |
 | Curriculum subtopics, normalized planning constraints, explicit PlanItem relation | **NOT IMPLEMENTED** | No schema in this batch. |
 | Activity taxonomy and class participants | **DONE** (schema) | Typed FK-backed sources, `class_participants`, `class_session_participants`. ACT-01..26. Class recurrence rules remain open. |
-| Credit lifecycle: archive return, reserved entitlement, reactivation | **DONE** (schema) | CRD-01..31, WS-CRD-LOCK-01/02. The entitlement **period source** is **NOT IMPLEMENTED** and the production path is fail-closed (H-02, OQ-CRD-3). |
+| Credit lifecycle: archive return, reserved entitlement, reactivation | **DONE** (schema) | CRD-01..38, WS-CRD-LOCK-01/02. The reversal window rule is approved and tested to the microsecond including equality at the deadline (OQ-CRD-1 RESOLVED 2026-11-14). The entitlement **period source** is **NOT IMPLEMENTED** and the production path is fail-closed (H-02, OQ-CRD-3 OPEN). What happens to a reserved entitlement after its period ends is **NOT IMPLEMENTED** (OQ-CRD-2 OPEN). |
 | Credit purchase, renewal, refund execution and payment reconciliation | **DEFERRED** | Phase 21/22 per PD-2026-11-13-F. |
 | File scan/quarantine, notification generation and permission fencing | **DEFERRED** (operations) / **NOT IMPLEMENTED** (base contracts) | Base security contracts stay in Phase 2 per PD-2026-11-13-F; no schema in this batch. |
 | Retention policy schema integration | **NOT IMPLEMENTED** | Blocked on Q-020 numeric durations. |
@@ -72,6 +72,7 @@ closure is the independent Supervisor's call. Nothing here claims Phase 2 is app
 |---|---|---|
 | C-01 Saga delivery per recipient | **DONE** (schema) | `outbox_event_recipients`, delivery keyed `(event_id, workspace_id)`, completion only when all recipients acknowledge. SAGA-R01..R32. |
 | H-01 archive clock read before the entitlement lock | **DONE** | Clock read after the lock; WS-CRD-LOCK-01/02, sensitivity verified against the pre-fix code. |
+| OQ-CRD-1 exact boundary (Supervisor correction, 2026-11-14) | **DONE** | The approved rule is extracted into `credit_reversal_window_end()` / `credit_reversal_eligible()` and tested with explicit timestamps: deadline minus one microsecond eligible, the exact deadline eligible, plus one microsecond ineligible, monotonic across the window, identical in four time zones, and no second copy of the interval inside the command. CRD-32..CRD-38. The command's post-lock `clock_timestamp()` read and WS-CRD-LOCK-01/02 are unchanged. |
 | H-02 entitlement period source | **DONE as fail-closed**; the source itself is **NOT IMPLEMENTED** | Production path refuses (OQ-CRD-3); caller-supplied period is synthetic-only and role-gated. CRD-28..31, WS-ROLE-18/19. |
 | H-03 outbox acknowledgement authorization | **DONE** | Declared-recipient check, send-before-acknowledge check, per-recipient idempotency and conflict refusal. SAGA-R01..R03, R11, R12. |
 | H-04 activation timestamp and lock order | **DONE** | One authoritative timestamp read after the locks, used for enrollment start, entitlement and audit. CRD-01/01b. |

@@ -228,6 +228,12 @@ SELECT format('REVOKE ALL ON FUNCTION archive_student_enrollment(text,uuid,bigin
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT SELECT,INSERT ON TABLE reactivation_command_log TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT SELECT ON TABLE membership_roles TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+-- The approved reversal-window rule is a pure policy function. The command owner evaluates it; the runtime
+-- may read the deadline to display it. Neither can change the rule: that needs a schema change.
+SELECT format('GRANT EXECUTE ON FUNCTION credit_reversal_window_end(timestamptz) TO %I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner','ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+SELECT format('GRANT EXECUTE ON FUNCTION credit_reversal_eligible(timestamptz,timestamptz) TO %I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_function_owner','ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
 SELECT format('GRANT UPDATE(idempotency_key) ON TABLE reactivation_command_log TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT INSERT ON TABLE enrollments,counselor_assignments TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT UPDATE(state,started_at) ON TABLE enrollments TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec

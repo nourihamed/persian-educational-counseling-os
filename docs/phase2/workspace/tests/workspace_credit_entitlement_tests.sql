@@ -303,4 +303,70 @@ DO $t$ BEGIN
   END IF;
   RAISE NOTICE 'PASS CRD-31 the fail-closed activation created no enrollment state, entitlement or command row';
 END $t$;
-SELECT 'STUDENT CREDIT ENTITLEMENT TESTS COMPLETED (CRD-01..CRD-31, including H-06/M-01)' AS result;
+-- ============================ OQ-CRD-1: the boundary itself, to the microsecond ============================
+-- RESOLVED by the Product Owner on 2026-11-14: an exact 168-hour interval from the activation timestamp,
+-- INCLUSIVE boundary. These tests drive credit_reversal_eligible() with explicit timestamps, so equality is
+-- tested exactly rather than bracketed. They do not replace WS-CRD-LOCK-01/02, which proves that the command
+-- reads its wall clock AFTER the entitlement row lock.
+DO $t$
+DECLARE
+  a timestamptz := '2026-03-01 09:17:43.123456+03:30';   -- an awkward activation instant on purpose
+  d timestamptz;
+BEGIN
+  d := credit_reversal_window_end(a);
+  IF d <> a + interval '168 hours' THEN
+    RAISE EXCEPTION 'FAIL CRD-32: deadline % is not activation + 168 hours', d;
+  END IF;
+  IF extract(epoch FROM (d - a)) <> 604800 THEN
+    RAISE EXCEPTION 'FAIL CRD-32: the window is % seconds, expected 604800', extract(epoch FROM (d - a));
+  END IF;
+  RAISE NOTICE 'PASS CRD-32 the deadline is exactly 168 hours (604800 s) after the activation timestamp';
+
+  IF NOT credit_reversal_eligible(a, d - interval '1 microsecond') THEN
+    RAISE EXCEPTION 'FAIL CRD-33: one microsecond before the deadline was refused';
+  END IF;
+  RAISE NOTICE 'PASS CRD-33 one microsecond BEFORE the deadline is eligible';
+
+  IF NOT credit_reversal_eligible(a, d) THEN
+    RAISE EXCEPTION 'FAIL CRD-34: the exact deadline was refused (the boundary must be inclusive)';
+  END IF;
+  RAISE NOTICE 'PASS CRD-34 the EXACT deadline is eligible (inclusive boundary, OQ-CRD-1)';
+
+  IF credit_reversal_eligible(a, d + interval '1 microsecond') THEN
+    RAISE EXCEPTION 'FAIL CRD-35: one microsecond after the deadline was accepted';
+  END IF;
+  RAISE NOTICE 'PASS CRD-35 one microsecond AFTER the deadline is ineligible';
+
+  IF NOT credit_reversal_eligible(a, a) OR NOT credit_reversal_eligible(a, a + interval '84 hours')
+     OR credit_reversal_eligible(a, a + interval '169 hours') THEN
+    RAISE EXCEPTION 'FAIL CRD-36: eligibility is not monotonic across the window';
+  END IF;
+  RAISE NOTICE 'PASS CRD-36 eligibility holds from the activation instant through the deadline and not beyond';
+END $t$;
+-- The rule must not depend on the session time zone: the same two instants decide the same way in any zone.
+DO $t$
+DECLARE a timestamptz := '2026-03-01 09:17:43.123456+03:30'; d timestamptz; z text;
+BEGIN
+  d := credit_reversal_window_end(a);
+  FOREACH z IN ARRAY ARRAY['UTC','Asia/Tehran','America/Los_Angeles','Pacific/Kiritimati'] LOOP
+    PERFORM set_config('TimeZone', z, true);
+    IF credit_reversal_window_end(a) <> d
+       OR NOT credit_reversal_eligible(a, d)
+       OR credit_reversal_eligible(a, d + interval '1 microsecond') THEN
+      RAISE EXCEPTION 'FAIL CRD-37: the window moved or the verdict changed in time zone %', z;
+    END IF;
+  END LOOP;
+  PERFORM set_config('TimeZone', 'UTC', true);
+  RAISE NOTICE 'PASS CRD-37 the deadline and the verdict are identical in UTC, Asia/Tehran, America/Los_Angeles and Pacific/Kiritimati';
+END $t$;
+-- The command itself must use this rule, not a second copy of it.
+DO $t$ DECLARE n integer; BEGIN
+  SELECT count(*) INTO n FROM pg_proc
+   WHERE proname='archive_student_enrollment' AND prosrc LIKE '%credit_reversal_eligible%';
+  IF n<>1 THEN RAISE EXCEPTION 'FAIL CRD-38: the archive command does not use credit_reversal_eligible()'; END IF;
+  SELECT count(*) INTO n FROM pg_proc
+   WHERE proname='archive_student_enrollment' AND prosrc LIKE '%168 hours%';
+  IF n<>0 THEN RAISE EXCEPTION 'FAIL CRD-38: the archive command still carries its own copy of the interval'; END IF;
+  RAISE NOTICE 'PASS CRD-38 the archive command evaluates the shared rule and keeps no second copy of the interval';
+END $t$;
+SELECT 'STUDENT CREDIT ENTITLEMENT TESTS COMPLETED (CRD-01..CRD-38, including H-06/M-01 and the OQ-CRD-1 boundary)' AS result;

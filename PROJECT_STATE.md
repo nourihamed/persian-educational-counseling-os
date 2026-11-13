@@ -21,7 +21,7 @@
 - **Decisions implemented:** PD-2026-11-13-A (fixed assessment question set), B (specialized entities plus a shared Activity layer), C (approval separation with the exception disabled and fail-closed), D (7-day credit return window, student-bound reserved credit, reactivation only inside the original period), F (MEDIUM scope allocation). See `docs/phase2/IMPLEMENTATION_RESPONSE_2026-11-14.md`.
 - **Last open HIGH closed at the schema level:** the Saga outbox envelope, delivery state/lease/dead-letter/re-drive, and the Workspace inbox with generation fencing are now reconciled with the Control Plane DDL and tested. The **service-level** Saga behaviour (freeze/drain, snapshot, staging, dispatcher crash, chaos, drift repair) remains SPEC-ONLY.
 - **Signature change:** `activate_student_enrollment()` takes a seventh parameter, the entitlement period end. Every call site, grant and role assertion was updated. The database chooses no entitlement duration.
-- **New open questions:** OQ-CRD-1 (window semantics), OQ-CRD-2 (reserved credit after the period ends), OQ-CRD-3 (source of the entitlement duration), OQ-SAGA-1 (signed wire format), OQ-SAGA-2 (quarantine resolution), OQ-ASM-1 (item bank). None was decided by the implementation.
+- **New open questions:** OQ-CRD-1 (window semantics — **RESOLVED by the Product Owner on 2026-11-14**: exact 168-hour interval, inclusive boundary), OQ-CRD-2 (reserved credit after the period ends — OPEN), OQ-CRD-3 (source of the entitlement duration — OPEN), OQ-SAGA-1 (signed wire format — OPEN), OQ-SAGA-2 (quarantine resolution — OPEN), OQ-ASM-1 (item bank — OPEN). None was decided by the implementation.
 - **Still open, unchanged:** Q-007, Q-020, PS-1..PS-8, the transfer exception approval authority, OQ-D/OQ-E numeric objectives, M-05 and M-06 definitions, disposition of PR #8–#11, and bringing PR #12 up to date with `main`.
 - **Last local verification:** PostgreSQL 16.15, cleared cluster, all 18 runnable workflow steps passed (476 PASS assertion lines) plus the Python verifier unit tests. **CI for the pushed commit is NOT verified by the implementation agent** — this session has no GitHub Actions access.
 
@@ -34,6 +34,14 @@
 - **Status per exit item** is now labelled DONE / PARTIAL / NOT IMPLEMENTED / DEFERRED in `docs/phase2/PHASE2_EXIT_CRITERIA.md` section 3. Saga service behaviour is PARTIAL with the section-10 items NOT IMPLEMENTED; nothing in the lifecycle or Saga work is described as complete.
 - **Last local verification:** PostgreSQL 16.15, cleared cluster, all 18 runnable workflow steps passed (504 PASS assertion lines) plus the Python verifier unit tests. **CI on the final HEAD of this batch is NOT verified by the implementation agent.**
 - **Still open, unchanged:** Q-007, Q-020, OQ-CRD-1/2/3, OQ-SAGA-1/2, OQ-ASM-1, PS-1..PS-8, OQ-D and OQ-E numeric objectives, the transfer exception approval authority, M-05 and M-06 definitions, disposition of PR #8–#11, and bringing PR #12 up to date with `main`.
+
+### Update 2026-11-14 (third) — OQ-CRD-1 resolved, exact boundary under test
+
+- **OQ-CRD-1 is RESOLVED** (Product Owner, 2026-11-14): the credit reversal window is an exact 168-hour interval from the stored activation timestamp, boundary **inclusive**. Recorded in `DECISION_LOG.md` as a 2026-11-14 clarification without a new D-number, and in `OPEN_QUESTIONS.md` as RESOLVED.
+- The rule now lives in `credit_reversal_window_end()` / `credit_reversal_eligible()`. CRD-32..CRD-38 test it with explicit timestamps, including **equality at the deadline**, four time zones, and the absence of a second copy of the interval inside the command. The command's post-lock `clock_timestamp()` read and WS-CRD-LOCK-01/02 are unchanged.
+- **OQ-CRD-2 and OQ-CRD-3 remain OPEN.** The production-intended activation path remains fail-closed, and nothing about an expired reserved entitlement was decided or implemented.
+- Previous reviewed HEAD `14c76fd` had two successful PostgreSQL 16 CI runs (`43502040401`, `43502032586`). CI for the HEAD produced by this batch is **NOT VERIFIED by the implementation agent**.
+- No security boundary was weakened: per-recipient outbox delivery and acknowledgement, fresh timestamp reads after row locks, the fail-closed activation and inbox paths, and D-014 synthetic-only all remain in force.
 
 **Current Gate: NOT READY.** This PR is a draft design/schema delivery vehicle, not phase approval.
 

@@ -56,7 +56,9 @@ Window semantics, stated explicitly because the decision text did not fix them:
   `timestamptz`, so the result does not depend on the session time zone (effectively UTC arithmetic).
 - The boundary comparison is `<=` (**inclusive**).
 - If the Product Owner means local calendar-day boundaries in Asia/Tehran, that is a one-line policy
-  change. It is recorded as an open clarification (OQ-CRD-1), not assumed.
+  change. **OQ-CRD-1 was RESOLVED by the Product Owner on 2026-11-14 exactly as implemented**: an exact
+  168-hour interval with an inclusive boundary. The rule now lives in `credit_reversal_eligible()` and is
+  tested to the microsecond by CRD-32..CRD-38, including equality at the deadline.
 - The entitlement **duration** is NOT chosen by the database. `activate_student_enrollment()` now takes a
   required `p_entitlement_period_end`; an activation without a future entitlement period is refused. This
   changes the function signature (seventh parameter) and every call site and grant was updated.
@@ -166,17 +168,22 @@ blocks later local commands.
 
 ## 3. New open questions raised by this work
 
+**OQ-CRD-1 is no longer in this table: the Product Owner RESOLVED it on 2026-11-14** as an exact 168-hour
+interval with an inclusive boundary, which is what was implemented. See `DECISION_LOG.md` (2026-11-14
+clarification) and `OPEN_QUESTIONS.md`. The remaining questions below are still open and none of them is
+decided by the implementation.
+
 | ID | Question | Why it matters | Recommended option | Authority |
 |---|---|---|---|---|
-| OQ-CRD-1 | Is the 7-day reversal window an exact 168-hour interval from the activation timestamp (implemented), or local calendar-day boundaries in Asia/Tehran? Is the boundary inclusive (implemented)? | Decides whether an archive near the edge returns credit | Keep the 168-hour inclusive interval: it is timezone-independent and matches "from the original activation timestamp" | Product Owner |
 | OQ-CRD-2 | What happens to a reserved entitlement once its original period ends — released to the wallet, forfeited, or manual adjustment? | Credits currently stay reserved indefinitely (fail-closed, visible in `expired_reserved_entitlements`) | Decide before any pilot billing; do not auto-release | Product Owner / Finance |
 | OQ-CRD-3 | Where does the entitlement **duration** come from (plan, product, per-activation)? The database now requires the caller to supply `period_end`. | Without a source, every caller invents one | Attach it to the purchased plan/product in the billing phase | Product Owner |
 | OQ-SAGA-1 | Canonical wire format and signing for Saga envelopes across databases/services | `payload_hash` is transport integrity only | Define with PS-1..PS-4 before any cross-service deployment | Platform Security |
 | OQ-SAGA-2 | Quarantine resolution: who re-applies a quarantined event once the local projection catches up, and under what authority? | Quarantined events currently stay quarantined | Operator command with audit, designed with OQ-E | Product Owner / Operations |
 | OQ-ASM-1 | Item-bank ownership and the meaning of `item_ref` | Membership uniqueness relies on it | Model the item bank when assessment authoring is implemented | Educational domain owner |
 
-Unchanged and still open: Q-007, Q-020, OQ-D numeric objectives, OQ-E thresholds, PS-1..PS-8, the transfer
-exception authority, M-05 and M-06 (whose definitions are still not in the repository).
+Unchanged and still open: Q-007, Q-020, **OQ-CRD-2**, **OQ-CRD-3**, OQ-SAGA-1, OQ-SAGA-2, OQ-ASM-1, OQ-D
+numeric objectives, OQ-E thresholds, PS-1..PS-8, the transfer exception authority, M-05 and M-06 (whose
+definitions are still not in the repository).
 
 ---
 

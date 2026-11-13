@@ -462,3 +462,33 @@ completed (ALL_STEPS_PASSED, 504 PASS assertion lines) plus the Python verifier 
 | Entitlement period source | — | — | NOT IMPLEMENTED (OQ-CRD-3); production path fail-closed |
 | Contact change vs HMAC rotation / vs ownership switch, concurrent | — | — | NOT RUN |
 | GitHub Actions on the final HEAD of this batch | — | — | NOT VERIFIED by the implementation agent (no Actions access) |
+
+## Supervisor final review corrections (2026-11-14; author-executed, NOT independently reproduced)
+
+Reviewed HEAD before this batch: `14c76fdaf2ae33dc6af4b437a5376cfb5c411412`, whose CI runs
+[43502040401](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43502040401) and
+[43502032586](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43502032586)
+both completed **success** on PostgreSQL 16. CI for the HEAD produced by this batch must be read from the
+Actions tab for that exact SHA and is **NOT VERIFIED** by the implementation agent.
+
+Local run: PostgreSQL 16.15, cleared cluster, every database created fresh per step.
+
+| ID | Check | Where | Status |
+|---|---|---|---|
+| CRD-32 | The deadline is exactly 168 hours (604800 s) after the activation timestamp | workspace/tests/workspace_credit_entitlement_tests.sql | PASS |
+| CRD-33 | One microsecond BEFORE the deadline is eligible | same | PASS |
+| CRD-34 | The EXACT deadline is eligible (inclusive boundary, OQ-CRD-1 as approved) | same | PASS |
+| CRD-35 | One microsecond AFTER the deadline is ineligible | same | PASS |
+| CRD-36 | Eligibility holds from the activation instant through the deadline and not beyond | same | PASS |
+| CRD-37 | The deadline and the verdict are identical in UTC, Asia/Tehran, America/Los_Angeles and Pacific/Kiritimati | same | PASS |
+| CRD-38 | The archive command evaluates the shared rule and keeps no second copy of the 168-hour interval | same | PASS |
+| WS-CRD-LOCK-01/02 | Unchanged and still passing: the command reads its wall clock only AFTER the entitlement row lock, with the control case | workspace/tests/workspace_credit_lock_boundary_race.sh | PASS |
+
+CRD-32..38 drive `credit_reversal_eligible()` with explicit timestamps, so equality at the deadline is
+tested exactly rather than bracketed. They do not replace WS-CRD-LOCK-01/02 and that test was not weakened.
+
+Still NOT RUN / NOT IMPLEMENTED after this batch (unchanged): Saga service behaviour in contract section 10,
+quarantine resolution (OQ-SAGA-2), verified transport and signed wire format (OQ-SAGA-1, PS-1..PS-4/PS-6),
+the entitlement period source (OQ-CRD-3), disposition of an expired reserved entitlement (OQ-CRD-2),
+per-subject exam results, curriculum subtopics and PlanItem, retention schema integration (Q-020), and
+contact change concurrency against HMAC rotation and against an ownership switch (NOT RUN).

@@ -360,13 +360,21 @@ Q-007 and Q-020 remain open. PS-1..PS-8 remain deferred to Platform Security. No
 
 ## New open questions raised by the 2026-11-14 implementation (none decided by the implementation)
 
-### OQ-CRD-1 — semantics of the 7-day credit-return window
-**Question:** is the window an exact 168-hour interval from the stored activation timestamp (as implemented), or local calendar-day boundaries in Asia/Tehran? Is the boundary inclusive (as implemented)?
-**Why it matters:** it decides whether an archive near the edge returns credit.
-**Recommended option:** keep the 168-hour inclusive interval — it is timezone-independent and matches "7 calendar days from the original activation timestamp".
-**Alternatives:** local midnight boundaries in Asia/Tehran; exclusive boundary.
-**Impact:** one comparison in `archive_student_enrollment()` plus CRD-14/15.
-**Authority:** Product Owner.
+### OQ-CRD-1 — semantics of the 7-day credit-return window — **RESOLVED (Product Owner, 2026-11-14)**
+**Decision:** the window is an **exact 168-hour interval** from the stored activation timestamp, with an
+**INCLUSIVE** boundary. An archive at exactly `activation + 168 hours` qualifies for the compensating credit
+return; one microsecond later does not. The interval form makes the verdict independent of the session time
+zone; local calendar-day boundaries in Asia/Tehran were not chosen.
+**Where it lives:** `credit_reversal_window_end()` and `credit_reversal_eligible()` in
+`docs/phase2/workspace/workspace_archive_transactions.sql`. The rule is in one place and the command
+evaluates it; changing it needs a schema change, not DML.
+**Evidence:** CRD-32..CRD-38 drive the rule with explicit timestamps and test the deadline minus one
+microsecond (eligible), the exact deadline (eligible), the deadline plus one microsecond (ineligible),
+monotonicity across the window, identical verdicts in four time zones, and that the command keeps no second
+copy of the interval. WS-CRD-LOCK-01/02 separately prove that the command reads its wall clock only after
+the entitlement row lock. All executed on PostgreSQL 16.15.
+**Not decided by this resolution:** OQ-CRD-2 (what happens to a reserved entitlement once its original
+period ends) and OQ-CRD-3 (where the entitlement duration comes from) both remain **OPEN**.
 
 ### OQ-CRD-2 — disposition of a reserved entitlement after its original period ends
 **Question:** released to the wallet, forfeited, or resolved by a manual adjustment?
