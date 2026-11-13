@@ -227,6 +227,7 @@ SELECT format('REVOKE ALL ON FUNCTION archive_student_enrollment(text,uuid,bigin
   'ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT SELECT,INSERT ON TABLE reactivation_command_log TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('GRANT SELECT ON TABLE membership_roles TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT UPDATE(idempotency_key) ON TABLE reactivation_command_log TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT INSERT ON TABLE enrollments,counselor_assignments TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 SELECT format('GRANT UPDATE(state,started_at) ON TABLE enrollments TO %I','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec

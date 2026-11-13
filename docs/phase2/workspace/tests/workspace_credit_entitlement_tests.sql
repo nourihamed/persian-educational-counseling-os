@@ -39,8 +39,15 @@ END; $t$;
 
 INSERT INTO workspace_profile(singleton,workspace_id,workspace_type) VALUES(true,'a7500000-0000-0000-0000-000000000001','organization');
 INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES
- ('b7500000-0000-0000-0000-000000000001','c7500000-0000-0000-0000-000000000001','active');
-INSERT INTO membership_roles(membership_id,role_key) VALUES ('b7500000-0000-0000-0000-000000000001','counselor');
+ ('b7500000-0000-0000-0000-000000000001','c7500000-0000-0000-0000-000000000001','active'),
+ ('b7500000-0000-0000-0000-000000000002','c7500000-0000-0000-0000-000000000002','active'),     -- active, NOT a counselor
+ ('b7500000-0000-0000-0000-000000000003','c7500000-0000-0000-0000-000000000003','suspended'),  -- counselor, inactive
+ ('b7500000-0000-0000-0000-000000000004','c7500000-0000-0000-0000-000000000004','active');     -- a second real counselor
+INSERT INTO membership_roles(membership_id,role_key) VALUES
+ ('b7500000-0000-0000-0000-000000000001','counselor'),
+ ('b7500000-0000-0000-0000-000000000002','assistant'),
+ ('b7500000-0000-0000-0000-000000000003','counselor'),
+ ('b7500000-0000-0000-0000-000000000004','counselor');
 INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state) VALUES
  ('e7500000-0000-0000-0000-00000000000a','f7500000-0000-0000-0000-00000000000a','Credit A','grade_10','active'),
  ('e7500000-0000-0000-0000-00000000000b','f7500000-0000-0000-0000-00000000000b','Credit B','grade_10','active'),
@@ -107,6 +114,20 @@ END $t$;
 
 -- ============================ free reactivation inside the original period ============================
 SET SESSION AUTHORIZATION :"runtime_role";
+-- H-06: an active membership is not a counselor, and a suspended counselor is not available.
+SELECT cr_err('CRD-07a an active member who does not hold the counselor role cannot be appointed responsible',
+ $q$SELECT reactivate_student_enrollment('cr-react-noncounselor','e7500000-0000-0000-0000-00000000000a','a7600000-0000-0000-0000-0000000000a1',1,'b7500000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000002')$q$,'42501','does not hold the counselor role');
+SELECT cr_err('CRD-07b a suspended counselor cannot be appointed responsible',
+ $q$SELECT reactivate_student_enrollment('cr-react-suspended','e7500000-0000-0000-0000-00000000000a','a7600000-0000-0000-0000-0000000000a2',1,'b7500000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000003')$q$,'42501','not an active Workspace member');
+RESET SESSION AUTHORIZATION;
+DO $t$ BEGIN
+  IF EXISTS (SELECT 1 FROM enrollments WHERE enrollment_id IN ('a7600000-0000-0000-0000-0000000000a1','a7600000-0000-0000-0000-0000000000a2'))
+     OR EXISTS (SELECT 1 FROM reactivation_command_log WHERE idempotency_key LIKE 'cr-react-%') THEN
+    RAISE EXCEPTION 'FAIL CRD-07c a refused reactivation left state behind';
+  END IF;
+  RAISE NOTICE 'PASS CRD-07c neither refused appointment created an enrollment or a command row';
+END $t$;
+SET SESSION AUTHORIZATION :"runtime_role";
 SELECT reactivate_student_enrollment('cr-react-a','e7500000-0000-0000-0000-00000000000a','a7600000-0000-0000-0000-0000000000aa',1,'b7500000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001');
 RESET SESSION AUTHORIZATION;
 DO $t$ DECLARE e public.student_entitlements%ROWTYPE; b record; BEGIN
@@ -136,10 +157,16 @@ DO $t$ DECLARE r uuid; BEGIN
 END $t$;
 SELECT cr_err('CRD-11 reactivation key reused with a different intent rejected',
  $q$SELECT reactivate_student_enrollment('cr-react-a','e7500000-0000-0000-0000-00000000000a','a7600000-0000-0000-0000-0000000000ab',1,'b7500000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001')$q$,'23505','different intent');
+-- M-01: the same key with the SAME everything except the counselor is a different request.
+SELECT cr_err('CRD-11b reactivation replay naming a different counselor is rejected',
+ $q$SELECT reactivate_student_enrollment('cr-react-a','e7500000-0000-0000-0000-00000000000a','a7600000-0000-0000-0000-0000000000aa',1,'b7500000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000004')$q$,'23505','different intent');
 RESET SESSION AUTHORIZATION;
 DO $t$ BEGIN
   IF (SELECT current_value FROM workspace_capacity_counters WHERE dimension_key='active_students')<>2
      OR (SELECT count(*) FROM capacity_events WHERE idempotency_key='reactivation:cr-react-a')<>1 THEN RAISE EXCEPTION 'FAIL CRD-12'; END IF;
+  IF (SELECT counselor_membership_id FROM reactivation_command_log WHERE idempotency_key='cr-react-a')<>'b7500000-0000-0000-0000-000000000001' THEN
+    RAISE EXCEPTION 'FAIL CRD-12b the command log did not bind the responsible counselor';
+  END IF;
   RAISE NOTICE 'PASS CRD-12 reactivation reserved exactly one capacity slot, replay reserved nothing more';
 END $t$;
 
@@ -276,4 +303,4 @@ DO $t$ BEGIN
   END IF;
   RAISE NOTICE 'PASS CRD-31 the fail-closed activation created no enrollment state, entitlement or command row';
 END $t$;
-SELECT 'STUDENT CREDIT ENTITLEMENT TESTS COMPLETED (CRD-01..CRD-31)' AS result;
+SELECT 'STUDENT CREDIT ENTITLEMENT TESTS COMPLETED (CRD-01..CRD-31, including H-06/M-01)' AS result;

@@ -154,6 +154,9 @@ CREATE TABLE reactivation_command_log (
   entitlement_id uuid NOT NULL REFERENCES student_entitlements(entitlement_id),
   expected_generation bigint NOT NULL CHECK (expected_generation>=1),
   actor_membership_id uuid NOT NULL REFERENCES workspace_memberships(membership_id),
+  -- M-01: the responsible counselor is material input, not an incidental argument. A replay that names a
+  -- different counselor is a different request and must be refused, not silently answered with the first.
+  counselor_membership_id uuid NOT NULL REFERENCES workspace_memberships(membership_id),
   recorded_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE FUNCTION reject_reactivation_command_mutation() RETURNS trigger LANGUAGE plpgsql AS $body$
@@ -199,7 +202,8 @@ BEGIN
     IF v_existing.student_id IS DISTINCT FROM p_student_id
        OR v_existing.new_enrollment_id IS DISTINCT FROM p_new_enrollment_id
        OR v_existing.expected_generation IS DISTINCT FROM p_expected_generation
-       OR v_existing.actor_membership_id IS DISTINCT FROM p_actor_membership_id THEN
+       OR v_existing.actor_membership_id IS DISTINCT FROM p_actor_membership_id
+       OR v_existing.counselor_membership_id IS DISTINCT FROM p_counselor_membership_id THEN
       RAISE EXCEPTION 'reactivation idempotency key reused with different intent' USING ERRCODE='unique_violation';
     END IF;
     RETURN v_existing.new_enrollment_id;   -- exact replay: no second slot, no second consumption
@@ -211,8 +215,16 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.workspace_memberships WHERE membership_id=p_actor_membership_id AND status='active') THEN
     RAISE EXCEPTION 'reactivation actor is not an active Workspace member' USING ERRCODE='insufficient_privilege';
   END IF;
+  -- H-06: an ACTIVE membership is not the same thing as a counselor. The proposed responsible counselor
+  -- must actually hold the counselor role in this Workspace. This command grants no delegation: it only
+  -- refuses to appoint a member who does not already hold the role.
   IF NOT EXISTS (SELECT 1 FROM public.workspace_memberships WHERE membership_id=p_counselor_membership_id AND status='active') THEN
     RAISE EXCEPTION 'the responsible counselor is not an active Workspace member' USING ERRCODE='insufficient_privilege';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.membership_roles
+                  WHERE membership_id=p_counselor_membership_id AND role_key='counselor') THEN
+    RAISE EXCEPTION 'membership % does not hold the counselor role in this Workspace', p_counselor_membership_id
+      USING ERRCODE='insufficient_privilege';
   END IF;
 
   SELECT * INTO v_ent FROM public.student_entitlements
@@ -249,8 +261,9 @@ BEGIN
   UPDATE public.student_entitlements SET state='consumed', reconsumed_at=v_now WHERE entitlement_id=v_ent.entitlement_id;
 
   INSERT INTO public.reactivation_command_log(idempotency_key,student_id,new_enrollment_id,entitlement_id,
-                                              expected_generation,actor_membership_id)
-  VALUES (p_idempotency_key,p_student_id,p_new_enrollment_id,v_ent.entitlement_id,p_expected_generation,p_actor_membership_id);
+                                              expected_generation,actor_membership_id,counselor_membership_id)
+  VALUES (p_idempotency_key,p_student_id,p_new_enrollment_id,v_ent.entitlement_id,p_expected_generation,
+          p_actor_membership_id,p_counselor_membership_id);
 
   INSERT INTO public.audit_events(audit_event_id,actor_membership_id,event_type,target_type,target_id,outcome,correlation_id,metadata)
   VALUES (gen_random_uuid(),p_actor_membership_id,'student.reactivation','enrollment',p_new_enrollment_id,'success',p_idempotency_key,
