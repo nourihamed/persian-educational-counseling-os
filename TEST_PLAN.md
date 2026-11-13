@@ -430,3 +430,35 @@ workflow steps completed (ALL_STEPS_PASSED, 476 PASS assertion lines) plus the P
 | Quarantine resolution and re-application | — | — | NOT IMPLEMENTED (OQ-SAGA-2 open) |
 | Contact change vs HMAC rotation / vs ownership switch, concurrent | — | — | NOT RUN |
 | GitHub Actions for this commit | — | — | NOT VERIFIED by the implementation agent (no Actions access) |
+
+## Supervisor remediation batch on head 8abbbe3 (2026-11-14; author-executed, NOT independently reproduced)
+
+PostgreSQL 16.15, cleared cluster, every database created fresh per step. All 18 runnable workflow steps
+completed (ALL_STEPS_PASSED, 504 PASS assertion lines) plus the Python verifier unit tests.
+
+| ID | Check | Where | Status |
+|---|---|---|---|
+| SAGA-01..03 | Switch, envelope and declared audience are one transaction; a refused switch leaves nothing | control_plane/tests/cp_38_saga_outbox_tests.sql | PASS |
+| SAGA-04..11 | Event immutable; hash must describe the payload; audience immutable; an event with no recipient is refused at the constraint check | same | PASS |
+| SAGA-R01..R03 | Acknowledgement before send refused; a non-recipient Workspace cannot acknowledge or be reported sent | same | PASS |
+| SAGA-R04..R06 | One claim returns a delivery per recipient; a second dispatcher claims nothing; only the lease holder for THAT recipient may report | same | PASS |
+| SAGA-R07..R10 | Destination acknowledged while the source received nothing: the source delivery is untouched, the event is not complete, the source stays in the backlog | same | PASS (this is the C-01 defect) |
+| SAGA-R11/R12 | Duplicate acknowledgement idempotent; conflicting acknowledgement refused | same | PASS |
+| SAGA-R13..R15 | Abandoned lease expires, a restarted dispatcher claims ONLY the outstanding recipient, the stale dispatcher is refused, the remaining recipient is delivered | same | PASS (deterministic wait on a one-second lease) |
+| SAGA-R16..R18 | The event becomes complete only after both recipients acknowledge; acknowledged is terminal; per-recipient attempt counts | same | PASS |
+| SAGA-R19..R27 | Dead-letter is an operator action, per recipient, idempotent; the other recipient stays deliverable; re-drive returns the same event id; audit per recipient, append-only | same | PASS |
+| SAGA-R28..R32 | The dispatcher cannot write events, declare an audience, change delivery rows, change ownership or switch ownership | same | PASS |
+| CRD-01/01b | Activation whose period already ended is refused by the post-lock check; a missing period is refused | workspace/tests/workspace_credit_entitlement_tests.sql | PASS |
+| CRD-07a/b/c | An active non-counselor and a suspended counselor cannot be appointed responsible; neither refusal left state | same | PASS |
+| CRD-11b, CRD-12b | Reactivation replay naming a different counselor refused; the command log binds the counselor | same | PASS |
+| CRD-28..31 | The production-intended activation path fails closed (OQ-CRD-3); the Runtime cannot reach the synthetic command or the resolver; no partial state | same | PASS |
+| WS-CRD-LOCK-01 | The reversal window is decided from the clock read AFTER the entitlement lock: 2 seconds of window, 8-second lock wait, no credit returned | workspace/tests/workspace_credit_lock_boundary_race.sh | PASS |
+| WS-CRD-LOCK-02 | Control: 1 hour of window and the same wait still returns credit | same | PASS |
+| WS-CRD-LOCK sensitivity | Reverting the archive clock/lock order makes case A return credit (1 reversal instead of 0) | manual re-run of the pre-fix code | VERIFIED (the test fails against the defect) |
+| WS-ROLE-18/19 | The Runtime holds neither the synthetic activation command nor the period resolver; the synthetic identity keeps its own grant | workspace/tests/workspace_role_privilege_tests.sql | PASS |
+| INB-02a/b/c/d | The worker's production-intended inbox path fails closed; the worker cannot reach the synthetic path or the transport gate; nothing recorded, fence unmoved | workspace/tests/workspace_inbox_tests.sql | PASS |
+| Saga service behaviour: freeze/drain, in-flight barrier, snapshot consistency, destination staging, real process crash, partition, chaos, outage/restore/failover, projection-drift repair, quarantine resolution | — | — | NOT IMPLEMENTED (SPEC-ONLY, contract section 10) |
+| Verified transport / signed wire format for inbox and outbox envelopes | — | — | NOT IMPLEMENTED (OQ-SAGA-1, PS-1..PS-4/PS-6) |
+| Entitlement period source | — | — | NOT IMPLEMENTED (OQ-CRD-3); production path fail-closed |
+| Contact change vs HMAC rotation / vs ownership switch, concurrent | — | — | NOT RUN |
+| GitHub Actions on the final HEAD of this batch | — | — | NOT VERIFIED by the implementation agent (no Actions access) |

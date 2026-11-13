@@ -25,6 +25,16 @@
 - **Still open, unchanged:** Q-007, Q-020, PS-1..PS-8, the transfer exception approval authority, OQ-D/OQ-E numeric objectives, M-05 and M-06 definitions, disposition of PR #8–#11, and bringing PR #12 up to date with `main`.
 - **Last local verification:** PostgreSQL 16.15, cleared cluster, all 18 runnable workflow steps passed (476 PASS assertion lines) plus the Python verifier unit tests. **CI for the pushed commit is NOT verified by the implementation agent** — this session has no GitHub Actions access.
 
+### Update 2026-11-14 (second) — Supervisor findings C-01 and H-01..H-06/M-01 remediated on head `8abbbe3`
+
+- **C-01 was a real defect, not a theoretical one.** One delivery row per event meant the first recipient's acknowledgement stopped retries for the other Workspace. Delivery is now per declared recipient and an event is complete only when every required recipient has acknowledged. See `cp_12_saga_outbox_delivery.sql` and SAGA-R01..R32.
+- **Two paths are now deliberately fail-closed, and both are tested as such:** activation cannot establish an entitlement period (OQ-CRD-3) and the inbox cannot apply an event without a verified transport (OQ-SAGA-1, PS-1..PS-4/PS-6). The operational identities hold those entry points and are refused by them. The working application logic lives behind dedicated synthetic identities (`ws_<key>_synth_exec`, `ws_<key>_synth_inbox`) used only by the synthetic suites under D-014.
+- **Reactivation** now requires a real counselor role and binds the counselor to the idempotent command.
+- **The credit reversal window** is decided from a wall clock read after the entitlement lock; the regression test's sensitivity was verified against the pre-fix code.
+- **Status per exit item** is now labelled DONE / PARTIAL / NOT IMPLEMENTED / DEFERRED in `docs/phase2/PHASE2_EXIT_CRITERIA.md` section 3. Saga service behaviour is PARTIAL with the section-10 items NOT IMPLEMENTED; nothing in the lifecycle or Saga work is described as complete.
+- **Last local verification:** PostgreSQL 16.15, cleared cluster, all 18 runnable workflow steps passed (504 PASS assertion lines) plus the Python verifier unit tests. **CI on the final HEAD of this batch is NOT verified by the implementation agent.**
+- **Still open, unchanged:** Q-007, Q-020, OQ-CRD-1/2/3, OQ-SAGA-1/2, OQ-ASM-1, PS-1..PS-8, OQ-D and OQ-E numeric objectives, the transfer exception approval authority, M-05 and M-06 definitions, disposition of PR #8–#11, and bringing PR #12 up to date with `main`.
+
 **Current Gate: NOT READY.** This PR is a draft design/schema delivery vehicle, not phase approval.
 
 ---

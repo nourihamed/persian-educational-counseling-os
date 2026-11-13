@@ -4,6 +4,16 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-11-14 — Phase 2: remediation of Supervisor findings C-01 and H-01..H-06/M-01 on head `8abbbe3` (draft SQL; synthetic)
+`fix/security/test/docs:` **C-01 (critical, real defect):** Saga delivery kept one row per event, so the first recipient's acknowledgement marked the whole event done and retries stopped for the other Workspace. Delivery is now tracked per declared recipient — `outbox_event_recipients` states the audience and is immutable, `outbox_deliveries` is keyed `(event_id, workspace_id)` with its own state, lease, attempts, send record and acknowledgement, acknowledgement requires a declared recipient and a successful send first, and `outbox_event_completion` reports an event complete only when every required recipient has acknowledged. Dead-letter and re-drive act on one recipient and are audited per recipient.
+**H-01/H-04:** the credit wall clock is read only after the required row locks; activation resolves one authoritative timestamp and uses it for the enrollment start, the entitlement row and the audit. Regression `WS-CRD-LOCK-01/02` is deterministic and its sensitivity was verified against the pre-fix code.
+**H-02:** the production-intended activation path takes no period argument and fails closed (`feature_not_supported`, OQ-CRD-3); the caller-supplied-period command is renamed `activate_student_enrollment_synthetic` and granted only to `ws_<key>_synth_exec`. No entitlement duration source was invented.
+**H-03:** acknowledgement is bound to the exact event and recipient, refuses a non-recipient, refuses an acknowledgement before send, and is idempotent per recipient.
+**H-05:** `payload_hash` is transport integrity, not authentication; the production-intended inbox path fails closed pending an approved verified transport (OQ-SAGA-1, PS-1..PS-4/PS-6) and the application logic moved to a role-gated synthetic command. No cryptography was invented.
+**H-06/M-01:** reactivation requires the proposed counselor to actually hold the counselor role, and the counselor is bound to the idempotent command and compared on replay.
+Local evidence: PostgreSQL 16.15, cleared cluster, all 18 runnable workflow steps passed (504 PASS assertion lines) plus the Python verifier unit tests. Draft SQL and synthetic data only (D-014). Saga service behaviour, a verified transport, the entitlement period source, retry/lease thresholds and quarantine resolution remain unimplemented or open. Phase 2 Gate remains **NOT READY**; D-014 remains in force; Phase 3 is not authorized; CI on the final HEAD is not verified by the implementation agent.
+
+
 ### 2026-11-14 — Phase 2: Product Owner decisions PD-2026-11-13-A..F implemented (draft SQL; synthetic)
 `feat/security/test/docs:` Implemented the approved decisions as database contracts with executable tests.
 **Assessment (A):** `test_definition_version_questions` makes question membership and order the authority; publication requires a complete contiguous set; a response is bound by composite foreign keys to a question of its own attempt's version; the attempt scoring snapshot must equal the published version's; adaptive (`per_attempt`) publication is refused in MVP.

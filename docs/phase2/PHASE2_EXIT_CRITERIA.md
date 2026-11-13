@@ -37,23 +37,46 @@ A design contract is not implementation evidence. A draft SQL test is not runtim
 
 ## 3. Findings that block design/schema exit
 
+Status vocabulary, applied to every item: **DONE** (implemented at the schema level and covered by executed
+tests), **PARTIAL** (some of the item is implemented, the rest is named below), **NOT IMPLEMENTED**,
+**DEFERRED** (allocated to a later phase by an approved decision). A DONE label is the implementation's
+assessment of its own work at the database level. It is not a gate decision and does not close a finding:
+closure is the independent Supervisor's call. Nothing here claims Phase 2 is approved.
+
 ### HIGH
-- WS-DOM-01 assessment total/response/score integrity.
-- WS-DOM-02 competing membership role sources of truth.
-- WS-DOM-03 guardian relationship/permission auditability and authority proof.
-- Transfer approval table cannot preserve revoked and replacement approvals as separate immutable events.
-- Contact-change has no schema/function/test draft yet; current contract is specification only.
-- ~~Durable Saga event schema and command/outbox/inbox boundaries need final reconciliation with current Control Plane DDL.~~ **Schema reconciled and tested 2026-11-14** (`cp_12_saga_outbox_delivery.sql`, `workspace_inbox_projection.sql`, SAGA-01..34, INB-01..22). The **service-level** behaviour in contract section 10 stays SPEC-ONLY. Closure is the Supervisor's call, not the implementation's.
-- Workspace lifecycle and capacity archive/reactivation transitions need explicit schema and tests.
-- Final-capacity-slot concurrency test needs a fresh successful CI result.
+| Item | Status | Evidence / what remains |
+|---|---|---|
+| WS-DOM-01 assessment total/response/score integrity | **DONE** (schema) | Version question membership and order are authoritative; responses bound by composite FKs; attempt policy = published policy. AVQ-01..22, ASM-01..30, ASM-RACE-01, WS-ROLE-16/17. The database still does not compute or validate a score — that is by design, per the assessment contract. |
+| WS-DOM-02 competing membership role sources of truth | **PARTIAL** | Governance event ledger, receipt command boundary and role catalog tests exist (offered as evidence 2026-11-13). No new work in this batch. The Supervisor has not judged this sufficient. |
+| WS-DOM-03 guardian relationship/permission auditability | **DONE** (schema) | Append-only link/permission events, projection change refused without its event, effective view. GDN-01..18. Guardian legal authority remains Q-007 and is not encoded. |
+| Transfer approval revoked/replacement approvals as immutable events | **DONE** (schema) | Immutable approval events plus separate revocation events, one current per kind, serialized on the case row. APR-01..13, APR-RACE-01, SEP-01..29. |
+| Contact-change schema/function/tests | **DONE** (schema) | One-time proof, atomic command, audit, outbox, separate owner/executor/verifier roles. CC-01..42, CC-RACE-01. Concurrency against HMAC rotation and against an ownership switch is **NOT RUN**. |
+| Durable Saga event schema and command/outbox/inbox boundaries | **PARTIAL** | Schema reconciled and per-recipient delivery implemented after C-01: `cp_12_saga_outbox_delivery.sql`, `workspace_inbox_projection.sql`, SAGA-01..11, SAGA-R01..R32, INB-01..22. The **service-level** behaviour of contract section 10 is **NOT IMPLEMENTED** (freeze/drain, in-flight barrier, snapshot consistency, destination staging, real process crash, partition, chaos, outage/restore/failover, projection-drift repair, quarantine resolution). The inbox application path is **fail-closed** pending a verified transport (H-05). |
+| Workspace lifecycle and capacity archive/reactivation transitions | **DONE** (schema) | Archive with atomic capacity release and the reactivation command with counselor validation. ARC-01..17, CRD-01..31, WS-REACT-RACE-01, WS-CRD-LOCK-01/02. Suspension capacity treatment remains an open policy question. |
+| Final-capacity-slot concurrency test needs a fresh successful CI result | **PARTIAL** | The test runs green locally on every full run and in CI on `8abbbe3`. A fresh CI result is required on the final HEAD of this remediation batch and is **NOT VERIFIED by the implementation agent**. |
 
 ### MEDIUM
-- Assessment definition/versioning: **version question membership/order implemented and tested 2026-11-14** (PD-2026-11-13-A, AVQ-01..22). Per-subject exam results and the custom error taxonomy remain open.
-- Curriculum subtopics, normalized planning constraints and explicit PlanItem relation.
-- Activity taxonomy and class participants: **implemented and tested 2026-11-14** (PD-2026-11-13-B, ACT-01..26; `class_participants`, `class_session_participants`). Recurrence rules remain open.
-- Credit lifecycle: **archive return window, student-bound reserved entitlement and reactivation implemented and tested 2026-11-14** (PD-2026-11-13-D, CRD-01..27). Purchase, renewal, refund execution and the payment reconciliation boundary remain deferred to Phase 21/22 per PD-2026-11-13-F.
-- File scan/quarantine and notification generation/permission fencing.
-- Retention policy schema integration and Q-007/Q-020 ownership decisions.
+| Item | Status | Evidence / what remains |
+|---|---|---|
+| Assessment definition/versioning | **DONE** (schema) | AVQ-01..22. |
+| Per-subject exam results and the custom error taxonomy | **NOT IMPLEMENTED** | Named in the assessment contract; no schema in this batch. |
+| Curriculum subtopics, normalized planning constraints, explicit PlanItem relation | **NOT IMPLEMENTED** | No schema in this batch. |
+| Activity taxonomy and class participants | **DONE** (schema) | Typed FK-backed sources, `class_participants`, `class_session_participants`. ACT-01..26. Class recurrence rules remain open. |
+| Credit lifecycle: archive return, reserved entitlement, reactivation | **DONE** (schema) | CRD-01..31, WS-CRD-LOCK-01/02. The entitlement **period source** is **NOT IMPLEMENTED** and the production path is fail-closed (H-02, OQ-CRD-3). |
+| Credit purchase, renewal, refund execution and payment reconciliation | **DEFERRED** | Phase 21/22 per PD-2026-11-13-F. |
+| File scan/quarantine, notification generation and permission fencing | **DEFERRED** (operations) / **NOT IMPLEMENTED** (base contracts) | Base security contracts stay in Phase 2 per PD-2026-11-13-F; no schema in this batch. |
+| Retention policy schema integration | **NOT IMPLEMENTED** | Blocked on Q-020 numeric durations. |
+
+### Supervisor findings on head `8abbbe3` (remediation batch 2026-11-14)
+| Finding | Status | Evidence |
+|---|---|---|
+| C-01 Saga delivery per recipient | **DONE** (schema) | `outbox_event_recipients`, delivery keyed `(event_id, workspace_id)`, completion only when all recipients acknowledge. SAGA-R01..R32. |
+| H-01 archive clock read before the entitlement lock | **DONE** | Clock read after the lock; WS-CRD-LOCK-01/02, sensitivity verified against the pre-fix code. |
+| H-02 entitlement period source | **DONE as fail-closed**; the source itself is **NOT IMPLEMENTED** | Production path refuses (OQ-CRD-3); caller-supplied period is synthetic-only and role-gated. CRD-28..31, WS-ROLE-18/19. |
+| H-03 outbox acknowledgement authorization | **DONE** | Declared-recipient check, send-before-acknowledge check, per-recipient idempotency and conflict refusal. SAGA-R01..R03, R11, R12. |
+| H-04 activation timestamp and lock order | **DONE** | One authoritative timestamp read after the locks, used for enrollment start, entitlement and audit. CRD-01/01b. |
+| H-05 inbox trust boundary | **DONE as fail-closed**; verified transport is **NOT IMPLEMENTED** | Production entry point refuses (OQ-SAGA-1, PS-1..PS-4/PS-6); synthetic path role-gated. INB-02a/b/c/d. |
+| H-06 / M-01 reactivation counselor and idempotency | **DONE** | Counselor role required, counselor bound to the command and compared on replay. CRD-07a/b/c, CRD-11b, CRD-12b. |
 
 ## 4. Later-phase implementation gates (not Phase 2 implementation claims)
 

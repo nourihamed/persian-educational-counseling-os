@@ -197,9 +197,59 @@ or SPEC-ONLY, not as passing.
 
 ---
 
+## 4b. Remediation of the Supervisor findings on head `8abbbe3` (second pass, same day)
+
+The independent Supervisor reviewed `8abbbe3` and raised one CRITICAL and six HIGH findings. All are
+addressed below. **C-01 was a real defect in the work above, not a theoretical risk**, and the entry in
+section 1.5 describing per-event delivery is superseded by this section.
+
+| Finding | What was wrong | What changed | Status | Tests |
+|---|---|---|---|---|
+| **C-01** delivery per recipient | One `outbox_deliveries` row per event. An ownership switch must reach both Workspaces, and the first acknowledgement marked the whole event acknowledged, which could permanently stop retries for the other side. | `outbox_event_recipients` declares the audience (immutable; an event with no recipient is refused at the constraint check). `outbox_deliveries` is keyed `(event_id, workspace_id)` with its own state, lease, attempts, send record and acknowledgement. Claiming never returns an acknowledged recipient. Dead-letter and re-drive act on one recipient. `outbox_event_completion` reports complete only when every required recipient has acknowledged. Both producers declare their audience in the same transaction as the event. | **DONE** (schema) | SAGA-01..11, SAGA-R01..R32 |
+| **H-01** archive clock before lock | `clock_timestamp()` was read before the entitlement row was locked, so a command that waited past the remaining window still saw it open. | The clock is read after the lock. | **DONE** | WS-CRD-LOCK-01/02, with sensitivity verified against the pre-fix code |
+| **H-02** entitlement period source | The Runtime supplied `p_entitlement_period_end`, so it could extend a student's entitlement with an arbitrary timestamp. | `activate_student_enrollment()` takes no period argument and calls `resolve_student_entitlement_period()`, which raises `feature_not_supported` naming OQ-CRD-3. The caller-supplied-period command is `activate_student_enrollment_synthetic()`, granted only to `ws_<key>_synth_exec` (D-014). The required future source and its immutable-snapshot semantics are documented at the resolver as a recommendation. | **DONE as fail-closed**; the source is **NOT IMPLEMENTED** | CRD-28..31, WS-ROLE-18/19 |
+| **H-03** acknowledgement authorization | A Workspace that was not a recipient could acknowledge, and an acknowledgement could precede a send. | The command requires a declared recipient, requires `sent_at`, validates the recipient-specific delivery state, and keeps exact per-recipient replay idempotent. | **DONE** | SAGA-R01..R03, R11, R12 |
+| **H-04** activation timestamp and lock order | The clock was read before any lock and the period validated against it. | One authoritative timestamp is read after every required lock and used for the enrollment start, the entitlement row and the audit metadata. | **DONE** | CRD-01/01b |
+| **H-05** inbox trust boundary | The worker could apply events whose only integrity evidence was a self-consistent hash. | `payload_hash` is documented as transport integrity, never authentication. `apply_inbox_event()` is the production-intended entry point and refuses via `assert_inbox_transport_verified()` (OQ-SAGA-1, PS-1..PS-4/PS-6). The application logic moved to `apply_inbox_event_synthetic()`, granted only to `ws_<key>_synth_inbox`. No cryptography, key, certificate or trust policy was invented. | **DONE as fail-closed**; verified transport **NOT IMPLEMENTED** | INB-01, INB-02, INB-02a/b/c/d |
+| **H-06 / M-01** reactivation counselor | Any active member could be appointed responsible counselor, and the counselor was not part of the idempotency comparison. | The proposed counselor must hold the counselor role; `reactivation_command_log` stores `counselor_membership_id` and the replay comparison includes it. No delegation permission was added. | **DONE** | CRD-07a/b/c, CRD-11b, CRD-12b, WS-REACT-RACE-01 |
+
+### Why the fail-closed shape rather than a working default
+
+Both H-02 and H-05 could have been "fixed" by choosing something — an entitlement duration, or treating the
+hash as sufficient. Each would have been a business or security decision this agent is not entitled to make.
+Instead the operational identity keeps the production-intended entry point and that entry point refuses, so
+the gap is visible and testable rather than papered over. When the Product Owner approves a period source,
+`resolve_student_entitlement_period()` is replaced by a lookup and the resolved value is snapshotted into
+the already-immutable `student_entitlements.period_end`. When Platform Security approves a transport,
+`assert_inbox_transport_verified()` is replaced by a call into it and the application logic does not change.
+
+### Evidence for this pass
+
+- PostgreSQL 16.15, cleared cluster, every database created fresh per step: all 18 runnable workflow steps
+  passed (**ALL_STEPS_PASSED**, 504 PASS assertion lines), plus the Python verifier-contract unit tests.
+- Commits: `51b3948` (C-01), `bc98b49` (H-01/H-04 + H-02, corrected together because they rewrite the same
+  two functions), `cc0db90` (H-05), `106c724` (H-06/M-01), plus the documentation commit.
+- The lease-expiry step in SAGA-R13 is a deterministic wait on a one-second lease, not a timing race; the
+  credit-boundary test coordinates through the entitlement row lock and waits until the archive command is
+  observably blocked before releasing it.
+- CI on the final HEAD of this batch is **NOT VERIFIED by the implementation agent** (no Actions access from
+  this session). It must be read from GitHub.
+
+### Still NOT implemented after this pass
+
+Saga service behaviour in contract section 10 (freeze/drain, in-flight barrier, snapshot consistency,
+destination staging, real process crash at each checkpoint, lease expiry under partition, chaos, outage,
+restore, failover, projection-drift repair); quarantine resolution (OQ-SAGA-2); a verified transport and
+signed wire format (OQ-SAGA-1, PS-1..PS-4/PS-6); the entitlement period source (OQ-CRD-3); per-subject exam
+results; curriculum subtopics and PlanItem; retention schema integration (Q-020); contact change concurrency
+against HMAC rotation and against an ownership switch (NOT RUN).
+
 ## 5. Recommendation
 
-**NOT READY.** The implementation work on the approved P0/P1 decisions is complete and tested at the
-database level, but Phase 2 cannot exit while Q-007, Q-020, PS-1..PS-8, the transfer exception authority,
-the OQ-D/OQ-E numeric objectives and the M-05/M-06 definitions are open, and while the Saga's service-level
-behaviour remains specification only. The independent Supervisor makes the gate decision.
+**NOT READY.** The approved P0/P1 decisions and the Supervisor's C-01/H-01..H-06/M-01 findings are
+addressed at the database level and covered by executed tests. Phase 2 still cannot exit: two production
+paths are deliberately fail-closed because their decisions are open (OQ-CRD-3, OQ-SAGA-1 with
+PS-1..PS-4/PS-6), the Saga's service-level behaviour remains specification only, and Q-007, Q-020,
+PS-1..PS-8, the transfer exception authority, the OQ-D/OQ-E numeric objectives and the M-05/M-06
+definitions are all open. A DONE label in this document is the implementation's assessment of its own work,
+not a closed finding. The independent Supervisor makes the gate decision.
