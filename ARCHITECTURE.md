@@ -1,5 +1,8 @@
 # ARCHITECTURE.md
 
+
+> **CURRENT ARCHITECTURE OVERRIDE — 2026-11-09 (PR #12, unmerged):** The older Tenant = Counselor wording below is historical and superseded. The tenant boundary is Workspace (Organization or Independent Counselor); counselors are members/assignees. Control Plane owns global Platform Student identity, Workspace ownership/generation and mobile+grade claims. Draft cp_07 adds initial claim admission with active/retiring HMAC aliases; Workspace draft SQL adds atomic activation/debit/capacity/audit. Per-Workspace DB role/CONNECT catalog tests and the synthetic PostgreSQL 16 workflow pass. These are draft schema controls, not runtime services. The cross-database transfer Saga, durable outbox/inbox, contact-change workflow, authenticated approval authority, production KMS/credentials and API object authorization remain incomplete. No cross-database FK or atomic cross-database transaction is claimed. Phase 2 remains NOT READY; PR #12 is unmerged and D-014 forbids real data.
+
 Status: conceptual architecture baseline; no implementation yet. Current tenant-isolation topology is governed by D-020/D-023 and Phase 1 design docs.
 
 ## 1. Layering
@@ -15,11 +18,11 @@ Rule (non-negotiable, Master Prompt §50, §66): business logic never lives in r
 
 ## 2. Multi-Tenancy Strategy
 
-**Tenant = Counselor.** Every tenant-scoped row carries a `tenant_id` (= owning Counselor's id, even when the row is logically a Student's — the Student belongs to exactly one tenant via `CounselorStudent`).
+**Tenant = Workspace.** A Workspace is either an Organization Workspace or an Independent Counselor Workspace. Every Workspace has its own database and runtime credential within its assigned Alt-5 cell. Counselors are Workspace members/assignments, not tenant roots. A person may belong to multiple Workspaces with independent memberships and permissions. Global student ownership is authoritative in the Control Plane; Workspace-local student/enrollment records are projections.
 
 **Current isolation direction (D-020 / Phase 1):** Alt-5 hybrid isolation cells, with Alt-4 as the security reference. Each cell requires a distinct host/VM and network boundary and its own PostgreSQL cluster/instance; each tenant has its own database and tenant-specific runtime credential within that cell. Tenant/cell routing is derived from authenticated, server-verified membership. D-023 adds Level 3 infrastructure/administrative independence for cells and Level 4 independent administrative control of critical backups/recovery. D-009/Q-001 recorded an earlier shared-database mechanism; it is historical and is superseded as the active isolation topology by D-020. This remains design-only, not proof of implementation or runtime security.
 
-**Scope qualification (D-012 accepted; Q-013 resolved):** In the MVP, `ProgramTemplate` and its `ProgramVersion` rows are tenant-owned only, with `tenant_id NOT NULL`; a Version must belong to the same Tenant as its source Template. Platform-owned/shared catalog templates and their versions are out of MVP. Do not implement nullable tenant ownership or mixed-ownership shared rows under the MVP decision. A future platform catalog requires a separate architecture decision before implementation. Student enrollments, plans, and student-facing records remain tenant-owned without exception.
+**Scope qualification (D-012 accepted; Q-013 resolved):** In the MVP, `ProgramTemplate` and its `ProgramVersion` rows are tenant-owned only, with `workspace_id NOT NULL`; a Version must belong to the same Tenant as its source Template. Platform-owned/shared catalog templates and their versions are out of MVP. Do not implement nullable tenant ownership or mixed-ownership shared rows under the MVP decision. A future platform catalog requires a separate architecture decision before implementation. Student enrollments, plans, and student-facing records remain tenant-owned without exception.
 
 - Derive tenant/cell routing from authenticated, server-verified membership; never trust request-supplied tenant/cell/database identifiers.
 - Give each tenant its own database and tenant-specific runtime credential within its assigned cell; enforce host/VM and network boundaries between cells.
@@ -39,11 +42,11 @@ The earlier statement that database-per-tenant was not selected is superseded by
 | Database | Separate PostgreSQL cluster/instance per cell; separate database and credential per tenant; optional RLS as defense in depth |
 | API | Authorization middleware resolves tenant from the authenticated principal; path/body IDs are never trusted alone (IDOR protection) |
 | Services | Application services require an explicit tenant context object, no ambient global |
-| Queries | Repository layer injects `tenant_id` filter automatically; raw queries forbidden outside Infrastructure layer |
+| Queries | Repository layer injects `workspace_id` filter automatically; raw queries forbidden outside Infrastructure layer |
 | Reports | Report generation runs inside the same tenant-scoped repository calls |
-| Files | Storage paths are namespaced by `tenant_id`; signed, time-limited URLs only |
-| Notifications | Delivery queue entries carry `tenant_id`; adapters never fan out across tenants |
-| Background Jobs | Each job run is bound to a single `tenant_id` (or explicitly marked platform-level) |
+| Files | Storage paths are namespaced by `workspace_id`; signed, time-limited URLs only |
+| Notifications | Delivery queue entries carry `workspace_id`; adapters never fan out across tenants |
+| Background Jobs | Each job run is bound to a single `workspace_id` (or explicitly marked platform-level) |
 
 ## 4. Adapter Boundaries (Master Prompt §66)
 

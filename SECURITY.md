@@ -1,5 +1,8 @@
 # SECURITY.md
 
+
+> **CURRENT SECURITY OVERRIDE — 2026-11-09 (PR #12, unmerged):** Tenant is Workspace, not Counselor. Each Workspace is intended to have its own DB/credential boundary within Alt-5 cells; membership grants no cross-Workspace access. Control Plane owns global student owner/generation and mobile+grade claims. Draft SQL for initial claim admission/HMAC alias coverage, transfer switch and Workspace activation has passed synthetic PostgreSQL 16 tests; per-Workspace role/CONNECT catalog tests also pass. No runtime control is claimed. HIGH residuals: missing contact-change/reverification, KMS/HSM and trusted cryptographic backfill, authenticated guardian/prior-counselor/destination authority verification, cross-database transfer Saga/outbox/inbox, production credentials, API object-level authorization, backup/restore and failover. The former shared Control Plane function-owner blast radius has been addressed in the split-owner draft and passed synthetic PostgreSQL 16 catalog assertions in Actions run #231; production credential binding and target-environment privilege verification remain open. High-risk roles require MFA; Platform Admin is read-only in MVP and cannot initiate transfer. D-014 continues to prohibit real data.
+
 Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14; security controls are requirements only and runtime implementation remains unverified.
 
 ## اصول پایه
@@ -18,7 +21,7 @@ Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-
 - XSS Protection: sanitize ورودی‌های آزاد متن، CSP در Frontend
 - CSRF: برای session-based endpointها (در صورت استفاده از Cookie)
 - Rate Limiting: روی Login، Password Reset، API عمومی (Redis-based)
-- Secure File Upload: محدودیت نوع/حجم فایل، اسکن قبل از ذخیره، نام‌گذاری غیرقابل‌حدس، جداسازی فایل بر اساس tenant_id در مسیر Storage
+- Secure File Upload: محدودیت نوع/حجم فایل، اسکن قبل از ذخیره، نام‌گذاری غیرقابل‌حدس، جداسازی فایل بر اساس workspace_id در مسیر Storage
 - Audit Logs: برای عملیات حساس (تغییر Credit، تغییر Role، حذف دانش‌آموز، ورود Admin به حساب دیگران)
 - **Backup/Recovery (D-023):** backupهای حیاتی، مدیریت backup، کلیدهای رمزنگاری و کنترل‌های حذف/retention باید خارج از کنترل مدیریتی عادی حساب production باشند؛ restore باید وضعیت تعلیق/offboarding تنانت را از مرجع معتبر بازیابی کند. تفاوت نام bucket/service به‌تنهایی اثبات استقلال نیست.
 - Secrets Management: هیچ secret در کد/Git؛ از `.env` + Secret Manager (Vault/Cloud secret store) در Production
@@ -56,3 +59,23 @@ Passwords, Tokens, API Keys, SMS provider secrets, Telegram Bot Token, Payment s
 ## Pre-pilot security and data-retention items (added 2026-10-17)
 
 Retention draft: `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md` (NEEDS-DECISION / LEGAL-REVIEW; no duration set). Tenant role deletion requires the checklist in that draft (D-017). Active Phase 1 acceptance criteria are in `docs/phase1/TENANT_ISOLATION_TEST_CONTRACTS.md`; all remain NOT-RUN. Real student data is prohibited until D-014 conditions are met. This section does not claim any security control is implemented or verified.
+
+
+## Phase 2 database role and credential contracts
+
+- Control Plane roles/grants: `docs/phase2/control_plane/ROLE_PRIVILEGE_CONTRACT.md` and draft `cp_06_role_privileges_draft.sql`.
+- Workspace DB credentials/roles: `docs/phase2/workspace/ROLE_PRIVILEGE_CONTRACT.md`.
+- Control Plane role setup/catalog assertions passed in ephemeral PostgreSQL 16 CI run #35. This is not production role provisioning.
+- Workspace per-DB credential separation, object-level RBAC integration and cross-Workspace connection-denial tests remain SPECIFIED / NOT RUN.
+
+
+## Phase 2 security-contract references (2026-11-09)
+
+- Mobile contact change/reverification: `docs/phase2/control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md`.
+- Transfer approval identity/authority: `docs/phase2/control_plane/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md`.
+- Cross-Workspace transfer Saga: `docs/phase2/transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md`.
+- Parent/legal authority matrix (Q-007 remains open): `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md`.
+- Category-based retention/legal hold: `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md`.
+- Backup/failover/restore: `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md`.
+
+All are design contracts only. Contact verifier, trusted approval verifier, Saga runtime, legal matrix, deletion jobs, KMS/HSM and operational drills remain NOT IMPLEMENTED / NOT RUN. No legal durations are approved; D-014 synthetic-only remains mandatory.

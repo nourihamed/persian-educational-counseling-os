@@ -1,14 +1,36 @@
 # ROADMAP.md
+## Current Phase 2 status — 2026-11-09 (authoritative addendum)
 
-Status (updated 2026-10-24): Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged. Phase 1 provider-neutral design/documentation gate APPROVED under D-024; PR #3 was squash-merged into main on 2026-10-24 (b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa). D-020 selects Alt-5 hybrid isolation cells; D-023's Level 3 production-cell and Level 4 independent critical-backup targets remain mandatory. Q-023 remains OPEN as a hard pre-hosting deployment gate, not a Phase 1 design blocker: provider/account topology, capability evidence, cost/capacity, and environment-only security/backup tests must be completed before hosted deployment. Active Alt-5 catalog: 51 specifications, 0 implemented, 0 executed, 0 passing. The 41-row category inventory maps all 51 active contracts; endpoint-level coverage remains deferred. PR #6's traceability corrections were merged into `main` at `fb16219d506998c9e074971927b55e322f32c21d`. Phase 2 remains NOT STARTED / NOT AUTHORIZED pending a separate Product Owner decision; real student data remains prohibited under D-014. Local setup is not an isolation boundary.
+- Phase 2 remains **NOT READY**; PR #12 is Open/Draft/Unmerged. No changes have been merged into main.
+- Latest verified successful SQL CI is Run #336 (PostgreSQL 16) at exact SHA `52bd0347b3aba4f816d996065122ed0d362bae5f`; it passed the CP/Workspace SQL suites and `WS-CAP-RACE-01`. It predates the subsequent removal of `workspace_memberships.role_key` and the new `WS-ROLE-SOURCE-01` assertion; fresh CI for current HEAD is not yet verified. It predates the subsequent removal of `workspace_memberships.role_key` and the new `WS-ROLE-SOURCE-01` assertion; fresh CI for current HEAD is not yet verified.
+- Completed draft/design work: Workspace-centric model; Control Plane/Workspace separation; initial claim admission/HMAC alias coverage; split Control Plane function owners and catalog tests; transfer switch/state machine; atomic Workspace activation/debit/capacity/audit; per-Workspace role/CONNECT tests; contact-change, approval-authority, cross-Workspace Saga, parent authority, retention/legal-hold, operational resilience contracts; Workspace domain schema gap review; final-capacity-slot race test added to CI but not yet executed.
+- Remaining Phase 2 sequence:
+  1. Implement and test mobile contact-change/reverification; SQL command, trusted proof verifier, API and executable tests remain open.
+  2. Redesign transfer approval/revocation schema as append-only events; implement trusted assertion verifier, authority revalidation and API tests.
+  3. Implement durable cross-Workspace Saga: outbox/inbox workers, source freeze/drain, final snapshot, destination staging, projection updates, generation fencing, reconciliation and crash recovery.
+  4. Resolve Workspace domain HIGH findings WS-DOM-01..03 and MEDIUM WS-DOM-04..09; complete curriculum/planning, assessment, class, activity, capacity, credit and file/notification lifecycle schema.
+  5. Complete Q-007 Iran age/legal guardian matrix and retention/legal-hold policy approvals without inventing numeric durations.
+  6. Implement API authentication/authorization and service credential binding; test counselor/manager/guardian object scope, files, exports, notifications and IDOR.
+  7. Execute independent backup/restore, failover, split-brain, pool isolation, load/capacity and target-environment security tests; resolve Q-023 before hosted deployment.
+  8. Reconcile PRs #8–#11 with PR #12, resolve branch divergence, run fresh CI on exact final SHA, complete independent Supervisor review and obtain explicit Product Owner Gate decision.
+- Phase 3 is not authorized until Phase 2 is independently APPROVED and the Product Owner separately authorizes progression.
+- D-014 remains in force: synthetic data only; real student/customer data prohibited until all required controls/tests/review and written PO approval.
+
+
+## Supervisor continuation update — 2026-11-10
+
+New design contracts: mobile contact-change/reverification, transfer approval identity/authority, cross-Workspace Saga/outbox/inbox/recovery, and Workspace membership/guardian governance events. They define architecture and acceptance tests only; none closes implementation/schema findings by itself. The current Phase 2 blockers remain: contact-change schema/verifier/tests; approval event schema and trusted verification; distributed transfer boundary; Workspace governance event schema; WS-DOM-01..09 reconciliation; Q-007/Q-020 legal policy inputs; API authorization design-to-schema consistency; operational evidence and final branch/PR reconciliation. Fresh CI on the current branch HEAD is not verified. Gate NOT READY.
+
+
+Status (updated 2026-10-24): Phase 0 closed by Product Owner on 2026-10-14; PR #1 merged. Phase 1 provider-neutral design/documentation gate APPROVED under D-024; PR #3 was squash-merged into main on 2026-10-24 (b9c7a7f1f67ae7c11058c36d41beb3a32f76f0fa). D-020 selects Alt-5 hybrid isolation cells; D-023's Level 3 production-cell and Level 4 independent critical-backup targets remain mandatory. Q-023 remains OPEN as a hard pre-hosting deployment gate, not a Phase 1 design blocker: provider/account topology, capability evidence, cost/capacity, and environment-only security/backup tests must be completed before hosted deployment. Active Alt-5 catalog: 51 specifications, 0 implemented, 0 executed, 0 passing. The 41-row category inventory maps all 51 active contracts; endpoint-level coverage remains deferred. PR #6's traceability corrections were merged into `main` at `fb16219d506998c9e074971927b55e322f32c21d`. At the time of this historical Phase 1 traceability snapshot, Phase 2 had not started. The current Phase 2 status is defined in the 2026-11-09 addendum at the top of this file; real student data remains prohibited under D-014. Local setup is not an isolation boundary.
 
 قانون: هر فاز طبق `Mandatory Development Workflow` (بخش ۷۶ Master Prompt) اجرا می‌شود و بعد از اتمام، **خودکار به فاز بعد نمی‌رویم** — منتظر تأیید می‌مانیم.
 
 | # | فاز | خروجی کلیدی |
 |---|---|---|
 | 0 | Product & Business Model | مجموعه اسناد پایه — تکمیل و تأیید شده؛ Phase 0 در 2026-10-14 بسته شد |
-| 1 | Architecture & Multi-Tenancy (design only) | انتخاب معماری جداسازی تنانت طبق Q-022؛ تعیین trust boundaries و residual risks؛ قراردادهای authorization و تست متناسب با معماری انتخاب‌شده. معماری shared PostgreSQL + tenant_id + RLS قبلی صرفاً سابقه است؛ Q-022 با D-020 حل شده و معماری فعال، Alt-5 isolation cells با دیتابیس و اعتبارنامه مجزا برای هر تنانت درون سلول است. بدون کد برنامه، migration یا زیرساخت در این فاز. |
-| 2 | Database & Domain Model | ERD کامل، مدل‌های Core (Counselor, Student, Program, Activity...) |
+| 1 | Architecture & Multi-Tenancy (design only) | انتخاب معماری جداسازی تنانت طبق Q-022؛ تعیین trust boundaries و residual risks؛ قراردادهای authorization و تست متناسب با معماری انتخاب‌شده. معماری shared PostgreSQL + workspace_id + RLS قبلی صرفاً سابقه است؛ Q-022 با D-020 حل شده و معماری فعال، Alt-5 isolation cells با دیتابیس و اعتبارنامه مجزا برای هر تنانت درون سلول است. بدون کد برنامه، migration یا زیرساخت در این فاز. |
+| 2 | Database & Domain Model | Control Plane + Workspace DB boundaries, Workspace-centric ERD, global ownership/transfer, Workspace memberships/assignments, educational domain, versioning and credit ledger |
 | 3 | Infrastructure | FastAPI skeleton، Alembic، زیرساخت مطابق توپولوژی cell مصوب در Q-023 (انتخاب نشده؛ Docker Compose فقط ابزار استقرار است، نه مرز امنیتی)، CI اولیه؛ Redis فقط در صورت توجیه |
 | 4 | Authentication & RBAC | Register/Login/Refresh/Reset، Policy engine |
 | 5 | Counselor/Student Relationship | CounselorStudent entity + lifecycle |
@@ -54,3 +76,25 @@ Status (updated 2026-10-24): Phase 0 closed by Product Owner on 2026-10-14; PR #
 Phase 0 توسط Product Owner در 2026-10-14 بسته شد و PR #1 در همان تاریخ در `main` ادغام شد (squash commit `d68fde54b4e4c86642b74c3bf1ef20fe18edf12b`). این بخش فقط سابقه بسته‌شدن Phase 0 را حفظ می‌کند و مرجع وضعیت جاری Phase 1 نیست.
 
 **وضعیت جاری پروژه فقط از ابتدای این فایل و `PROJECT_STATE.md`، `docs/phase1/PHASE1_REPORT.md` و `SUPERVISOR_REVIEW.md` خوانده شود.** طبق وضعیت ثبت‌شده در 2026-10-24 تحت D-024، گیت مستندات/طراحی Phase 1 تأیید شده است؛ Q-023 همچنان گیت اجباری پیش از استقرار میزبانی‌شده است؛ Phase 2 هنوز شروع نشده و مجوز ندارد. تأیید طراحی به معنی تأیید امنیت زمان اجرا نیست.
+
+
+## Phase 2 operational resilience contract (2026-11-09)
+
+`docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` now defines provider-neutral requirements for independent Control Plane primary/replica and backup domains, split-brain fencing, restore quarantine/reconciliation, key recovery, connection/pool isolation and measured cell capacity. It deliberately does not invent RPO/RTO, replication mode, retention duration, failover mode, provider or capacity limits. All environment drills remain NOT RUN.
+
+
+## Phase 2 domain, policy and operations review additions (2026-11-09)
+
+- `docs/phase2/workspace/WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` records current schema gaps: test response/score integrity, membership role source of truth, guardian auditability, assessment versions/per-subject results, planning inputs, activity taxonomy, class participation, capacity and file/notification lifecycle.
+- `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md` preserves Q-007 as open pending qualified Iran legal review and PO approval.
+- `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md` defines versioned category-based disposition and legal-hold requirements without numeric retention guesses.
+- `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` defines failover/restore/capacity acceptance boundaries; all environment tests remain NOT RUN.
+
+
+Phase 2 exit criteria are centralized in `docs/phase2/PHASE2_EXIT_CRITERIA.md`. Do not treat later-phase implementation requirements as Phase 2 runtime deliverables; Phase 2 must nevertheless specify their architecture, invariants and acceptance tests before progression.
+
+
+The educational domain design targets are now specified in `workspace/ASSESSMENT_DOMAIN_CONTRACT.md`, `workspace/DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` and `workspace/CURRICULUM_DOMAIN_CONTRACT.md`. Schema reconciliation and executable synthetic tests remain required before Phase 2 design/schema exit.
+
+
+Further Workspace domain contracts now cover Activity/Class/Assignment, Student Credit commercial lifecycle and capacity lifecycle/reservations. See `workspace/ACTIVITY_CLASS_DOMAIN_CONTRACT.md`, `workspace/STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` and `workspace/CAPACITY_LIFECYCLE_CONTRACT.md`; schema/test reconciliation remains open.

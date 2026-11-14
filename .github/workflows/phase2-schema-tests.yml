@@ -1,0 +1,292 @@
+name: Phase 2 draft schema tests
+
+on:
+  push:
+    branches:
+      - docs/product-owner-decisions-consolidation-2026-11-07
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/phase2/**"
+      - ".github/workflows/phase2-schema-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-draft-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Apply Control Plane drafts and run regression suite
+        run: |
+          createdb control_plane_test
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_01_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_05_identity_rotation_guard.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_07_claim_admission_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/schema/cp_06_role_privileges_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/tests/cp_10_constraint_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_test -f docs/phase2/control_plane/tests/cp_35_approval_event_tests.sql
+          bash docs/phase2/control_plane/tests/cp_36_approval_revocation_race.sh control_plane_test
+
+      - name: Apply Control Plane drafts and run concurrent global-identity race
+        run: |
+          createdb control_plane_race
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_01_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_05_identity_rotation_guard.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_07_claim_admission_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race -f docs/phase2/control_plane/schema/cp_06_role_privileges_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_race <<'SQL'
+          INSERT INTO workspaces(workspace_id,workspace_type,status) VALUES
+            ('a0000000-0000-0000-0000-000000000001','organization','active'),
+            ('a0000000-0000-0000-0000-000000000002','independent_counselor','active'),
+            ('a0000000-0000-0000-0000-000000000003','organization','active');
+          SQL
+          bash docs/phase2/control_plane/tests/cp_20_race.sh control_plane_race
+
+      - name: Test Control Plane initial claim admission and concurrency
+        run: |
+          createdb control_plane_admission_test
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_01_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_05_identity_rotation_guard.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_07_claim_admission_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_02_switch_function_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_03_transfer_transitions_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_04_transfer_command_idempotency.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/schema/cp_06_role_privileges_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_admission_test -f docs/phase2/control_plane/tests/cp_15_identity_admission_tests.sql
+          bash docs/phase2/control_plane/tests/cp_25_claim_admission_race.sh control_plane_admission_test
+
+      - name: Transfer approval separation of duties and the disabled conflict exception
+        run: |
+          set -euo pipefail
+          C=docs/phase2/control_plane
+          createdb -h localhost -U postgres cp_approval_separation
+          for f in cp_01_schema_draft cp_05_identity_rotation_guard cp_07_claim_admission_draft cp_02_switch_function_draft cp_03_transfer_transitions_draft cp_04_transfer_command_idempotency cp_06_role_privileges_draft cp_11_transfer_approval_command; do
+            psql -X -v ON_ERROR_STOP=1 -d cp_approval_separation -f $C/schema/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -d cp_approval_separation -f $C/tests/cp_37_approval_separation_tests.sql
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
+      - name: Transfer Saga outbox envelope, delivery leases, dead-letter and re-drive
+        run: |
+          set -euo pipefail
+          C=docs/phase2/control_plane
+          createdb -h localhost -U postgres cp_saga_test
+          for f in cp_01_schema_draft cp_05_identity_rotation_guard cp_07_claim_admission_draft cp_02_switch_function_draft cp_03_transfer_transitions_draft cp_04_transfer_command_idempotency cp_06_role_privileges_draft cp_12_saga_outbox_delivery; do
+            psql -X -v ON_ERROR_STOP=1 -d cp_saga_test -f $C/schema/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -d cp_saga_test -f $C/tests/cp_38_saga_outbox_tests.sql
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
+      - name: Workspace Saga inbox and generation-fenced projection
+        run: |
+          set -euo pipefail
+          W=docs/phase2/workspace
+          K=a1000000000000000000000000000021
+          createdb -h localhost -U postgres workspace_inbox_test
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection; do
+            psql -X -v ON_ERROR_STOP=1 -d workspace_inbox_test -f $W/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_inbox_test -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_inbox_test -f $W/tests/workspace_inbox_tests.sql
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
+      - name: Apply Workspace draft and run schema regression suite
+        run: |
+          createdb workspace_test
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/tests/workspace_schema_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/tests/workspace_assessment_guardian_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/tests/workspace_assessment_version_question_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_test -f docs/phase2/workspace/tests/workspace_activity_source_tests.sql
+          bash docs/phase2/workspace/tests/workspace_assessment_submit_race.sh workspace_test
+
+      - name: Test Workspace governance event ledger
+        run: |
+          createdb workspace_governance_test
+          psql -X -v ON_ERROR_STOP=1 -d workspace_governance_test -f docs/phase2/workspace/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_governance_test -f docs/phase2/workspace/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_governance_test -f docs/phase2/workspace/tests/workspace_governance_event_tests.sql
+
+      - name: Test atomic activation, credit and capacity rollback
+        run: |
+          createdb workspace_activation_test
+          psql -X -v ON_ERROR_STOP=1 -d workspace_activation_test -f docs/phase2/workspace/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_activation_test -f docs/phase2/workspace/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_activation_test -f docs/phase2/workspace/tests/workspace_activation_tests.sql
+
+      - name: Test concurrent activation and credit serialization
+        run: |
+          createdb workspace_activation_race
+          psql -X -v ON_ERROR_STOP=1 -d workspace_activation_race -f docs/phase2/workspace/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_activation_race -f docs/phase2/workspace/workspace_activation_transactions.sql
+          bash docs/phase2/workspace/tests/workspace_activation_race.sh workspace_activation_race
+
+      - name: Test competing enrollments for final active-student capacity slot
+        run: |
+          createdb workspace_capacity_race
+          psql -X -v ON_ERROR_STOP=1 -d workspace_capacity_race -f docs/phase2/workspace/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_capacity_race -f docs/phase2/workspace/workspace_activation_transactions.sql
+          bash docs/phase2/workspace/tests/workspace_capacity_last_slot_race.sh workspace_capacity_race
+
+      - name: Test per-Workspace database roles and cross-database denial
+        run: |
+          createdb workspace_other
+          psql -X -v ON_ERROR_STOP=1 -d workspace_other -f docs/phase2/workspace/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_other -f docs/phase2/workspace/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_other -f docs/phase2/workspace/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=a1000000000000000000000000000001 -d workspace_test -f docs/phase2/workspace/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=a1000000000000000000000000000002 -d workspace_other -f docs/phase2/workspace/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=a1000000000000000000000000000001 -v other_workspace_key=a1000000000000000000000000000002 -v other_database=workspace_other -d workspace_test -f docs/phase2/workspace/tests/workspace_role_privilege_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=a1000000000000000000000000000002 -v other_workspace_key=a1000000000000000000000000000001 -v other_database=workspace_test -d workspace_other -f docs/phase2/workspace/tests/workspace_role_privilege_tests.sql
+
+      - name: Governance proof receipts, verifier boundary and concurrency (synthetic, Issue #13)
+        run: |
+          K=a1000000000000000000000000000001
+          W=docs/phase2/workspace
+          R=docs/phase2/workspace/receipts
+          createdb receipt_test
+          psql -X -v ON_ERROR_STOP=1 -d receipt_test -f $W/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_test -f $W/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_test -f $W/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_test -f $R/receipt_00_canonical_payload_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_test -f $R/receipt_01_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/receipt_02_roles_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/receipt_03_consume_function_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_10_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_30_integrity_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_40_canonical_vectors_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_50_h03_tests.sql
+          createdb receipt_race
+          psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_race -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $R/receipt_00_canonical_payload_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $R/receipt_01_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_race -f $R/receipt_02_roles_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_race -f $R/receipt_03_consume_function_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d receipt_race -c "INSERT INTO workspace_profile(singleton,workspace_id,workspace_type) VALUES(true,'a9100000-0000-0000-0000-000000000001','organization'); INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES ('b9100000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','active'),('b9100000-0000-0000-0000-000000000003','c9100000-0000-0000-0000-000000000003','active');"
+          bash $R/tests/receipt_20_race.sh receipt_race $K $R/tests
+
+      - name: Verifier boundary tests (test doubles only; production verifier is fail-closed)
+        run: |
+          cd docs/phase2/workspace/receipts/verifier_interface/tests
+          python3 -m unittest -v test_verifier_contract.py
+          cd ../canonical
+          python3 -m unittest -v test_vectors_v1.py
+
+      - name: Control Plane commands under real executor roles; contact change and its race (synthetic)
+        run: |
+          C=docs/phase2/control_plane
+          for DB in control_plane_executor_test control_plane_contact_test; do
+            createdb $DB
+            for f in cp_01_schema_draft cp_05_identity_rotation_guard cp_07_claim_admission_draft cp_02_switch_function_draft cp_03_transfer_transitions_draft cp_04_transfer_command_idempotency cp_06_role_privileges_draft; do
+              psql -X -v ON_ERROR_STOP=1 -d $DB -f $C/schema/$f.sql
+            done
+          done
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_executor_test -f $C/tests/cp_45_executor_identity_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/schema/cp_08_contact_change_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/schema/cp_09_contact_change_roles_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/tests/cp_30_role_privilege_tests.sql
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/tests/cp_40_contact_change_tests.sql
+          bash $C/tests/cp_46_contact_change_race.sh control_plane_contact_test
+
+      - name: Student Credit entitlement lifecycle (archive return, reserved credit, reactivation)
+        run: |
+          set -euo pipefail
+          W=docs/phase2/workspace
+          K=a1000000000000000000000000000011
+          createdb -h localhost -U postgres workspace_credit_test
+          createdb -h localhost -U postgres workspace_credit_lock_race
+          psql -X -v ON_ERROR_STOP=1 -d workspace_credit_test -f $W/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_credit_test -f $W/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_credit_test -f $W/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_credit_test -f $W/workspace_archive_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_credit_test -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_credit_test -f $W/tests/workspace_credit_entitlement_tests.sql
+          KL=a1000000000000000000000000000012
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions; do
+            psql -X -v ON_ERROR_STOP=1 -d workspace_credit_lock_race -f $W/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$KL -d workspace_credit_lock_race -f $W/workspace_roles_setup_draft.sql
+          bash $W/tests/workspace_credit_lock_boundary_race.sh workspace_credit_lock_race $KL
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
+      - name: Concurrent reactivation on one reserved entitlement
+        run: |
+          set -euo pipefail
+          W=docs/phase2/workspace
+          createdb -h localhost -U postgres workspace_react_race
+          psql -X -v ON_ERROR_STOP=1 -d workspace_react_race -f $W/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_react_race -f $W/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_react_race -f $W/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_react_race -f $W/workspace_archive_transactions.sql
+          bash $W/tests/workspace_reactivation_race.sh workspace_react_race
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
+      - name: Workspace archive and capacity release under the runtime role (synthetic)
+        run: |
+          W=docs/phase2/workspace
+          K=a1000000000000000000000000000009
+          createdb workspace_archive_test
+          psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_activation_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_governance_events_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_archive_transactions.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_archive_test -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_archive_test -f $W/tests/workspace_archive_tests.sql

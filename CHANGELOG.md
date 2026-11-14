@@ -4,6 +4,34 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-11-14 — Phase 2: OQ-CRD-1 resolved and its exact boundary tested (draft SQL; synthetic)
+`feat/test/docs:` The Product Owner resolved OQ-CRD-1 on 2026-11-14: the credit reversal window is an exact 168-hour interval from the stored activation timestamp with an **inclusive** boundary. The rule is extracted from `archive_student_enrollment()` into `credit_reversal_window_end()` and `credit_reversal_eligible()` — IMMUTABLE, side-effect free, taking explicit timestamps — so the boundary can be tested exactly instead of bracketed. New tests CRD-32..CRD-38 cover the deadline minus one microsecond (eligible), the **exact** deadline (eligible), the deadline plus one microsecond (ineligible), monotonicity across the window, identical verdicts in four time zones, and that the command keeps no second copy of the interval. The command still reads its own `clock_timestamp()` **after** acquiring the entitlement row lock, and WS-CRD-LOCK-01/02 is unchanged and still passing. Canonical documents reconciled: OQ-CRD-1 is recorded RESOLVED in `OPEN_QUESTIONS.md`, a 2026-11-14 Product Owner clarification is recorded in `DECISION_LOG.md` without a new D-number, and the stale "open clarification" wording is removed from the archive draft, the credit contract and `IMPLEMENTATION_RESPONSE_2026-11-14.md`. **OQ-CRD-2 and OQ-CRD-3 remain OPEN** and the production-intended activation path stays fail-closed. No security boundary was weakened: per-recipient outbox delivery and acknowledgement, post-lock timestamp reads, the fail-closed activation and inbox paths and the D-014 synthetic-only restriction are all intact. Local evidence: PostgreSQL 16.15, cleared cluster, all 18 runnable workflow steps passed plus the Python verifier unit tests. Phase 2 Gate remains **NOT READY**; Phase 3 is not authorized; CI on the resulting HEAD is not verified by the implementation agent.
+
+
+### 2026-11-14 — Phase 2: remediation of Supervisor findings C-01 and H-01..H-06/M-01 on head `8abbbe3` (draft SQL; synthetic)
+`fix/security/test/docs:` **C-01 (critical, real defect):** Saga delivery kept one row per event, so the first recipient's acknowledgement marked the whole event done and retries stopped for the other Workspace. Delivery is now tracked per declared recipient — `outbox_event_recipients` states the audience and is immutable, `outbox_deliveries` is keyed `(event_id, workspace_id)` with its own state, lease, attempts, send record and acknowledgement, acknowledgement requires a declared recipient and a successful send first, and `outbox_event_completion` reports an event complete only when every required recipient has acknowledged. Dead-letter and re-drive act on one recipient and are audited per recipient.
+**H-01/H-04:** the credit wall clock is read only after the required row locks; activation resolves one authoritative timestamp and uses it for the enrollment start, the entitlement row and the audit. Regression `WS-CRD-LOCK-01/02` is deterministic and its sensitivity was verified against the pre-fix code.
+**H-02:** the production-intended activation path takes no period argument and fails closed (`feature_not_supported`, OQ-CRD-3); the caller-supplied-period command is renamed `activate_student_enrollment_synthetic` and granted only to `ws_<key>_synth_exec`. No entitlement duration source was invented.
+**H-03:** acknowledgement is bound to the exact event and recipient, refuses a non-recipient, refuses an acknowledgement before send, and is idempotent per recipient.
+**H-05:** `payload_hash` is transport integrity, not authentication; the production-intended inbox path fails closed pending an approved verified transport (OQ-SAGA-1, PS-1..PS-4/PS-6) and the application logic moved to a role-gated synthetic command. No cryptography was invented.
+**H-06/M-01:** reactivation requires the proposed counselor to actually hold the counselor role, and the counselor is bound to the idempotent command and compared on replay.
+Local evidence: PostgreSQL 16.15, cleared cluster, all 18 runnable workflow steps passed (504 PASS assertion lines) plus the Python verifier unit tests. Draft SQL and synthetic data only (D-014). Saga service behaviour, a verified transport, the entitlement period source, retry/lease thresholds and quarantine resolution remain unimplemented or open. Phase 2 Gate remains **NOT READY**; D-014 remains in force; Phase 3 is not authorized; CI on the final HEAD is not verified by the implementation agent.
+
+
+### 2026-11-14 — Phase 2: Product Owner decisions PD-2026-11-13-A..F implemented (draft SQL; synthetic)
+`feat/security/test/docs:` Implemented the approved decisions as database contracts with executable tests.
+**Assessment (A):** `test_definition_version_questions` makes question membership and order the authority; publication requires a complete contiguous set; a response is bound by composite foreign keys to a question of its own attempt's version; the attempt scoring snapshot must equal the published version's; adaptive (`per_attempt`) publication is refused in MVP.
+**Activity (B):** five typed, FK-backed source columns replace any polymorphic reference, each carrying `student_id`; `class_participants` and `class_session_participants` added; one activity per source record; student and kind immutable.
+**Transfer approvals (C):** separation of duties enforced, the `source_destination_owner` exception stored disabled and unstorable-if-enabled, approval side bound to the case's source/destination Workspace, a dedicated `record_transfer_approval`/`revoke_transfer_approval` command and executor identity, and post-lock expiry moved to `clock_timestamp()`.
+**Student Credit (D):** `student_entitlements`, a 168-hour inclusive compensating-return window, student-bound reserved credit excluded from the spendable balance, free reactivation only inside the original period with no new debit and no period extension, and `credit_wallet_balances`. `activate_student_enrollment()` now requires an entitlement period end (signature change).
+**Saga (last open HIGH):** the outbox envelope gained schema version, payload hash, student, both Workspaces, generation and correlation/causation ids and became fully immutable; delivery state, dispatcher leases, attempts, dead-letter and audited re-drive moved to `outbox_deliveries`/`outbox_delivery_audit`; the Workspace gained `workspace_inbox_events` and `apply_inbox_event()` with stale rejection, future quarantine and atomic inbox+projection under generation fencing.
+Local evidence: PostgreSQL 16.15, cleared cluster, all 18 runnable workflow steps passed (476 PASS assertion lines) plus the Python verifier unit tests. This validates draft SQL and synthetic tests only. No distributed atomicity is claimed; Saga service behaviour, signed wire format, retry/lease thresholds and quarantine resolution remain unimplemented or open. Phase 2 Gate remains **NOT READY**; D-014 remains in force; Phase 3 is not authorized; CI for this commit is not verified by the implementation agent.
+
+
+### 2026-11-09 — Phase 2 Control Plane function-owner split (draft; synthetic CI)
+`security/test/docs:` Replaced the shared Control Plane SECURITY DEFINER owner with three non-login function-family owners for transfer, HMAC rotation and initial identity admission. Narrowed grants by table/function family; added column-scoped row-lock privileges for identity-gate, immutable Workspace UUID and append-only admission-command rows; added a Workspace UUID immutability trigger; expanded role catalog assertions and aligned the privilege contract, project state and Supervisor review. GitHub Actions run #222 passed on PostgreSQL 16 at exact branch HEAD `2f605051440b4198794e710283f0a6d852983316`. This validates only the draft SQL and synthetic tests; production credentials, KMS/HSM, API authorization, distributed transfer Saga and operational resilience remain unverified. Phase 2 Gate remains NOT READY; D-014 synthetic-only restriction remains in force; Phase 3 is not authorized.
+
+
 ### 2026-10-24 — Merge of Phase 1 traceability follow-up (PR #6)
 `docs:` PR #6 was squash-merged into `main` at `fb16219d506998c9e074971927b55e322f32c21d`. Post-merge verification confirmed 51 unique active Alt-5 acceptance specifications with no duplicates and 41 path-inventory rows; all active contract IDs are mapped to at least one active path row and all active row references exist in the catalog. No code, migration, infrastructure, or executable test was added or run. Phase 1 remains approved for design/documentation only under D-024; Q-023 remains a pre-hosting gate, Phase 2 remains unauthorized, and real student data remains prohibited under D-014.
 
@@ -414,3 +442,129 @@ Updated current-state, roadmap, phase report and supervisor review after PR #3 w
 - `SUPERVISOR_REVIEW.md` records this follow-up finding and correction.
 
 Verification boundary: documentation-only. Alt-5 acceptance catalog remains 47 specifications, 0 implemented, 0 executed, 0 passing. Q-023 remains a mandatory pre-hosting deployment gate; D-014's real-student-data prohibition remains unchanged. No application code, migrations, infrastructure, executable tests, Phase 2 work, or hosting approval was added or implied.
+
+## 2026-11-09 — Phase 2 Workspace / Control Plane reconciliation (PR #12 branch; unmerged)
+
+Added Workspace DB design and schema skeleton, transfer workflow contract, API/authorization contract, HMAC rotation protocol, idempotent transfer-command draft, and updated Control Plane schema/function/state-machine/test drafts. Corrected the decision crosswalk and added current-state authority notes to canonical product/architecture/security documents.
+
+This work remains documentation and draft-schema only. Revised SQL/race tests have NOT RUN against the current HEAD. Earlier Control Plane test counts are superseded. No runtime implementation, production migration, merge, Phase 3 authorization, or real-data permission is claimed. Phase 2 Gate remains NOT READY; D-014 remains in force.
+
+
+## 2026-11-09 — PostgreSQL 16 draft schema verification
+
+Added a PostgreSQL 16 GitHub Actions workflow. Latest successful run #53 executed at branch commit `3c50f0be27ebad6c159d20d2447b763868e6bc86` and passed 22 Control Plane PASS notices (including a role-catalog notice covering eight privilege sub-checks), 1 concurrent global-identity race and 13 Workspace schema PASS notices. Earlier failed runs exposed test-fixture defects and a missing sequence grant to the non-login function owner; these were corrected before run #35.
+
+This evidence applies only to the synthetic SQL/schema cases in the workflow. Production service-role binding, trusted approval identity service, cross-Workspace DB authorization, transfer freeze/drain and crash recovery, outbox/inbox delivery, activation+credit atomicity, full capacity concurrency, backup/restore and HA tests remain NOT RUN. Phase 2 Gate remains NOT READY; D-014 remains in force.
+
+
+### 2026-11-09 — Phase 2 claim admission, Workspace activation and role verification
+`feat:` Added a Control Plane initial identity-claim admission draft (cp_07) with a database maintenance gate, exact active/retiring HMAC alias coverage, global mobile+grade uniqueness, encrypted contact-index insertion, atomic ownership/claim creation and idempotency. Added dedicated identity-admission executor scope and regression/race tests.
+
+`feat:` Added Workspace atomic activation draft: enrollment activation, Student Credit debit (unit_code CRD), active-student capacity reservation and minimal audit event occur in one transaction. Added wallet-row serialization/negative-balance guard, append-only command log and idempotent replay. Added per-Workspace PostgreSQL role naming from canonical Workspace UUID, database CONNECT isolation, worker/exporter limits and role catalog tests.
+
+`test:` GitHub Actions run #148 passed on PostgreSQL 16 at SQL/test tree SHA e97056b44ebfdbfce5344a9c524ba8af1e72055b. It covered Control Plane transfer/rotation/claim admission, concurrent global identity and claim-admission races, Workspace schema/activation/credit/capacity/audit, concurrent activation and two-Workspace role/CONNECT assertions. This is synthetic draft-SQL evidence only.
+
+`docs/security:` Updated Control Plane/Workspace role contracts, HMAC rotation protocol, Workspace database design, canonical architecture/database/API/security overrides, project state, roadmap, test plan and supervisor review. Phase 2 remains NOT READY; PR #12 remains Draft/Open/Unmerged; Phase 3 and real data remain prohibited under D-014.
+
+
+
+## 2026-11-09 — Phase 2 identity, approval and transfer contracts
+- Added `docs/phase2/control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md` for secure mobile contact change, proof binding, all-live-key alias coverage, idempotency and audit.
+- Added `docs/phase2/control_plane/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` for verified guardian, prior counselor fee-receipt and destination acceptance authorities, signed one-time assertions, revocation and re-approval.
+- Added `docs/phase2/transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md` for durable outbox/inbox, source freeze/drain, destination staging, cutover and forward recovery.
+- Bound the contracts into the Control Plane README, transfer workflow contract, API authorization contract, TEST_PLAN and Supervisor Review.
+- Identified approval-schema reconciliation: current unique (case_id, approval_kind) plus mutable revoked_at cannot retain a revoked approval and replacement as separate immutable events.
+- Documentation/design only. No proof verifier, API, Saga worker, contact-change SQL, approval event schema or new executable tests were implemented. Phase 2 remains NOT READY; D-014 synthetic-only rule unchanged.
+
+
+## 2026-11-09 — Phase 2 domain, legal-policy and operations review
+- Added `docs/phase2/workspace/WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` with HIGH/MEDIUM findings from actual Workspace SQL schema.
+- Added `docs/phase2/api/PARENT_GUARDIAN_AUTHORITY_MATRIX_Q007.md`; Q-007 remains open pending qualified Iran legal review and Product Owner approval.
+- Added `docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md` for category-based versioned retention and legal-hold/disposition behavior without unapproved numeric durations.
+- Added `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` for failover, independent backup, restore, pool isolation and capacity acceptance criteria.
+- Updated OPEN_QUESTIONS, PROJECT_STATE, ROADMAP, SECURITY and TEST_PLAN references. Documentation only; no runtime or operational tests are claimed.
+
+
+## 2026-11-09 — Workspace capacity race coverage
+- Added a PostgreSQL 16 CI race test for two different student enrollments competing for the final active-student capacity slot.
+- The fixture intentionally provides sufficient Student Credit so the losing transaction exercises capacity serialization, not wallet insufficiency.
+- Test is wired into the Phase 2 workflow; execution status awaits fresh CI on the latest branch head.
+
+
+## 2026-11-09 — Phase 2 exit criteria baseline
+- Added `docs/phase2/PHASE2_EXIT_CRITERIA.md` to distinguish Phase 2 design/schema completion from later runtime/production gates and centralize evidence, blockers, unresolved PO decisions and gate rules.
+
+
+## 2026-11-09 — Phase 2 open decision register
+- Added `docs/phase2/PHASE2_OPEN_DECISIONS.md` to consolidate remaining Product Owner/legal/security/operations decisions and technical closure work without assigning unapproved values.
+
+
+## 2026-11-09 — Workspace membership role source-of-truth correction
+- Removed redundant scalar `workspace_memberships.role_key`; `membership_roles` is the sole role-assignment relation in the draft schema.
+- Updated Workspace schema/activation/race fixtures and added `WS-ROLE-SOURCE-01` schema assertion.
+- Role grant/revocation event audit and direct-DML privilege tests remain open; fresh CI pending.
+
+
+## 2026-11-09 — Educational domain contracts
+- Added assessment domain contract for immutable definitions/attempts, response-count integrity, scoring-policy snapshots, custom error analysis and per-subject exam results.
+- Added deterministic planning domain contract for normalized schedule/availability inputs, explicit PlanItems, reproducibility and explainability.
+- Added curriculum domain contract for Grade → Subject → Book/Edition → Chapter → Topic → Subtopic, ownership, versioning and mastery evidence.
+- Linked all three contracts from Workspace design, exit criteria, Project State, Roadmap, Test Plan and Supervisor Review. SQL reconciliation and tests remain open.
+
+
+## 2026-11-09 — Activity, credit and capacity lifecycle contracts
+- Added Activity/Class/Assignment domain contract with recurrence, participation, attendance and provenance rules.
+- Added Student Credit commercial lifecycle contract separating CRD from fiat billing and specifying verified payment, grants, refunds and reconciliation.
+- Added Capacity lifecycle contract for multi-dimensional reservations, activation/archive/reactivation and transfer coordination.
+- Linked contracts into Workspace design, Phase 2 exit criteria, Project State, Roadmap, Test Plan and Supervisor Review.
+
+
+## 2026-11-09 — Workspace authorization-table privilege hardening
+- Removed runtime write grants from Workspace membership, role, permission, branch, counselor-assignment and guardian relationship/permission tables; runtime is SELECT-only on these authorization sources.
+- Made the activation function owner read-only on authorization tables and narrowed its activation grants to column-level state/counter changes and lock-only columns.
+- Added immutable wallet identity trigger/test and expanded per-Workspace role privilege assertions.
+- Dedicated audited authorization-management functions and append-only grant/revocation event history remain open; latest changes await fresh CI.
+
+
+## 2026-11-10 — Product Owner approved Workspace role grantability matrix
+- Recorded the accepted MVP role matrix in `docs/phase2/workspace/PO_DECISION_ROLE_GRANTABILITY_MATRIX_2026-11-10.md`.
+- Organization Manager may invite, activate and revoke counselor memberships only within its own Workspace; Counselor cannot delegate; Branch Manager is operational-only within assigned Branch; other staff cannot delegate; Platform Admin is limited to narrow Governance authority, including Organization Manager appointment approval, without general Workspace write or student-data access.
+- Added deny-by-default, no-self-grant, no-privilege-escalation, strict scope, audit and revocation-freshness invariants to the trusted governance contract and linked the decision from Phase 2 exit tracking.
+- This closes the Product Owner policy decision only. Trusted verifier/adapter, proof receipt, API enforcement and executable acceptance tests remain unimplemented; Q-007 remains open; Phase 2 remains NOT READY; D-014 synthetic-only remains in force.
+
+### Phase 2 — Governance proof receipts and verifier boundary (Issue #13, synthetic draft)
+- Added `docs/phase2/workspace/receipts/`: receipt table with binding and single-use controls, verifier and adapter identities with narrow grants, atomic consume-and-apply command, verifier interface contract (production fail-closed; test double only), executable tests and concurrency checks.
+- Fixed NULL-unsafe payload validation in the governance event draft (six comparisons, COALESCE).
+- Not production implementation, not a migration, not a cryptographic verification, not an approval. Phase 2 gate: NOT READY pending independent Supervisor review.
+
+### Issue #13 corrective patch (2026-11-11)
+- Retry of a consumed receipt returns the original result after expiry when the full binding matches; unconsumed expired receipts fail closed.
+- Receipt state machine made terminal for consumed and revoked; NULL-safe metadata checks; consumption event reference enforced by foreign key.
+- Canonical payload contract `receipt-canon-v1` added (contract, draft SQL, test-only reference, vectors).
+- Verifier test double checks the canonicalization version and the payload digest (not a signature check).
+- Workflow updated for the canonical contract and the new suites. Not production implementation; not an approval.
+
+### Issue #13 H-03 correction (head 70e37d7)
+- Receipt INSERT accepts only initially registered receipts with no consumption metadata; consumed and revoked cannot be inserted directly.
+- registered→consumed only through the consume command for that receipt; direct owner-level UPDATE refused.
+- Revocation recorded in an append-only audit (revoked_by, revoked_at). No revocation policy or service introduced.
+- Consumed retry checks the referenced event against the receipt binding; inconsistent events are refused.
+- Regression suite receipt_50_h03_tests.sql (12 PASS). CI success on 70e37d7 is execution evidence only, not production approval.
+
+### H-03 corrective — privilege-backed consume boundary (Supervisor finding)
+- Replaced the session-setting authorisation (receipt.consume_active) with a transaction-scoped consume grant row, writable only by a dedicated consume definer role that owns the consume function.
+- Trigger governance_proof_receipts_a_consume_grant refuses registered→consumed without a grant from the same transaction, including for identities that hold UPDATE.
+- Added negative tests with setting-based attempts, grant forgery refusals for governance owner, verifier_rt and adapter, a catalog privilege check, and a legitimate consume that releases its grant.
+- Revocation unchanged and still deferred; M-05 and M-06 remain open residual findings.
+
+### Phase 2 exit findings — implementation batch (2026-11-13)
+- WS-DOM-01: immutable published test definition versions, attempt/response reconciliation at submission, immutable submitted attempts, idempotent `submit_test_attempt()`, custom error reason with description.
+- WS-DOM-03: append-only guardian link and permission events; projection changes require their event in the same transaction; effective-permission view.
+- Control Plane: transfer approvals are immutable events; revocation is a separate append-only event; replacement approvals keep history; one current approval per kind; revocation and switch serialise on the transfer case.
+- Drafts and tests only. No scoring formula, no guardian legal matrix, no approval-recording command, no production migration. Not an approval.
+
+### Phase 2 exit findings — second batch (2026-11-13)
+- Fixed: Control Plane commands failed under their own executor roles because deferred alias-coverage triggers ran at commit as the caller. Each command now runs them in its own security context. New suite calls every command as its real executor.
+- Added: contact-change draft (one-time proof, atomic command, audit, outbox, separate role family) with tests and a race test.
+- Added: Workspace archive command with atomic capacity release, idempotency and a counter-reconciliation view, with tests under the runtime role.
+- Drafts and synthetic data only. No credit policy on archive, no reactivation, no production verifier. Not an approval.
