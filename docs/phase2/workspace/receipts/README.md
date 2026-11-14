@@ -67,3 +67,45 @@
 - M-05 and M-06: referenced in the Supervisor review. Their definitions are not part of the implementation record used for this correction, so this patch does not claim to resolve them.
 - Revocation authority and propagation across API, export, worker and notification: NOT IMPLEMENTED (deferred).
 - Production cryptography, verifier, key lifecycle, mTLS, PS-1 to PS-8: DEFERRED.
+
+## Freshness defect found and fixed in this project's own work (2026-11-14)
+
+`consume_governance_receipt_and_apply()` validated the receipt's `not_before` / `expires_at` window with
+`now()`. In PostgreSQL `now()` is the **transaction start** time and does not advance. So an adapter could
+open a transaction while a receipt was still valid, hold it open past `expires_at`, and still consume it.
+
+This was not reasoned about in the abstract — it was demonstrated. A receipt with a two-second lifetime was
+consumed and applied four seconds after it had expired, and the receipt ended up `consumed` with a
+governance event attached. The pre-existing tests RC-21 and RC-22 did not catch it because their receipts
+were already outside the window when their transaction began, which `now()` handles correctly.
+
+It mattered more than an ordinary off-by-one. The expiry window is the **only** freshness control this
+database actually has: revocation propagation across API, export, worker and notification handoffs is PS-8
+and deferred. A stale clock removed it entirely.
+
+**Fix.** The command now reads `clock_timestamp()` once, into `v_now`, **after** taking the receipt's
+`FOR UPDATE` lock, and uses it for both the window check and `consumed_at`. This is the same pattern the
+H-01 remediation applied to the credit reversal window. No clock-skew tolerance is introduced: PS-5 is
+deferred and none is invented.
+
+**Regression tests** — `tests/receipt_60_freshness_tests.sql`:
+- **RC-FRESH-01** a receipt that expires while the consuming transaction is open is refused.
+- **RC-FRESH-02** that refusal leaves the receipt `registered`, with no consumption metadata and no event.
+- **RC-FRESH-03/03b** the mirror case: a receipt whose `not_before` passes *during* the open transaction is
+  accepted, and `consumed_at` is at or after `not_before`. A "fix" that merely froze a different clock, or
+  compared in the wrong direction, fails here.
+- **RC-FRESH-04** static guard: the command must read `clock_timestamp()` and must not contain `now()`,
+  `transaction_timestamp()` or `CURRENT_TIMESTAMP`, so the defect cannot be reintroduced by a later edit
+  that looks harmless.
+
+**Sensitivity verified.** Re-running the suite against the pre-fix function (identical except `v_now :=
+now()`) fails at RC-FRESH-01 with the diagnostic naming the cause. The suite is therefore sensitive to the
+implementation and not merely passing.
+
+**The same defect class existed in two other places and was fixed in the same batch:** the one-time
+contact-change proof window in `cp_08_contact_change_draft.sql` (CC-FRESH-01..03) and
+`guardian_permissions_effective`, which is the guardian authorization read shape (CLK-01..03). Because
+three independent instances were found, a catalog-driven guard was added —
+`../tests/workspace_clock_discipline_tests.sql` — which scans every SECURITY DEFINER function and every
+view for a transaction-start clock and fails by name, with a short reviewed allowlist for sites that only
+write a stored timestamp. That guard is what protects against a fourth instance.

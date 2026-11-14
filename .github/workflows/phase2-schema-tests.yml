@@ -244,6 +244,9 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_30_integrity_tests.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_40_canonical_vectors_tests.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_50_h03_tests.sql
+          # Freshness of the receipt validity window. The defect this covers was demonstrated: with now()
+          # an expired receipt was consumed and applied. These tests take ~8s of deliberate waiting.
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_60_freshness_tests.sql
           createdb receipt_race
           psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_activation_transactions.sql
@@ -278,6 +281,9 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/tests/cp_30_role_privilege_tests.sql
           psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/tests/cp_40_contact_change_tests.sql
           bash $C/tests/cp_46_contact_change_race.sh control_plane_contact_test
+          # Freshness of the one-time contact-change proof window. Reuses cp_40's helpers and fixtures,
+          # so it must run after it in the same database. Takes ~4s of deliberate waiting.
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/tests/cp_47_freshness_tests.sql
 
       - name: Student Credit entitlement lifecycle (archive return, reserved credit, reactivation)
         run: |
@@ -329,6 +335,30 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_archive_transactions.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_archive_test -f $W/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_archive_test -f $W/tests/workspace_archive_tests.sql
+
+      - name: Clock discipline — no security decision from a transaction-start clock
+        run: |
+          set -euo pipefail
+          W=docs/phase2/workspace
+          R=docs/phase2/workspace/receipts
+          K=a1000000000000000000000000000051
+          # Its own database: CLK-03 leaves guardian fixtures behind on purpose, because the guardian
+          # event tables are append-only (WS-DOM-03) and cannot be cleaned up.
+          createdb -h localhost -U postgres workspace_clock_test
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze; do
+            psql -X -v ON_ERROR_STOP=1 -d workspace_clock_test -f $W/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_clock_test -f $W/workspace_roles_setup_draft.sql
+          # The receipt drafts are loaded too so the CLK-01 catalog scan covers the consume command.
+          psql -X -v ON_ERROR_STOP=1 -d workspace_clock_test -f $R/receipt_00_canonical_payload_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_clock_test -f $R/receipt_01_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_clock_test -f $R/receipt_02_roles_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_clock_test -f $R/receipt_03_consume_function_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_clock_test -f $W/tests/workspace_clock_discipline_tests.sql
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
 
       # DOCUMENTATION CONSISTENCY CHECK — deliberately not an implementation test.
       # It proves nothing about the schema or any security property. It only stops the two halves of the

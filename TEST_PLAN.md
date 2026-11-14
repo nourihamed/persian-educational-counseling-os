@@ -541,3 +541,72 @@ signed wire format (OQ-SAGA-1, PS-1..PS-4/PS-6); the entitlement period source (
 expired reserved entitlement (OQ-CRD-2); per-subject exam results; curriculum subtopics and PlanItem;
 retention schema integration (Q-020); and contact change concurrency against HMAC rotation and against an
 ownership switch.
+
+## Batch 2 — clock discipline at security decision points (2026-11-14)
+
+Three independent instances of one defect were found: a security decision made from a **transaction-start**
+clock. In PostgreSQL `now()`, `transaction_timestamp()` and `CURRENT_TIMESTAMP` all return the time the
+transaction began and do not advance, so any expiry, freshness or authorization decision made from them can
+be defeated by holding a transaction open. Each instance was **demonstrated before being fixed**, and each
+test below was **shown to fail against the pre-fix code**.
+
+### `receipt_60_freshness_tests.sql` — RC-FRESH-01..04 (5 PASS lines)
+The governance proof-receipt validity window. Demonstrated defect: a receipt with a two-second lifetime was
+consumed and applied four seconds after expiry, ending up `consumed` with a governance event attached.
+
+- RC-FRESH-01 a receipt that expires while the consuming transaction is open is refused.
+- RC-FRESH-02 the refusal leaves the receipt `registered`, with no consumption metadata and no event.
+- RC-FRESH-03/03b the mirror case — a receipt whose `not_before` passes *during* the open transaction is
+  accepted, and `consumed_at` is at or after `not_before`. This catches a "fix" that froze a different
+  clock or compared in the wrong direction.
+- RC-FRESH-04 static guard on the function body.
+
+Why RC-21/RC-22 did not catch it: their receipts were already outside the window when the transaction
+began, which `now()` evaluates correctly. The defect only appears when the window closes *during* the
+transaction, which is the case nothing tested.
+
+**Sensitivity:** against the pre-fix function (identical but `v_now := now()`), RC-FRESH-01 fails with the
+diagnostic naming the cause. Measured, not assumed.
+
+### `cp_47_freshness_tests.sql` — CC-FRESH-01..03 (3 PASS lines)
+The one-time contact-change proof window, which authorizes changing a student's **global** contact identity.
+Same defect shape. Runs after `cp_40_contact_change_tests.sql` in the same database and reuses its helpers.
+
+- CC-FRESH-01 a proof that expires during the open transaction is refused.
+- CC-FRESH-02 the refusal leaves the proof `registered`, with no command reservation and no audit row.
+- CC-FRESH-03 static guard on the command body.
+
+**Sensitivity:** against the pre-fix command, CC-FRESH-01 fails. Measured.
+
+### `workspace_clock_discipline_tests.sql` — CLK-01..03 (3 PASS lines)
+The guard that protects against a fourth instance, plus the `guardian_permissions_effective` fix.
+
+- CLK-01 **catalog-driven**: scans every SECURITY DEFINER function and every view for a transaction-start
+  clock and fails **by name**. It carries one reviewed allowlist entry
+  (`append_workspace_governance_event`, whose `granted_at=now()` writes a stored value and decides
+  nothing). A new site must be fixed or explicitly reviewed into the allowlist with a reason.
+- CLK-02 narrower: the specific windows that were defective must still read `clock_timestamp()`. This
+  survives an over-broad edit to CLK-01's allowlist.
+- CLK-03 **behavioural**: a guardian permission that expires mid-transaction stops being effective. A
+  static check alone would miss a view rewritten to compare against a column holding a stale value.
+
+`guardian_permissions_effective` is the Workspace's guardian authorization read shape — its own comment says
+so — and with `now()` a permission that expired during a transaction still read as effective, which *was*
+the access decision.
+
+**Sensitivity:** against the pre-fix view, CLK-01 fails naming `view guardian_permissions_effective`.
+Measured.
+
+CLK-03 deliberately leaves its fixture behind: the guardian event tables are append-only (WS-DOM-03) and
+cannot be cleaned up, as an earlier version of the test discovered when its DELETE was refused with
+"guardian_permission_events is append-only". The suite therefore runs in its own database in CI.
+
+### Recorded timestamps aligned with the decision clock
+`archive_student_enrollment()` and `change_student_mobile_contact()` now write their stored timestamps
+(`ended_at`, `archived_at`, `consumed_at`, `updated_at`) from the same post-lock `v_now` they decide from,
+so the audit time equals the decision time. These were never decisions and were not defects; the change
+makes the rule uniform and lets the static guards stay strict.
+
+Still NOT RUN / NOT IMPLEMENTED after this batch: everything listed at the end of the Batch 1 section, plus
+clock-skew tolerance (PS-5, deliberately none), end-to-end revocation freshness across service handoffs
+(PS-8, no services exist), and signature verification (PS-1..PS-4, the verifier stays fail-closed).

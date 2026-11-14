@@ -9,8 +9,8 @@ write-barrier commit on `docs/product-owner-decisions-consolidation-2026-11-07` 
 
 | Kind | What it is | Result |
 |---|---|---|
-| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — all **20** runnable steps, **557 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (`OK`) |
-| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** The Batch 1 commit adds SQL and two new workflow steps, so earlier Actions evidence does not cover it. The last independently verified SHA is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233 (companion run 43551717243 also succeeded). A fresh Actions run at the new SHA is required, and the implementation agent cannot read Actions logs. |
+| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **21 implementation test steps**, **568 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
+| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL, three test suites and a new workflow step, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
 
 Any commit that touches SQL or tests requires a fresh local run and a fresh Actions run at its own SHA.
 Documentation-only commits on top of a verified SHA change no SQL and no test, so they do not invalidate
@@ -418,5 +418,63 @@ Product Owner approved the MVP role grantability matrix on 2026-11-10; see `docs
 - **Still open, unchanged:** Q-007, Q-020, OQ-CRD-2/3, OQ-SAGA-1/2, OQ-ASM-1, PS-1..PS-8, OQ-D and OQ-E
   numeric objectives, the transfer exception approval authority, M-05 and M-06 definitions, and the
   disposition of PR #8–#11.
+- Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
+  prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**
+
+## Update 2026-11-14 (fifth) — Batch 2: clock discipline at security decision points
+
+Batch 1 was pushed as `cc8cd6449223943cbc6e360e677f4cb2ba37090f` (verified against the repository:
+15 files, +1874/−11, parent `ad3bf28`, PR #12 still Draft/open/unmerged). Its GitHub Actions result has
+**not** been reported to the implementation agent.
+
+- **One defect found three times, each instance demonstrated before being fixed.** In PostgreSQL `now()`,
+  `transaction_timestamp()` and `CURRENT_TIMESTAMP` return the **transaction start** time and do not
+  advance. Any expiry, freshness or authorization decision made from them can be defeated simply by
+  holding a transaction open.
+  1. **`consume_governance_receipt_and_apply()`** — the governance proof-receipt validity window. A receipt
+     with a two-second lifetime was **consumed and applied four seconds after expiry**, ending up
+     `consumed` with a governance event attached. This mattered more than an ordinary off-by-one: the
+     expiry window is the **only** freshness control this database has, because revocation propagation
+     across service handoffs is PS-8 and deferred. The existing RC-21/RC-22 missed it because their
+     receipts were already outside the window when the transaction began, which `now()` handles correctly.
+  2. **`change_student_mobile_contact()`** — the one-time contact-change proof window. Same shape. This
+     proof authorizes changing a student's **global** contact identity, so its expiry is the whole point
+     of it being one-time.
+  3. **`guardian_permissions_effective`** — the view whose own comment states it is "the ONLY read shape
+     that may be used for a guardian access decision". With `now()`, a permission that expired during a
+     transaction still read as effective, and that stale read *was* the access decision.
+- **Fix:** each site reads `clock_timestamp()` once, after the relevant row lock — the pattern the H-01
+  remediation established for the credit reversal window. `archive_student_enrollment()` and
+  `change_student_mobile_contact()` now also write their stored timestamps from that same `v_now`, so the
+  audit time equals the decision time. **No clock-skew tolerance was introduced:** PS-5 is deferred and
+  none is invented.
+- **A guard against a fourth instance.** Because three independent instances existed, fixing them is not
+  enough. `docs/phase2/workspace/tests/workspace_clock_discipline_tests.sql` CLK-01 scans the **catalog** —
+  every SECURITY DEFINER function and every view — and fails **by name** on any transaction-start clock,
+  with one reviewed allowlist entry (`append_workspace_governance_event`, which writes a stored value and
+  decides nothing). CLK-02 narrowly pins the previously defective windows so an over-broad allowlist edit
+  still fails. CLK-03 is behavioural, because a static check alone would miss a view rewritten to compare
+  against a column holding a stale value.
+- **Every new test was shown to FAIL against the pre-fix code.** RC-FRESH-01 fails with `v_now := now()`;
+  CC-FRESH-01 fails with the pre-fix contact-change command; CLK-01 fails naming
+  `view guardian_permissions_effective` with the pre-fix view. Sensitivity is measured, not assumed.
+- **New tests:** `receipt_60_freshness_tests.sql` RC-FRESH-01..04 (5 PASS lines),
+  `cp_47_freshness_tests.sql` CC-FRESH-01..03 (3), `workspace_clock_discipline_tests.sql` CLK-01..03 (3).
+  The workflow goes from 20 to 21 implementation test steps plus the documentation check.
+- **Batch 2 status against the Supervisor brief:** the proof-receipt boundary, `verifier_rt` narrow
+  registration, independent binding revalidation at the command boundary, atomic consumption with event
+  append and projection update, replay protection and idempotency, and the negative/tampering/claim
+  mismatch/revocation/concurrency tests were **already implemented** in earlier work (RC-01..31, M01/M02
+  series, RR-01..03). This batch adds the freshness dimension that was missing and fixes what it found.
+  **Still NOT IMPLEMENTED and not claimed:** the authenticated private service channel (PS-6), production
+  signature verification (PS-1..PS-4, verifier stays fail-closed), and end-to-end revocation freshness
+  (PS-8, no services exist).
+- **Local verification:** PostgreSQL 16.15, cleared cluster (0 leftover databases, 0 leftover roles), all
+  21 implementation test steps passed, **568 PASS assertion lines**, 0 FAIL, plus the Python verifier unit
+  tests, plus the documentation consistency check reported separately. **GitHub Actions at this HEAD:
+  NOT RUN.**
+- **Still open, unchanged:** Q-007, Q-020, OQ-CRD-2/3, OQ-SAGA-1/2, OQ-ASM-1, PS-1..PS-8, OQ-D and OQ-E
+  numeric objectives, the transfer exception approval authority, M-05 and M-06 definitions, and the
+  disposition of PR #8–#11. See `docs/phase2/UNRESOLVED_ITEM_REGISTER.md`.
 - Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
   prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**

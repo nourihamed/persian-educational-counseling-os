@@ -379,3 +379,109 @@ Phase 2 deliverable — with the register entry for OQ-E stating plainly what re
 - No authenticity for the freeze receipt. Signing is OQ-SAGA-1 and PS-1..PS-4.
 - No distributed atomicity between the Control Plane and a Workspace database.
 - **Phase 2 is not self-approved.** This section is an implementation report, not a review.
+
+---
+
+## 7. Batch 2 — clock discipline at security decision points (same day, fifth pass)
+
+### 7.1 What Batch 2 asked for, and what already existed
+
+The brief lists eight items for the Trusted Governance Authorization Adapter. Checking them against the
+repository before writing anything:
+
+| Brief item | Status before this batch |
+|---|---|
+| Separate verifier process/service boundary | Implemented as a boundary: `verifier_rt` may INSERT receipts and nothing else (RC-01, RC-05, RC-31); `verifier_interface/verifier_contract.py` is the interface. The *deployment* topology is PS-7, deferred. |
+| Authenticated private service channel | **NOT IMPLEMENTED** (PS-6). Correctly so, and stated as such. |
+| Signed assertion verification interface | Interface exists; `verify_production` always refuses, `verify_test_double` is test-only. |
+| Narrow proof-receipt registration through `verifier_rt` | Implemented and tested. |
+| Independent receipt verification at the command boundary | Implemented: the command revalidates every binding against the recorded receipt (RC-13..19). It does not recheck a signature, which is PS-1. |
+| Atomic consumption, revalidation, event append, projection update | Implemented in one transaction (RC-20..29); the projection update happens inside `append_workspace_governance_event`. |
+| Replay protection and idempotency | Implemented (RC-24..27, RR-01..03). |
+| Negative, tampering, claim mismatch, freshness, revocation, concurrency tests | All present **except freshness**, which had no test at all. |
+
+So the honest work for this batch was the one gap: freshness. Rebuilding what already worked would have
+produced a large diff and no new assurance.
+
+### 7.2 The gap was not empty — it was hiding a live defect
+
+`consume_governance_receipt_and_apply()` checked `not_before` / `expires_at` with `now()`. In PostgreSQL
+`now()` is the **transaction start** time and does not advance.
+
+This was demonstrated, not argued. A receipt with a two-second lifetime, consumed from a transaction that
+opened while it was valid and slept four seconds:
+
+```
+consumed | expires_at < clock_timestamp() = t | consumed_event_id IS NOT NULL = t
+```
+
+The receipt was consumed and the governance event applied, four seconds after the receipt had expired.
+
+Why the existing tests did not catch it: RC-21 (not-yet-valid) and RC-22 (expired) both use receipts that
+are already outside the window when their transaction begins, and `now()` evaluates those correctly. The
+defect only appears when the window closes *during* the transaction — the one case nothing tested.
+
+Why it mattered more than an ordinary off-by-one: the expiry window is the **only** freshness control this
+database has. Revocation propagation across API, export, worker and notification handoffs is PS-8 and
+deferred, so there was nothing else to fall back on.
+
+### 7.3 The same defect existed in two more places
+
+Grepping the project for the pattern rather than stopping at the first instance:
+
+| Site | What it decides | Severity |
+|---|---|---|
+| `change_student_mobile_contact()` (`cp_08`) | the one-time contact-change proof window — this proof authorizes changing a student's **global** contact identity, so its expiry is the whole point of it being one-time | HIGH |
+| `guardian_permissions_effective` (view) | its own comment states it is "the ONLY read shape that may be used for a guardian access decision". With `now()`, a permission that expired mid-transaction still read as effective — and that stale read *was* the access decision | HIGH |
+| `expired_reserved_entitlements` (view) | a report, not a decision — but whatever implements OQ-CRD-2 will read it | LOW, fixed for uniformity |
+
+All were fixed the same way: `clock_timestamp()`, read after the relevant row lock. `v_now` is also now
+used for the stored timestamps those commands write (`ended_at`, `archived_at`, `consumed_at`,
+`updated_at`), so the recorded time equals the decision time. Those assignments were never defects; making
+them uniform is what lets the static guards stay strict and simple.
+
+**No clock-skew tolerance was introduced anywhere.** PS-5 is deferred and inventing a tolerance would be
+inventing a security policy.
+
+### 7.4 Fixing three instances is not the same as preventing a fourth
+
+Three independent instances of one mistake is evidence about the project, not about three files. So the
+batch also adds a guard that scans the catalog rather than a list of files:
+
+- **CLK-01** walks every SECURITY DEFINER function and every view, strips comments, and fails **by name**
+  on `now()`, `transaction_timestamp()` or `CURRENT_TIMESTAMP`. It carries exactly one reviewed allowlist
+  entry — `append_workspace_governance_event`, whose `granted_at=now()` writes a stored value and decides
+  nothing — and the allowlist requires a stated reason. A new function or view that decides from a stale
+  clock fails the suite.
+- **CLK-02** separately pins the specific windows that were defective, so an over-broad edit to CLK-01's
+  allowlist does not silently re-open the hole.
+- **CLK-03** is behavioural, because a static scan would miss a view rewritten to compare against a column
+  holding a transaction-start value.
+
+### 7.5 Evidence, including what the tests were measured against
+
+| What | Result |
+|---|---|
+| `receipt_60_freshness_tests.sql` RC-FRESH-01..04 | **5 PASS lines**, 0 FAIL |
+| `cp_47_freshness_tests.sql` CC-FRESH-01..03 | **3 PASS lines**, 0 FAIL |
+| `workspace_clock_discipline_tests.sql` CLK-01..03 | **3 PASS lines**, 0 FAIL |
+| Negative control: consume function with `v_now := now()` | **RC-FRESH-01 FAILS** (exit 3) with the diagnostic naming the cause |
+| Negative control: pre-fix contact-change command | **CC-FRESH-01 FAILS** (exit 3) |
+| Negative control: pre-fix guardian view | **CLK-01 FAILS** (exit 3), naming `view guardian_permissions_effective` |
+| Pre-existing suites unaffected | receipt_10 still 44 PASS, cp_40 still 41 PASS |
+| Full workflow, cleared PostgreSQL 16.15 cluster (0 leftover databases, 0 leftover roles) | **ALL_STEPS_PASSED** — 21 implementation test steps, **568 PASS assertion lines**, 0 FAIL, plus the Python verifier unit tests (15 and 6 tests, `OK`) |
+| Documentation consistency check (register) | 6 PASS lines, reported separately and **not** counted as implementation evidence |
+| GitHub Actions at this HEAD | **NOT RUN.** New SQL, three new suites and a new workflow step. The agent has no Actions access and cannot read job logs. Batch 1 was pushed as `cc8cd64`; its Actions result has not been reported to the agent. |
+
+### 7.6 What is still not claimed after Batch 2
+
+- No signature is verified anywhere. `verifier_outcome='verified'` remains a **recorded input** from an
+  external verifier, never proof. The production verifier refuses (PS-1..PS-4).
+- No authenticated private service channel exists (PS-6). `authn_event_ref` and `authority_ref` stay
+  opaque references.
+- No end-to-end revocation freshness (PS-8). The database records revocation; propagation to API, export,
+  worker and notification handoffs has no services to propagate to.
+- No clock-skew tolerance (PS-5).
+- The static guards are static. They prove no transaction-start clock is read; the behavioural proof is
+  RC-FRESH-01..03, CC-FRESH-01..02 and CLK-03, each measured against pre-fix code.
+- **Phase 2 is not self-approved.** This is an implementation report, not a review.

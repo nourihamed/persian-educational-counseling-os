@@ -140,16 +140,16 @@ BEGIN
   -- Release exactly one active-student slot. Underflow is impossible: the counter cannot go below zero.
   PERFORM public.adjust_workspace_capacity('active_students',-1,'archive:'||p_idempotency_key,v_student_id,p_actor_membership_id,'student archive');
 
-  UPDATE public.enrollments SET state='archived', ended_at=now()
+  UPDATE public.enrollments SET state='archived', ended_at=v_now
    WHERE enrollment_id=p_enrollment_id AND state='active' AND ownership_generation=p_expected_generation;
   GET DIAGNOSTICS v_n=ROW_COUNT;
   IF v_n<>1 THEN
     RAISE EXCEPTION 'archive state update affected %, expected exactly one row', v_n USING ERRCODE='check_violation';
   END IF;
   -- Historical rows are kept; active counselor assignments of the archived enrollment are ended, not deleted.
-  UPDATE public.counselor_assignments SET state='ended', ended_at=now()
+  UPDATE public.counselor_assignments SET state='ended', ended_at=v_now
    WHERE enrollment_id=p_enrollment_id AND state='active';
-  UPDATE public.students SET lifecycle_state='archived', archived_at=now()
+  UPDATE public.students SET lifecycle_state='archived', archived_at=v_now
    WHERE student_id=v_student_id AND lifecycle_state='active';
 
   INSERT INTO public.audit_events(audit_event_id,actor_membership_id,event_type,target_type,target_id,outcome,correlation_id,metadata)
@@ -290,12 +290,16 @@ END;
 $$;
 REVOKE ALL ON FUNCTION reactivate_student_enrollment(text,uuid,uuid,bigint,uuid,uuid) FROM PUBLIC;
 
--- Reserved credits whose original period has ended. Their disposition is an OPEN Product Owner decision;
--- this view only makes them visible, it does not release, forfeit or adjust anything.
+-- Reserved credits whose original period has ended. Their disposition is an OPEN Product Owner decision
+-- (OQ-CRD-2); this view only makes them visible, it does not release, forfeit or adjust anything.
+-- clock_timestamp(), not now(), for the same reason as the other time windows in this project: now() is
+-- the transaction start time, so inside a long transaction this view would under-report. The consequence
+-- here is a stale report rather than a wrong authorization decision, but whatever eventually implements
+-- OQ-CRD-2 will read this view, so the rule is kept uniform rather than left as a trap.
 CREATE VIEW expired_reserved_entitlements AS
   SELECT e.entitlement_id, e.student_id, e.credit_amount, e.activated_at, e.period_end, e.reserved_at
     FROM student_entitlements e
-   WHERE e.state='reserved' AND e.period_end < now();
+   WHERE e.state='reserved' AND e.period_end < clock_timestamp();
 
 -- Counters are projections over the immutable capacity events (contract section 5, test 9).
 CREATE VIEW capacity_counter_reconciliation AS

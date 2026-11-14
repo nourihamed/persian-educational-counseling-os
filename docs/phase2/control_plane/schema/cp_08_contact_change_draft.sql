@@ -121,6 +121,7 @@ DECLARE
   v_expected_keys integer; v_supplied_keys integer; v_distinct_keys integer;
   v_alias record; v_n integer;
   v_old jsonb; v_new jsonb;
+  v_now timestamptz;   -- read ONCE from clock_timestamp() after the proof lock; see step 5
 BEGIN
   IF p_idempotency_key IS NULL OR length(btrim(p_idempotency_key))=0
      OR p_payload_hash IS NULL OR octet_length(p_payload_hash)<>32
@@ -196,7 +197,15 @@ BEGIN
   IF v_proof.status<>'registered' THEN
     RAISE EXCEPTION 'contact-change proof is % and cannot be used', v_proof.status USING ERRCODE='check_violation';
   END IF;
-  IF now() < v_proof.issued_at OR now() >= v_proof.expires_at THEN
+  -- FRESHNESS CLOCK (defect fixed 2026-11-14; same class as H-01 and the receipt consume defect).
+  -- clock_timestamp(), NOT now(), and read AFTER the FOR UPDATE above. now() is the transaction start
+  -- time and does not advance, so with now() a caller could open a transaction while this one-time proof
+  -- was still valid, hold it open past expires_at, and still use it. This proof authorizes changing a
+  -- student's GLOBAL contact identity, so its expiry window is the whole point of it being one-time.
+  -- No skew allowance is applied: PS-5 is deferred and none is invented.
+  -- Regression: CC-FRESH-01/02 in docs/phase2/control_plane/tests/cp_47_freshness_tests.sql.
+  v_now := clock_timestamp();
+  IF v_now < v_proof.issued_at OR v_now >= v_proof.expires_at THEN
     RAISE EXCEPTION 'contact-change proof is not valid at this time' USING ERRCODE='check_violation';
   END IF;
   IF v_proof.student_id IS DISTINCT FROM p_student_id
@@ -213,7 +222,7 @@ BEGIN
   -- 6. Reserve the command (UNIQUE proof_id: one proof, one command) and consume the proof.
   INSERT INTO public.contact_change_commands(idempotency_key,payload_hash,student_id,expected_workspace_id,expected_generation,proof_id,claim_id)
   VALUES (p_idempotency_key,p_payload_hash,p_student_id,p_expected_workspace_id,p_expected_generation,p_proof_id,v_claim.claim_id);
-  UPDATE public.contact_change_proofs SET status='consumed', consumed_at=now(), consumed_by_command=p_idempotency_key
+  UPDATE public.contact_change_proofs SET status='consumed', consumed_at=v_now, consumed_by_command=p_idempotency_key
    WHERE proof_id=p_proof_id;
 
   -- 7. Replace the contact for every live key version. Any uniqueness conflict rolls everything back.
@@ -223,7 +232,7 @@ BEGIN
                    FROM jsonb_to_recordset(p_aliases) AS a(key_version integer, mobile_hmac_hex text) ORDER BY a.key_version LOOP
     UPDATE public.student_contact_index
        SET mobile_hmac=decode(v_alias.mobile_hmac_hex,'hex'), mobile_ciphertext=p_mobile_ciphertext,
-           cipher_key_version=p_cipher_key_version, updated_at=now()
+           cipher_key_version=p_cipher_key_version, updated_at=v_now
      WHERE student_id=p_student_id AND key_version=v_alias.key_version;
     GET DIAGNOSTICS v_n=ROW_COUNT;
     IF v_n<>1 THEN

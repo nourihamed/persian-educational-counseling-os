@@ -37,6 +37,7 @@ DECLARE
   v_ws uuid;
   v_ev record;
   v_seq bigint;
+  v_now timestamptz;   -- read ONCE from clock_timestamp() after the receipt lock; see step 2a
 BEGIN
   -- 1. Caller must be an allowlisted adapter identity (never a runtime/worker/exporter/verifier).
   IF NOT EXISTS (SELECT 1 FROM public.receipt_adapter_allowlist a WHERE a.role_name = session_user) THEN
@@ -49,6 +50,19 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'receipt % not found', p_receipt_id USING ERRCODE = 'no_data_found';
   END IF;
+
+  -- 2a. FRESHNESS CLOCK (defect fixed 2026-11-14; same class as H-01).
+  --     This read is clock_timestamp(), NOT now(), and it happens AFTER the receipt lock.
+  --     now() is the transaction start time, so with now() an adapter could open a transaction while a
+  --     receipt was still valid, do other work (or simply hold the transaction open) past the receipt's
+  --     expires_at, and still consume it: the expiry check would compare against a stale timestamp. That
+  --     was demonstrated — a receipt with a 2-second lifetime was consumed and applied 4 seconds after it
+  --     had expired. The expiry window is the ONLY freshness control the database has, because revocation
+  --     propagation across service handoffs is PS-8 and deferred, so a stale read defeated it entirely.
+  --     clock_timestamp() advances inside the transaction, so the check is against the real moment of use.
+  --     Regression: RC-FRESH-01/02 in tests/receipt_60_freshness_tests.sql.
+  --     No skew allowance is applied here. PS-5 is deferred and no tolerance is invented.
+  v_now := clock_timestamp();
 
   -- 3. Exact binding checks against the Workspace and the request.
   SELECT workspace_id INTO v_ws FROM public.workspace_profile WHERE singleton;
@@ -112,7 +126,7 @@ BEGIN
   END IF;
 
   -- 5. Validity window applies ONLY to an unconsumed receipt. An unconsumed expired receipt fails closed.
-  IF now() < r.not_before OR now() >= r.expires_at THEN
+  IF v_now < r.not_before OR v_now >= r.expires_at THEN
     RAISE EXCEPTION 'receipt is not valid at this time' USING ERRCODE = 'check_violation';
   END IF;
 
@@ -130,7 +144,7 @@ BEGIN
   -- 8. Mark consumed (single-use). The guard accepts this transition only for this receipt id.
   INSERT INTO public.receipt_consume_grants(receipt_id, txid) VALUES (p_receipt_id, txid_current());
   UPDATE public.governance_proof_receipts
-     SET status = 'consumed', consumed_at = now(),
+     SET status = 'consumed', consumed_at = v_now,
          consumed_event_id = v_ev.event_id, consumed_idempotency_key = p_idempotency_key
    WHERE receipt_id = p_receipt_id;
   DELETE FROM public.receipt_consume_grants WHERE receipt_id = p_receipt_id AND txid = txid_current();

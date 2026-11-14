@@ -287,11 +287,16 @@ CREATE CONSTRAINT TRIGGER guardian_permissions_require_event AFTER INSERT OR UPD
 -- A stored permission is effective only while its link is verified and the time window is open.
 -- This view is the ONLY read shape that may be used for a guardian access decision inside the Workspace DB;
 -- the service must still revalidate identity and legal authority at use (Phase 4, Q-007).
+-- The window uses clock_timestamp(), NOT now() (defect fixed 2026-11-14, same class as H-01 and the
+-- receipt-consume defect). now() is the transaction start time and does not advance, so a reader inside a
+-- long transaction would keep seeing a permission that expired while that transaction was open. Because
+-- this view IS the authorization read shape, that stale read would have been the access decision.
+-- Regression: CLK-01..03 in tests/workspace_clock_discipline_tests.sql (CLK-03 is the behavioural one).
 CREATE VIEW guardian_permissions_effective AS
   SELECT p.permission_id, p.guardian_link_id, l.student_id, l.guardian_platform_user_id, p.scope_key, p.valid_from, p.valid_until
     FROM guardian_permissions p JOIN student_guardian_links l ON l.link_id=p.guardian_link_id
    WHERE p.revoked_at IS NULL AND l.verification_state='verified'
-     AND p.valid_from <= now() AND (p.valid_until IS NULL OR p.valid_until > now());
+     AND p.valid_from <= clock_timestamp() AND (p.valid_until IS NULL OR p.valid_until > clock_timestamp());
 
 CREATE TABLE program_templates (
   template_id uuid PRIMARY KEY,
