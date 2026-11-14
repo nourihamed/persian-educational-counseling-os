@@ -492,3 +492,52 @@ quarantine resolution (OQ-SAGA-2), verified transport and signed wire format (OQ
 the entitlement period source (OQ-CRD-3), disposition of an expired reserved entitlement (OQ-CRD-2),
 per-subject exam results, curriculum subtopics and PlanItem, retention schema integration (Q-020), and
 contact change concurrency against HMAC rotation and against an ownership switch (NOT RUN).
+
+## Batch 1 — source transfer freeze and database write barrier (2026-11-14)
+
+`docs/phase2/workspace/tests/workspace_transfer_freeze_tests.sql` — FRZ-01..FRZ-37, run on a fresh database
+by workflow step "Workspace source transfer freeze and database write barrier". 37 assertions, 36 PASS lines
+(FRZ-26 and FRZ-27 share one line). Coverage:
+
+- FRZ-01 asserts from the catalog, not from a list in the test, that **all 26** student-scoped tables carry
+  the barrier trigger. The count comes from `student_write_barrier_coverage`, so a new student-scoped table
+  added without a barrier makes this test fail rather than silently passing.
+- FRZ-02..FRZ-09 authority: the Workspace runtime, worker and exporter roles cannot freeze or unfreeze; only
+  the transfer-controller identity can.
+- FRZ-10..FRZ-15 freeze record integrity: uniqueness per token and per (student, case, source generation),
+  one live freeze per student, stale source generation refused, a different token for the same case refused,
+  non-zero outstanding work refused.
+- FRZ-16..FRZ-22 the write barrier: INSERT, UPDATE and DELETE on student-scoped tables are refused while
+  frozen, including **as the table owner**, which is a stronger claim than refusing the runtime role —
+  FRZ-16/17 originally reported a privilege error (42501) rather than the barrier's own check violation
+  (23514), and were moved to run as the owner so they test the barrier and not the grant.
+- FRZ-23..FRZ-29 unfreeze: pre-switch only, token-bound and case-bound, idempotent on replay, writes resume
+  after an abort, an unfrozen record cannot be reactivated.
+- FRZ-30..FRZ-37 the fence: after the source observes the switch the freeze becomes permanent, unfreeze is
+  refused with a distinct message, the bypass row is transaction-scoped and keyed on `txid_current()`, and
+  the freeze audit records `('signed_receipt', false)` so no authenticity is implied.
+
+`docs/phase2/workspace/tests/workspace_freeze_barrier_race.sh` — WS-FRZ-BARRIER-01..04, run in **two modes**
+by workflow step "Workspace in-flight transaction barrier race (both modes)". 8 PASS lines.
+
+- The coordination is deterministic, not timing-based: the in-flight writer waits for an explicit go signal,
+  and the driver sends it only after observing the freeze blocked on a lock in `pg_stat_activity`.
+- BARRIER-01 the freeze blocks until the in-flight transaction settles; BARRIER-02 the in-flight write
+  **survives** (a barrier drains, it does not discard); BARRIER-03 `barrier_watermark_txid` is strictly later
+  than the drained writer's transaction id; BARRIER-04 no write is accepted after the barrier closed.
+- **Sensitivity was verified and the first version of this test was not sensitive.** With the `FOR SHARE`
+  lock removed from `assert_student_not_frozen`, mode `fk` (a `study_sessions` write) still passes, because
+  PostgreSQL's own foreign-key row lock blocks the freeze for any table with a foreign key to `students`.
+  Mode `nofk` writes `class_session_participants`, which is student-scoped but references
+  `class_participants` rather than `students`, and that mode **fails** (exit 2) without the barrier. Both
+  modes run; only `nofk` is evidence for the barrier this project added.
+
+Still NOT RUN / NOT IMPLEMENTED after this batch: the freeze of API, worker, import, export and file
+surfaces (those surfaces do not exist in this repository); correctness of the caller-reported outstanding-work
+count; freeze duration, drain timeout and acceptance thresholds (OQ-E, deliberately not invented); snapshot
+consistency, destination staging, real process crash, partition, chaos, outage/restore/failover and
+projection-drift repair (Saga contract section 10); quarantine resolution (OQ-SAGA-2); verified transport and
+signed wire format (OQ-SAGA-1, PS-1..PS-4/PS-6); the entitlement period source (OQ-CRD-3); disposition of an
+expired reserved entitlement (OQ-CRD-2); per-subject exam results; curriculum subtopics and PlanItem;
+retention schema integration (Q-020); and contact change concurrency against HMAC rotation and against an
+ownership switch.

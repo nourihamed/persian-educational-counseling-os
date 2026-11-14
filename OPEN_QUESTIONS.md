@@ -406,3 +406,25 @@ period ends) and OQ-CRD-3 (where the entitlement duration comes from) both remai
 **Why it matters:** uniqueness of question membership within a version relies on it; no item bank is modelled in Phase 2.
 **Recommended option:** model the item bank when assessment authoring is implemented.
 **Authority:** Educational domain owner.
+
+## Unresolved-item register (2026-11-14)
+
+A consolidated register of every unresolved item that gates Phase 2 now lives in
+`docs/phase2/UNRESOLVED_ITEM_REGISTER.md`, with a machine-readable twin in
+`docs/phase2/unresolved_items.json`. It covers Q-007, Q-020, OQ-CRD-2, OQ-CRD-3, OQ-SAGA-1, OQ-SAGA-2,
+OQ-ASM-1, OQ-D, OQ-E, PS-1..PS-8, M-05, M-06, WS-DOM-02, the transfer exception approval authority, the
+disposition of PR #8–#11 and branch synchronization. For each item it records the current status, why it is
+unresolved, the security or architecture impact, whether safe implementation may continue and under what
+fail-closed condition, the required decision owner, the options and a recommended option with its rationale.
+
+Three things that register does **not** do, and this file inherits them:
+
+- It does not close any item. An item is closed only by its named decision owner, never by documentation.
+- It does not convert a recommendation into an implementation. Where the code had to behave somehow while a
+  decision is open, it refuses, and the refusal names the open question.
+- It does not treat a green CI run, a CONDITIONAL PASS or the register itself as approval of Phase 2.
+
+**OQ-E note (2026-11-14):** the *database half* of the transfer freeze boundary is now implemented and
+tested (`docs/phase2/workspace/workspace_transfer_freeze.sql`). OQ-E itself remains **PARTIALLY DECIDED**:
+freeze duration, drain timeout, acceptance thresholds and the non-database surfaces are still open, and none
+of them was invented. See the register's OQ-E entry.

@@ -260,3 +260,122 @@ PS-1..PS-4/PS-6), the Saga's service-level behaviour remains specification only,
 PS-1..PS-8, the transfer exception authority, the OQ-D/OQ-E numeric objectives and the M-05/M-06
 definitions are all open. A DONE label in this document is the implementation's assessment of its own work,
 not a closed finding. The independent Supervisor makes the gate decision.
+
+---
+
+## 6. Batch 1 — source transfer freeze and database write barrier (same day, fourth pass)
+
+### 6.1 What the baseline inspection found
+
+Two facts decided the shape of this batch, and both are verifiable:
+
+1. **No application code exists.** `backend/`, `frontend/`, `scripts/`, `tests/` and `deployment/` contain
+   only `.gitkeep`. Every Batch 1 item phrased as service behaviour — dispatcher crash recovery, partition
+   and outage recovery, projection drift detection, quarantine forward recovery — has no process to crash,
+   partition or restart. Those items cannot be implemented in Phase 2 and are **not** claimed. Section 6.5
+   is the decision packet on that point.
+2. **The Workspace database had no freeze enforcement at all.** The Control Plane recorded
+   `transfer_cases.source_freeze_token` and `source_frozen_at`, but
+   `grep -rn "freeze\|frozen\|drain" docs/phase2/workspace/*.sql` returned **0 matches**. A source Workspace
+   could keep writing a student's data straight through cutover, so the final snapshot could miss writes
+   taken after it was made. This is the part of Batch 1 that *could* be built in a database-only phase, and
+   it is what was built.
+
+### 6.2 What is enforced now
+
+`docs/phase2/workspace/workspace_transfer_freeze.sql`:
+
+- A durable freeze record, unique per freeze token and per `(student_id, case_id, source_generation)`, with
+  a partial unique index allowing only one live freeze per student across the `frozen` and `fenced` states.
+- A write barrier: a `BEFORE INSERT OR UPDATE OR DELETE` row trigger on every student-scoped table, calling
+  `assert_student_not_frozen()`. Because it is a row trigger and not a privilege check, it binds **every**
+  writer — the Workspace runtime role, the worker, the exporter, and the project's own SECURITY DEFINER
+  commands. FRZ-16/17 assert the refusal **as the table owner**, which is the strongest available claim.
+- An in-flight transaction barrier: `assert_student_not_frozen()` takes `FOR SHARE` on the student row, and
+  `freeze_student_for_transfer()` takes `FOR UPDATE` on the student and on all its enrollments, so the
+  freeze cannot complete while a writer holds those rows. The transaction id at which the barrier closed is
+  recorded as `barrier_watermark_txid`.
+- Token-bound idempotency: the same token replayed is a no-op; a **different** token for the same case,
+  student and generation is refused rather than blindly accepted.
+- Unfreeze only before the ownership switch, bound to the same token and case, and refused once an inbox
+  event at a newer generation has been applied. After the switch the freeze becomes a permanent **fence**,
+  applied by the inbox projection under a transaction-scoped bypass keyed on `txid_current()`.
+
+### 6.3 Two defects found in this project's own work while testing it
+
+**A missing barrier on enrollment-scoped tables.** FRZ-18 failed on the first run: `counselor_assignments`,
+`activation_command_log` and `archive_command_log` carry no `student_id` — they are student-scoped only
+through `enrollment_id` — and the first version of the barrier keyed exclusively on `student_id`, so all
+three were unprotected. The trigger now takes a key-kind argument (`'student'` or `'enrollment'`) and
+resolves the student through the enrollment. Coverage went from **23** tables to **26**. FRZ-01 now asserts
+the count from `student_write_barrier_coverage` rather than from a list written into the test, so a new
+student-scoped table added without a barrier fails the test instead of passing silently.
+
+**A race test that proved nothing.** The first version of `workspace_freeze_barrier_race.sh` had the
+in-flight writer insert a `study_sessions` row, and it passed. Running the negative control — replacing
+`assert_student_not_frozen()` with a version identical except that the `FOR SHARE` lock is removed — showed
+it **still passed**. The reason is that `study_sessions` has a foreign key to `students`, so PostgreSQL
+itself takes a `KEY SHARE` lock on the student row and blocks the freeze. The test would have passed against
+a project with no barrier at all.
+
+The fix was to find a student-scoped table with no foreign-key path to `students`.
+`class_session_participants` is one: it carries `student_id` and is covered by the barrier, but its foreign
+keys point at `class_participants` and `class_sessions`. The race now runs in two modes, and the measured
+negative-control result is:
+
+| Mode | In-flight write | With the barrier | With `FOR SHARE` removed |
+|---|---|---|---|
+| `nofk` | `class_session_participants` | PASS (exit 0) | **FAIL (exit 2)** — "the in-flight writer never took the student row lock" |
+| `fk` | `study_sessions` | PASS (exit 0) | PASS (exit 0) — masked by the foreign-key lock |
+
+Both modes are wired into CI. Only `nofk` is evidence for the barrier this project added; `fk` is kept
+because it is the realistic end-to-end path. This distinction is written into the script's own header so a
+later reader cannot mistake the `fk` result for proof.
+
+### 6.4 Evidence
+
+| What | Result |
+|---|---|
+| `workspace_transfer_freeze_tests.sql` FRZ-01..FRZ-37 | 37 assertions, **36 PASS lines** (FRZ-26 and FRZ-27 share one line), 0 FAIL |
+| `workspace_freeze_barrier_race.sh`, modes `nofk` and `fk` | **8 PASS lines**, 0 FAIL |
+| Negative control, mode `nofk` | **FAILS as required** (exit 2) when the `FOR SHARE` barrier is removed |
+| Negative control, mode `fk` | passes even without the barrier — recorded as *not* evidence |
+| Full workflow, cleared PostgreSQL 16.15 cluster (0 leftover databases, 0 leftover roles) | **ALL_STEPS_PASSED** — all **20** runnable steps, **557 PASS assertion lines**, 0 FAIL, plus the Python verifier unit tests (`OK`) |
+| GitHub Actions at this HEAD | **NOT RUN.** Two new workflow steps and new SQL mean earlier Actions evidence does not cover this commit. The agent has no Actions access and cannot read job logs. |
+
+### 6.5 Decision packet — Batch 1 items that cannot be built in Phase 2
+
+The Supervisor brief lists these Batch 1 requirements. For each, what is possible in a database-only phase
+has been done, and the rest is stated as not done rather than quietly reinterpreted.
+
+| Batch 1 requirement | Status | Why |
+|---|---|---|
+| Source Workspace freeze and write drain | **DONE for the database**, NOT IMPLEMENTED beyond it | API, worker, import, export and file surfaces do not exist. Any surface that reaches this database is refused. |
+| In-flight transaction barrier | **DONE** | Enforced by row locks and tested with a sensitivity-verified race. |
+| Stale-owner rejection | **DONE** | Generation fencing in the inbox projection plus the freeze's stale-generation refusal. INB-01..22, FRZ-12. |
+| No simultaneous source and destination ownership | **DONE at the database level** | The ownership switch is a single Control Plane transaction; the source is fenced on observing it. Not a distributed atomicity claim. |
+| Auditability of every transition | **DONE** | Freeze, unfreeze and fence are audited, with `('signed_receipt', false)` recorded so no authenticity is implied. |
+| Lease expiry and retry | **DONE** (earlier batch) | Per-recipient delivery leases, attempts, dead-letter and re-drive. SAGA-R01..R32. |
+| Crash recovery at checkpoints | **NOT IMPLEMENTED** | Requires a dispatcher process. None exists. Lease expiry is the database-side precondition for it and is tested. |
+| Partition and outage recovery | **NOT IMPLEMENTED** | Requires two deployed databases and a network between them. |
+| Projection drift detection and repair | **NOT IMPLEMENTED** | Requires a comparison process across two databases. |
+| Quarantine forward recovery | **NOT IMPLEMENTED, and deliberately so** | OQ-SAGA-2 is open. A release path invented here would be an authenticated-transport bypass. |
+| Fault-injection tests | **PARTIAL** | Database-level fault injection is done (negative controls, lock contention, stale generations, bad hashes). Process-level fault injection has no process to kill. |
+
+**What this needs from the Product Owner and Supervisor:** a decision on whether a minimal service layer is
+in scope for Phase 2, or whether these items move to a later phase with the database preconditions
+(implemented and tested here) accepted as Phase 2's deliverable. The implementation has **not** assumed
+either answer. Building a service layer now would expand Phase 2's scope beyond "Database & Domain Model";
+not building it leaves the listed items open. Recommendation: **move them to a later phase**, because the
+brief's own phase boundary puts services after the data model, and accept the database preconditions as the
+Phase 2 deliverable — with the register entry for OQ-E stating plainly what remains.
+
+### 6.6 What is still not claimed
+
+- No production readiness for anything here. All of it is synthetic-only under D-014.
+- No freeze duration, drain timeout or acceptance threshold. OQ-E leaves them to measured design.
+- No correctness of the caller-reported outstanding-work count. The database only refuses to record a final
+  barrier when it is non-zero; it cannot see an application job queue.
+- No authenticity for the freeze receipt. Signing is OQ-SAGA-1 and PS-1..PS-4.
+- No distributed atomicity between the Control Plane and a Workspace database.
+- **Phase 2 is not self-approved.** This section is an implementation report, not a review.

@@ -242,6 +242,54 @@ SELECT format('REVOKE ALL ON FUNCTION reactivate_student_enrollment(text,uuid,uu
   'ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 \endif
 
+-- Source transfer freeze and write barrier (workspace_transfer_freeze.sql). Applied only when loaded.
+SELECT to_regprocedure('freeze_student_for_transfer(uuid,text,uuid,uuid,bigint,text,integer,timestamptz)') IS NOT NULL AS has_freeze \gset
+\if :has_freeze
+DO $freeze_role$
+DECLARE r text := 'ws_'||current_setting('app.workspace_key')||'_transfer_ctl';
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=r) THEN
+    EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS', r);
+  END IF;
+END $freeze_role$;
+DO $freeze_owner$
+DECLARE r text := 'ws_'||current_setting('app.workspace_key')||'_freeze_owner';
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=r) THEN
+    EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS', r);
+  END IF;
+END $freeze_owner$;
+SELECT format('ALTER FUNCTION freeze_student_for_transfer(uuid,text,uuid,uuid,bigint,text,integer,timestamptz) OWNER TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_freeze_owner') \gexec
+SELECT format('ALTER FUNCTION unfreeze_student_after_abort(text,uuid,text) OWNER TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_freeze_owner') \gexec
+SELECT format('GRANT SELECT ON TABLE students,enrollments,workspace_inbox_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_freeze_owner') \gexec
+SELECT format('GRANT UPDATE(student_id) ON TABLE students TO %I', 'ws_'||current_setting('app.workspace_key')||'_freeze_owner') \gexec
+SELECT format('GRANT UPDATE(enrollment_id) ON TABLE enrollments TO %I', 'ws_'||current_setting('app.workspace_key')||'_freeze_owner') \gexec
+SELECT format('GRANT SELECT,INSERT,UPDATE ON TABLE student_transfer_freezes TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_freeze_owner') \gexec
+SELECT format('GRANT SELECT ON TABLE student_write_barrier_bypass TO %I', 'ws_'||current_setting('app.workspace_key')||'_freeze_owner') \gexec
+SELECT format('ALTER FUNCTION assert_student_not_frozen(uuid) OWNER TO %I', 'ws_'||current_setting('app.workspace_key')||'_freeze_owner') \gexec
+SELECT format('GRANT INSERT ON TABLE audit_events TO %I', 'ws_'||current_setting('app.workspace_key')||'_freeze_owner') \gexec
+-- Only the transfer controller may freeze or unfreeze. The Workspace runtime, worker and exporter cannot,
+-- and no identity may write the freeze record or the barrier exemption directly.
+SELECT format('GRANT EXECUTE ON FUNCTION freeze_student_for_transfer(uuid,text,uuid,uuid,bigint,text,integer,timestamptz) TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_transfer_ctl') \gexec
+SELECT format('GRANT EXECUTE ON FUNCTION unfreeze_student_after_abort(text,uuid,text) TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_transfer_ctl') \gexec
+SELECT format('REVOKE ALL ON FUNCTION freeze_student_for_transfer(uuid,text,uuid,uuid,bigint,text,integer,timestamptz) FROM PUBLIC,%I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('REVOKE ALL ON FUNCTION unfreeze_student_after_abort(text,uuid,text) FROM PUBLIC,%I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter','ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
+SELECT format('REVOKE ALL ON TABLE student_transfer_freezes,student_write_barrier_bypass FROM PUBLIC,%I,%I,%I,%I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_worker','ws_'||current_setting('app.workspace_key')||'_exporter','ws_'||current_setting('app.workspace_key')||'_function_owner',
+  'ws_'||current_setting('app.workspace_key')||'_transfer_ctl') \gexec
+SELECT format('GRANT SELECT ON TABLE student_transfer_freezes TO %I,%I',
+  'ws_'||current_setting('app.workspace_key')||'_runtime','ws_'||current_setting('app.workspace_key')||'_transfer_ctl') \gexec
+SELECT format('GRANT SELECT ON student_write_barrier_coverage TO %I', 'ws_'||current_setting('app.workspace_key')||'_runtime') \gexec
+\endif
+
 -- Saga inbox (workspace_inbox_projection.sql). Applied only when that draft is loaded.
 SELECT to_regprocedure('apply_inbox_event_synthetic(uuid,integer,text,jsonb,bytea,uuid,uuid,uuid,bigint,uuid)') IS NOT NULL AS has_inbox \gset
 \if :has_inbox
@@ -262,6 +310,10 @@ SELECT format('GRANT SELECT ON TABLE workspace_profile,students,enrollments,coun
   'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
 -- Row-lock privilege only; workspace_inbox_events is append-only through its trigger.
 SELECT format('GRANT UPDATE(event_id) ON TABLE workspace_inbox_events TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+SELECT format('GRANT SELECT,INSERT,DELETE ON TABLE student_write_barrier_bypass TO %I',
+  'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
+SELECT format('GRANT SELECT,UPDATE(state,fenced_at,fenced_generation) ON TABLE student_transfer_freezes TO %I',
   'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec
 SELECT format('GRANT SELECT,INSERT ON TABLE workspace_inbox_events TO %I',
   'ws_'||current_setting('app.workspace_key')||'_inbox_owner') \gexec

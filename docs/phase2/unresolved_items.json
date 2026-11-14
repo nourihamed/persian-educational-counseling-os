@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "generated_for": "Phase 2 — Database & Domain Model, Independent-Supervisor-Governed Implementation",
+  "generated_at": "2026-11-14",
+  "generated_by": "implementation agent (NOT the Supervisor, NOT the Product Owner)",
+  "rules": [
+    "An item is closed only by its named decision owner, never by documenting it here.",
+    "No item in this register has been resolved by the implementation.",
+    "status values: OPEN | PARTIALLY_DECIDED | DEFERRED | RESOLVED | FACTUALLY_CORRECTED",
+    "implementation_may_continue states whether SAFE work unrelated to the undecided part may proceed; it never means the item is answered."
+  ],
+  "items": [
+    {
+      "id": "Q-007",
+      "title": "Detailed parent/guardian access matrix and legal-authority verification",
+      "status": "PARTIALLY_DECIDED",
+      "why_unresolved": "The high-level policy (Option A, per OQ-G and the 2026-11-07 Product Owner decisions) is accepted: per-child, per-permission scoping with expiry, revocation and audit. The detailed matrix by age and legal status under Iranian law, the acceptable evidence of guardianship, the conflict and exception rules, and the exact read/action scopes are not decided and require legal review.",
+      "security_impact": "HIGH. Guardian authority is an authorization input. Guessing it would grant a third party access to a minor's educational, financial and assessment data. Private counselor notes and confidential conversations are involved.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Guardian projections and parent-facing surfaces stay fail-closed: student_guardian_links carries no effective permission grant, and no parent API exists. Non-guardian work proceeds.",
+      "decision_owner": "Product Owner with Iranian legal counsel",
+      "options": [
+        "A. Commission the legal review now and derive the matrix from it before any parent surface is built.",
+        "B. Ship a minimum matrix (overall progress, weekly execution, exam trend, critical alerts only) under explicit written Product Owner acceptance of the legal risk, and defer everything else.",
+        "C. Defer the whole parent panel out of the MVP."
+      ],
+      "recommended_option": "A",
+      "rationale": "Phase 23 (Parent Panel) is far from the current phase, so nothing is blocked by waiting, and a legally wrong matrix cannot be fixed retroactively once data has been disclosed."
+    },
+    {
+      "id": "Q-020",
+      "title": "Tenant data-retention periods and the criteria for dropping tenant roles",
+      "status": "PARTIALLY_DECIDED",
+      "why_unresolved": "D-017/D-018 decided the principle (no automatic role deletion, a five-step lifecycle, data minimisation, per-category rules, extensions only by recorded decision). Every actual duration is still NEEDS-DECISION or LEGAL-REVIEW, the named reviewers are not appointed, and the approver of role deletion is not recorded.",
+      "security_impact": "MEDIUM for Phase 2. It becomes HIGH at first tenant offboarding: without a retention rule, tenant roles and tenant data are either destroyed too early (losing audit evidence) or kept indefinitely (a privacy exposure).",
+      "implementation_may_continue": true,
+      "continue_conditions": "No Phase 2 artifact deletes tenant data or drops a tenant role. Retention is referenced, never enforced with an invented number.",
+      "decision_owner": "Product Owner with legal, tax and privacy reviewers",
+      "options": [
+        "A. Set per-category durations now from the draft schedule, after legal/tax review.",
+        "B. Set a single conservative interim retention period for all categories and revisit before the pilot.",
+        "C. Keep it open until the first offboarding feature is scheduled (Phase 4 or later)."
+      ],
+      "recommended_option": "A",
+      "rationale": "The draft schedule already enumerates the categories, so the remaining work is review rather than design, and a single interim number (option B) would almost certainly be wrong for billing and audit records."
+    },
+    {
+      "id": "OQ-CRD-2",
+      "title": "Disposition of a reserved entitlement after its original period ends",
+      "status": "OPEN",
+      "why_unresolved": "When a student is archived inside the reversal window the credit is returned; when archived outside it, the entitlement is held as reserved. What happens to that reserved entitlement once its original period has elapsed — expire, extend, return, or convert — is a commercial rule that has not been decided.",
+      "security_impact": "LOW for security, HIGH for billing correctness. A wrong rule silently gives away or silently destroys paid credit.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Reactivation against a reserved entitlement is implemented and tested; no expiry, extension or automatic return of a reserved entitlement is implemented. Nothing reads the elapsed period.",
+      "decision_owner": "Product Owner",
+      "options": [
+        "A. The reserved entitlement expires at the end of its original period and the credit is not returned.",
+        "B. The reserved entitlement expires but the credit is returned to the wallet.",
+        "C. The reserved entitlement is held indefinitely until it is reused or explicitly released.",
+        "D. The period is extended by the archived duration, so the counselor loses no paid time."
+      ],
+      "recommended_option": "D",
+      "rationale": "It matches what the counselor paid for (a quantity of service, not a wall-clock window), it cannot destroy paid credit, and unlike C it is bounded. This is a recommendation for the Product Owner, not a decision: nothing in the implementation assumes it."
+    },
+    {
+      "id": "OQ-CRD-3",
+      "title": "Source of the entitlement duration",
+      "status": "OPEN",
+      "why_unresolved": "Activating a student must set an entitlement period, but whether the duration comes from the purchased product, the counselor's plan, the program, or an explicit per-student parameter has not been decided.",
+      "security_impact": "LOW for security, HIGH for billing correctness.",
+      "implementation_may_continue": true,
+      "continue_conditions": "The production entry point activate_student_enrollment() is fail-closed: resolve_student_entitlement_period() raises feature_not_supported and names OQ-CRD-3. The working path exists only as activate_student_enrollment_synthetic(), which requires the period to be passed explicitly and is restricted to the synthetic executor role under D-014.",
+      "decision_owner": "Product Owner",
+      "options": [
+        "A. The purchased product/plan carries the duration.",
+        "B. The counselor sets it per student within plan-defined bounds.",
+        "C. The program template carries it.",
+        "D. A platform-wide default with per-product override."
+      ],
+      "recommended_option": "A",
+      "rationale": "It keeps the billing rule in the billing domain, which is where the money and the audit trail already are, and leaves B available later as a bounded override. Not decided; the entry point stays fail-closed."
+    },
+    {
+      "id": "OQ-SAGA-1",
+      "title": "Canonical wire format and signing for Saga envelopes",
+      "status": "OPEN",
+      "why_unresolved": "The outbox envelope carries payload_hash, schema_version and correlation identifiers, but the canonical byte encoding, the hash and signature algorithms, and the key policy are not decided. They depend on PS-1..PS-4.",
+      "security_impact": "HIGH. Without authenticated transport, a Workspace cannot distinguish a genuine ownership-switch event from a forged one, which is a cross-tenant takeover path.",
+      "implementation_may_continue": true,
+      "continue_conditions": "apply_inbox_event() is fail-closed through assert_inbox_transport_verified(). The working projection exists only as apply_inbox_event_synthetic() under the synthetic inbox role (D-014). No signature is invented and no authenticity is claimed.",
+      "decision_owner": "Platform Security with Product Owner",
+      "options": [
+        "A. Decide PS-1..PS-4 first and derive this from them.",
+        "B. Define the canonical encoding now (which is a deterministic serialization question) and leave the algorithms to PS-1/PS-2.",
+        "C. Keep the whole item closed until Phase 18/19."
+      ],
+      "recommended_option": "B",
+      "rationale": "Canonical encoding is independent of the cipher choice and is the part that silently breaks compatibility if decided late; it can be settled without pre-empting Platform Security."
+    },
+    {
+      "id": "OQ-SAGA-2",
+      "title": "Resolution of a quarantined inbox event",
+      "status": "OPEN",
+      "why_unresolved": "An inbox event that fails verification or integrity is quarantined. Who may inspect it, who may release or discard it, and what evidence that requires is not decided.",
+      "security_impact": "HIGH. A release path is an authenticated-transport bypass if its authority is not defined; without any path, a single bad event can strand a student's ownership.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Quarantine records the outcome and stops the projection. No release or discard command exists. Forward recovery is operator re-drive of the delivery at the Control Plane, which never alters the event.",
+      "decision_owner": "Product Owner with Platform Security",
+      "options": [
+        "A. No release path: a quarantined event is always re-issued as a new event by the Control Plane.",
+        "B. A two-person operator release with recorded evidence.",
+        "C. Platform-admin release with audit."
+      ],
+      "recommended_option": "A",
+      "rationale": "It keeps the immutable-event guarantee intact and needs no new authority: re-drive and re-issue already exist. B and C both create a privileged path that would have to be defended against misuse."
+    },
+    {
+      "id": "OQ-ASM-1",
+      "title": "Item-bank ownership and the meaning of item_ref",
+      "status": "OPEN",
+      "why_unresolved": "Assessment version questions reference items by item_ref, but whether the item bank is platform-owned, Workspace-owned or external, and therefore what referential integrity is enforceable, is not decided.",
+      "security_impact": "MEDIUM. A Workspace-owned bank referenced without integrity is an unrestricted polymorphic reference, which the brief forbids; a platform-owned bank crosses the tenant boundary and needs its own authorization rule.",
+      "implementation_may_continue": true,
+      "continue_conditions": "item_ref is a constrained text reference inside the Workspace with no cross-database FK and no claim of integrity against an external bank. The immutable question set itself is implemented and tested.",
+      "decision_owner": "Product Owner",
+      "options": [
+        "A. Workspace-owned item bank with a real foreign key.",
+        "B. Platform-owned shared bank with explicit licensing and read authorization.",
+        "C. Both, distinguished by a reference kind, with integrity enforced per kind."
+      ],
+      "recommended_option": "A",
+      "rationale": "It is the only option that gives enforceable referential integrity inside Phase 2's tenancy model, and C can be added later without rewriting A."
+    },
+    {
+      "id": "OQ-D",
+      "title": "Control Plane topology and recovery — numeric objectives",
+      "status": "PARTIALLY_DECIDED",
+      "why_unresolved": "Option A is accepted: independent Control Plane infrastructure, primary plus replica, independently controlled encrypted backups with restore drills, fail-closed student access when ownership cannot be validated. RPO, RTO, retention, failover consistency, split-brain prevention and measured capacity/cost remain open.",
+      "security_impact": "HIGH at operation, not at schema. Without a split-brain rule, two Control Plane primaries could both grant ownership.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Phase 2 produces schema and commands only. No deployment, no replication configuration and no availability claim. The fail-closed ownership rule is implemented.",
+      "decision_owner": "Product Owner with the operations owner",
+      "options": [
+        "A. Set RPO/RTO now from business tolerance and design to them.",
+        "B. Measure a representative workload first, then set them.",
+        "C. Defer to Phase 28 (Production Readiness)."
+      ],
+      "recommended_option": "B",
+      "rationale": "The brief forbids inventing SLOs, and numbers set without measurement would be either unachievable or meaningless. Measurement needs a running system, so this belongs with Phase 27/28 work, but the split-brain prevention rule should be decided earlier because it constrains the design."
+    },
+    {
+      "id": "OQ-E",
+      "title": "Transfer cutover — freeze boundary, duration, recovery and acceptance thresholds",
+      "status": "PARTIALLY_DECIDED",
+      "why_unresolved": "Option B is accepted: controlled source write freeze, final snapshot, destination staging and import, integrity validation, then the atomic Control Plane ownership switch. The freeze duration, the precise freeze boundary, failure recovery and acceptance thresholds were explicitly left to detailed design and tests.",
+      "security_impact": "HIGH. An imprecise freeze boundary means writes accepted after the snapshot are lost or applied to the wrong owner.",
+      "implementation_may_continue": true,
+      "continue_conditions": "The database half of the freeze boundary is now implemented and tested (see docs/phase2/workspace/workspace_transfer_freeze.sql): a durable freeze record, a write barrier on every student-scoped table, an in-flight transaction barrier with a recorded watermark, and a permanent fence after the switch. No freeze duration, drain timeout or acceptance threshold is invented or enforced. The application, worker, import and export surfaces named in the contract do not exist in this repository and are not claimed.",
+      "decision_owner": "Product Owner with the operations owner",
+      "options": [
+        "A. Set a maximum freeze duration and an acceptance threshold now, as a product promise.",
+        "B. Derive both from measured transfer runs once a service layer exists.",
+        "C. Leave the freeze open-ended and require manual operator confirmation per transfer."
+      ],
+      "recommended_option": "B",
+      "rationale": "A duration invented without a measured workload is the kind of number the brief forbids. C is acceptable as an interim operating rule while B is being measured, and the database already supports it because the freeze has no timeout."
+    },
+    {
+      "id": "PS-1",
+      "title": "Signature algorithm for authorization assertions",
+      "status": "DEFERRED",
+      "why_unresolved": "Deferred to Platform Security (Issue #13, Decision C). No algorithm has been chosen.",
+      "security_impact": "HIGH. Blocks production verification of every assertion and receipt.",
+      "implementation_may_continue": true,
+      "continue_conditions": "The production verifier is fail-closed. Tests use test doubles only and are labelled as such.",
+      "decision_owner": "Platform Security with Product Owner",
+      "options": ["A. Ed25519.", "B. ECDSA P-256.", "C. RSA-PSS.", "D. HMAC with a shared key."],
+      "recommended_option": "A",
+      "rationale": "Small keys, no parameter-choice footguns and wide library support. Stated as a recommendation only; nothing is implemented against it."
+    },
+    {
+      "id": "PS-2",
+      "title": "Algorithm allowlist values",
+      "status": "DEFERRED",
+      "why_unresolved": "Depends on PS-1 and has not been decided.",
+      "security_impact": "HIGH. Without an allowlist, algorithm-substitution attacks are not excluded.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No allowlist value is hard-coded anywhere; the verifier refuses.",
+      "decision_owner": "Platform Security",
+      "options": ["A. A single algorithm, no negotiation.", "B. A short allowlist with an explicit rejection of 'none'."],
+      "recommended_option": "A",
+      "rationale": "A single algorithm removes negotiation, which is where most signature-verification vulnerabilities live."
+    },
+    {
+      "id": "PS-3",
+      "title": "Issuer-key registry design and implementation",
+      "status": "DEFERRED",
+      "why_unresolved": "Deferred to Platform Security. No registry exists.",
+      "security_impact": "HIGH. Without it there is no way to know which key may sign for which issuer.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No key material and no issuer trust list is stored in Phase 2 artifacts.",
+      "decision_owner": "Platform Security",
+      "options": ["A. A Control Plane registry table.", "B. An external KMS/HSM as the authority.", "C. Static configuration per deployment."],
+      "recommended_option": "B",
+      "rationale": "Key custody belongs outside the application database; A can hold references to it without holding the keys."
+    },
+    {
+      "id": "PS-4",
+      "title": "Key provisioning, storage, rotation and revocation procedures",
+      "status": "DEFERRED",
+      "why_unresolved": "Deferred to Platform Security. No procedure exists.",
+      "security_impact": "HIGH. Rotation without a procedure is an outage; compromise without revocation is unbounded.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Contact-identity HMAC rotation is implemented as a mechanism only. No key policy, rotation schedule or revocation source is invented.",
+      "decision_owner": "Platform Security",
+      "options": ["A. KMS-managed rotation with overlapping validity.", "B. Manual rotation under a runbook.", "C. No rotation before the pilot."],
+      "recommended_option": "A",
+      "rationale": "Overlapping validity is what makes rotation possible without downtime, and it has to be designed before the first key is issued."
+    },
+    {
+      "id": "PS-5",
+      "title": "Clock-skew allowance for not_before / expires_at",
+      "status": "DEFERRED",
+      "why_unresolved": "Deferred; no allowance has been set.",
+      "security_impact": "MEDIUM. Too large an allowance extends the life of a revoked assertion; too small causes spurious failures.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No skew allowance is implemented. Expiry comparisons use clock_timestamp() with no tolerance.",
+      "decision_owner": "Product Owner with Platform Security",
+      "options": ["A. Zero tolerance plus mandatory NTP.", "B. A small fixed allowance (for example 30 seconds).", "C. A configurable allowance with an upper bound."],
+      "recommended_option": "C",
+      "rationale": "A bounded configurable value survives real deployment conditions without being an unbounded weakening."
+    },
+    {
+      "id": "PS-6",
+      "title": "Certificate authority, trust store and mTLS identity for the verifier-to-adapter channel",
+      "status": "DEFERRED",
+      "why_unresolved": "Deferred to Platform Security.",
+      "security_impact": "HIGH. The channel that carries authorization decisions is unauthenticated until this is decided.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No transport is implemented. verifier_rt holds no receipt-consumption or governance-command privilege, which was verified by test.",
+      "decision_owner": "Platform Security",
+      "options": ["A. Private CA with mTLS.", "B. Service-mesh identity.", "C. Bearer tokens over TLS."],
+      "recommended_option": "A",
+      "rationale": "Mutual authentication is the property being relied on; a bearer token authenticates only one side."
+    },
+    {
+      "id": "PS-7",
+      "title": "Deployment topology of the verifier service and the adapter",
+      "status": "DEFERRED",
+      "why_unresolved": "Deferred to Platform Security / Product Owner.",
+      "security_impact": "MEDIUM. Topology determines the blast radius of a compromised adapter.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No service exists to deploy. Phase 2 defines the database boundary only.",
+      "decision_owner": "Platform Security with Product Owner",
+      "options": ["A. A separate verifier service.", "B. A library inside each service.", "C. A sidecar per workload."],
+      "recommended_option": "A",
+      "rationale": "A separate service keeps key access out of application processes, which is the reason the boundary exists."
+    },
+    {
+      "id": "PS-8",
+      "title": "Revocation source for receipts and propagation of membership revocation",
+      "status": "DEFERRED",
+      "why_unresolved": "Deferred. No revocation source is defined for API, export, worker or notification handoffs.",
+      "security_impact": "HIGH. Blocks any end-to-end freshness claim: a revoked membership may still be honoured downstream.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No freshness or end-to-end revocation claim is made anywhere in Phase 2. Governance events record revocation in the database; propagation beyond it is not implemented.",
+      "decision_owner": "Product Owner with Platform Security",
+      "options": ["A. Short-lived receipts, no revocation list.", "B. A revocation list consulted on every use.", "C. Both: short lifetimes plus a list for emergencies."],
+      "recommended_option": "C",
+      "rationale": "Short lifetimes bound the normal case; a list is the only answer for an urgent revocation, and the two are complementary."
+    },
+    {
+      "id": "M-05",
+      "title": "Supervisor finding M-05 — definition not in the implementation record",
+      "status": "OPEN",
+      "why_unresolved": "The finding is referenced in the Supervisor review material but its text was never supplied to the implementation. It cannot be acted on, and guessing what it says would be inventing a finding.",
+      "security_impact": "UNKNOWN. It cannot be assessed without the definition.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Unrelated work continues. M-05 is not claimed as addressed anywhere.",
+      "decision_owner": "Supervisor",
+      "options": ["A. Supply the finding text so it can be addressed.", "B. Withdraw it if superseded.", "C. Restate it against the current head."],
+      "recommended_option": "C",
+      "rationale": "The head has moved substantially since the finding was raised, so a restatement against the current head is both actionable and avoids work on a finding that may already be resolved."
+    },
+    {
+      "id": "M-06",
+      "title": "Supervisor finding M-06 — definition not in the implementation record",
+      "status": "OPEN",
+      "why_unresolved": "Same as M-05. One reference in SUPERVISOR_REVIEW.md associates M-06 with load-scenario order and an L-10 dependency, but that is not a sufficient definition to implement against, and SUPERVISOR_REVIEW.md is Supervisor-owned and must not be edited by the implementation.",
+      "security_impact": "UNKNOWN.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Unrelated work continues. M-06 is not claimed as addressed.",
+      "decision_owner": "Supervisor",
+      "options": ["A. Supply the finding text.", "B. Withdraw it if superseded.", "C. Restate it against the current head."],
+      "recommended_option": "C",
+      "rationale": "As for M-05."
+    },
+    {
+      "id": "WS-DOM-02",
+      "title": "Membership role source of truth and trusted authorization",
+      "status": "PARTIALLY_DECIDED",
+      "why_unresolved": "The competing-role-source part is closed: the scalar workspace_memberships.role_key is gone and membership_roles is the canonical projection. What remains open is the trusted authorization adapter: authenticated actor evidence is not cryptographically verified, no grantability/anti-self-escalation matrix is enforced, and no application role may execute the governance commands. That depends on Issue #13 and PS-1..PS-8.",
+      "security_impact": "HIGH. Until it is closed, a governance command has no verifiable authority behind it, so role grants cannot be trusted as an authorization basis.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Governance commands are restricted to dedicated owner roles; no application role can append events; the production verifier is fail-closed; verifier_rt was tested to hold no receipt-consumption or governance privilege.",
+      "decision_owner": "Platform Security with Product Owner (Issue #13)",
+      "options": [
+        "A1/B3 as proposed in Issue #13: a trusted governance authorization adapter with a fail-closed verifier.",
+        "B. A database-only authority model with no external verification.",
+        "C. Defer governance commands entirely out of Phase 2."
+      ],
+      "recommended_option": "A1/B3",
+      "rationale": "It is the option already proposed and reviewed in Issue #13, and it is the only one that lets a role grant carry evidence of who authorized it. B would make the database its own authority, which is what the current fail-closed design deliberately avoids."
+    },
+    {
+      "id": "TRANSFER-EXC-AUTH",
+      "title": "Who may authorize a transfer approval-conflict exception",
+      "status": "OPEN",
+      "why_unresolved": "Separation of duties means the same actor may not both request and approve a transfer. Whether an exception may ever be granted, by whom, with what evidence, and with what audit, is not decided.",
+      "security_impact": "HIGH. An exception path is a separation-of-duties bypass, which is the control that prevents a single actor from moving a student between Workspaces unilaterally.",
+      "implementation_may_continue": true,
+      "continue_conditions": "transfer_approval_conflict_exceptions exists with CHECK (enabled = false), so no exception can be enabled by any role. The table exists only so that the decision has somewhere to land; it grants nothing today.",
+      "decision_owner": "Product Owner",
+      "options": [
+        "A. No exception ever: a conflict must be resolved by involving a second actor.",
+        "B. Platform-admin exception with recorded justification and audit.",
+        "C. Two-person platform-admin exception."
+      ],
+      "recommended_option": "A",
+      "rationale": "The control exists precisely for the single-actor case, and an exception path reintroduces exactly the risk it was built to prevent. If an exception is required for operational reasons, C is preferable to B because it does not rely on one administrator's judgement."
+    },
+    {
+      "id": "PR-8-11-DISPOSITION",
+      "title": "Disposition of pull requests #8, #9, #10 and #11",
+      "status": "OPEN",
+      "why_unresolved": "All four are open drafts against main at ba5e9d8 (verified 2026-11-14 by reading the repository). PR #12 does not merge or supersede their Git history. Whether each is to be merged, closed as superseded, or rebased has not been instructed.",
+      "security_impact": "NONE directly. The risk is process: four open drafts of the same documentation make it ambiguous which text is current.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No PR is merged, rebased, force-pushed or closed by the implementation. Work continues only on the PR #12 branch.",
+      "decision_owner": "Product Owner, on Supervisor advice",
+      "options": [
+        "A. Close #8-#11 as superseded by #12, after confirming no unique content is lost.",
+        "B. Merge them in order, then rebase #12.",
+        "C. Leave all five open until Phase 2 is approved."
+      ],
+      "recommended_option": "A",
+      "rationale": "Their content has been consolidated into the #12 branch, and keeping four stale drafts open invites a reviewer to read superseded text. The confirmation that no unique content is lost should be produced before closing; the implementation can prepare that diff on request.",
+      "evidence": {
+        "verified_at": "2026-11-14",
+        "pr_8": {"head": "7d1ce9f3649a4125b5f19f5cfd292327d5a6b3f3", "base": "main@ba5e9d8", "state": "open", "draft": true},
+        "pr_9": {"head": "d72c401510045075441d881838a515cd1ea9921a", "base": "main@ba5e9d8", "state": "open", "draft": true},
+        "pr_10": {"head": "30cc32fff9583f0d85726cbd33d142579d97a2a1", "base": "main@ba5e9d8", "state": "open", "draft": true},
+        "pr_11": {"head": "ce20f5fa143d0556db92ac4a1db88153367ea909", "base": "main@ba5e9d8", "state": "open", "draft": true}
+      }
+    },
+    {
+      "id": "BRANCH-SYNC",
+      "title": "Branch synchronization: is the PR #12 branch behind main?",
+      "status": "FACTUALLY_CORRECTED",
+      "why_unresolved": "The item is kept open because the decision on PR #8-#11 may still move main. The specific claim carried in PROJECT_STATE.md and in earlier reports — that PR #12 is behind main — is NOT TRUE at the current head and has been corrected.",
+      "security_impact": "NONE. It is a correctness-of-reporting issue.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No rebase and no force-push, per the standing constraint.",
+      "decision_owner": "Product Owner",
+      "options": [
+        "A. Leave the branch as it is; it already contains main.",
+        "B. Rebase once #8-#11 are dispositioned, if main moves."
+      ],
+      "recommended_option": "A",
+      "rationale": "Measured on 2026-11-14: main's tip is ba5e9d8 and `git merge-base --is-ancestor ba5e9d8 HEAD` succeeds, so the PR #12 branch already contains all of main. There is nothing to synchronize until main moves. If #8-#11 are merged, B applies and needs an explicit instruction because rebasing is otherwise forbidden."
+    }
+  ]
+}

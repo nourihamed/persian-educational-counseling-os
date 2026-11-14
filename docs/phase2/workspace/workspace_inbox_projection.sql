@@ -160,6 +160,13 @@ BEGIN
   IF v_outcome IS NULL THEN
     IF v_is_source THEN
       -- The student has left: fence the local projection at the new generation and end the assignments.
+      -- These are writes to barrier-guarded tables and the student may be frozen for this very transfer,
+      -- so the inbox takes a transaction-scoped exemption for exactly this work and releases it below.
+      IF to_regclass('public.student_write_barrier_bypass') IS NOT NULL THEN
+        INSERT INTO public.student_write_barrier_bypass(student_id, txid, reason)
+        VALUES (v_student, txid_current(), 'transfer_fence_projection')
+        ON CONFLICT DO NOTHING;
+      END IF;
       UPDATE public.enrollments
          SET ownership_generation = p_ownership_generation,
              state = 'ended',
@@ -167,6 +174,15 @@ BEGIN
        WHERE enrollment_id = v_enrollment;
       UPDATE public.counselor_assignments SET state='ended', ended_at=v_now
        WHERE enrollment_id = v_enrollment AND state='active';
+      -- A live freeze for this student becomes a PERMANENT fence: the switch has been observed, so the
+      -- pre-switch unfreeze path is closed for good.
+      IF to_regclass('public.student_transfer_freezes') IS NOT NULL THEN
+        UPDATE public.student_transfer_freezes
+           SET state='fenced', fenced_at=v_now, fenced_generation=p_ownership_generation
+         WHERE student_id = v_student AND state = 'frozen';
+        DELETE FROM public.student_write_barrier_bypass
+         WHERE student_id = v_student AND txid = txid_current();
+      END IF;
     ELSE
       -- The student has arrived: the local projection advances to exactly N+1.
       UPDATE public.enrollments

@@ -1,19 +1,20 @@
 # CURRENT PROJECT STATE — PHASE 2 (updated 2026-11-14)
 
-**Document date:** 2026-11-14. **Branch HEAD this document describes:** `db3fbdf2ba1fe1d2a0fba2163c5e2c367054272d`
-on `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, Draft, open, **unmerged**).
+**Document date:** 2026-11-14. **Branch HEAD this document describes:** the Batch 1 source-freeze and
+write-barrier commit on `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, Draft, open,
+**unmerged**).
 **Phase 2 gate: NOT READY. Phase 3: NOT AUTHORIZED.** D-014 synthetic-only remains in force.
 
 ## Verification status at this HEAD — local and CI are reported separately
 
-| Kind | What it is | Result at `db3fbdf` |
+| Kind | What it is | Result |
 |---|---|---|
-| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — all 18 runnable steps, **511 PASS assertion lines**, plus the Python verifier-contract unit tests (`OK`) |
-| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 at this exact SHA | **success** — run [43504583054](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43504583054), job 132158760370 (a companion run, 43504575056, also succeeded) |
+| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — all **20** runnable steps, **557 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (`OK`) |
+| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** The Batch 1 commit adds SQL and two new workflow steps, so earlier Actions evidence does not cover it. The last independently verified SHA is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233 (companion run 43551717243 also succeeded). A fresh Actions run at the new SHA is required, and the implementation agent cannot read Actions logs. |
 
-Both results above were produced at `db3fbdf`. Documentation-only commits made on top of it change no SQL
-and no test, so they do not invalidate these results; any commit that touches SQL or tests requires a fresh
-local run and a fresh Actions run at its own SHA.
+Any commit that touches SQL or tests requires a fresh local run and a fresh Actions run at its own SHA.
+Documentation-only commits on top of a verified SHA change no SQL and no test, so they do not invalidate
+its results.
 
 The two are different kinds of evidence and neither substitutes for the other. The local run is executed by
 the implementation agent and is not independently reproduced. The Actions run is executed by CI at the exact
@@ -363,3 +364,59 @@ Product Owner approved the MVP role grantability matrix on 2026-11-10; see `docs
 - Implemented as drafts with tests: contact change (`cp_08`, `cp_09`, `cp_40`, `cp_46`), Workspace archive with capacity release.
 - Open: Saga outbox/inbox reconciliation, approval-recording command, reactivation and policy-dependent capacity rows, WS-DOM-04 remainder, MEDIUM items, M-05/M-06, PR #8–#11, PR #12 behind main, all Product Owner / Platform Security decisions.
 - Phase 2 gate: NOT READY. Phase 3: unauthorized. Real data: prohibited (D-014). PR #12: Draft, open, unmerged.
+
+## Update 2026-11-14 (fourth) — Batch 1: source transfer freeze and database write barrier
+
+- **A real enforcement gap was found and closed.** Before this commit the Control Plane recorded that a
+  source freeze had happened (`transfer_cases.source_freeze_token`, `source_frozen_at`) and the Workspace
+  database enforced **nothing**: `grep -rn "freeze\|frozen\|drain" docs/phase2/workspace/*.sql` returned 0
+  matches. A source Workspace could keep writing a student's data straight through cutover, so the final
+  snapshot could miss writes taken after it. The database half of the OQ-E freeze boundary is now
+  implemented in `docs/phase2/workspace/workspace_transfer_freeze.sql`.
+- **What is enforced:** a durable freeze record (unique per token and per student/case/source generation);
+  a write barrier trigger on **all 26** student-scoped tables, which binds every writer including the
+  Workspace runtime role and the SECURITY DEFINER commands because it is a row trigger and not a privilege
+  check; an **in-flight transaction barrier** (`FOR SHARE` on the student row inside
+  `assert_student_not_frozen`, plus `FOR UPDATE` on the student and all its enrollments in the freeze
+  command) with the closing transaction id recorded as `barrier_watermark_txid`; token-bound idempotency;
+  unfreeze only before the ownership switch; and a **permanent fence** once the source has observed the
+  switch, applied by the inbox projection under a transaction-scoped bypass.
+- **A second gap was found while testing it.** `counselor_assignments`, `activation_command_log` and
+  `archive_command_log` are student-scoped only through `enrollment_id` and were therefore unprotected by
+  the first version of the barrier. The barrier trigger now takes a key-kind argument and resolves the
+  student through the enrollment. Coverage went from 23 tables to 26; FRZ-01 asserts the count from the
+  catalog rather than from a list in the test.
+- **Test evidence:** `workspace_transfer_freeze_tests.sql` FRZ-01..FRZ-37 (37 assertions, 36 PASS lines —
+  FRZ-26 and FRZ-27 share one line) and `workspace_freeze_barrier_race.sh` WS-FRZ-BARRIER-01..04 in two
+  modes (8 PASS lines). Both are wired into `.github/workflows/phase2-schema-tests.yml` as two new steps,
+  taking the workflow from 18 to 20 runnable steps.
+- **The race test's sensitivity was verified, and the first version of it was not sensitive.** Removing the
+  `FOR SHARE` lock from `assert_student_not_frozen` leaves the `fk` mode passing, because PostgreSQL's own
+  foreign-key row lock blocks the freeze for any table with a foreign key to `students`. The `nofk` mode
+  writes `class_session_participants`, which is student-scoped but references `class_participants` instead
+  of `students`, and that mode **fails** without the barrier. Both modes are run; only `nofk` is evidence.
+- **What is NOT claimed.** "Reject new writes, background jobs, file mutations, imports" also covers API,
+  worker, import and export surfaces that **do not exist in this repository** (`backend/`, `frontend/`,
+  `scripts/`, `tests/` contain only `.gitkeep`). What is claimed is that any surface which reaches this
+  database is refused. The outstanding-work count is reported *by the caller*; the database only refuses to
+  record a final barrier when it is non-zero, which is not evidence that the controller counted correctly.
+  No freeze duration, drain timeout or acceptance threshold is invented. The freeze receipt is not signed
+  (OQ-SAGA-1, PS-1..PS-4).
+- **A standing claim in this document was false and has been corrected.** "PR #12 behind main" was repeated
+  in several entries above and in earlier implementation reports. Measured on 2026-11-14: `main` is at
+  `ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114` and `git merge-base --is-ancestor ba5e9d8 HEAD` exits 0, so the
+  PR #12 branch already contains all of `main` and there is nothing to synchronize. The historical entries
+  above are left unedited as a record; this entry supersedes them on that point. See
+  `docs/phase2/UNRESOLVED_ITEM_REGISTER.md`, item BRANCH-SYNC.
+- **New:** `docs/phase2/UNRESOLVED_ITEM_REGISTER.md` and `docs/phase2/unresolved_items.json` are the
+  mandatory unresolved-item register covering Q-007, Q-020, OQ-CRD-2/3, OQ-SAGA-1/2, OQ-ASM-1, OQ-D, OQ-E,
+  PS-1..PS-8, M-05, M-06, WS-DOM-02, the transfer exception approval authority, the PR #8–#11 disposition and
+  branch synchronization. Nothing in it is decided by the implementation.
+- **Local verification:** PostgreSQL 16.15, cleared cluster (0 leftover databases, 0 leftover roles), all 20
+  runnable workflow steps passed, 557 PASS assertion lines, 0 FAIL, plus the Python verifier unit tests.
+  **GitHub Actions at this HEAD: NOT RUN.** The agent has no Actions access and cannot read job logs.
+- **Still open, unchanged:** Q-007, Q-020, OQ-CRD-2/3, OQ-SAGA-1/2, OQ-ASM-1, PS-1..PS-8, OQ-D and OQ-E
+  numeric objectives, the transfer exception approval authority, M-05 and M-06 definitions, and the
+  disposition of PR #8–#11.
+- Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
+  prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**

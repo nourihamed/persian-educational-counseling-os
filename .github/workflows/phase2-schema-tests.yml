@@ -126,11 +126,50 @@ jobs:
           W=docs/phase2/workspace
           K=a1000000000000000000000000000021
           createdb -h localhost -U postgres workspace_inbox_test
-          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection; do
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze; do
             psql -X -v ON_ERROR_STOP=1 -d workspace_inbox_test -f $W/$f.sql
           done
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_inbox_test -f $W/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_inbox_test -f $W/tests/workspace_inbox_tests.sql
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
+      - name: Workspace source transfer freeze and database write barrier
+        run: |
+          set -euo pipefail
+          W=docs/phase2/workspace
+          K=a1000000000000000000000000000031
+          createdb -h localhost -U postgres workspace_freeze_test
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze; do
+            psql -X -v ON_ERROR_STOP=1 -d workspace_freeze_test -f $W/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_freeze_test -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_freeze_test -f $W/tests/workspace_transfer_freeze_tests.sql
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
+      - name: Workspace in-flight transaction barrier race (both modes)
+        run: |
+          set -euo pipefail
+          W=docs/phase2/workspace
+          # mode "nofk" is the SENSITIVE one: the in-flight writer touches a student-scoped table that has
+          # no foreign key to students, so only the barrier's own FOR SHARE lock can block the freeze.
+          # mode "fk" is the realistic path, but PostgreSQL's foreign-key row lock would block the freeze
+          # there even with no barrier at all, so it is not evidence on its own. Both are run.
+          for m in nofk fk; do
+            if [ "$m" = nofk ]; then K=a1000000000000000000000000000041; else K=a1000000000000000000000000000042; fi
+            DB=workspace_freeze_race_$m
+            createdb -h localhost -U postgres $DB
+            for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze; do
+              psql -X -v ON_ERROR_STOP=1 -d $DB -f $W/$f.sql
+            done
+            psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d $DB -f $W/workspace_roles_setup_draft.sql
+            bash $W/tests/workspace_freeze_barrier_race.sh $DB $K $m
+          done
         env:
           PGHOST: localhost
           PGUSER: postgres
@@ -290,3 +329,10 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d workspace_archive_test -f $W/workspace_archive_transactions.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_archive_test -f $W/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_archive_test -f $W/tests/workspace_archive_tests.sql
+
+      # DOCUMENTATION CONSISTENCY CHECK — deliberately not an implementation test.
+      # It proves nothing about the schema or any security property. It only stops the two halves of the
+      # unresolved-item register from drifting apart, and stops an item being silently marked RESOLVED or
+      # marked continuable without a fail-closed condition. Do not count it as test evidence.
+      - name: Unresolved-item register consistency (documentation check, NOT implementation evidence)
+        run: python3 -I docs/phase2/tests/check_unresolved_register.py
