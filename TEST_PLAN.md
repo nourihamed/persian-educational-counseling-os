@@ -610,3 +610,62 @@ makes the rule uniform and lets the static guards stay strict.
 Still NOT RUN / NOT IMPLEMENTED after this batch: everything listed at the end of the Batch 1 section, plus
 clock-skew tolerance (PS-5, deliberately none), end-to-end revocation freshness across service handoffs
 (PS-8, no services exist), and signature verification (PS-1..PS-4, the verifier stays fail-closed).
+
+## Batch 3 — Student Credit ledger invariants (2026-11-14)
+
+Batch 3 was a **verification** task, so the method was to check each required property against what the
+tests actually assert. Three properties had **no test at all**, and two real defects were found through
+them. The full verification matrix is in `docs/phase2/IMPLEMENTATION_RESPONSE_2026-11-14.md` section 8.
+
+### `workspace_credit_ledger_invariant_tests.sql` — CRD-39..47 (12 PASS lines)
+Runs after `workspace_credit_entitlement_tests.sql` in the same database and reuses its fixtures.
+
+- **CRD-39/40/41 — the central invariant, previously untested.** "No negative or inconsistent spendable
+  balance" had no test. CRD-27 checked the balance *identity*
+  (`available = ledger − reserved − recommitted`), which is a different claim — an identity can hold
+  perfectly while the balance is negative. CRD-39 refuses a debit larger than the whole ledger; CRD-40
+  refuses exactly `available + 1`; **CRD-41 is the control** — exactly `available` must be accepted and
+  leave 0, otherwise CRD-39/40 would also pass against a guard that refuses everything.
+- **CRD-42/43 — the defect.** A reversal with the correct wallet, exact opposite amount and an unreversed
+  debit, but naming a **different student**, was accepted before the fix (`student_matches_debit = f`).
+  CRD-43 closes the NULL loophole.
+- **CRD-44/45 — append-only for UPDATE.** CRD-05 covered DELETE only; amending a row or re-pointing it at
+  another student was untested.
+- **CRD-46/46b** — a negative grant and an unknown wallet are refused.
+- **CRD-46c/46d** — neither the Workspace runtime nor the worker can insert a ledger row directly. This
+  also bounds the severity of CRD-42: the misattribution was never reachable from an application role.
+- **CRD-47 — the anti-regression guard.** Asserts from the catalog that exactly one
+  `validate_credit_reversal()` and exactly one guard trigger exist, and that the body still carries the
+  balance check, the student binding and the row lock.
+
+### `workspace_credit_last_unit_race.sh` — WS-CRD-LAST-01..05 (5 PASS lines)
+The concurrency half of the same invariant, which the existing races did not cover:
+`workspace_activation_race.sh` has both sessions activate the **same** enrollment and the wallet is never
+scarce there. Here two **different** students race for a wallet holding exactly one unit.
+
+Deterministic: session A activates and holds the wallet lock, the driver waits until that lock is held,
+starts B, confirms B is blocked, and only then **signals A to COMMIT** — A is never killed, because
+terminating it would abort its transaction, release the credit and let B succeed legitimately. An earlier
+version of this script did exactly that and produced a misleading pass.
+
+Asserts: B blocked rather than reading a stale balance; exactly one debit; available balance 0 and never
+negative; exactly one enrollment, entitlement and capacity slot; the loser refused for insufficient credit
+with nothing partial left behind.
+
+### Sensitivity, measured for every new test
+| Control | Result |
+|---|---|
+| Student binding removed from the guard | CRD-42 fails (exit 3) |
+| A weak duplicate guard replaces the strong one | CRD-39 fails (exit 3) |
+| Wallet row lock removed from the guard | WS-CRD-LAST-02/03/04/05 fail; measured `debits=2 ledger=-1 available=-1 entitlements=2 capacity=2` |
+| Pre-existing credit suite after the guard consolidation | unchanged: 43 PASS lines, exit 0 |
+
+One nuance recorded in the race script itself: in the no-lock control the "second activation is blocked"
+observation **still appears**, because the activation command takes other row locks and B blocks on those
+regardless. That observation proves only that the sessions overlapped; the outcome assertions are the
+evidence. This is the same trap that made the first version of the Batch 1 barrier race worthless.
+
+Still NOT RUN / NOT IMPLEMENTED after this batch: OQ-CRD-2 (no expiry, extension, forfeiture or automatic
+return of a reserved entitlement is implemented), OQ-CRD-3 (the production activation path stays
+fail-closed on the entitlement period), and everything listed at the end of the Batch 1 and Batch 2
+sections.

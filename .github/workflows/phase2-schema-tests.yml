@@ -298,6 +298,17 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d workspace_credit_test -f $W/workspace_archive_transactions.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_credit_test -f $W/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_credit_test -f $W/tests/workspace_credit_entitlement_tests.sql
+          # Ledger invariants that had no test at all before Batch 3, including the central one: the
+          # spendable balance can never go negative. Runs after the suite above and reuses its fixtures.
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_credit_test -f $W/tests/workspace_credit_ledger_invariant_tests.sql
+          # The concurrency half of that invariant: two students racing for the last credit.
+          KU=a1000000000000000000000000000013
+          createdb workspace_credit_last_unit
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions; do
+            psql -X -v ON_ERROR_STOP=1 -d workspace_credit_last_unit -f $W/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$KU -d workspace_credit_last_unit -f $W/workspace_roles_setup_draft.sql
+          bash $W/tests/workspace_credit_last_unit_race.sh workspace_credit_last_unit $KU
           KL=a1000000000000000000000000000012
           for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions; do
             psql -X -v ON_ERROR_STOP=1 -d workspace_credit_lock_race -f $W/$f.sql

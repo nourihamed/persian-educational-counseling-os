@@ -9,8 +9,8 @@ write-barrier commit on `docs/product-owner-decisions-consolidation-2026-11-07` 
 
 | Kind | What it is | Result |
 |---|---|---|
-| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **21 implementation test steps**, **568 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
-| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL, three test suites and a new workflow step, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
+| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **21 implementation test steps**, **585 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
+| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL and five new test suites, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
 
 Any commit that touches SQL or tests requires a fresh local run and a fresh Actions run at its own SHA.
 Documentation-only commits on top of a verified SHA change no SQL and no test, so they do not invalidate
@@ -476,5 +476,58 @@ Batch 1 was pushed as `cc8cd6449223943cbc6e360e677f4cb2ba37090f` (verified again
 - **Still open, unchanged:** Q-007, Q-020, OQ-CRD-2/3, OQ-SAGA-1/2, OQ-ASM-1, PS-1..PS-8, OQ-D and OQ-E
   numeric objectives, the transfer exception approval authority, M-05 and M-06 definitions, and the
   disposition of PR #8–#11. See `docs/phase2/UNRESOLVED_ITEM_REGISTER.md`.
+- Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
+  prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**
+
+## Update 2026-11-14 (sixth) — Batch 3: Student Credit lifecycle verified item by item
+
+Batch 2 was pushed as `7da927dea352f290dbe1583be51c723b1d228363` (verified: 14 files, +858/−14, parent
+`cc8cd64`). Its GitHub Actions result has **not** been reported to the implementation agent.
+
+Batch 3 asked for **verification** of thirteen credit-ledger properties rather than new features. Each was
+checked against what the tests actually assert. Full matrix:
+`docs/phase2/IMPLEMENTATION_RESPONSE_2026-11-14.md` section 8.
+
+- **Three properties had no test at all**, including the most important one: *"no negative or inconsistent
+  spendable balance."* The guard enforcing it existed and worked — a probe confirmed it refuses an
+  over-debit — but **nothing in the suite ever exercised that branch.** CRD-27 tested the balance
+  *identity*, which is a different claim: an identity can hold perfectly while the balance is negative.
+  Now covered serially (CRD-39/40/41, including a control that exactly the available balance *is*
+  accepted) and concurrently (WS-CRD-LAST-01..05).
+- **Defect 1 — a compensating reversal could name the wrong student.** The guard checked the wallet, the
+  amount and single use, but not the student. Demonstrated: a reversal naming a different student was
+  accepted (`student_matches_debit = f`). Severity **MEDIUM**, stated precisely: no application role holds
+  INSERT on the ledger — CRD-46c/46d now prove it — so it was not reachable from the runtime. It still
+  mattered because the brief requires the tie to the student explicitly, the balance arithmetic reads
+  `student_entitlements` so the numbers would have agreed while the attribution was wrong, the ledger is
+  **append-only** so a wrong attribution could never be corrected, and OQ-CRD-2 will read that attribution.
+  Fixed; CRD-42/43.
+- **Defect 2 — the ledger guard existed twice and the weak copy was reachable.** A weak copy sat beside the
+  table in `workspace_schema_draft.sql` (no wallet lock, **no balance check**) and a strong
+  `CREATE OR REPLACE` copy in `workspace_activation_transactions.sql`. The strong copy won in the normal
+  load order, so no previous credit result was wrong — but one CI step loads the schema draft **without**
+  the activation file, so the weak path was live, and a maintainer hardening the obvious copy would have
+  edited dead code. Consolidated into one definition in the file that creates the table; CRD-47 asserts
+  from the catalog that exactly one guard exists and still carries the balance check, the student binding
+  and the row lock.
+- **Also newly covered:** append-only on UPDATE as well as DELETE (CRD-44/45 — CRD-05 covered DELETE only),
+  negative grants and unknown wallets (CRD-46/46b), and direct ledger writes by the runtime and worker
+  roles (CRD-46c/46d).
+- **Every new test was measured against a control.** Student binding removed → CRD-42 fails. Weak duplicate
+  guard restored → CRD-39 fails. Wallet row lock removed → WS-CRD-LAST-02/03/04/05 fail with measured
+  `debits=2 ledger=-1 available=-1 entitlements=2 capacity=2`. The pre-existing credit suite is unchanged
+  at 43 PASS lines, exit 0.
+- **A trap is recorded in the race script**, because it had already cost this project once: in the no-lock
+  control the "second activation is blocked" observation **still appears**, since the activation command
+  takes other row locks and B blocks on those regardless. That observation proves only that the sessions
+  overlapped; the outcome assertions are the evidence. The first version of the Batch 1 barrier race was
+  worthless for exactly this reason.
+- **OQ-CRD-1 was not reopened** (resolved; CRD-32..38 unchanged). **OQ-CRD-2 and OQ-CRD-3 were not
+  decided:** nothing expires, extends, forfeits or automatically returns a reserved entitlement, and the
+  production activation path stays fail-closed on the entitlement period.
+- **Local verification:** PostgreSQL 16.15, cleared cluster (0 leftover databases, 0 leftover roles), all
+  21 implementation test steps passed, **585 PASS assertion lines**, 0 FAIL, plus the Python verifier unit
+  tests, plus the documentation consistency check reported separately. **GitHub Actions at this HEAD:
+  NOT RUN.**
 - Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
   prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**

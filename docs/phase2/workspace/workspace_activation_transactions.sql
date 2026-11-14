@@ -4,66 +4,12 @@
 -- This function enforces the local generation projection, ledger balance and capacity atomically.
 BEGIN;
 
--- Serialize every ledger insert on its wallet row and prevent a negative balance.
--- The same guard validates exact, same-wallet, single-use reversal entries.
-DROP TRIGGER IF EXISTS credit_reversal_guard ON public.credit_transactions;
-
-CREATE OR REPLACE FUNCTION validate_credit_reversal() RETURNS trigger
-LANGUAGE plpgsql AS $body$
-DECLARE
-  v_wallet uuid;
-  v_amount bigint;
-  v_kind text;
-  v_balance bigint;
-  v_held bigint;
-BEGIN
-  PERFORM 1 FROM public.credit_wallets
-   WHERE wallet_id=NEW.wallet_id
-   FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'credit wallet % does not exist',NEW.wallet_id
-      USING ERRCODE='foreign_key_violation';
-  END IF;
-
-  IF NEW.transaction_kind='reversal' THEN
-    SELECT wallet_id,amount,transaction_kind
-      INTO v_wallet,v_amount,v_kind
-      FROM public.credit_transactions
-     WHERE transaction_id=NEW.related_transaction_id
-     FOR UPDATE;
-    IF NOT FOUND OR v_wallet<>NEW.wallet_id OR v_kind='reversal' OR NEW.amount<>-v_amount THEN
-      RAISE EXCEPTION 'reversal must reference one original transaction in the same wallet with exact opposite amount'
-        USING ERRCODE='check_violation';
-    END IF;
-    IF EXISTS (
-      SELECT 1 FROM public.credit_transactions
-       WHERE transaction_kind='reversal'
-         AND related_transaction_id=NEW.related_transaction_id
-    ) THEN
-      RAISE EXCEPTION 'original credit transaction has already been reversed'
-        USING ERRCODE='unique_violation';
-    END IF;
-  END IF;
-
-  SELECT COALESCE(sum(amount),0) INTO v_balance
-    FROM public.credit_transactions
-   WHERE wallet_id=NEW.wallet_id;
-
-  -- PD-2026-11-13-D: a credit returned by a compensating reversal is bound to the student it was spent on.
-  -- It stays out of the spendable balance in BOTH entitlement states, so it can never fund another
-  -- student's activation, and it never exists as wallet balance and reserved entitlement at the same time.
-  SELECT COALESCE(sum(e.credit_amount),0) INTO v_held
-    FROM public.student_entitlements e
-    JOIN public.credit_transactions d ON d.transaction_id=e.debit_transaction_id
-   WHERE d.wallet_id=NEW.wallet_id
-     AND e.reversal_transaction_id IS NOT NULL;
-
-  IF v_balance - v_held + NEW.amount < 0 THEN
-    RAISE EXCEPTION 'insufficient student credit: balance %, reserved for named students %, requested debit %',
-      v_balance,v_held,-NEW.amount USING ERRCODE='check_violation';
-  END IF;
-  RETURN NEW;
-END; $body$;
+-- The ledger insert guard (wallet row lock, exact single-use reversal, student binding, non-negative
+-- spendable balance) is defined ONCE, in workspace_schema_draft.sql, beside the table and trigger it
+-- protects. It used to be redefined here with CREATE OR REPLACE, which meant the copy next to the table
+-- was dead code and loading the schema draft alone produced a ledger with no balance check at all.
+-- Consolidated 2026-11-14; CRD-47 asserts from the catalog that exactly one guard exists and that its
+-- body still carries the balance and student checks.
 
 -- Spendable balance = ledger balance minus every credit that a compensating reversal has bound to a student.
 CREATE OR REPLACE VIEW credit_wallet_balances AS
@@ -85,9 +31,8 @@ SELECT w.wallet_id,
          AS available_balance
   FROM public.credit_wallets w;
 
-CREATE TRIGGER credit_transaction_insert_guard
-  BEFORE INSERT ON public.credit_transactions
-  FOR EACH ROW EXECUTE FUNCTION validate_credit_reversal();
+-- The guard TRIGGER is created in workspace_schema_draft.sql too, for the same reason as the function:
+-- one definition, next to the table it protects.
 
 -- New local enrollments must start inactive. Only the controlled activation function may activate them.
 CREATE FUNCTION enforce_enrollment_initial_state() RETURNS trigger

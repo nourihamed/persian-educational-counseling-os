@@ -428,3 +428,20 @@ Three things that register does **not** do, and this file inherits them:
 tested (`docs/phase2/workspace/workspace_transfer_freeze.sql`). OQ-E itself remains **PARTIALLY DECIDED**:
 freeze duration, drain timeout, acceptance thresholds and the non-database surfaces are still open, and none
 of them was invented. See the register's OQ-E entry.
+
+### OQ-CRD-2 / OQ-CRD-3 status note (2026-11-14, after the Batch 3 credit verification)
+
+The complete credit ledger and entitlement implementation was verified item by item against the Supervisor
+brief's thirteen required properties (matrix in `docs/phase2/IMPLEMENTATION_RESPONSE_2026-11-14.md`
+section 8). Two defects were found and fixed; neither touched these two questions and **neither question is
+decided**.
+
+- **OQ-CRD-2** remains OPEN. Nothing expires, extends, forfeits or automatically returns a reserved
+  entitlement. `expired_reserved_entitlements` only makes the affected rows visible. CRD-18 proves a
+  reactivation outside the original period is refused and leaves no state behind.
+- **OQ-CRD-3** remains OPEN. `activate_student_enrollment()` is still fail-closed:
+  `resolve_student_entitlement_period()` raises `feature_not_supported` naming OQ-CRD-3. The working path
+  exists only as `activate_student_enrollment_synthetic()`, which requires the period explicitly and is
+  restricted to the synthetic executor role under D-014.
+
+**OQ-CRD-1 was not reopened.** It is resolved and CRD-32..38 stand unchanged.

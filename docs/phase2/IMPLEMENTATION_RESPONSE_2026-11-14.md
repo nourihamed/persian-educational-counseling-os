@@ -485,3 +485,101 @@ batch also adds a guard that scans the catalog rather than a list of files:
 - The static guards are static. They prove no transaction-start clock is read; the behavioural proof is
   RC-FRESH-01..03, CC-FRESH-01..02 and CLK-03, each measured against pre-fix code.
 - **Phase 2 is not self-approved.** This is an implementation report, not a review.
+
+---
+
+## 8. Batch 3 — Student Credit lifecycle, verified item by item (same day, sixth pass)
+
+Batch 3 asks for **verification** of thirteen properties rather than new features. The method was to check
+each one against what the tests actually assert, not against what the documentation claims. That found
+three properties with **no test at all** and, through them, two real defects.
+
+### 8.1 The verification matrix
+
+| # | Required property | Verdict | Evidence |
+|---|---|---|---|
+| 1 | Append-only ledger | **VERIFIED** | CRD-05 (DELETE refused). **UPDATE was untested** — now CRD-44/45. |
+| 2 | Atomic debit and idempotency | **VERIFIED** | CRD-02, CRD-10, CRD-31 (fail-closed activation leaves no partial state). |
+| 3 | No negative or inconsistent spendable balance | **WAS NOT TESTED AT ALL** → now verified | The guard existed and worked, but nothing exercised it. CRD-27 tested the balance *identity*, which is a different claim: an identity can hold perfectly while the balance is negative. Now CRD-39/40/41 serially and WS-CRD-LAST-01..05 concurrently. |
+| 4 | Student-bound reserved credit | **VERIFIED** | CRD-06 (reserved credit cannot fund another student), CRD-07. |
+| 5 | Original debit retained after reversal | **VERIFIED** | CRD-03, CRD-05. |
+| 6 | Compensating transaction tied to original debit, **student** and entitlement | **DEFECT FOUND** → fixed | Tied to the debit (CRD-03/04) and the entitlement (`reversal_transaction_id`), but **not to the student**. Demonstrated below. Now CRD-42/43. |
+| 7 | Exact 168-hour inclusive reversal boundary | **VERIFIED** | CRD-32..38 (OQ-CRD-1, already resolved; not reopened). |
+| 8 | Lock ordering and post-lock timestamp acquisition | **VERIFIED** | WS-CRD-LOCK-01/02, whose own sensitivity was verified earlier by reverting the clock/lock order. CRD-47 now also asserts the guard still takes its row lock. |
+| 9 | Free reactivation only within the original period | **VERIFIED** | CRD-08, CRD-18. |
+| 10 | No period extension on archive/reactivation | **VERIFIED** | CRD-09. |
+| 11 | Expired entitlement cannot be reactivated for free | **VERIFIED** | CRD-18 (and the disposition of such an entitlement stays OQ-CRD-2, undecided). |
+| 12 | Concurrent archive / reactivation / debit behaviour | **PARTIAL → now fuller** | Reactivation: WS-REACT-RACE-01. Archive vs the reversal window: WS-CRD-LOCK-01/02. **Two students racing for the last credit was untested** — now WS-CRD-LAST-01..05. |
+| 13 | Correct authorization and Workspace isolation | **VERIFIED** | Role and cross-database tests already exist; direct ledger writes by the runtime and worker roles were untested and are now CRD-46c/46d. |
+
+### 8.2 Defect 1 — a compensating reversal could name the wrong student
+
+The ledger guard validated that a reversal referenced one unreversed transaction, in the same wallet, with
+the exact opposite amount. It did **not** check the student. Demonstrated: an insert with the correct
+wallet and amount but a different `student_id` was accepted, and the row landed with
+
+```
+idempotency_key      | student_matches_debit
+probe-wrongstudent-2 | f
+```
+
+**Severity, stated honestly.** Only `function_owner` (NOLOGIN, used by the SECURITY DEFINER commands) and
+`table_owner` hold INSERT on `credit_transactions`; no application role does, and CRD-46c/46d now prove
+that. So this was not reachable from the Workspace runtime. It still mattered: the brief requires the tie
+to the student explicitly, the balance arithmetic reads `student_entitlements` rather than the reversal row
+so the numbers would have agreed while the attribution was wrong, the ledger is **append-only** and a wrong
+attribution could therefore never be corrected, and whatever eventually implements OQ-CRD-2 reads exactly
+this attribution. Classified MEDIUM: defence in depth on an audit record, not a live exploit.
+
+**Fix:** the guard requires `NEW.student_id IS DISTINCT FROM` the related transaction's student to fail.
+`IS DISTINCT FROM` so that reversing a debit with no student requires no student here either, which keeps
+non-student transactions reversible.
+
+### 8.3 Defect 2 — the ledger guard existed twice, and the weak copy was reachable
+
+`validate_credit_reversal()` was defined in **two** files: a weak copy in `workspace_schema_draft.sql`
+beside the table, and a strong `CREATE OR REPLACE` copy in `workspace_activation_transactions.sql`. The
+weak copy had no wallet row lock and **no balance check at all**.
+
+In the normal load order the strong copy won, so every credit suite was testing the right function and no
+previous result was wrong. Two things were still broken:
+
+- **The weak path was reachable, not hypothetical.** One CI step — the governance event ledger step — loads
+  `workspace_schema_draft.sql` without the activation file. That database had a credit ledger with no
+  negative-balance prevention. Nothing claimed otherwise, but the trap was live.
+- **Editing the obvious copy would have had no effect.** A maintainer hardening the guard next to the table
+  would have changed dead code, silently.
+
+**Fix:** one definition, in the file that creates the table and the trigger, carrying the strong body. The
+activation file keeps a comment explaining where the guard lives and why. CRD-47 asserts from the catalog
+that exactly one `validate_credit_reversal()` and exactly one guard trigger exist, and that the body still
+contains the balance check, the student binding and the row lock — so a second definition cannot silently
+win again.
+
+### 8.4 Evidence, and what each test was measured against
+
+| What | Result |
+|---|---|
+| `workspace_credit_ledger_invariant_tests.sql` CRD-39..47 | **12 PASS lines**, 0 FAIL |
+| `workspace_credit_last_unit_race.sh` WS-CRD-LAST-01..05 | **5 PASS lines**, 0 FAIL |
+| Pre-existing credit suite after the guard consolidation | **unchanged: 43 PASS lines, exit 0** |
+| Negative control: student binding removed from the guard | **CRD-42 FAILS** (exit 3) — the misattributed reversal is accepted |
+| Negative control: a weak duplicate guard replaces the strong one | **CRD-39 FAILS** (exit 3) — the over-debit succeeds |
+| Negative control: wallet row lock removed from the guard | **WS-CRD-LAST-02/03/04/05 FAIL** — measured `debits=2 ledger=-1 available=-1 entitlements=2 capacity=2` |
+
+A nuance recorded in the race script itself, because it would otherwise invite a wrong reading: in the
+no-lock control the "second activation is blocked" observation **still appears**, because the activation
+command takes other row locks (the enrollment, the capacity counter) and B blocks on those regardless. The
+blocking observation proves only that the sessions overlapped. The outcome assertions are the evidence.
+This is the same trap that made the first version of the Batch 1 barrier race worthless, and it is called
+out here so a reader does not repeat it.
+
+### 8.5 What Batch 3 did not do
+
+- **OQ-CRD-1 was not reopened.** It is resolved; CRD-32..38 stand as they were.
+- **OQ-CRD-2 and OQ-CRD-3 were not decided.** No expiry, extension, forfeiture or automatic return of a
+  reserved entitlement is implemented, and the production activation path stays fail-closed on the
+  entitlement period. `expired_reserved_entitlements` still only *shows* the affected rows. The decision
+  requests for both are in `docs/phase2/UNRESOLVED_ITEM_REGISTER.md` with options and a recommendation.
+- **No service-layer behaviour is claimed.** All of this is database-level; there is no service layer.
+- **Phase 2 is not self-approved.** This is an implementation report, not a review.

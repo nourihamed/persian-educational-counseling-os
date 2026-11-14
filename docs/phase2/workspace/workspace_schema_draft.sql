@@ -986,20 +986,80 @@ CREATE UNIQUE INDEX one_reversal_per_credit_transaction
   ON credit_transactions(related_transaction_id)
   WHERE transaction_kind='reversal';
 
-CREATE FUNCTION validate_credit_reversal() RETURNS trigger LANGUAGE plpgsql AS $body$
-DECLARE v_wallet uuid; v_amount bigint; v_kind text;
+-- THE ledger insert guard. There is exactly one definition of it, and it lives here, beside the table and
+-- the trigger it protects (consolidated 2026-11-14).
+--
+-- It used to exist TWICE: a weak copy here and a strong `CREATE OR REPLACE` copy in
+-- workspace_activation_transactions.sql. The strong copy won whenever both files were loaded, which is the
+-- normal order, so behaviour was correct in every suite that tested credit. Two problems followed anyway:
+--   * Loading workspace_schema_draft.sql ALONE produced a ledger with no wallet row lock and NO
+--     negative-balance check. One CI step does exactly that (the governance ledger step), so the weak path
+--     was reachable, not hypothetical.
+--   * A maintainer editing the copy next to the table — the natural place to look — would have changed
+--     nothing, because the other file silently replaced it at load time.
+-- CRD-47 asserts from the catalog that one guard trigger exists and that its body carries the balance and
+-- student checks, so a weak copy cannot silently win again.
+CREATE FUNCTION validate_credit_reversal() RETURNS trigger
+LANGUAGE plpgsql AS $body$
+DECLARE
+  v_wallet uuid;
+  v_amount bigint;
+  v_kind text;
+  v_student uuid;
+  v_balance bigint;
+  v_held bigint;
 BEGIN
+  -- Serialize every ledger insert for this wallet. Without this lock two concurrent debits could each
+  -- read the same balance and both succeed, overdrawing the wallet.
+  PERFORM 1 FROM public.credit_wallets WHERE wallet_id=NEW.wallet_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'credit wallet % does not exist',NEW.wallet_id USING ERRCODE='foreign_key_violation';
+  END IF;
+
   IF NEW.transaction_kind='reversal' THEN
-    SELECT wallet_id,amount,transaction_kind INTO v_wallet,v_amount,v_kind
-      FROM credit_transactions WHERE transaction_id=NEW.related_transaction_id FOR UPDATE;
+    SELECT wallet_id,amount,transaction_kind,student_id
+      INTO v_wallet,v_amount,v_kind,v_student
+      FROM public.credit_transactions WHERE transaction_id=NEW.related_transaction_id FOR UPDATE;
     IF NOT FOUND OR v_wallet<>NEW.wallet_id OR v_kind='reversal' OR NEW.amount<>-v_amount THEN
       RAISE EXCEPTION 'reversal must reference one original transaction in the same wallet with exact opposite amount'
         USING ERRCODE='check_violation';
     END IF;
+    -- A compensating reversal must name the SAME student as the debit it compensates (Batch 3
+    -- requirement: the compensating transaction is tied to the original debit, the student AND the
+    -- entitlement). Without this, a reversal could return credit in the ledger while attributing it to
+    -- another student. The balance arithmetic would still agree, because it is computed from
+    -- student_entitlements, but the ledger is the append-only audit record and an append-only record
+    -- cannot be corrected afterwards. Anything that later implements OQ-CRD-2 reads this attribution.
+    -- IS DISTINCT FROM, so reversing a debit that carries no student (NULL) requires NULL here too.
+    IF NEW.student_id IS DISTINCT FROM v_student THEN
+      RAISE EXCEPTION 'a reversal must name the same student as the transaction it reverses (debit names %, reversal names %)',
+        v_student, NEW.student_id USING ERRCODE='check_violation';
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.credit_transactions
+                WHERE transaction_kind='reversal' AND related_transaction_id=NEW.related_transaction_id) THEN
+      RAISE EXCEPTION 'original credit transaction has already been reversed' USING ERRCODE='unique_violation';
+    END IF;
+  END IF;
+
+  SELECT COALESCE(sum(amount),0) INTO v_balance
+    FROM public.credit_transactions WHERE wallet_id=NEW.wallet_id;
+
+  -- PD-2026-11-13-D: a credit returned by a compensating reversal is bound to the student it was spent on.
+  -- It stays out of the spendable balance in BOTH entitlement states, so it can never fund another
+  -- student's activation, and it never exists as wallet balance and reserved entitlement at the same time.
+  SELECT COALESCE(sum(e.credit_amount),0) INTO v_held
+    FROM public.student_entitlements e
+    JOIN public.credit_transactions d ON d.transaction_id=e.debit_transaction_id
+   WHERE d.wallet_id=NEW.wallet_id AND e.reversal_transaction_id IS NOT NULL;
+
+  IF v_balance - v_held + NEW.amount < 0 THEN
+    RAISE EXCEPTION 'insufficient student credit: balance %, reserved for named students %, requested debit %',
+      v_balance,v_held,-NEW.amount USING ERRCODE='check_violation';
   END IF;
   RETURN NEW;
 END; $body$;
-CREATE TRIGGER credit_reversal_guard
+
+CREATE TRIGGER credit_transaction_insert_guard
   BEFORE INSERT ON credit_transactions
   FOR EACH ROW EXECUTE FUNCTION validate_credit_reversal();
 
