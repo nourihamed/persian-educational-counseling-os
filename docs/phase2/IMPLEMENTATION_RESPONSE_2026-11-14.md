@@ -883,3 +883,37 @@ operational control of credentials, which is outside the database.
 - **No RLS policies**, therefore no RLS bypass testing — the absence is the finding (WS-ISO-01).
 - **No counselor-to-counselor isolation**, as above.
 - **Phase 2 is not self-approved.** This is an implementation report, not a review.
+
+
+---
+
+## 12. Correction — the branch-synchronization claim was wrong
+
+Section 6 of this document and the BRANCH-SYNC register item both reported that the PR #12 branch was
+**not** behind `main`, presenting that as a correction of an earlier claim. **The retraction was wrong and
+the original claim was right.**
+
+`main`'s tip was taken from the `base.sha` field of the open pull request objects. That field records the
+base commit **as it stood when each PR was created** (`ba5e9d8`), not `main`'s current tip. Four PRs all
+reporting the same value read like corroboration; it was one stale value four times. The right source is
+the branch listing, which gives `main` at `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6`.
+
+Measured on 2026-11-15:
+
+| Check | Result |
+|---|---|
+| `git merge-base --is-ancestor 5bb8e4e HEAD` | **fails** — the branch does not contain `main` |
+| commits on `main` not on the branch | `4004360` (added `cp_30_role_privilege_tests.sql`), `5bb8e4e` (reverted it) |
+| `git diff ba5e9d8 5bb8e4e` | **0 changed files** |
+
+So the branch **is** behind `main` by two commits, and the **net content difference is zero**. Nothing from
+`main` is missing. Both halves have to be stated together: the first alone understates the branch's
+position, the second alone was the error.
+
+No rebase, merge or force-push was performed. The register entry now carries the measurement and recommends
+resolving this with the PR #8–#11 disposition, which moves `main` regardless.
+
+**Why this is recorded rather than quietly amended:** a false "corrected" claim sat in the register and in
+`PROJECT_STATE.md` across several batches. The error was in the *method* — trusting a convenient field
+instead of the authoritative one — and that is worth leaving on the record, because the same method would
+produce the same error again.

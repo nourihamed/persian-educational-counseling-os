@@ -484,19 +484,31 @@
     },
     {
       "id": "BRANCH-SYNC",
-      "title": "Branch synchronization: is the PR #12 branch behind main?",
-      "status": "FACTUALLY_CORRECTED",
-      "why_unresolved": "The item is kept open because the decision on PR #8-#11 may still move main. The specific claim carried in PROJECT_STATE.md and in earlier reports — that PR #12 is behind main — is NOT TRUE at the current head and has been corrected.",
-      "security_impact": "NONE. It is a correctness-of-reporting issue.",
+      "title": "Branch synchronization: the PR #12 branch is behind main by two commits whose net content change is zero",
+      "status": "OPEN",
+      "why_unresolved": "The PR #12 branch IS behind main. This entry previously claimed the opposite and that claim was WRONG. The error: main's tip was read from the `base.sha` field of the open pull request objects, which records the base commit as it stood when each PR was created (ba5e9d8), not main's current tip. Measured correctly on 2026-11-15: main is at 5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6 and `git merge-base --is-ancestor 5bb8e4e HEAD` fails, so the branch does not contain main. Substantively, however, nothing from main is missing: main's two extra commits are 4004360, which added docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql, and 5bb8e4e, which reverted it. `git diff ba5e9d8 5bb8e4e` reports ZERO changed files, so merging main would bring no file changes. The branch's own cp_30_role_privilege_tests.sql was written independently on this branch and is unaffected.",
+      "security_impact": "NONE technically. The real risk is to the integrity of this project's own reporting: a false 'corrected' claim sat in the register and in PROJECT_STATE.md for several batches, and a reviewer relying on it would have believed the branch was synchronized when it was not.",
       "implementation_may_continue": true,
-      "continue_conditions": "No rebase and no force-push, per the standing constraint.",
+      "continue_conditions": "No rebase, no merge and no force-push, per the standing constraint. The divergence is two commits with zero net content difference, so no work on this branch depends on resolving it.",
       "decision_owner": "Product Owner",
       "options": [
-        "A. Leave the branch as it is; it already contains main.",
-        "B. Rebase once #8-#11 are dispositioned, if main moves."
+        "A. Leave the branch as it is. It is behind main only in history, and main carries no content the branch lacks.",
+        "B. Merge main into the branch so the history is strictly ahead, once the Product Owner lifts the no-merge constraint for this one operation.",
+        "C. Resolve it together with the PR #8-#11 disposition, since merging or closing those will move main anyway."
       ],
-      "recommended_option": "A",
-      "rationale": "Measured on 2026-11-14: main's tip is ba5e9d8 and `git merge-base --is-ancestor ba5e9d8 HEAD` succeeds, so the PR #12 branch already contains all of main. There is nothing to synchronize until main moves. If #8-#11 are merged, B applies and needs an explicit instruction because rebasing is otherwise forbidden."
+      "recommended_option": "C",
+      "rationale": "The divergence is harmless today (zero net content), so there is nothing to gain from a merge on its own, and rebasing or force-pushing is forbidden. Dispositioning PR #8-#11 will move main regardless, so the synchronization decision belongs with that one rather than being taken twice. Whichever is chosen, the claim in the record must now say 'behind by two commits, zero net content difference' rather than 'not behind'.",
+      "evidence": {
+        "verified_at": "2026-11-15",
+        "main_tip": "5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6",
+        "merge_base": "ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114",
+        "commits_on_main_not_on_branch": [
+          "4004360 test(phase2): verify claim admission executor is isolated",
+          "5bb8e4e revert: remove accidental malformed Phase 2 test from main"
+        ],
+        "net_changed_files_merge_base_to_main": 0,
+        "previous_claim": "FACTUALLY_CORRECTED / not behind main — this was wrong and is retracted"
+      }
     }
   ]
 }

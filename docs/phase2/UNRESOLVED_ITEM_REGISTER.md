@@ -46,7 +46,7 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | WS-DOM-02 | Role source of truth and trusted authorization | PARTIALLY DECIDED | HIGH | Yes, fail-closed | Platform Security + Product Owner (Issue #13) |
 | TRANSFER-EXC-AUTH | Who may authorize an approval-conflict exception | OPEN | HIGH | Yes, exception impossible to enable | Product Owner |
 | PR-8-11-DISPOSITION | Disposition of PR #8–#11 | OPEN | Process only | Yes, no PR touched | Product Owner on Supervisor advice |
-| BRANCH-SYNC | Is the PR #12 branch behind main? | **FACTUALLY CORRECTED** | None | Yes | Product Owner |
+| BRANCH-SYNC | PR #12 branch is behind main by 2 commits, zero net content | OPEN | None technical; reporting integrity | Yes | Product Owner |
 
 ---
 
@@ -278,22 +278,49 @@ None of PS-1..PS-8 is answered, and none is assumed. The production verifier is 
 **Options:** (A) close #8–#11 as superseded by #12, after confirming no unique content is lost; (B) merge them in order and then rebase #12; (C) leave all five open until Phase 2 is approved.
 **Recommendation: A.** Their content has been consolidated into the #12 branch, and stale drafts invite a reviewer to read superseded text. The "no unique content lost" diff should be produced before closing; the implementation can prepare it on request.
 
-### BRANCH-SYNC — Is the PR #12 branch behind `main`?
-**Status: FACTUALLY CORRECTED.** The claim carried in `PROJECT_STATE.md` and in earlier implementation reports — that PR #12 is behind `main` and needs to be brought up to date — **is not true at the current head.**
+### BRANCH-SYNC — The PR #12 branch is behind `main` by two commits whose net content change is zero
+**Status: OPEN. This entry previously claimed the branch was NOT behind `main`, and that claim was wrong.
+It is retracted here.**
 
-Measured on 2026-11-14:
+**The error.** `main`'s tip was read from the `base.sha` field of the open pull request objects. That field
+records the base commit **as it stood when each PR was created** (`ba5e9d8`), not `main`'s current tip.
+Four PRs all reporting the same `base.sha` looked like confirmation; it was the same stale value four times.
+
+**Measured correctly on 2026-11-15:**
 
 ```
-main tip:                 ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114
-PR #12 head:              ad3bf2888cae567d8a6eca7d4bd7f3dc100aa979
-git merge-base --is-ancestor ba5e9d8 HEAD   -> exit 0 (ancestor)
+main tip:                                      5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6
+merge base with the PR #12 branch:             ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114
+git merge-base --is-ancestor 5bb8e4e HEAD   -> fails  (the branch does NOT contain main)
+
+commits on main and not on the branch:
+  4004360  test(phase2): verify claim admission executor is isolated   (added cp_30_role_privilege_tests.sql)
+  5bb8e4e  revert: remove accidental malformed Phase 2 test from main  (removed it again)
+
+git diff ba5e9d8 5bb8e4e  ->  0 changed files
 ```
 
-So the PR #12 branch already contains all of `main`, and there is nothing to synchronize. The item stays in the register rather than being closed, because the decision on PR #8–#11 may move `main`, and a rebase would then need an explicit instruction (rebasing and force-pushing are otherwise forbidden).
+**So both halves of the statement matter.** Formally the branch **is** behind `main` by two commits. But
+`main` added a file and then reverted it, so the net content difference is **zero** and nothing from `main`
+is missing from the branch. Merging `main` would bring no file changes. The branch's own
+`docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql` was written independently on this branch
+and is unaffected by either commit.
 
-**Recommendation: A — leave the branch as it is;** revisit only if `main` moves.
+**Impact:** none technically. The real damage was to the integrity of this project's own reporting: a false
+"corrected" claim sat in this register and in `PROJECT_STATE.md` across several batches, and a reviewer
+relying on it would have believed the branch was synchronized when it was not.
 
----
+**Held how:** no rebase, no merge and no force-push, per the standing constraint. Nothing on this branch
+depends on resolving it.
+
+**Options:** (A) leave it — behind only in history, with no missing content; (B) merge `main` so the history
+is strictly ahead, once the Product Owner lifts the no-merge constraint for that one operation;
+(C) resolve it together with the PR #8–#11 disposition, which will move `main` anyway.
+
+**Recommendation: C.** The divergence is harmless today, so a merge on its own gains nothing, and rebasing
+or force-pushing is forbidden. Dispositioning PR #8–#11 moves `main` regardless, so this decision belongs
+with that one rather than being taken twice. Whichever option is chosen, the record must now say
+"behind by two commits, zero net content difference" and never "not behind".
 
 ## What this register deliberately does not do
 

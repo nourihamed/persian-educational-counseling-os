@@ -706,3 +706,38 @@ finding below survived several previous passes.
 - The register now carries **27 items** (WS-ISO-01 added).
 - Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
   prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**
+
+## Correction 2026-11-15 — "PR #12 is not behind main" was WRONG and is retracted
+
+An earlier entry in this document, and the BRANCH-SYNC item in
+`docs/phase2/UNRESOLVED_ITEM_REGISTER.md`, stated that the PR #12 branch was **not** behind `main` and
+marked the original claim as "factually corrected". **That retraction was itself wrong.** The original
+claim was right: the branch **is** behind `main`.
+
+**The error.** `main`'s tip was read from the `base.sha` field of the open pull request objects. That field
+records the base commit **as it stood when each PR was created** (`ba5e9d8`), not `main`'s current tip.
+Four PRs all reporting the same value looked like corroboration; it was one stale value four times.
+
+**Measured correctly on 2026-11-15:**
+
+```
+main tip:                                    5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6
+merge base with the PR #12 branch:           ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114
+git merge-base --is-ancestor 5bb8e4e HEAD -> fails (the branch does NOT contain main)
+
+on main, not on the branch:
+  4004360  test(phase2): verify claim admission executor is isolated  (added cp_30_role_privilege_tests.sql)
+  5bb8e4e  revert: remove accidental malformed Phase 2 test from main (removed it again)
+
+git diff ba5e9d8 5bb8e4e  ->  0 changed files
+```
+
+**Both halves matter.** The branch is behind by **two commits**, and the **net content difference is zero**,
+because `main` added a file and then reverted it. Nothing from `main` is missing from the branch, and
+merging `main` would bring no file changes. The branch's own
+`docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql` was written independently here and is
+unaffected by either commit.
+
+No rebase, merge or force-push has been performed. The recommendation is to resolve this together with the
+PR #8–#11 disposition, which will move `main` anyway. **Every earlier statement in this document that the
+branch is "not behind main" is superseded by this entry.**
