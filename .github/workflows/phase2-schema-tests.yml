@@ -309,6 +309,21 @@ jobs:
           # Freshness of the one-time contact-change proof window. Reuses cp_40's helpers and fixtures,
           # so it must run after it in the same database. Takes ~4s of deliberate waiting.
           psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/tests/cp_47_freshness_tests.sql
+          # Contact confidentiality and key-material assertions (Batch 7).
+          psql -X -v ON_ERROR_STOP=1 -d control_plane_contact_test -f $C/tests/cp_49_contact_confidentiality_tests.sql
+          # Contact identity concurrency, the two races the brief listed as NOT RUN. Each runs in its OWN
+          # fresh database: race A completes an HMAC rotation and race B moves an ownership generation, so
+          # sharing a database made one race abort on preconditions the other had changed.
+          for m in a b; do
+            DB=control_plane_cid_$m
+            createdb -h localhost -U postgres $DB
+            for f in cp_01_schema_draft cp_05_identity_rotation_guard cp_07_claim_admission_draft cp_02_switch_function_draft cp_03_transfer_transitions_draft cp_04_transfer_command_idempotency cp_06_role_privileges_draft cp_08_contact_change_draft cp_09_contact_change_roles_draft; do
+              psql -X -v ON_ERROR_STOP=1 -d $DB -f $C/schema/$f.sql
+            done
+            psql -X -v ON_ERROR_STOP=1 -d $DB -f $C/tests/cp_30_role_privilege_tests.sql
+            psql -X -v ON_ERROR_STOP=1 -d $DB -f $C/tests/cp_40_contact_change_tests.sql
+            bash $C/tests/cp_48_contact_identity_race.sh $DB $m
+          done
 
       - name: Student Credit entitlement lifecycle (archive return, reserved credit, reactivation)
         run: |
@@ -395,6 +410,12 @@ jobs:
           PGHOST: localhost
           PGUSER: postgres
           PGPASSWORD: postgres
+
+      # REPOSITORY CHECK — deliberately not an implementation test. It proves the absence of the secret
+      # SHAPES it scans for, not the absence of secrets; real assurance needs a secret-scanning service,
+      # which is an operational control outside this repository. Do not count it as test evidence.
+      - name: No secret or key material in tracked files or committed file names (repository check, NOT implementation evidence)
+        run: python3 -I docs/phase2/tests/check_no_secret_material.py
 
       # DOCUMENTATION CONSISTENCY CHECK — deliberately not an implementation test.
       # It proves nothing about the schema or any security property. It only stops the two halves of the

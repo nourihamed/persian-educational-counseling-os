@@ -9,7 +9,7 @@ write-barrier commit on `docs/product-owner-decisions-consolidation-2026-11-07` 
 
 | Kind | What it is | Result |
 |---|---|---|
-| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **22 implementation test steps**, **653 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
+| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **22 implementation test steps**, **749 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
 | **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL and new test suites, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
 
 Any commit that touches SQL or tests requires a fresh local run and a fresh Actions run at its own SHA.
@@ -741,3 +741,61 @@ unaffected by either commit.
 No rebase, merge or force-push has been performed. The recommendation is to resolve this together with the
 PR #8–#11 disposition, which will move `main` anyway. **Every earlier statement in this document that the
 branch is "not behind main" is superseded by this entry.**
+
+## Update 2026-11-15 (fourth) — Batch 7: contact identity, HMAC rotation and concurrency
+
+Batch 6 and the branch-synchronization retraction were pushed as `b095dbc7` and `65b5f735`. Their GitHub
+Actions results have **not** been reported to the implementation agent.
+
+- **The two races the brief listed as NOT RUN are now run, and they pass.** Both serializations were
+  designed in and documented in comments, and neither had ever been executed — a comment claiming mutual
+  exclusion is not evidence of it.
+  - **Race A:** a contact change holding `FOR SHARE` on `identity_write_gate` blocks
+    `begin_identity_hmac_rotation()`, which takes `FOR UPDATE` on the same row. Without it, a contact
+    change could write an identity alias at a key version the rotation is retiring.
+  - **Race B:** a contact change holding `FOR UPDATE` on the student's `student_ownership` row blocks
+    `switch_student_ownership()`. Afterwards the generation advances 1 → 2, ownership moves to the
+    destination, and a contact change citing the pre-switch generation is refused. Without it, the
+    globally unique contact identity could be written against an owner and generation that no longer hold.
+  - Coordination is deterministic: the first session waits for an explicit go signal, sent only after the
+    driver has **observed** the second blocked in `pg_stat_activity`, and the first is signalled to commit
+    rather than killed. **Sensitivity measured:** removing the gate lock fails race A; removing the
+    ownership lock fails race B.
+- **A defect I nearly reported that was my own test's fault.** The first version of race B shared a
+  database with race A and reported that the ownership switch **did not block** — which reads exactly like
+  a missing lock. Diagnosing before reporting showed race B had reused a proof bound to a *different*
+  student; the command correctly refused it, the transaction aborted, its locks were released, and the
+  switch then ran unblocked. `change_student_mobile_contact()` does take `FOR UPDATE` on
+  `student_ownership`. The fix was **isolation, not a weaker assertion**: each race now runs in its own
+  fresh database, and the reason is written into the script.
+- **Two confidentiality tests were wrong first and the schema was right.** CID-03 initially banned every
+  text column on the key-version tables and flagged `mobile_encryption_key_versions.key_manager_ref` —
+  which is a non-secret KMS/HSM identifier, exactly the external-custody shape the register recommends for
+  PS-3. CID-05 initially looked for fingerprint uniqueness on `student_contact_index`, which deliberately
+  has none: it answers what a student's contact is, not who owns a contact. The real rule is a partial
+  unique index on `enrollment_claim_identity_aliases` over `(key_version, mobile_hmac, grade_key)` across
+  `active` **and** `transfer_pending` claims — so two students **can** share a fingerprint in the contact
+  index, and what they cannot do is hold live claims on it in the same grade under the same key. Both
+  tests were corrected to assert the real design, and that design is now stated in the test rather than
+  left to be inferred.
+- **No key material and no plaintext contact in the database** (CID-01..CID-04), and **no secret material
+  in the repository**: the new `check_no_secret_material.py` scanned 147 tracked files and 186 paths ever
+  added in Git history with no findings, and was verified sensitive by planting a fake Iranian mobile
+  number and a fake API key (all three expected findings fired). It is reported as a **repository check,
+  never as implementation evidence**, and states its own limit: a pattern scan proves the absence of known
+  shapes, not the absence of secrets.
+- **Local verification:** PostgreSQL 16.15, cleared cluster, all 22 implementation test steps passed,
+  **749 PASS assertion lines**, 0 FAIL. **Read that number carefully:** only **12** of the increase from
+  653 are new assertions (6 CID-RACE + 6 CID). The rest of the contact step's rise from 51 to 147 is
+  `cp_30` and `cp_40` **re-running** in the two isolated race databases, which is repeated execution of
+  existing coverage and not new coverage. Plus the Python verifier unit tests, and two checks reported
+  separately and explicitly not counted as implementation evidence (the register consistency check, 6
+  lines, and the repository secret scan, 2 lines).
+- **A local harness limitation, recorded.** The repository secret scan initially reported FAILED in the
+  local runner, because that runner executes every step as the `postgres` user and Git refuses a
+  root-owned repository to another user (`dubious ownership`). The check itself is correct — it
+  **fails closed** when it cannot scan, rather than passing silently — and it passes when run as the
+  repository owner, which is how CI runs it. The local runner now runs database-free steps as the owner.
+- **GitHub Actions at this HEAD: NOT RUN.**
+- Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
+  prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**

@@ -917,3 +917,120 @@ resolving this with the PR #8–#11 disposition, which moves `main` regardless.
 `PROJECT_STATE.md` across several batches. The error was in the *method* — trusting a convenient field
 instead of the authoritative one — and that is worth leaving on the record, because the same method would
 produce the same error again.
+
+---
+
+## 13. Batch 7 — Contact identity, HMAC rotation and concurrency (2026-11-15)
+
+### 13.1 The two races the brief listed as NOT RUN
+
+Both serializations were **designed in and documented in comments**, and neither had ever been executed.
+A comment claiming mutual exclusion is not evidence of it, which is the whole point of
+`cp_48_contact_identity_race.sh`.
+
+| Race | What it proves | Result |
+|---|---|---|
+| **A** — contact change in flight, HMAC rotation begins | `change_student_mobile_contact()` holds `FOR SHARE` on `identity_write_gate`; `begin_identity_hmac_rotation()` takes `FOR UPDATE` on the same row and therefore **blocks** | CID-RACE-A1/A2/A3 **pass** |
+| **B** — contact change in flight, ownership switch for the same student | the contact change holds `FOR UPDATE` on the student's `student_ownership` row, so `switch_student_ownership()` **blocks**; afterwards the generation advances 1 → 2, ownership moves, and a contact change citing the pre-switch generation is refused | CID-RACE-B1/B2/B3 **pass** |
+
+Why each matters. In A, a contact change landing mid-rotation would write an identity alias at a key
+version the rotation is retiring, and the deferred coverage check that guarantees every claim has an alias
+at every live key version would be evaluated against a set that changed underneath it — and contact lookup
+is how a student is found at all. In B, a contact change landing during a switch would write the globally
+unique contact identity against an owner and generation that no longer hold: the same stale-owner class as
+the transfer fence, but on global identity rather than Workspace-local data.
+
+Coordination is deterministic. The first session does its work and then waits for an explicit go signal;
+the driver sends it only after **observing** the second session blocked in `pg_stat_activity`. The first
+session is signalled to commit, never killed — terminating it would abort its transaction, release every
+lock and let the second succeed legitimately. The existing `cp_46_contact_change_race.sh` orders its
+sessions with `sleep 0.6` and `pg_sleep 2`; this file does not.
+
+**Sensitivity measured for both:**
+
+| Control | Result |
+|---|---|
+| `FOR SHARE` on `identity_write_gate` removed | **race A fails** at CID-RACE-A1 (exit 1) |
+| `FOR UPDATE` on `student_ownership` removed | **race B fails** at CID-RACE-B1 (exit 1) |
+
+### 13.2 A defect I nearly reported that was my own test's fault
+
+The first version of race B ran in the same database as race A and reported that **the ownership switch
+did not block** — which reads like a missing lock in the implementation, and I was one step from writing
+it up that way.
+
+It was not. Diagnosing before reporting showed that race B reused proof `…c2`, which `cc_proof` had bound
+to **student 2**, while race B called it for **student 1**. The command correctly refused a proof bound to
+a different student, the transaction aborted, its locks were released, and the switch then ran unblocked.
+`change_student_mobile_contact()` does take `FOR UPDATE` on `student_ownership`; it is right there at
+step 2.
+
+Race A had also left the database in a different state than race B assumed: key version 1 `retiring` and 2
+`active`, and a student's ownership generation already advanced. **The fix was isolation, not a weaker
+assertion** — each race now runs in its own fresh database, and the reason is written into the script so
+the next person does not re-share them. Race B also moved to student 3, untouched by any other suite, and
+derives its owner, generation and destination from the database rather than hard-coding them.
+
+This is recorded because the near-miss is the useful part: a race test that fails for a fixture reason
+looks exactly like a race test that found a bug.
+
+### 13.3 Confidentiality and key material
+
+`cp_49_contact_confidentiality_tests.sql`, CID-01..CID-05b, asserted from the catalog so a column or index
+added later fails by name:
+
+- **CID-01** no text column anywhere can hold a plaintext contact. A contact may exist only as bytea
+  ciphertext, a keyed fingerprint, a key version or an opaque `_ref`.
+- **CID-02** every fingerprint is pinned to exactly 32 bytes, so its length leaks nothing, and the contact
+  itself is bytea.
+- **CID-03** the key-version tables hold **no key material**: no bytea at all, and text only as an opaque
+  `*_ref` or a CHECK-pinned enum.
+- **CID-04** exactly one HMAC key version is active, and a second active version is refused.
+- **CID-05/05b** global contact identity is unique per **(key version, fingerprint, grade)** across
+  `active` **and** `transfer_pending` claims.
+
+Two of these tests were wrong first and the schema was right, which is worth recording:
+
+- CID-03 initially banned every text column and so flagged
+  `mobile_encryption_key_versions.key_manager_ref`. That column is a non-secret KMS/HSM key identifier —
+  exactly the external-custody shape the register recommends for PS-3. The test was tightened to ban
+  `bytea` and unconstrained text instead.
+- CID-05 initially looked for fingerprint uniqueness on `student_contact_index` and failed. That table is
+  keyed `(student_id, key_version)` and deliberately carries **no** fingerprint uniqueness: it answers
+  "what is this student's contact", not "who owns this contact". The global rule lives on
+  `enrollment_claim_identity_aliases` as a partial unique index over `(key_version, mobile_hmac,
+  grade_key)` restricted to live claim states. So **two students can share a fingerprint in the contact
+  index**; what they cannot do is hold live claims on it in the same grade under the same key. That is
+  stated plainly in the test, because a reviewer should not have to infer it.
+
+### 13.4 Repository scan for secrets
+
+`docs/phase2/tests/check_no_secret_material.py` scans tracked files for plaintext contacts (Iranian mobile
+and generic E.164), long literals assigned to secret-shaped names, PEM private-key blocks and tracked
+credential files, and checks every path ever **added** in the Git history for credential-file names.
+
+Result on this repository: **147 tracked files and 186 historical paths, no findings.** The scan was
+verified sensitive by planting a fake Iranian number and a fake API key in a tracked file: all three
+expected findings fired.
+
+It deliberately does not flag this project's synthetic shapes — `repeat('aa',32)`, `decode('…','hex')`,
+`freeze_token='freeze-1'` — because flagging fixtures trains a reader to ignore the check, which is worse
+than not having it. **It is reported as a repository check, never as implementation evidence**, and it
+states its own limitation: a pattern scan proves the absence of the shapes it knows, not the absence of
+secrets. Real assurance needs a secret-scanning service on the repository, which is operational and
+outside it.
+
+### 13.5 What is NOT claimed for Batch 7
+
+- **No production key management.** PS-1..PS-4 are deferred and nothing here invents an algorithm, a key
+  policy, a rotation schedule or a revocation source. Rotation is tested as a **mechanism**: the gate
+  serializes, the states transition, coverage is asserted.
+- **No cryptographic strength claim.** The tests assert shapes and serialization, never that a cipher or
+  MAC is sound.
+- **No proof that an opaque `_ref` holds a non-secret.** No database assertion can establish that; it is
+  an operational property belonging to PS-3/PS-4.
+- **No rollback/recovery testing beyond transaction abort.** The brief lists "rollback and recovery"; what
+  is covered is that a refused contact change leaves the proof unconsumed with no command reservation and
+  no audit row (CC-FRESH-02, and the aborts observed here). Recovery of a partially completed rotation
+  across a process crash needs a process, and none exists.
+- **Phase 2 is not self-approved.** This is an implementation report, not a review.

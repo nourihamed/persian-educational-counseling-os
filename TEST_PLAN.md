@@ -779,3 +779,62 @@ Object-level authorization, IDOR and uniform-404 behaviour (API properties; no A
 tenant context (no jobs run); file and notification ownership (neither subsystem exists); RLS policies and
 therefore RLS bypass testing — the absence is itself the finding (WS-ISO-01); counselor-to-counselor
 isolation; and everything listed at the end of the Batch 1–5 sections.
+
+## Batch 7 — contact identity, HMAC rotation and concurrency (2026-11-15)
+
+### `cp_48_contact_identity_race.sh` — the two races the brief listed as NOT RUN (6 PASS lines)
+Both serializations were designed in and documented in comments, and neither had ever been executed.
+
+- **Mode `a`** — contact change in flight, HMAC rotation begins. `change_student_mobile_contact()` holds
+  `FOR SHARE` on `identity_write_gate`; `begin_identity_hmac_rotation()` takes `FOR UPDATE` on that row
+  and must block. CID-RACE-A1 the block, A2 both committing in order, A3 a contact change during
+  maintenance mode being refused.
+- **Mode `b`** — contact change in flight, ownership switch for the same student. The contact change holds
+  `FOR UPDATE` on the student's `student_ownership` row, so `switch_student_ownership()` must block;
+  afterwards the generation advances 1 → 2, ownership moves to the destination, and a contact change citing
+  the pre-switch generation is refused. CID-RACE-B1/B2/B3.
+
+Deterministic: the first session waits for an explicit go signal, sent only after the driver has
+**observed** the second session blocked in `pg_stat_activity`, and the first session is signalled to commit
+rather than killed. The older `cp_46_contact_change_race.sh` orders its sessions with `sleep 0.6` plus
+`pg_sleep 2`; this one does not.
+
+**Each mode runs in its own fresh database**, and that is load-bearing rather than tidy: race A completes a
+rotation (key version 1 `retiring`, 2 `active`) and advances a student's ownership generation. Sharing one
+database made race B's contact change abort on preconditions race A had changed, which **looked exactly
+like a missing lock in the implementation**. It was not — see the sensitivity table.
+
+| Control | Result |
+|---|---|
+| `FOR SHARE` on `identity_write_gate` removed | race A **fails** at CID-RACE-A1 |
+| `FOR UPDATE` on `student_ownership` removed | race B **fails** at CID-RACE-B1 |
+
+### `cp_49_contact_confidentiality_tests.sql` — CID-01..CID-05b (6 PASS lines)
+Catalog assertions, so a column or index added later fails by name: no text column can hold a plaintext
+contact (CID-01); every fingerprint is pinned to 32 bytes and the contact is bytea ciphertext (CID-02); the
+key-version tables hold no key material — no bytea, text only as an opaque `*_ref` or a CHECK-pinned enum
+(CID-03); exactly one active HMAC key version and a second is refused (CID-04); global identity is unique
+per `(key_version, mobile_hmac, grade_key)` across `active` **and** `transfer_pending` claims (CID-05).
+
+**Two of these tests were wrong first and the schema was right**, which is recorded in the file itself:
+CID-03 initially banned all text and flagged `key_manager_ref`, which is the non-secret KMS identifier the
+register recommends for PS-3; CID-05 initially looked for fingerprint uniqueness on `student_contact_index`,
+which deliberately has none — it answers what a student's contact is, not who owns a contact. So two
+students **can** share a fingerprint in the contact index; they cannot hold live claims on it in the same
+grade under the same key.
+
+### `check_no_secret_material.py` — REPOSITORY CHECK, not implementation evidence
+Scans tracked files for plaintext contacts (Iranian mobile and generic E.164), long literals assigned to
+secret-shaped names, PEM private-key blocks and tracked credential files, and checks every path ever
+**added** in Git history for credential-file names. Result: **147 tracked files, 186 historical paths, no
+findings.** Verified sensitive by planting a fake Iranian number and a fake API key — all three expected
+findings fired. It does not flag this project's synthetic shapes (`repeat('aa',32)`, `decode('…','hex')`),
+because flagging fixtures trains a reader to ignore the check. It states its own limit: a pattern scan
+proves the absence of known shapes, not the absence of secrets.
+
+### Still NOT RUN / NOT IMPLEMENTED after Batch 7
+Production key management (PS-1..PS-4: no algorithm, key policy, rotation schedule or revocation source is
+invented; rotation is tested as a mechanism only); any cryptographic strength claim; proof that an opaque
+`_ref` holds a non-secret (not establishable in a database); recovery of a partially completed rotation
+across a process crash (needs a process, none exists); plus everything listed at the end of the Batch 1–6
+sections.
