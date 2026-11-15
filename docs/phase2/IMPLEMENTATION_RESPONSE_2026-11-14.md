@@ -1034,3 +1034,191 @@ outside it.
   no audit row (CC-FRESH-02, and the aborts observed here). Recovery of a partially completed rotation
   across a process crash needs a process, and none exists.
 - **Phase 2 is not self-approved.** This is an implementation report, not a review.
+
+---
+
+## 14. Batch 8 — files, notifications, retention and operational contracts (2026-11-15)
+
+### 14.1 Method, and what the baseline actually was
+
+The five operations tables existed. What they *enforced* was a different question, and the only way to
+answer it was to interrogate the catalog on a loaded database rather than read the DDL:
+
+| Area | Found | |
+|---|---|---|
+| `private_file_objects` | Transfer write barrier present. Nothing else: the runtime holds `UPDATE` on every column, so `sha256`, `object_key`, `byte_size`, `content_type` and `encryption_key_version` were all rewritable, and `archived` was not terminal | **gap** |
+| `in_app_notifications` | **No reference to a student at all**, so the transfer fence could not be expressed for notifications; no constraint tying a recipient to this Workspace; `payload jsonb` unconstrained; recipient and payload mutable after delivery | **gap** |
+| `legal_holds` | **No grants to any application role**, no immutability, no referential integrity for its polymorphic `(entity_type, entity_id)`, and nothing anywhere consulted it | **inert** |
+| Retention policy / category / disposition model | Does not exist, although the retention contract §3 requires one | **missing** |
+| Append-only tables | 23 tables guarded `UPDATE`/`DELETE` with row triggers. **A row trigger does not fire for `TRUNCATE`** | **gap** |
+| The write barrier itself | Resolved the owner from `NEW` on `INSERT` and `UPDATE`, from `OLD` only on `DELETE` | **DEFECT — see 14.2** |
+
+### 14.2 The defect that matters most: the write barrier only looked at one side of an UPDATE
+
+Batch 1 claimed that a frozen student's data cannot change through cutover. It could.
+
+`student_write_barrier()` read the ownership column from `NEW` on an `UPDATE`, so an `UPDATE` that
+**rewrote that column** was evaluated against its *destination*. With student `e8..01` frozen, these were
+all **ACCEPTED** on a loaded database:
+
+```
+UPDATE private_file_objects SET student_id = <other student> WHERE file_id = <frozen student's file>
+UPDATE study_sessions       SET student_id = <other student> WHERE study_session_id = <frozen row>
+UPDATE private_file_objects SET student_id = NULL            WHERE file_id = <frozen student's file>
+```
+
+The third worked because `assert_student_not_frozen(NULL)` returns, so a NULL destination was a universal
+escape hatch. `DELETE` was refused throughout, which is exactly why the gap survived two audits: the
+obvious destructive verb was covered.
+
+What it costs is the property the Saga contract depends on. Rows could **leave** a frozen student's dataset
+after the barrier watermark, so the snapshot the destination Workspace imports is not the snapshot the
+source froze — and nothing downstream would notice, because the source's own tables stay self-consistent.
+It applied to all 31 guarded tables, not only files.
+
+**The fix is in one function, so it covers all of them at once.** Two rules:
+
+1. an `UPDATE` is asserted against the **OLD** owner as well as the NEW one, freeze first so the refusal
+   names the freeze rather than the weaker ownership reason;
+2. the ownership key of a guarded row is **forward-only**: `NULL -> value` is allowed (a row that acquires
+   its owner later), `value -> other value` and `value -> NULL` are refused for every writer, frozen or
+   not. Nothing in this repository re-points a guarded row at another student — grepped before deciding —
+   so this forbids no existing path. It removes the class instead of the three instances demonstrated.
+
+**Measured both ways.** FRZ-38..FRZ-43 cover the three refusals, the one legitimate direction, a
+cross-student move with **neither** student frozen, and an indirect key (`counselor_assignments.enrollment_id`).
+Reverting the function to its pre-Batch-8 `NEW`-only shape drops the freeze suite from 46 PASS to 40 and
+**fails at FRZ-38**.
+
+### 14.3 Notifications could not be fenced, and nothing bound a recipient to this Workspace
+
+`in_app_notifications` had no student reference. The Saga recovery contract requires the source to be
+"rejected for writes, jobs, files, exports and **notifications**"; the API authorization contract lists
+"recipient substitution; child/Workspace mismatch; stale queued notification after transfer; sensitive data
+in event payload"; the guardian authority matrix says child A's authority can never be used for child B,
+notifications included. None of that was enforceable, because the row did not say which student it was about.
+
+What is enforced now:
+
+- **`student_id` on the notification**, declared in `workspace_schema_draft.sql` rather than in the new
+  draft **so the catalog-driven barrier installation picks the table up automatically**. Barrier coverage
+  went from 31 tables to **32, with zero holes**. If it had been added in the later file, the coverage view
+  would have listed the table without a trigger and FRZ-01 would have failed — which is the coverage test
+  doing its job.
+- **Recipient isolation**, at insert: an **active** member of this Workspace, the student the notification
+  is about, or a **verified, unrevoked guardian of that student**. `invited` and `suspended` memberships
+  are not recipients. OPS-13 is the one that matters: the same guardian, verified for student A, is
+  **refused** as a recipient for student B.
+- **No plaintext contact in the payload**, scanned over jsonb string leaves at any depth, so nesting does
+  not hide a number. This is the contact-change contract's own rule — "Notifications must not include the
+  full new number; use a masked display only after authorization" — and CID-01..05 would be defeated by a
+  notification that quoted the number.
+- **Immutability**: recipient, subject, template and payload are frozen once written; only `read_at` may
+  change, and only once. Re-pointing a delivered notification at another recipient is recipient
+  substitution after the fact.
+
+**What is NOT claimed:** delivery-time re-authorization. The contracts require it; it needs a worker, and
+there is none. Registered as **OPS-NOTIF-DELIVERY**, overlapping PS-8.
+
+### 14.4 Retention: a legal hold that failed OPEN, and a policy model that did not exist
+
+`legal_holds` carried an unrestricted polymorphic reference — `(entity_type text, entity_id uuid)` with no
+integrity — which the brief explicitly forbids. A hold on a mistyped id, or on a type nobody implemented,
+silently protected nothing while the register said the data was held. It was also mutable, deletable, and
+read by nothing.
+
+Built in this batch, all of it fail-closed:
+
+- **`retention_entity_types`**, a reviewed registry that makes the polymorphic reference enforceable: an
+  entry must name a real table and a real **uuid** primary-key column, checked against the catalog when it
+  is registered, and it cannot be removed (removal would make every hold that used it unresolvable). A hold
+  whose target does not resolve is **refused**.
+- **Hold integrity**: placement facts immutable, release one-way, no delete, no truncate.
+- **`retention_categories` + `retention_policy_versions`**: the nine categories transcribed from
+  `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md` §1, each with one `needs_decision` version and a **NULL
+  duration**, because every period in §2 of that document is NEEDS-DECISION, PROPOSAL or LEGAL-REVIEW and
+  **not one is approved**. A version is immutable: a `needs_decision` policy cannot become `approved` by an
+  `UPDATE`, only by a new version, so what was in force at any past moment stays true. A CHECK makes
+  `approved` impossible without a duration, an action, an approval reference **and** an effective date.
+- **`assert_destructive_disposition_allowed()`**, one gate with five distinct named refusals: the action is
+  not destructive; the entity type is unregistered; the target row is absent; **any** hold is live; no
+  approved policy version is effective. It reads `clock_timestamp()`, because an effective-date decision
+  from a transaction-start clock can be defeated by holding a transaction open (CLK-01/CLK-02; OPS-49 pins
+  it narrowly).
+
+Today the fifth condition alone refuses everything. **That is the behaviour the contract requires** while
+Q-020 is open: "A policy with an unresolved duration must be marked blocked for destructive deletion; it
+must not mean immediate deletion or indefinite retention by accident."
+
+**A gate that always raised would pass every refusal test in the suite and be worthless.** So OPS-48
+inserts a **synthetic** approved policy — its own `approval_ref` reads
+`SYNTHETIC-TEST-FIXTURE-NOT-A-PRODUCT-OWNER-DECISION` — and shows the gate then **allows**; then a hold is
+placed and it refuses again with the hold reason; then two conflicting approved policies make it fail
+closed on ambiguity. OPS-40 asserts that the **schema draft itself approves nothing**, so that fixture
+cannot drift into the drafts.
+
+**No authority was invented.** Who may place or release a hold (**OPS-HOLD-AUTH**) and who may authorize or
+execute a disposition (**OPS-DISP-AUTH**) are Product Owner decisions, so no role is granted a write on
+`legal_holds` and nobody — not `PUBLIC`, not runtime, worker or exporter — may execute the gate. OPS-50 and
+OPS-51 assert both from the catalog, so a later grant fails the suite instead of passing silently.
+
+### 14.5 A finding deliberately not inflated: TRUNCATE
+
+23 tables claim append-only or immutable semantics through row triggers, and **not one refused `TRUNCATE`**,
+which row triggers never see. Statement-level guards are installed now, catalog-driven, with a coverage
+view and OPS-60 failing by name for anything added later; 31 tables are covered, zero holes.
+
+**But it was not reachable.** Measured: `TRUNCATE` is granted only to `ws_<key>_table_owner`, the NOLOGIN
+owner; runtime, worker and exporter hold none, on any table. So this is **hardening, not a fixed
+vulnerability**, and OPS-64 asserts the measurement itself so the claim cannot quietly become wrong. It
+still matters: the owner identity is what migrations and any future maintenance script use, and
+"append-only" is offered as evidence in this project's own exit criteria.
+
+Two of the three TRUNCATE tests are also **partially masked**, and say so: a plain `TRUNCATE` of a table
+another table references is refused by PostgreSQL with `0A000` before any trigger runs — the same class of
+masking as the foreign-key row lock in the freeze race — so `CASCADE` is used where an FK exists.
+`audit_events` is referenced by nothing, which makes OPS-61 the sensitive one.
+
+### 14.6 Evidence
+
+PostgreSQL 16.15, cleared cluster, every database built from the drafts.
+
+- **23 implementation test steps, all passed. 808 PASS assertion lines, 0 FAIL.** (Previous head: 22 steps,
+  749 lines.)
+- **All 59 new lines are new assertions**, with no re-run inflation: the new operations step contributes 53
+  and the freeze suite rises 40 -> 46. Nothing else moved.
+- Python verifier and canonical-vector tests: 15 + 6 OK.
+- Separately reported and **not** counted as implementation evidence: the register consistency check
+  (31 items, 6 lines) and the repository secret scan.
+
+**Sensitivity measured for every new guard, by neutralising it and re-running:**
+
+| Control | Result |
+|---|---|
+| Barrier reverted to the pre-Batch-8 `NEW`-only shape | freeze suite **fails at FRZ-38** (46 -> 40 PASS) |
+| `assert_notification_recipient_allowed` stubbed to return | **fails at OPS-13** (the child A / child B rule) |
+| `jsonb_has_plaintext_contact` stubbed to `false` | **fails at OPS-17** |
+| `retention_entity_exists` stubbed to `true` | **fails at OPS-30** |
+| TRUNCATE guard dropped from `audit_events` | **fails at OPS-60**, the coverage test, before OPS-61 |
+| Gate's legal-hold check removed | **fails at OPS-47.4** |
+
+### 14.7 What is NOT claimed for Batch 8
+
+- **No retention period.** Q-020 stays open. The only approved policy anywhere is the synthetic fixture
+  inside OPS-48, and OPS-40 asserts the drafts approve nothing.
+- **No complete erasure.** There is no disposition executor, object-store client, export pipeline, cache,
+  index, replica or backup tooling in this repository. Passing the gate is **not** evidence that a deletion
+  would be complete; retention contract §7 is unimplemented (**OPS-RETENTION-SCOPE**).
+- **No hold or disposition authority** (OPS-HOLD-AUTH, OPS-DISP-AUTH). The mechanisms exist and are
+  uncallable by every application identity.
+- **No delivery-time notification authorization** (OPS-NOTIF-DELIVERY). The insert-time rule is enforced;
+  the worker does not exist.
+- **No notification channel.** Telegram, SMS and e-mail are later phases. Nothing in the core depends on a
+  channel, and nothing about one is designed here.
+- **No anti-virus or content scanning.** `quarantined -> available` is enforced as a one-way state
+  transition; what clears a scan is a service that does not exist.
+- **Nothing about the table owner or a superuser.** SEC-08 already records that no trigger-based guard
+  contains either identity.
+- **GitHub Actions at this head: NOT RUN.** The agent has no Actions access. The Batch 6 head `b095dbc7`
+  and the Batch 7 head `d6d81f8b` still have no reported Actions result.
+- **Phase 2 is not self-approved and remains NOT READY.** This is an implementation report, not a review.

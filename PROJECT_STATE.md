@@ -9,8 +9,8 @@ write-barrier commit on `docs/product-owner-decisions-consolidation-2026-11-07` 
 
 | Kind | What it is | Result |
 |---|---|---|
-| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **22 implementation test steps**, **749 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
-| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL and new test suites, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
+| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **23 implementation test steps**, **808 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus two checks reported separately and explicitly *not* implementation evidence (register consistency, 6 PASS lines; repository secret scan, 2 lines) |
+| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** Every batch since has added SQL and new test suites, so earlier Actions evidence does not cover them. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The later pushes (Batch 1 `cc8cd64` through Batch 7 `d6d81f8b`) have **no** reported Actions result; the implementation agent has no Actions access and cannot read job logs. |
 
 Any commit that touches SQL or tests requires a fresh local run and a fresh Actions run at its own SHA.
 Documentation-only commits on top of a verified SHA change no SQL and no test, so they do not invalidate
@@ -797,5 +797,84 @@ Actions results have **not** been reported to the implementation agent.
   **fails closed** when it cannot scan, rather than passing silently — and it passes when run as the
   repository owner, which is how CI runs it. The local runner now runs database-free steps as the owner.
 - **GitHub Actions at this HEAD: NOT RUN.**
+- Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
+  prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**
+
+## Update 2026-11-15 (fifth) — Batch 8: files, notifications, retention and operational contracts
+
+Batch 7 was pushed as `d6d81f8b32719a0f9f3d8316c866e4625d361f8e` (verified against the local commit: same
+message, 9 files, +894/−1). Its GitHub Actions result has **not** been reported to the implementation agent.
+
+- **The most important finding of this batch is a defect in Batch 1's own work: the transfer write barrier
+  only looked at ONE SIDE of an `UPDATE`.** It resolved the student from `NEW` on `INSERT` and `UPDATE` and
+  from `OLD` only on `DELETE`, so an `UPDATE` that **rewrote the ownership column** was checked against its
+  destination. With a student frozen, all three of these were **ACCEPTED** on a loaded database: moving the
+  frozen student's file to another student, moving their study session, and setting the file's owner to
+  `NULL` (which worked because `assert_student_not_frozen(NULL)` returns, making a NULL destination a
+  universal escape). `DELETE` was refused throughout, which is why the gap survived two audits.
+  **What it cost:** rows could **leave** a frozen student's dataset after the barrier watermark, so the
+  snapshot the destination Workspace imports is not the snapshot the source froze — and nothing downstream
+  would notice, because the source's own tables remain self-consistent. It applied to all 31 guarded tables.
+  **Fixed in one function**, so all of them are covered at once: an `UPDATE` is asserted against the OLD
+  owner as well as the NEW one, and the ownership key is **forward-only** (`NULL → value` allowed;
+  `value → other value` and `value → NULL` refused for every writer, frozen or not — nothing in the
+  repository re-points a guarded row, which was grepped before the decision). **Measured:** reverting to
+  the old shape drops the freeze suite from 46 to 40 PASS and fails at FRZ-38.
+- **Notifications could not be fenced at all, because the table had no reference to a student.** Four
+  contracts require the opposite. `student_id` is now on `in_app_notifications`, declared in the schema
+  draft rather than the new operations draft **so the catalog-driven barrier installation picks it up
+  automatically** — barrier coverage is now **32 tables, zero holes**. Recipient isolation is enforced at
+  insert: an **active** member of this Workspace, the student the notification is about, or a **verified,
+  unrevoked guardian of that student**. The case that matters: the same guardian, verified for student A,
+  is **refused** as a recipient for student B. A plaintext contact number is refused anywhere in the
+  payload at any depth. Recipient, subject and payload are immutable once written; only `read_at` may be
+  set, once. **Delivery-time re-authorization is NOT implemented** — it needs a worker, and none exists
+  (OPS-NOTIF-DELIVERY).
+- **`legal_holds` failed OPEN and was inert.** An unrestricted polymorphic `(entity_type, entity_id)` with
+  no integrity, mutable, deletable, no grants to any application role, and consulted by nothing: a hold on
+  a mistyped id silently protected nothing while the register said the data was held. Now the polymorphic
+  reference is enforceable through a reviewed `retention_entity_types` registry whose entries must name a
+  real table and a real **uuid** key (checked against the catalog), a hold whose target does not resolve is
+  refused, placement is immutable, release is one-way, and the record can be neither deleted nor truncated.
+- **A retention policy model existed only in prose.** Built: the nine categories transcribed from
+  `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md` §1, each with one immutable `needs_decision` version and
+  a **NULL duration**, because not one period in that document is approved (Q-020). A policy cannot become
+  `approved` by an `UPDATE`, only as a new version, and never without a duration, an action, an approval
+  reference and an effective date. One gate, `assert_destructive_disposition_allowed()`, refuses with five
+  distinct named reasons — non-destructive action, unregistered entity type, missing target, **any** live
+  legal hold, no approved policy effective — and reads `clock_timestamp()`, not a transaction-start clock.
+  **Today the last reason alone refuses everything, which is exactly what the contract requires** while the
+  period is undecided: an unresolved duration must block destructive disposition and must mean neither
+  "delete now" nor "keep forever".
+- **The gate is shown to discriminate, not merely to raise.** A gate that always failed would pass every
+  refusal test and be worthless, so OPS-48 inserts a **synthetic** approved policy (its `approval_ref` reads
+  `SYNTHETIC-TEST-FIXTURE-NOT-A-PRODUCT-OWNER-DECISION`), shows the gate then **allows**, then shows a hold
+  override it, then shows two conflicting approved policies fail closed on ambiguity. OPS-40 asserts that
+  **the drafts themselves approve nothing**, so the fixture cannot drift in.
+- **No authority was invented.** No application role can write `legal_holds`, and **nobody** — not `PUBLIC`,
+  runtime, worker or exporter — may execute the gate. OPS-50 and OPS-51 assert both from the catalog, so a
+  later grant fails the suite rather than passing silently. Registered as **OPS-HOLD-AUTH** and
+  **OPS-DISP-AUTH**; completeness of erasure beyond the primary row is **OPS-RETENTION-SCOPE**.
+- **A finding deliberately not inflated.** 23 tables claim append-only or immutable semantics through row
+  triggers and **none refused `TRUNCATE`**, which a row trigger never sees. Statement-level guards are
+  installed, catalog-driven, 31 tables covered with zero holes. **But it was not reachable:** measured,
+  `TRUNCATE` is held only by the NOLOGIN table owner — runtime, worker and exporter hold none on any table.
+  So this is **hardening, not a fixed vulnerability**, and OPS-64 asserts that measurement so the claim
+  cannot quietly become wrong. Two of the three behavioural TRUNCATE tests are also partially **masked** and
+  say so: a plain `TRUNCATE` of a referenced table is refused by PostgreSQL before any trigger runs, so
+  `CASCADE` is used where a foreign key exists; `audit_events` is referenced by nothing, which makes OPS-61
+  the sensitive one.
+- **Local verification:** PostgreSQL 16.15, cleared cluster, **23 implementation test steps, all passed,
+  808 PASS assertion lines, 0 FAIL**, plus the Python verifier tests (15 and 6, `OK`). **All 59 new lines
+  are new assertions** — the new operations step contributes 53 and the freeze suite rises from 40 to 46,
+  and nothing else moved, so there is no re-run inflation in this number. Two checks are reported
+  separately and are **not** implementation evidence: the register consistency check (31 items) and the
+  repository secret scan.
+- **Sensitivity measured for every new guard**, by neutralising it and re-running: the pre-Batch-8 barrier
+  fails FRZ-38; stubbing the recipient check fails OPS-13; stubbing the payload scan fails OPS-17; stubbing
+  the hold resolver fails OPS-30; dropping the audit TRUNCATE guard fails OPS-60; removing the gate's hold
+  check fails OPS-47.4.
+- **GitHub Actions at this HEAD: NOT RUN.** The agent has no Actions access; `b095dbc7` and `d6d81f8b` still
+  have no reported result.
 - Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
   prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**

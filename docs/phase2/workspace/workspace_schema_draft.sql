@@ -938,6 +938,15 @@ CREATE TABLE notification_preferences (
 CREATE TABLE in_app_notifications (
   notification_id uuid PRIMARY KEY,
   recipient_platform_user_id uuid NOT NULL,
+  -- The student the notification is ABOUT, which is not the recipient: a counselor or a guardian receives
+  -- notifications about a student. NULL means a Workspace-level notice that concerns no student.
+  -- Added in Batch 8. Without it the transfer fence could not be expressed for notifications at all,
+  -- although the Saga contract requires the source to be "rejected for writes, jobs, files, exports and
+  -- notifications", and the recipient could not be checked against the student either, which is the
+  -- "child/Workspace mismatch" threat in the API authorization contract. It is declared HERE rather than
+  -- in workspace_operations_draft.sql so the catalog-driven barrier installation in
+  -- workspace_transfer_freeze.sql covers this table automatically.
+  student_id uuid REFERENCES students(student_id),
   notification_type text NOT NULL,
   template_version text NOT NULL,
   payload jsonb NOT NULL,

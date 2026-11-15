@@ -509,6 +509,97 @@
         "net_changed_files_merge_base_to_main": 0,
         "previous_claim": "FACTUALLY_CORRECTED / not behind main — this was wrong and is retracted"
       }
+    },
+    {
+      "id": "OPS-HOLD-AUTH",
+      "title": "Who may place and who may release a legal hold",
+      "status": "OPEN",
+      "why_unresolved": "The data-retention contract section 9 lists 'Legal hold categories, triggers, release authority and dispute handling' as still required, and section 5 adds that 'a hold cannot be released by the same unrestricted deletion job that it blocks'. Neither the category list nor the two authorities have been decided. Batch 8 built the hold mechanism — resolvable target, immutable placement, one-way release, no delete, no truncate — but deciding WHO places and WHO releases a hold is a Product Owner decision with legal input, and inventing it would be exactly the kind of implicit decision the brief forbids.",
+      "security_impact": "HIGH at pilot. A hold that the wrong party can place is a denial-of-service on lawful deletion; a hold that the wrong party can release is the removal of a legal control. Today neither is possible because no application role can write the table at all, so the exposure is zero while the decision is open and becomes HIGH the moment a role is granted.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No role is granted INSERT, UPDATE or DELETE on legal_holds; only the NOLOGIN table owner can write it, which is a synthetic posture and is stated as such in workspace_roles_setup_draft.sql. OPS-51 asserts that from the catalog and fails if any application role is granted a write. The placement and release mechanics are enforced and tested (OPS-30..OPS-36) independently of who is eventually authorized.",
+      "decision_owner": "Product Owner with qualified Iranian legal review",
+      "options": [
+        "A. Platform Admin places and releases holds, with the request recorded against a case reference and a second Platform Admin approving the release.",
+        "B. A dedicated compliance role, separate from both the Workspace counselor roles and the deletion executor, holds both capabilities.",
+        "C. The Workspace owner may place a hold on their own Workspace's data, while release requires Platform Admin.",
+        "D. Holds are placed only through an operational runbook outside the application, by the database owner."
+      ],
+      "recommended_option": "B",
+      "rationale": "The contract's own rule is that the releasing authority must be separable from the deletion job, which is a separation-of-duties requirement, and this project already has the pattern for it in the transfer approval separation. A dedicated compliance role makes that separation a grant rather than a convention. (A) is workable but conflates platform administration with legal custody. (C) lets the party with an interest in deleting data also place and lift the control over it. (D) leaves no audit trail inside the system, which contradicts the contract's requirement to preserve who placed and released a hold, when, with what authority reference.",
+      "evidence": {
+        "mechanism": "docs/phase2/workspace/workspace_operations_draft.sql section 4",
+        "tests": "OPS-30..OPS-36, OPS-51 in docs/phase2/workspace/tests/workspace_operations_tests.sql",
+        "grants": "no application role holds INSERT/UPDATE/DELETE on legal_holds (asserted, not assumed)"
+      }
+    },
+    {
+      "id": "OPS-DISP-AUTH",
+      "title": "Who authorizes and who executes an irreversible disposition",
+      "status": "OPEN",
+      "why_unresolved": "The retention contract section 4 step 5 requires independent approval for irreversible actions 'according to the approved authority matrix', and states that 'the requester cannot approve their own high-impact deletion'. That matrix does not exist, and no disposition executor identity exists in this repository — there is no job runner, no object-store client and no worker. Batch 8 built the fail-closed gate every future executor must pass; it did not invent the authority that would call it.",
+      "security_impact": "HIGH at pilot. An unauthorized or self-approved deletion is irreversible and may destroy records that a legal or tax obligation requires. Today the exposure is zero: the gate is executable by nobody, and there is no code path that deletes a student, a file object, a notification or an audit event.",
+      "implementation_may_continue": true,
+      "continue_conditions": "EXECUTE on assert_destructive_disposition_allowed() is revoked from PUBLIC and granted to no role; OPS-50 asserts that from the catalog. The gate refuses every destructive action anyway while no retention policy version is approved (Q-020). No deletion path exists for the registered entity types: the file, notification and hold guards refuse DELETE outright, and the audit log refuses UPDATE, DELETE and now TRUNCATE.",
+      "decision_owner": "Product Owner with the operations owner",
+      "options": [
+        "A. Two-party authorization: a compliance role requests, a Platform Admin approves, and a dedicated executor identity — distinct from both — performs the work and may do nothing else.",
+        "B. Single approver with full audit, relying on the append-only disposition audit trail for accountability.",
+        "C. No automated destructive disposition at all in the first production release: restrict access and archive only, with erasure performed by a reviewed manual runbook.",
+        "D. Let the Workspace owner authorize disposition of their own Workspace's data."
+      ],
+      "recommended_option": "C then A",
+      "rationale": "(C) first, because an executor that cannot yet verify completeness across object storage, exports, caches, indexes, replicas and backups (OPS-RETENTION-SCOPE) would report deletions it did not actually complete, which is worse than not deleting. Then (A), because it satisfies the contract's requester-is-not-approver rule as a grant and keeps the executor's privileges narrow enough to be reviewable. (B) relies on detection after the fact for an irreversible action. (D) puts the decision with the party most likely to want the data gone and least likely to know the legal obligations.",
+      "evidence": {
+        "mechanism": "assert_destructive_disposition_allowed() in docs/phase2/workspace/workspace_operations_draft.sql section 5",
+        "tests": "OPS-47, OPS-48, OPS-50 in docs/phase2/workspace/tests/workspace_operations_tests.sql",
+        "measured": "the gate refuses for five distinct named reasons and ALLOWS only with a synthetic approved policy inserted inside the test, which is how its refusals are shown to be decisions rather than an unconditional raise"
+      }
+    },
+    {
+      "id": "OPS-RETENTION-SCOPE",
+      "title": "Disposition completeness beyond the primary row: objects, exports, caches, indexes, replicas and backups",
+      "status": "OPEN",
+      "why_unresolved": "The retention contract is explicit that 'deletion from the primary row alone is not complete disposition' (section 2) and that restore must re-apply post-backup suppression before recovered data is served (section 7). None of those systems exists in this repository: there is no object store, no export pipeline, no cache, no search index, no replica and no backup tooling. The mechanics also depend on the hosting target, which is itself undecided (OQ-D).",
+      "security_impact": "HIGH at pilot, but as an incompleteness rather than a hole: a deletion reported as done while copies survive is a false compliance statement. Today nothing deletes anything, so no such statement can be made by the system.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Batch 8 claims the database half ONLY, and says so in workspace_operations_draft.sql, in the test header and in PHASE2_EXIT_CRITERIA.md: no completeness of erasure is claimed, retention contract section 7 is recorded as unimplemented, and the gate's own documentation states that passing it is not evidence that a deletion would be complete.",
+      "decision_owner": "Product Owner with the operations owner, after the hosting decision (OQ-D)",
+      "options": [
+        "A. Build a durable suppression ledger that every restore and every derived copy must consult before serving data, and make disposition verification read it.",
+        "B. Cryptographic erasure per student or per category, accepting the key-scope, shared-object and backup dependencies the contract requires to be proven first.",
+        "C. Bounded backup rotation only, disclosing residual copies until expiry and refusing to report a deletion as complete until rotation has passed.",
+        "D. Defer all of it to a later phase and state in the product documentation that erasure is partial until then."
+      ],
+      "recommended_option": "A with C",
+      "rationale": "A suppression ledger is the only option that survives a restore, which is the case the contract names explicitly and the one most likely to resurrect deleted data silently. (C) is complementary and honest about residuals rather than overstating them. (B) is attractive but the contract itself requires key scope, shared-object dependencies, backups, holds and recovery behaviour to be proven before cryptographic erasure may be relied on, and none of that can be proven here. (D) alone leaves a compliance statement no one can support.",
+      "evidence": {
+        "not_implemented": "no object store, export, cache, index, replica or backup tooling exists in this repository",
+        "documented": "docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md section 7; PHASE2_EXIT_CRITERIA.md"
+      }
+    },
+    {
+      "id": "OPS-NOTIF-DELIVERY",
+      "title": "Delivery-time re-check of notification recipient authority and ownership generation",
+      "status": "OPEN",
+      "why_unresolved": "Four contracts require that a notification be re-authorized at DELIVERY, not only when it is created: the guardian authority matrix ('background jobs, exports, files and notifications re-check authorization before execution/delivery'), the role-grantability matrix (revocation must not authorize a subsequent notification), the Saga recovery contract (a stale queued notification must not be delivered after a transfer) and the API authorization contract, which names 'stale queued notification after transfer' as a threat. Batch 8 enforces the recipient rule at INSERT. The delivery-time half needs a notification worker, and no worker, queue or delivery path exists in this repository.",
+      "security_impact": "HIGH when a delivery path is built, and zero until then: nothing delivers a notification, so nothing can deliver a stale one. The specific risk is a notification queued before a guardian's permission was revoked, or before a student's ownership moved to another Workspace, being delivered afterwards.",
+      "implementation_may_continue": true,
+      "continue_conditions": "The insert-time rule is implemented and tested (OPS-10..OPS-16), the transfer write barrier now covers the notification table so a frozen student's notification cannot even be created (OPS-24, OPS-45), and the test header plus workspace_operations_draft.sql state plainly that delivery-time re-authorization is NOT implemented and NOT claimed. It overlaps PS-8, which holds the same gap for revocation freshness generally.",
+      "decision_owner": "Product Owner with Platform Security; implementation belongs to the notification phase",
+      "options": [
+        "A. The worker re-evaluates recipient authority, student lifecycle and current ownership generation inside the delivery transaction, and drops or quarantines anything that no longer passes.",
+        "B. Notifications carry the ownership generation they were created at, and delivery refuses on a generation mismatch.",
+        "C. Queue invalidation on revocation and on transfer: the event that revokes also purges or marks the affected queued notifications.",
+        "D. Short queue lifetime plus re-generation, so a stale notification expires rather than being re-checked."
+      ],
+      "recommended_option": "A with B",
+      "rationale": "(A) is what the contracts actually require, and this project's consistent lesson is that a check performed only at creation binds only the creator. (B) makes the transfer case cheap and deterministic and matches the generation fencing already used by the inbox projection, which is why recording the generation on the notification row is worth doing when the worker is built. (C) is a useful optimization but, on its own, is a cache invalidation problem and fails open if an invalidation is missed. (D) narrows the window without closing it.",
+      "evidence": {
+        "implemented": "insert-time recipient isolation and payload hygiene: docs/phase2/workspace/workspace_operations_draft.sql section 2",
+        "tests": "OPS-10..OPS-24, OPS-45, OPS-46",
+        "not_implemented": "no notification worker, queue or delivery path exists in this repository"
+      }
     }
   ]
 }

@@ -161,33 +161,81 @@ END; $body$;
 -- The indirect form matters: counselor_assignments, activation_command_log and archive_command_log belong
 -- to a student only through their enrollment. A first version of this barrier scanned for a student_id
 -- column alone and left those three writable during a freeze; test FRZ-18 caught it.
-CREATE FUNCTION student_write_barrier() RETURNS trigger LANGUAGE plpgsql AS $body$
-DECLARE v_key uuid; v_student uuid;
+-- The resolution itself, factored out so the barrier can resolve BOTH sides of an UPDATE. Deliberately
+-- SECURITY INVOKER: it runs as the writer, exactly as the inline resolution it replaced did, so no writer
+-- gains read access it did not already have.
+CREATE FUNCTION resolve_student_for_barrier(p_kind text, p_key uuid) RETURNS uuid
+LANGUAGE plpgsql AS $body$
+DECLARE v_student uuid;
 BEGIN
-  EXECUTE format('SELECT ($1).%I', TG_ARGV[0])
-     INTO v_key
-    USING CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
-  IF TG_ARGV[1] = 'enrollment' THEN
-    SELECT e.student_id INTO v_student FROM public.enrollments e WHERE e.enrollment_id = v_key;
-  ELSIF TG_ARGV[1] = 'plan' THEN
+  IF p_key IS NULL THEN RETURN NULL; END IF;
+  IF p_kind = 'enrollment' THEN
+    SELECT e.student_id INTO v_student FROM public.enrollments e WHERE e.enrollment_id = p_key;
+  ELSIF p_kind = 'plan' THEN
     -- student_plan_versions reaches its student only through student_plans. Added 2026-11-15; see below.
-    SELECT p.student_id INTO v_student FROM public.student_plans p WHERE p.plan_id = v_key;
-  ELSIF TG_ARGV[1] = 'attempt' THEN
+    SELECT p.student_id INTO v_student FROM public.student_plans p WHERE p.plan_id = p_key;
+  ELSIF p_kind = 'attempt' THEN
     -- test_responses reaches its student only through test_attempts. Added 2026-11-15; see below.
-    SELECT a.student_id INTO v_student FROM public.test_attempts a WHERE a.attempt_id = v_key;
-  ELSIF TG_ARGV[1] = 'guardian_link' THEN
+    SELECT a.student_id INTO v_student FROM public.test_attempts a WHERE a.attempt_id = p_key;
+  ELSIF p_kind = 'guardian_link' THEN
     -- guardian_permissions and guardian_link_events reach the student through the link.
-    SELECT l.student_id INTO v_student FROM public.student_guardian_links l WHERE l.link_id = v_key;
-  ELSIF TG_ARGV[1] = 'guardian_permission' THEN
+    SELECT l.student_id INTO v_student FROM public.student_guardian_links l WHERE l.link_id = p_key;
+  ELSIF p_kind = 'guardian_permission' THEN
     -- guardian_permission_events are two hops out: permission -> link -> student.
     SELECT l.student_id INTO v_student
       FROM public.guardian_permissions gp
       JOIN public.student_guardian_links l ON l.link_id = gp.guardian_link_id
-     WHERE gp.permission_id = v_key;
+     WHERE gp.permission_id = p_key;
   ELSE
-    v_student := v_key;
+    v_student := p_key;
   END IF;
-  PERFORM public.assert_student_not_frozen(v_student);
+  RETURN v_student;
+END; $body$;
+
+-- THE BARRIER HAS TO LOOK AT BOTH SIDES OF AN UPDATE — A DEFECT FOUND AND MEASURED IN BATCH 8.
+-- The first version of this function resolved the owner from NEW on INSERT and UPDATE and from OLD only on
+-- DELETE. A DELETE of a frozen student's row was therefore refused, but an UPDATE that REWROTE the
+-- ownership column was evaluated against its DESTINATION. Measured on a loaded database with student
+-- e8..01 frozen, all three of these were ACCEPTED:
+--     UPDATE private_file_objects SET student_id = <other student> WHERE file_id = <frozen student's file>
+--     UPDATE study_sessions       SET student_id = <other student> WHERE study_session_id = <frozen row>
+--     UPDATE private_file_objects SET student_id = NULL            WHERE file_id = <frozen student's file>
+-- The third worked because assert_student_not_frozen(NULL) returns, so a NULL destination was a universal
+-- escape. What that costs is exactly the property Batch 1 claimed to establish: rows could LEAVE a frozen
+-- student's dataset after the barrier watermark, so the snapshot the destination imports is not the
+-- snapshot the source froze, and nothing downstream would notice, because the source's own tables stay
+-- self-consistent.
+-- Two rules are enforced now:
+--   1. an UPDATE is asserted against the OLD owner as well as the NEW one;
+--   2. the ownership key of a guarded row is forward-only: NULL -> value is allowed (a row that acquires
+--      its owner later), while value -> other value and value -> NULL are refused for every writer,
+--      frozen or not. No path in this repository re-points a guarded row at another student, so this
+--      forbids nothing that exists; it removes the class rather than the one demonstrated instance.
+CREATE FUNCTION student_write_barrier() RETURNS trigger LANGUAGE plpgsql AS $body$
+DECLARE v_old_key uuid; v_new_key uuid; v_old uuid; v_new uuid;
+BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    EXECUTE format('SELECT ($1).%I', TG_ARGV[0]) INTO v_old_key USING OLD;
+    v_old := public.resolve_student_for_barrier(TG_ARGV[1], v_old_key);
+  END IF;
+  IF TG_OP <> 'DELETE' THEN
+    EXECUTE format('SELECT ($1).%I', TG_ARGV[0]) INTO v_new_key USING NEW;
+    v_new := public.resolve_student_for_barrier(TG_ARGV[1], v_new_key);
+  END IF;
+
+  -- The freeze is asserted FIRST and on both sides, so that a frozen student's row is refused with the
+  -- freeze reason rather than the weaker ownership reason. NULL is a no-op inside the assertion; both
+  -- calls are made so an UPDATE spanning two students is refused when EITHER of them is frozen.
+  PERFORM public.assert_student_not_frozen(v_old);
+  IF v_new IS DISTINCT FROM v_old THEN
+    PERFORM public.assert_student_not_frozen(v_new);
+  END IF;
+
+  IF TG_OP = 'UPDATE' AND v_old_key IS NOT NULL AND v_new_key IS DISTINCT FROM v_old_key THEN
+    RAISE EXCEPTION
+      'the ownership key %.% is forward-only: a row already bound to a student cannot be re-pointed or cleared',
+      TG_TABLE_NAME, TG_ARGV[0] USING ERRCODE='check_violation';
+  END IF;
   RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
 END; $body$;
 

@@ -380,6 +380,40 @@ SELECT format('REVOKE ALL ON FUNCTION append_workspace_governance_event(uuid,tex
   'ws_'||current_setting('app.workspace_key')||'_exporter',
   'ws_'||current_setting('app.workspace_key')||'_function_owner') \gexec
 
+-- ======================================================================================================
+-- BATCH 8 — retention, legal hold and the disposition gate. Applied only when
+-- workspace_operations_draft.sql is loaded in this database, because the freeze and inbox steps load the
+-- roles file without it.
+--
+-- WHAT IS DELIBERATELY NOT GRANTED, AND WHY
+--   * NO role receives INSERT or UPDATE on legal_holds. Who may place and who may release a hold is a
+--     Product Owner decision (retention contract §9; register item OPS-HOLD-AUTH). Until it is made, only
+--     the NOLOGIN table owner can write the table, which is a synthetic posture, not an authority model.
+--   * NO role receives EXECUTE on assert_destructive_disposition_allowed(), and PUBLIC's default EXECUTE
+--     is revoked. There is no disposition executor identity to grant it to (OPS-DISP-AUTH), and a gate
+--     nobody may call is the correct fail-closed state while that authority is undecided.
+--   * The gate owner gets COLUMN-SCOPED SELECT on the primary keys of the registered entity tables, not
+--     table SELECT. An existence check needs the key and nothing else, and audit_events in particular
+--     must not become readable by the function owner just so a row can be counted.
+-- ======================================================================================================
+DO $batch8$
+DECLARE
+  k text := current_setting('app.workspace_key');
+  fo text := 'ws_'||k||'_function_owner';
+BEGIN
+  IF to_regclass('public.retention_entity_types') IS NULL THEN
+    RETURN;
+  END IF;
+  EXECUTE format('GRANT SELECT ON TABLE retention_entity_types,retention_categories,'
+                 'retention_policy_versions,legal_holds TO %I', fo);
+  EXECUTE format('GRANT SELECT(file_id) ON TABLE private_file_objects TO %I', fo);
+  EXECUTE format('GRANT SELECT(notification_id) ON TABLE in_app_notifications TO %I', fo);
+  EXECUTE format('GRANT SELECT(audit_event_id) ON TABLE audit_events TO %I', fo);
+  EXECUTE 'REVOKE ALL ON FUNCTION assert_destructive_disposition_allowed(text,uuid,text) FROM PUBLIC';
+  EXECUTE format('REVOKE ALL ON FUNCTION assert_destructive_disposition_allowed(text,uuid,text) '
+                 'FROM %I,%I,%I', 'ws_'||k||'_runtime', 'ws_'||k||'_worker', 'ws_'||k||'_exporter');
+END $batch8$;
+
 -- Default privileges remain deny-by-default for future migrations.
 SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC',
   'ws_'||current_setting('app.workspace_key')||'_table_owner') \gexec

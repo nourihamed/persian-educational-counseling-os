@@ -47,6 +47,10 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | TRANSFER-EXC-AUTH | Who may authorize an approval-conflict exception | OPEN | HIGH | Yes, exception impossible to enable | Product Owner |
 | PR-8-11-DISPOSITION | Disposition of PR #8–#11 | OPEN | Process only | Yes, no PR touched | Product Owner on Supervisor advice |
 | BRANCH-SYNC | PR #12 branch is behind main by 2 commits, zero net content | OPEN | None technical; reporting integrity | Yes | Product Owner |
+| OPS-HOLD-AUTH | Who may place and who may release a legal hold | OPEN | HIGH at pilot; zero today | Yes, nobody can write the table | Product Owner + legal |
+| OPS-DISP-AUTH | Who authorizes and who executes an irreversible disposition | OPEN | HIGH at pilot; zero today | Yes, the gate is uncallable | Product Owner + operations |
+| OPS-RETENTION-SCOPE | Disposition completeness beyond the primary row | OPEN | HIGH at pilot, as incompleteness | Yes, completeness not claimed | Product Owner + operations (after OQ-D) |
+| OPS-NOTIF-DELIVERY | Delivery-time re-check of notification authority and generation | OPEN | HIGH once delivery exists | Yes, insert-time rule only | Product Owner + Platform Security |
 
 ---
 
@@ -321,6 +325,103 @@ is strictly ahead, once the Product Owner lifts the no-merge constraint for that
 or force-pushing is forbidden. Dispositioning PR #8–#11 moves `main` regardless, so this decision belongs
 with that one rather than being taken twice. Whichever option is chosen, the record must now say
 "behind by two commits, zero net content difference" and never "not behind".
+
+### OPS-HOLD-AUTH — who may place and who may release a legal hold
+**Status:** OPEN. The retention contract §9 still lists *"Legal hold categories, triggers, release authority
+and dispute handling"*, and §5 adds that *"a hold cannot be released by the same unrestricted deletion job
+that it blocks."* Neither authority has been decided.
+**What Batch 8 did build:** the hold *mechanism*. A hold must resolve to an existing row of a registered
+entity type — the polymorphic `(entity_type, entity_id)` now has enforceable referential integrity through
+`retention_entity_types`, so a hold on a mistyped id is refused instead of silently protecting nothing.
+Placement facts are immutable, release is one-way, and the record can be neither deleted nor truncated.
+**Impact:** HIGH at pilot, **zero today**. A hold the wrong party can place is a denial of service on lawful
+deletion; one the wrong party can release is the removal of a legal control. Neither is possible now.
+**Held how:** no application role holds `INSERT`, `UPDATE` or `DELETE` on `legal_holds` — only the NOLOGIN
+table owner can write it, which is a synthetic posture and is labelled as one in the roles draft. **OPS-51
+asserts this from the catalog** and fails if any application role is granted a write.
+**Options:** (A) Platform Admin places and releases, with a second Platform Admin approving the release;
+(B) a dedicated compliance role, separate from both the counselor roles and the deletion executor;
+(C) the Workspace owner may place, Platform Admin must release; (D) holds placed only by an operational
+runbook outside the application.
+**Recommendation: B.** The contract's own rule is that the releasing authority must be separable from the
+deletion job, which is separation of duties — and this project already has that pattern in the transfer
+approval separation, where it is a grant rather than a convention. (A) conflates platform administration
+with legal custody. (C) lets the party with an interest in deleting the data also lift the control over it.
+(D) leaves no trail inside the system, which contradicts the contract's own requirement to preserve who
+placed and released a hold, when, and under what authority reference.
+
+### OPS-DISP-AUTH — who authorizes and who executes an irreversible disposition
+**Status:** OPEN. The retention contract §4 requires independent approval for irreversible actions
+*"according to the approved authority matrix"* and that *"the requester cannot approve their own
+high-impact deletion."* That matrix does not exist, and this repository contains no disposition executor:
+no job runner, no object-store client, no worker.
+**What Batch 8 did build:** `assert_destructive_disposition_allowed()`, the fail-closed gate that any
+future executor must pass. It refuses, with a distinct named reason for each, when the action is not
+destructive, the entity type is unregistered, the target row is absent, **any** legal hold is live, or no
+approved retention policy version authorizes the action. Today the last condition refuses everything,
+because no period is approved anywhere (Q-020).
+**Impact:** HIGH at pilot, **zero today**: nothing can call the gate and nothing deletes any registered
+entity — the file, notification and hold guards refuse `DELETE` outright and the audit log refuses
+`UPDATE`, `DELETE` and now `TRUNCATE`.
+**Held how:** `EXECUTE` on the gate is revoked from `PUBLIC` and granted to no role; **OPS-50 asserts
+that**. OPS-48 shows the gate *allows* when a synthetic approved policy exists, which is how its refusals
+are shown to be decisions rather than an unconditional raise — that synthetic policy is a test fixture,
+labelled as such in its own `approval_ref`, and **OPS-40 asserts the schema draft approves nothing**.
+**Options:** (A) two-party: compliance requests, Platform Admin approves, a narrow executor identity
+performs; (B) single approver with an append-only audit trail; (C) no automated destructive disposition in
+the first release — restrict and archive only, erasure by reviewed runbook; (D) the Workspace owner
+authorizes disposition of their own data.
+**Recommendation: C first, then A.** An executor that cannot verify completeness across objects, exports,
+caches, indexes, replicas and backups (OPS-RETENTION-SCOPE) would report deletions it did not complete,
+which is worse than not deleting. Then (A), which satisfies the requester-is-not-approver rule as a grant
+and keeps the executor's privileges narrow enough to review. (B) relies on detecting an irreversible act
+after it happens. (D) puts the decision with the party least likely to know the legal obligations.
+
+### OPS-RETENTION-SCOPE — disposition completeness beyond the primary row
+**Status:** OPEN. The contract is explicit that *"deletion from the primary row alone is not complete
+disposition"* (§2) and that a restore must re-apply post-backup suppression before recovered data is
+served (§7). No object store, export pipeline, cache, search index, replica or backup tooling exists in
+this repository, and the mechanics depend on the hosting target, which is itself undecided (OQ-D).
+**Impact:** HIGH at pilot, as an **incompleteness** rather than a hole: a deletion reported as done while
+copies survive is a false compliance statement. Nothing deletes anything today, so the system makes no
+such statement.
+**Held how:** Batch 8 claims the **database half only**, and says so in the draft, in the test header and
+in `PHASE2_EXIT_CRITERIA.md`. Passing the gate is documented as *not* evidence that a deletion would be
+complete, and §7 of the contract is recorded as unimplemented.
+**Options:** (A) a durable suppression ledger every restore and derived copy must consult before serving
+data; (B) cryptographic erasure, with the key-scope, shared-object and backup dependencies the contract
+requires to be proven first; (C) bounded backup rotation with residual copies disclosed until expiry;
+(D) defer entirely and document that erasure is partial.
+**Recommendation: A with C.** A suppression ledger is the only option that survives a restore, which is
+the case the contract names and the one most likely to resurrect deleted data silently. (C) is
+complementary and honest about residuals. (B) cannot be relied on until the proofs the contract demands
+exist. (D) alone leaves a compliance claim nobody can support.
+
+### OPS-NOTIF-DELIVERY — delivery-time re-check of notification authority and generation
+**Status:** OPEN. Four contracts require a notification to be re-authorized **at delivery**, not only when
+it is created: the guardian authority matrix, the role-grantability matrix, the Saga recovery contract and
+the API authorization contract, which names *"stale queued notification after transfer"* as a threat.
+**What Batch 8 did build:** the **insert-time** half, which did not exist. A notification now names the
+student it concerns, so the transfer write barrier covers it (that could not even be expressed before:
+the table had no reference to a student). Its recipient must be an active member of this Workspace, the
+student it is about, or a **verified guardian of that student** — a guardian verified for student A is
+refused as a recipient for student B. Its payload may not carry a plaintext contact number, at any depth.
+Its recipient, subject and payload are immutable once written; only `read_at` may be set, once.
+**Impact:** HIGH once a delivery path exists, zero until then: nothing delivers a notification, so nothing
+can deliver a stale one. The specific risk is a notification queued before a guardian's permission was
+revoked, or before a student's ownership moved, being delivered afterwards.
+**Held how:** the insert-time rule is implemented and tested (OPS-10..OPS-24, OPS-45, OPS-46), and the
+draft and test header both state that delivery-time re-authorization is not implemented and not claimed.
+It overlaps PS-8, which holds the same gap for revocation freshness generally.
+**Options:** (A) the worker re-evaluates recipient authority, student lifecycle and current ownership
+generation inside the delivery transaction; (B) notifications carry the generation they were created at
+and delivery refuses on a mismatch; (C) queue invalidation on revocation and transfer; (D) a short queue
+lifetime so stale entries expire.
+**Recommendation: A with B.** (A) is what the contracts require, and this project's repeated lesson is that
+a check performed only at creation binds only the creator. (B) makes the transfer case deterministic and
+matches the generation fencing the inbox projection already uses, so recording the generation on the row
+is worth doing when the worker is built. (C) is a useful optimization but fails open if an invalidation is
+missed. (D) narrows the window without closing it.
 
 ## What this register deliberately does not do
 

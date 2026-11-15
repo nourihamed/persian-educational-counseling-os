@@ -346,4 +346,63 @@ DO $t$ BEGIN
   END IF;
   RAISE NOTICE 'PASS FRZ-37 the full freeze history is retained: one aborted freeze and one permanent fence';
 END $t$;
-SELECT 'TRANSFER FREEZE AND WRITE BARRIER TESTS COMPLETED (FRZ-01..FRZ-37)' AS result;
+-- ===================================================================================================
+-- FRZ-38..FRZ-43  THE BARRIER MUST LOOK AT BOTH SIDES OF AN UPDATE (Batch 8).
+--   Until Batch 8 the barrier resolved the owner from NEW on INSERT and UPDATE and from OLD only on
+--   DELETE, so an UPDATE that REWROTE the ownership column was checked against its destination. A frozen
+--   student's rows could therefore be moved to another student, or orphaned by setting the owner to NULL,
+--   while the student was frozen — after the barrier watermark, so the snapshot the destination Workspace
+--   imports would silently differ from the one the source froze. All three were demonstrated as ACCEPTED
+--   before the fix.
+--   Fresh fixtures below, because student e9..01 is permanently FENCED by FRZ-33 and a fence produces a
+--   different refusal than a freeze.
+-- ===================================================================================================
+INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state) VALUES
+ ('e9000000-0000-0000-0000-000000000003','f9000000-0000-0000-0000-000000000003','Move Source','grade_10','active'),
+ ('e9000000-0000-0000-0000-000000000004','f9000000-0000-0000-0000-000000000004','Move Peer','grade_10','active');
+INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state) VALUES
+ ('a9100000-0000-0000-0000-000000000003','e9000000-0000-0000-0000-000000000003',1,'requested'),
+ ('a9100000-0000-0000-0000-000000000004','e9000000-0000-0000-0000-000000000004',1,'requested');
+INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at)
+VALUES ('a9300000-0000-0000-0000-000000000004','a9100000-0000-0000-0000-000000000004',
+        'b9000000-0000-0000-0000-000000000001',true,'active',clock_timestamp());
+INSERT INTO study_sessions(study_session_id,student_id,started_at,actual_minutes)
+VALUES ('a9400000-0000-0000-0000-000000000003','e9000000-0000-0000-0000-000000000003',clock_timestamp(),25);
+INSERT INTO private_file_objects(file_id,student_id,object_key,storage_provider,content_type,byte_size,
+                                 sha256,encryption_key_version,state,uploaded_by_membership_id) VALUES
+ ('a9500000-0000-0000-0000-000000000003','e9000000-0000-0000-0000-000000000003','workspace/frz/move','synthetic',
+  'application/pdf',512,decode(repeat('b1',32),'hex'),1,'available','b9000000-0000-0000-0000-000000000001'),
+ ('a9500000-0000-0000-0000-000000000004',NULL,'workspace/frz/unowned','synthetic',
+  'text/plain',64,decode(repeat('b2',32),'hex'),1,'available','b9000000-0000-0000-0000-000000000001');
+
+SELECT freeze_student_for_transfer('a9600000-0000-0000-0000-000000000003','tok-move-1',
+  'e9000000-0000-0000-0000-000000000003','d9000000-0000-0000-0000-000000000009',1,'ctl-1.0.0',0,
+  clock_timestamp()) AS move_freeze;
+
+SET SESSION AUTHORIZATION :"runtime_role";
+SELECT fz_err('FRZ-38 a frozen student''s FILE cannot be moved to another student',
+ $q$UPDATE private_file_objects SET student_id='e9000000-0000-0000-0000-000000000004'
+     WHERE file_id='a9500000-0000-0000-0000-000000000003'$q$,'23514','is frozen for transfer case');
+SELECT fz_err('FRZ-39 a frozen student''s STUDY SESSION cannot be moved to another student',
+ $q$UPDATE study_sessions SET student_id='e9000000-0000-0000-0000-000000000004'
+     WHERE study_session_id='a9400000-0000-0000-0000-000000000003'$q$,'23514','is frozen for transfer case');
+SELECT fz_err('FRZ-40 a frozen student''s row cannot be orphaned by clearing its owner',
+ $q$UPDATE private_file_objects SET student_id=NULL
+     WHERE file_id='a9500000-0000-0000-0000-000000000003'$q$,'23514','is frozen for transfer case');
+-- FRZ-41/42/43 involve NO frozen student: the ownership key is forward-only for every writer, which is
+-- what removes the class rather than the one demonstrated instance.
+SELECT fz_ok('FRZ-41 an UNOWNED file may acquire an owner (NULL -> value is the one allowed direction)',
+ $q$UPDATE private_file_objects SET student_id='e9000000-0000-0000-0000-000000000004'
+     WHERE file_id='a9500000-0000-0000-0000-000000000004'$q$);
+SELECT fz_err('FRZ-42 that file cannot then be re-pointed, with neither student frozen',
+ $q$UPDATE private_file_objects SET student_id='e9000000-0000-0000-0000-000000000002'
+     WHERE file_id='a9500000-0000-0000-0000-000000000004'$q$,'23514','forward-only');
+RESET SESSION AUTHORIZATION;
+-- FRZ-43 runs WITHOUT session authorization because the runtime role holds no UPDATE on
+-- counselor_assignments (a permission denial would mask what this test is for). The guard is a trigger,
+-- so it binds this writer as well.
+SELECT fz_err('FRZ-43 an INDIRECT ownership key is forward-only too (counselor_assignments.enrollment_id)',
+ $q$UPDATE counselor_assignments SET enrollment_id='a9100000-0000-0000-0000-000000000002'
+     WHERE assignment_id='a9300000-0000-0000-0000-000000000004'$q$,'23514','forward-only');
+
+SELECT 'TRANSFER FREEZE AND WRITE BARRIER TESTS COMPLETED (FRZ-01..FRZ-43)' AS result;

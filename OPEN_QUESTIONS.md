@@ -445,3 +445,27 @@ decided**.
   restricted to the synthetic executor role under D-014.
 
 **OQ-CRD-1 was not reopened.** It is resolved and CRD-32..38 stand unchanged.
+
+### Q-020 status note (2026-11-15, after the Batch 8 retention work)
+
+Q-020 remains **PARTIALLY DECIDED** and nothing in Batch 8 decided any part of it. What changed is that the
+database now **behaves correctly while it is open** instead of having no behaviour at all:
+
+- The nine data categories from `docs/phase1/DATA_RETENTION_SCHEDULE_DRAFT.md` §1 exist as rows, each with
+  one immutable `needs_decision` policy version carrying a **NULL duration** — which is what that document
+  records for every period (NEEDS-DECISION, PROPOSAL or LEGAL-REVIEW; not one is approved).
+- A policy version cannot be flipped to `approved` by an `UPDATE`, only by recording a new version, and
+  `approved` is impossible without a duration, a disposition action, an approval reference **and** an
+  effective date. So a period cannot be introduced by a partial edit or by accident.
+- `assert_destructive_disposition_allowed()` refuses every destructive action while no approved policy
+  version is effective, and its message says why: *"the period is a Product Owner and legal decision
+  (Q-020) and an unresolved duration BLOCKS destructive disposition — it means neither 'delete now' nor
+  'keep forever'."* That is the retention contract's own rule, not a workaround.
+- **OPS-40 fails the test suite if any draft ever ships an approved period**, because approving one in the
+  schema would be this decision being made in code.
+
+Three new register items were raised rather than answered: **OPS-HOLD-AUTH** (who places and who releases a
+legal hold), **OPS-DISP-AUTH** (who authorizes and who executes an irreversible disposition, with the
+contract's requester-is-not-approver rule) and **OPS-RETENTION-SCOPE** (completeness beyond the primary row:
+objects, exports, caches, indexes, replicas, backups and restore-time suppression, none of which exists in
+this repository). No role can place a hold or call the gate, so all three are held fail-closed.
