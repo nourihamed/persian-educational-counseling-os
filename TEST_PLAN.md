@@ -669,3 +669,37 @@ Still NOT RUN / NOT IMPLEMENTED after this batch: OQ-CRD-2 (no expiry, extension
 return of a reserved entitlement is implemented), OQ-CRD-3 (the production activation path stays
 fail-closed on the entitlement period), and everything listed at the end of the Batch 1 and Batch 2
 sections.
+
+## Batch 4 — Assessment, exam and analysis model (2026-11-14, re-verified 2026-11-15)
+
+`docs/phase2/workspace/tests/workspace_assessment_exam_tests.sql` — EXM-01..42, run by workflow step
+"Apply Workspace draft and run schema regression suite", which went from 116 to **158 PASS lines**.
+Verification matrix for the brief's eight items: `IMPLEMENTATION_RESPONSE_2026-11-14.md` section 9.
+
+New structures tested: `exam_definition_versions` and `exam_definition_version_subjects` (immutable
+published blueprint; publication refused unless per-subject counts add up), `exam_subject_results`
+(per-subject results with composite foreign keys refusing cross-exam and cross-student rows
+declaratively, reconciled with the aggregate by a `DEFERRABLE INITIALLY DEFERRED` constraint trigger), and
+`test_analysis_versions` / `test_analysis_response_findings` (append-only, so a reclassification is a new
+version rather than a mutation of an immutable submitted response).
+
+### Sensitivity, measured — and one documented control that turned out to be wrong
+
+| Control | Result |
+|---|---|
+| Predicate replaced by **type comparisons only** | **FAILS** (exit 3). EXM-42: "the predicate returned NULL for: empty object, no algorithm_version, no algorithm". In the full suite EXM-01 fires first. Against the committed predicate EXM-42 passes. |
+| Reconciliation trigger body replaced by `RETURN NULL` | **FAILS** (exit 3) at EXM-26 with the exact expected message. |
+| ~~Removing only `COALESCE(..., false)`~~ | **DID NOT REPRODUCE.** This control was claimed in the first draft of the Batch 4 notes and the claim was wrong. With the `length(btrim(COALESCE(p->>'algorithm','')))>0` conjunct still present the chain evaluates to **false**, not NULL, because `NULL AND false` is `false`. Measured: the predicate returned `false` for `{}` and the suite passed. |
+| ~~Dropping the reconciliation trigger~~ | **INVALID AS A CONTROL.** EXM-26 runs `SET CONSTRAINTS exam_results_reconcile_trg IMMEDIATE` to observe the deferred check, so dropping the trigger fails the test's own setup ("constraint does not exist") and proves nothing about reconciliation. |
+
+The two underlying facts the predicate defends against were measured directly rather than recalled:
+`jsonb_typeof('{}'::jsonb -> 'algorithm') = 'string'` is **NULL**, and a `CHECK` constraint whose
+expression is NULL **accepts** the row (`INSERT 0 1` against a temp table carrying exactly that check).
+
+### Still NOT IMPLEMENTED after Batch 4, and not claimed
+Scoring formulas, rounding and score validation (by design — the database stores and compares snapshots and
+never computes a score); which algorithm **names** are permitted (OQ-ASM-2, raised by this work); rank,
+percentile and cohort comparison; a custom error taxonomy table (`test_responses` carries a fixed enum plus
+free-text `custom_error_reason`, so custom reasons are not reusable or countable as categories);
+`test_attempt_questions` (correctly absent — adaptive delivery cannot be published); and everything listed
+at the end of the Batch 1, 2 and 3 sections.

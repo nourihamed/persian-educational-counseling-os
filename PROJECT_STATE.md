@@ -9,8 +9,8 @@ write-barrier commit on `docs/product-owner-decisions-consolidation-2026-11-07` 
 
 | Kind | What it is | Result |
 |---|---|---|
-| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **21 implementation test steps**, **585 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
-| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL and five new test suites, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
+| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **21 implementation test steps**, **627 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
+| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL and six new test suites, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
 
 Any commit that touches SQL or tests requires a fresh local run and a fresh Actions run at its own SHA.
 Documentation-only commits on top of a verified SHA change no SQL and no test, so they do not invalidate
@@ -529,5 +529,62 @@ checked against what the tests actually assert. Full matrix:
   21 implementation test steps passed, **585 PASS assertion lines**, 0 FAIL, plus the Python verifier unit
   tests, plus the documentation consistency check reported separately. **GitHub Actions at this HEAD:
   NOT RUN.**
+- Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
+  prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**
+
+## Update 2026-11-15 — Batch 4: assessment, exam and analysis model (re-verified before commit)
+
+Batch 3 was pushed as `db94176f588ef1fed5de26360fa9399eeac21efd` (verified: 11 files, +751/−70, parent
+`7da927d`). Its GitHub Actions result has **not** been reported to the implementation agent.
+
+**A process note that belongs in the record.** The Batch 4 schema, tests and section 9 of
+`IMPLEMENTATION_RESPONSE_2026-11-14.md` were written on 2026-11-14 at 22:46 but were **never committed**
+before the session paused. They were found as uncommitted working-tree changes on 2026-11-15. Rather than
+trusting those notes, the entire workflow was re-run from a cleared cluster and the documented controls
+were re-executed. That re-verification reproduced the main evidence and **found one claim in those notes to
+be false** (below), which is the reason for not taking them at face value.
+
+- **Four of the brief's eight items were already implemented**, and each was verified by probe rather than
+  by reading documentation: the immutable published question set and order, normalized membership and
+  ordering, responses bound to the exact version by two composite foreign keys (declaratively, with no
+  trigger), and the attempt's scoring snapshot equalling the published version's. Probing also confirmed
+  that **publishing a `per_attempt` version is refused**, so adaptive delivery is genuinely disabled for
+  MVP rather than merely discouraged by a comment — and that a submitted attempt's responses are immutable,
+  which is what makes a score's inputs unable to drift.
+- **Four things were missing and were built:** an explicit scoring `algorithm` and positive integer
+  `algorithm_version` required in every policy snapshot (previously `{}` published successfully, so a
+  historical score was unattributable); `exam_definition_versions` with per-subject question counts;
+  `exam_subject_results` reconciled against the aggregate by a deferred constraint trigger; and append-only
+  `test_analysis_versions`, which gives a reclassification somewhere to go now that submitted responses are
+  immutable.
+- **A false claim in the 22:46 notes, corrected.** They stated that removing `COALESCE(..., false)` from
+  `scoring_policy_is_well_formed()` made the suite fail. It does **not**: with the
+  `length(btrim(COALESCE(p->>'algorithm','')))>0` conjunct still present the chain evaluates to `false`
+  rather than NULL, because `NULL AND false` is `false`. Measured: the predicate returned `false` for `{}`
+  and the suite passed. The control that actually isolates the trap is a **type-comparison-only** predicate,
+  against which EXM-42 fails naming "empty object, no algorithm_version, no algorithm" and EXM-01 fires
+  first in the full suite. Both the narrative and the evidence table now say this.
+- **A second control was also invalid and is recorded as such.** Dropping the reconciliation trigger breaks
+  EXM-26's own setup, because the test runs `SET CONSTRAINTS exam_results_reconcile_trg IMMEDIATE` to
+  observe the deferred check. Neutralising the trigger **body** instead is the valid control, and EXM-26
+  then fails with the exact expected message.
+- **The two facts the predicate defends against were measured, not recalled:**
+  `jsonb_typeof('{}'::jsonb -> 'algorithm') = 'string'` is **NULL**, and a `CHECK` constraint whose
+  expression is NULL **accepts** the row.
+- **A stale exit-criteria row was corrected.** `PHASE2_EXIT_CRITERIA.md` said "Per-subject exam results and
+  the custom error taxonomy — **NOT IMPLEMENTED**". Per-subject exam results **are** implemented, so that
+  row understated the project to a reviewer. It is now split into what is done and what genuinely is not:
+  the custom error taxonomy table, rank/percentile/cohort comparison, and scoring formulas (absent by
+  design).
+- **OQ-ASM-2 was added to the unresolved-item register** (which algorithm names are permitted, and how
+  versions are governed). The shape is enforced; the value set deliberately is not. Nothing about scoring
+  behaviour was decided.
+- **Local verification:** PostgreSQL 16.15, cleared cluster (0 leftover databases, 0 leftover roles), all
+  21 implementation test steps passed, **627 PASS assertion lines** (step 11 rose from 116 to 158, which is
+  exactly the 42 EXM assertions), 0 FAIL, plus the Python verifier unit tests, plus the documentation
+  consistency check reported separately. **GitHub Actions at this HEAD: NOT RUN.**
+- **Still open, unchanged:** Q-007, Q-020, OQ-CRD-2/3, OQ-SAGA-1/2, OQ-ASM-1, OQ-ASM-2, PS-1..PS-8, OQ-D and
+  OQ-E numeric objectives, the transfer exception approval authority, M-05 and M-06 definitions, and the
+  disposition of PR #8–#11. The register now carries 24 items.
 - Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
   prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**

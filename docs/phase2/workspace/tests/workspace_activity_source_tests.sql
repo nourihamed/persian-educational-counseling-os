@@ -24,7 +24,7 @@ BEGIN EXECUTE stmt; RAISE NOTICE 'PASS % (accepted)',label; END; $t$;
 INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state)
 VALUES ('e1000000-0000-0000-0000-000000000009','f1000000-0000-0000-0000-000000000009','Activity Other','grade_10','active');
 INSERT INTO exams(exam_id,student_id,title,exam_at,scoring_policy_snapshot)
-VALUES ('a5000000-0000-0000-0000-000000000009','e1000000-0000-0000-0000-000000000009','Other exam',now(),'{}'::jsonb);
+VALUES ('a5000000-0000-0000-0000-000000000009','e1000000-0000-0000-0000-000000000009','Other exam',now(),'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb);
 INSERT INTO class_participants(class_id,student_id,state) VALUES
  ('c5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','enrolled');
 INSERT INTO class_session_participants(class_session_id,class_id,student_id,attendance) VALUES

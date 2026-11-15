@@ -27,6 +27,7 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | OQ-SAGA-1 | Canonical wire format and signing | OPEN | HIGH | Yes, fail-closed | Platform Security + Product Owner |
 | OQ-SAGA-2 | Resolution of a quarantined inbox event | OPEN | HIGH | Yes, no release path | Product Owner + Platform Security |
 | OQ-ASM-1 | Item-bank ownership and `item_ref` | OPEN | MEDIUM | Yes, no cross-boundary reference | Product Owner |
+| OQ-ASM-2 | Which scoring algorithms are permitted | OPEN | MEDIUM (correctness) | Yes, shape enforced, values not | Product Owner |
 | OQ-D | Control Plane topology — numeric objectives | PARTIALLY DECIDED | HIGH at operation | Yes, schema only | Product Owner + operations |
 | OQ-E | Transfer cutover — boundary, duration, thresholds | PARTIALLY DECIDED | HIGH | Yes; boundary now implemented | Product Owner + operations |
 | PS-1 | Signature algorithm | DEFERRED | HIGH | Yes, fail-closed | Platform Security + Product Owner |
@@ -91,6 +92,24 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 **Held how:** `item_ref` is a constrained text reference inside the Workspace, with no cross-database foreign key and no claim of integrity against an external bank. The immutable question set itself is implemented and tested.
 **Options:** (A) Workspace-owned with a real foreign key; (B) platform-owned shared bank with licensing and read authorization; (C) both, distinguished by a reference kind with integrity enforced per kind.
 **Recommendation: A.** It is the only option that yields enforceable integrity inside Phase 2's tenancy model, and (C) can be added later without rewriting it.
+
+### OQ-ASM-2 — Which scoring algorithms are permitted, and how their versions are governed
+**Status:** OPEN, raised by the Batch 4 work on 2026-11-14. Nothing recorded which algorithm produced a
+score: a scoring policy snapshot of `{}` was accepted and published. Every snapshot must now name an
+`algorithm` and a positive integer `algorithm_version`.
+**Why it is still unresolved:** the database deliberately does not constrain *which* algorithm names are
+permitted, who may introduce one, or what a version increment means. Those are product decisions about
+scoring behaviour, and the database never computes or validates a score.
+**Impact:** low for security, medium for correctness and auditability — without a governed set, two
+Workspaces could use one name for different behaviour, and a historical score would stop being
+attributable to a known rule.
+**Held how:** the shape is enforced (EXM-01..07, EXM-42); the value set is not. No scoring algorithm is
+implemented anywhere.
+**Options:** (A) a platform-level registry of algorithm names and versions that the snapshot references;
+(B) a fixed allowlist in the schema, extended only by migration; (C) free-form names, governed by process.
+**Recommendation: A.** It makes a historical score attributable to a named, versioned rule without
+freezing the set in the schema, and it is the only option under which a reviewer can later tell what
+`algorithm_version: 2` actually meant.
 
 ### TRANSFER-EXC-AUTH — Who may authorize a transfer approval-conflict exception
 **Status:** OPEN. Separation of duties forbids the same actor from both requesting and approving a transfer. Whether an exception may ever be granted — by whom, on what evidence, with what audit — is undecided.

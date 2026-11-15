@@ -583,3 +583,107 @@ out here so a reader does not repeat it.
   requests for both are in `docs/phase2/UNRESOLVED_ITEM_REGISTER.md` with options and a recommendation.
 - **No service-layer behaviour is claimed.** All of this is database-level; there is no service layer.
 - **Phase 2 is not self-approved.** This is an implementation report, not a review.
+
+---
+
+## 9. Batch 4 — Assessment, Exam and result model (same day, seventh pass)
+
+### 9.1 What was already correct, verified rather than assumed
+
+Four of the eight brief items turned out to be already implemented. Each was checked by probe, not by
+reading the documentation:
+
+| Brief item | Verdict | How it was checked |
+|---|---|---|
+| Published `TestDefinitionVersion` has a fixed immutable question set and order | **VERIFIED** | `test_definition_version_guard` plus `UNIQUE(version_id, question_no)` and `UNIQUE(version_id, item_ref)`. AVQ-01..22. |
+| Question membership and ordering normalized and constrained | **VERIFIED** | `test_definition_version_questions` is the authoritative list; `question_count` is only a consistency check. |
+| Attempt responses reference questions of that exact version | **VERIFIED** | Two composite foreign keys make cross-version substitution impossible **declaratively**, with no trigger. |
+| Scoring policy snapshot equals the published version's policy | **VERIFIED** | The attempt guard refuses with "attempt scoring policy snapshot differs from the published version policy". |
+| Adaptive per-attempt delivery remains disabled for MVP | **VERIFIED** | Probed: publishing a `per_attempt` version is refused — "per-attempt delivery requires a separate Product Owner decision". The file comment alone had read as if it were merely discouraged; the guard enforces it. `test_attempt_questions` from the contract is therefore **not needed** for MVP and was deliberately not built. |
+| Invalid, incomplete, duplicate and cross-version responses rejected | **VERIFIED** | Table constraints plus `test_attempt_guard`, which recounts the stored responses at submission so the invariant holds for any writer. |
+
+Also probed and confirmed, because it is the foundation of reproducibility: **a submitted attempt's
+responses are immutable.** Change, delete and insert are all refused with "responses are immutable once the
+attempt is submitted". So the inputs to a score cannot drift after the fact.
+
+### 9.2 What was missing, and was built
+
+`docs/phase2/workspace/ASSESSMENT_DOMAIN_CONTRACT.md` section 7 names the required structures. Three did
+not exist at all, and one requirement had no enforcement:
+
+**1. An explicit scoring algorithm version.** `scoring_policy_snapshot` only had to be a JSON object.
+Demonstrated: a test definition version stored `{}` and published successfully. Nothing recorded *which*
+algorithm produced a score, so a historical number was unattributable. Every snapshot must now name an
+`algorithm` (non-empty string) and an `algorithm_version` (positive integer), on `test_definitions`,
+`test_definition_versions`, `test_attempts`, `exams`, `exam_results` and the new per-subject results.
+
+**The trap this had to avoid, stated as measured facts rather than as recollection.** A validation
+predicate built from type comparisons alone is NULL for a missing key, and **a CHECK constraint passes
+when its expression is NULL**, so the malformed value is accepted. Both halves were measured:
+
+```
+SELECT jsonb_typeof('{}'::jsonb -> 'algorithm') = 'string';     -> NULL
+CREATE TEMP TABLE t(p jsonb, CHECK (jsonb_typeof(p->'algorithm') = 'string'));
+INSERT INTO t VALUES ('{}'::jsonb);                             -> INSERT 0 1   (accepted)
+```
+
+This is the same trap recorded in `receipts/README.md` for `workspace_governance_events_draft.sql`, where
+payload validations used `jsonb_typeof(...) <> 'string'` with no NULL handling. The predicate therefore
+ends in `COALESCE(..., false)` and mixes in value checks that return false rather than NULL, and **EXM-42**
+asserts directly that the predicate is never NULL for any of twelve malformed inputs — a better defence
+than remembering the rule.
+
+**2. `exam_definition_versions`** — an immutable published exam blueprint, with per-subject question counts
+(`exam_definition_version_subjects`). Published is immutable and undeletable, and publication is refused
+unless the subject counts add up to the exam's own count.
+
+**3. `exam_subject_results`** — per-subject results keyed to the exact exam, student and subject, with
+composite foreign keys so a cross-exam or cross-student subject result is refused declaratively.
+Reconciliation with the aggregate is a `DEFERRABLE INITIALLY DEFERRED` constraint trigger, because the
+aggregate and the subject rows arrive in whatever order the writer chooses and neither is wrong on its own
+mid-transaction.
+
+**4. `test_analysis_versions`** and `test_analysis_response_findings` — append-only, so that a later
+reclassification is a new version rather than a silent mutation. Submitted responses were already
+immutable, so a reclassification previously had nowhere to go. EXM-40 is the point of the structure: after
+a second analysis version reclassifies a response, the submitted response itself is unchanged.
+
+### 9.3 Open questions respected rather than quietly answered
+
+Contract section 9 lists open policy inputs. None was decided:
+
+- **Whether every exam requires per-subject results** → it is per-blueprint data
+  (`requires_subject_results`), so the blueprint says it and this schema does not. EXM-31 proves an exam
+  with no blueprint may still hold an aggregate alone.
+- **Whether analysis can be rerun, and how a version is selected** → analysis versions are append-only with
+  monotonic numbering and carry **no** active/current flag and no selection rule.
+- **Scoring formulas and rounding** → nothing is computed or validated. The database stores and compares
+  snapshots.
+- **Which algorithm names are permitted** → not constrained. Raised as the new **OQ-ASM-2**, with options
+  and a recommendation, in `docs/phase2/UNRESOLVED_ITEM_REGISTER.md`.
+- **Rank, percentile and cohort comparison** → not modelled. They need a cohort this Workspace may not
+  hold and no rule exists for it.
+- **Whether an exam must cite a blueprint** → `definition_version_id` is nullable, because requiring one
+  would be a product decision and the existing ad-hoc exam rows have none.
+
+### 9.4 Evidence
+
+| What | Result |
+|---|---|
+| `workspace_assessment_exam_tests.sql` EXM-01..42 | **42 PASS lines**, 0 FAIL |
+| Existing suites with the new draft loaded and fixtures updated | `workspace_schema_tests` 16, `workspace_assessment_guardian_tests` 48, `workspace_assessment_version_question_tests` 23, `workspace_activity_source_tests` 28 — all exit 0 |
+| Negative control: predicate replaced by type comparisons only | **FAILS** (exit 3). EXM-42: "the predicate returned NULL for: empty object, no algorithm_version, no algorithm". In the full suite EXM-01 fires first — "an empty scoring policy snapshot is refused: statement unexpectedly succeeded". Against the committed predicate EXM-42 passes. |
+| Negative control first attempted: removing only `COALESCE(..., false)` | **DID NOT REPRODUCE**, and the claim that it did has been corrected here. With the `length(btrim(COALESCE(p->>'algorithm','')))>0` conjunct still present the chain evaluates to **false**, not NULL, because `NULL AND false` is `false`. Measured: the predicate returned `false` for `{}` and the suite passed. The control that isolates the trap is the type-comparison-only predicate above. |
+| Negative control: reconciliation trigger body replaced by `RETURN NULL` | **FAILS** (exit 3) at EXM-26 — "an aggregate with no per-subject rows committed although the blueprint requires them". The body is neutralised rather than the trigger dropped: EXM-26 runs `SET CONSTRAINTS exam_results_reconcile_trg IMMEDIATE` to observe the deferred check, so dropping the trigger breaks the test's own setup ("constraint does not exist") and would prove nothing about reconciliation. |
+| Fixture migration | 14 informal policy literals updated across 6 files to name an algorithm and version; the tightened CHECK would otherwise have broken them, and the tests still assert their original reasons |
+
+### 9.5 What is still not claimed
+
+- No scoring formula, rounding rule or algorithm is implemented or validated.
+- Rank, percentile and cohort comparison are absent.
+- `test_attempt_questions` is absent, correctly: adaptive delivery cannot be published.
+- A deferred constraint trigger runs at COMMIT with the **caller's** privileges, so any future SECURITY
+  DEFINER command writing these tables must run `SET CONSTRAINTS ... IMMEDIATE` inside its own security
+  context, as the other commands in this project already do. That note is in the draft file itself. No
+  such command exists yet.
+- **Phase 2 is not self-approved.** This is an implementation report, not a review.

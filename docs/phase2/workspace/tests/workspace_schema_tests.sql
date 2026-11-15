@@ -54,17 +54,17 @@ VALUES ('b4000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-00000000
 INSERT INTO study_sessions(study_session_id,student_id,activity_id,started_at,ended_at,planned_minutes,actual_minutes,outcome)
 VALUES ('c4000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','b4000000-0000-0000-0000-000000000001',now()-interval '30 minutes',now(),30,28,'completed');
 INSERT INTO test_definitions(test_id,title,subject_id,topic_id,test_kind,scoring_policy_snapshot)
-VALUES ('d4000000-0000-0000-0000-000000000001','Topic quiz','e3000000-0000-0000-0000-000000000001','a4000000-0000-0000-0000-000000000001','educational','{"negative_marking":true,"version":"v1"}'::jsonb);
+VALUES ('d4000000-0000-0000-0000-000000000001','Topic quiz','e3000000-0000-0000-0000-000000000001','a4000000-0000-0000-0000-000000000001','educational','{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb);
 -- WS-DOM-01 fixture: draft version -> published -> started attempt -> 10 explicit responses -> atomic submission -> analysed.
 INSERT INTO test_definition_versions(version_id,test_id,version_no,question_count,scoring_policy_snapshot)
-VALUES ('d4100000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001',1,10,'{"negative_marking":true,"version":"v1"}'::jsonb);
+VALUES ('d4100000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001',1,10,'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb);
 INSERT INTO test_definition_version_questions(version_question_id,version_id,question_no,item_ref,topic_id)
 SELECT ('d4200000-0000-0000-0000-0000000000'||lpad(g::text,2,'0'))::uuid,'d4100000-0000-0000-0000-000000000001',g,'synthetic-item-v1-'||g,
        CASE WHEN g=1 THEN 'a4000000-0000-0000-0000-000000000001'::uuid ELSE NULL END
   FROM generate_series(1,10) g;
 UPDATE test_definition_versions SET status='published', published_at=now() WHERE version_id='d4100000-0000-0000-0000-000000000001';
 INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot)
-VALUES ('e4000000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',now()-interval '15 minutes',10,'{"negative_marking":true,"version":"v1"}'::jsonb);
+VALUES ('e4000000-0000-0000-0000-000000000001','d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',now()-interval '15 minutes',10,'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb);
 INSERT INTO test_responses(response_id,attempt_id,definition_version_id,version_question_id,question_no,response_state,time_spent_seconds,error_reason)
 VALUES ('f4000000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000001',
         'd4200000-0000-0000-0000-000000000001',1,'wrong',50,'concept');
@@ -76,9 +76,9 @@ SELECT gen_random_uuid(),'e4000000-0000-0000-0000-000000000001','d4100000-0000-0
 SELECT submit_test_attempt('e4000000-0000-0000-0000-000000000001',8,1,1,75,'synthetic-submit-1',sha256('synthetic-payload-1'::bytea));
 UPDATE test_attempts SET state='analysed' WHERE attempt_id='e4000000-0000-0000-0000-000000000001';
 INSERT INTO exams(exam_id,student_id,title,exam_at,scoring_policy_snapshot)
-VALUES ('a5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','Synthetic exam',now(),'{"negative_marking":true}'::jsonb);
+VALUES ('a5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001','Synthetic exam',now(),'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb);
 INSERT INTO exam_results(exam_result_id,exam_id,student_id,correct_count,wrong_count,blank_count,score,scoring_policy_snapshot)
-VALUES ('b5000000-0000-0000-0000-000000000001','a5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',10,2,3,80,'{"negative_marking":true}'::jsonb);
+VALUES ('b5000000-0000-0000-0000-000000000001','a5000000-0000-0000-0000-000000000001','e1000000-0000-0000-0000-000000000001',10,2,3,80,'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb);
 INSERT INTO classes(class_id,subject_id,class_kind,title)
 VALUES ('c5000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','online','Online biology');
 INSERT INTO class_sessions(class_session_id,class_id,starts_at,ends_at,timezone_name)

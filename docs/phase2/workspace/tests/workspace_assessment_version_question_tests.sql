@@ -21,10 +21,10 @@ BEGIN EXECUTE stmt; RAISE NOTICE 'PASS % (accepted)',label; END; $t$;
 
 -- ============================ fixture: a third test and its draft version ============================
 INSERT INTO test_definitions(test_id,title,subject_id,test_kind,scoring_policy_snapshot)
-SELECT 'd4000000-0000-0000-0000-000000000003','Version integrity quiz',subject_id,'educational','{"negative_marking":true,"version":"v3"}'::jsonb
+SELECT 'd4000000-0000-0000-0000-000000000003','Version integrity quiz',subject_id,'educational','{"algorithm":"standard_negative","algorithm_version":3,"negative_marking":true}'::jsonb
   FROM test_definitions WHERE test_id='d4000000-0000-0000-0000-000000000001';
 INSERT INTO test_definition_versions(version_id,test_id,version_no,question_count,scoring_policy_snapshot)
-VALUES ('d4100000-0000-0000-0000-000000000003','d4000000-0000-0000-0000-000000000003',1,3,'{"negative_marking":true,"version":"v3"}'::jsonb);
+VALUES ('d4100000-0000-0000-0000-000000000003','d4000000-0000-0000-0000-000000000003',1,3,'{"algorithm":"standard_negative","algorithm_version":3,"negative_marking":true}'::jsonb);
 INSERT INTO test_definition_version_questions(version_question_id,version_id,question_no,item_ref) VALUES
  ('d4230000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000003',1,'synthetic-item-v3-1'),
  ('d4230000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000003',2,'synthetic-item-v3-2');
@@ -68,7 +68,7 @@ SELECT wx_err('AVQ-12 question of a published version cannot be removed',
  $q$DELETE FROM test_definition_version_questions WHERE version_question_id='d4230000-0000-0000-0000-000000000003'$q$,'23514','immutable');
 -- A draft row cannot be re-parented into another version (membership laundering).
 INSERT INTO test_definition_versions(version_id,test_id,version_no,question_count,scoring_policy_snapshot)
-VALUES ('d4100000-0000-0000-0000-000000000004','d4000000-0000-0000-0000-000000000003',2,1,'{"negative_marking":true,"version":"v4"}'::jsonb);
+VALUES ('d4100000-0000-0000-0000-000000000004','d4000000-0000-0000-0000-000000000003',2,1,'{"algorithm":"standard_negative","algorithm_version":4,"negative_marking":true}'::jsonb);
 INSERT INTO test_definition_version_questions(version_question_id,version_id,question_no,item_ref)
 VALUES ('d4240000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000004',1,'synthetic-item-v4-1');
 SELECT wx_err('AVQ-13 a question cannot be moved to another version',
@@ -76,9 +76,9 @@ SELECT wx_err('AVQ-13 a question cannot be moved to another version',
 
 -- ============================ attempt binds to the published version policy ============================
 SELECT wx_err('AVQ-14 attempt whose scoring policy differs from the published version rejected',
- $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000003','d4100000-0000-0000-0000-000000000003','e1000000-0000-0000-0000-000000000001',now(),3,'{"negative_marking":false}'::jsonb)$q$,'23514','differs from the published version policy');
+ $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000003','d4100000-0000-0000-0000-000000000003','e1000000-0000-0000-0000-000000000001',now(),3,'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":false}'::jsonb)$q$,'23514','differs from the published version policy');
 INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot)
-VALUES ('e4000000-0000-0000-0000-000000000003','d4000000-0000-0000-0000-000000000003','d4100000-0000-0000-0000-000000000003','e1000000-0000-0000-0000-000000000001',now(),3,'{"negative_marking":true,"version":"v3"}'::jsonb);
+VALUES ('e4000000-0000-0000-0000-000000000003','d4000000-0000-0000-0000-000000000003','d4100000-0000-0000-0000-000000000003','e1000000-0000-0000-0000-000000000001',now(),3,'{"algorithm":"standard_negative","algorithm_version":3,"negative_marking":true}'::jsonb);
 
 -- ============================ responses cannot leave their version ============================
 SELECT wx_err('AVQ-15 response citing a question of ANOTHER version rejected (cross-version substitution)',

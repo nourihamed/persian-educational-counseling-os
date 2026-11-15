@@ -117,7 +117,7 @@ SET SESSION AUTHORIZATION :"runtime_role";
 SELECT fz_err('FRZ-14 a frozen student cannot have a study session written',
  $q$INSERT INTO study_sessions(study_session_id,student_id,started_at,actual_minutes) VALUES (gen_random_uuid(),'e9000000-0000-0000-0000-000000000001',now(),30)$q$,'23514','frozen for transfer case');
 SELECT fz_err('FRZ-15 a frozen student cannot have an exam written',
- $q$INSERT INTO exams(exam_id,student_id,title,exam_at,scoring_policy_snapshot) VALUES (gen_random_uuid(),'e9000000-0000-0000-0000-000000000001','Blocked exam',now(),'{}'::jsonb)$q$,'23514','frozen for transfer case');
+ $q$INSERT INTO exams(exam_id,student_id,title,exam_at,scoring_policy_snapshot) VALUES (gen_random_uuid(),'e9000000-0000-0000-0000-000000000001','Blocked exam',now(),'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb)$q$,'23514','frozen for transfer case');
 RESET SESSION AUTHORIZATION;
 -- The barrier is a row trigger, so it binds the TABLE OWNER too, not just the least-privileged roles.
 -- (The runtime has no direct UPDATE on enrollments or students by design: those go through commands.)

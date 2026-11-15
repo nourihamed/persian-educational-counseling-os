@@ -132,6 +132,23 @@
       "rationale": "It is the only option that gives enforceable referential integrity inside Phase 2's tenancy model, and C can be added later without rewriting A."
     },
     {
+      "id": "OQ-ASM-2",
+      "title": "Which scoring algorithms are permitted, and how are their versions governed",
+      "status": "OPEN",
+      "why_unresolved": "Batch 4 made the scoring algorithm and its version explicit in every scoring policy snapshot, because nothing recorded which algorithm produced a score — a snapshot of `{}` was accepted and published. The database now requires the snapshot to NAME an algorithm and a positive integer version. It deliberately does not constrain WHICH algorithm names are permitted, who may introduce one, or what a version increment means, because those are product decisions about scoring behaviour.",
+      "security_impact": "LOW for security, MEDIUM for correctness and auditability. Without a governed set, two Workspaces could use the same algorithm name for different behaviour, and a historical score would no longer be attributable to a known rule.",
+      "implementation_may_continue": true,
+      "continue_conditions": "The database stores and compares snapshots and never computes or validates a score. The shape is enforced (EXM-01..07, EXM-42); the value set is not. No algorithm is implemented anywhere.",
+      "decision_owner": "Product Owner",
+      "options": [
+        "A. A platform-level registry of algorithm names and versions, referenced by the snapshot.",
+        "B. A fixed allowlist in the schema, extended only by migration.",
+        "C. Free-form names, with governance left to process rather than the database."
+      ],
+      "recommended_option": "A",
+      "rationale": "A registry makes a historical score attributable to a named, versioned rule without freezing the set in the schema, and it is the only option under which a reviewer can tell what `algorithm_version: 2` meant at the time. Not decided; nothing in the implementation assumes it."
+    },
+    {
       "id": "OQ-D",
       "title": "Control Plane topology and recovery — numeric objectives",
       "status": "PARTIALLY_DECIDED",
@@ -174,7 +191,12 @@
       "implementation_may_continue": true,
       "continue_conditions": "The production verifier is fail-closed. Tests use test doubles only and are labelled as such.",
       "decision_owner": "Platform Security with Product Owner",
-      "options": ["A. Ed25519.", "B. ECDSA P-256.", "C. RSA-PSS.", "D. HMAC with a shared key."],
+      "options": [
+        "A. Ed25519.",
+        "B. ECDSA P-256.",
+        "C. RSA-PSS.",
+        "D. HMAC with a shared key."
+      ],
       "recommended_option": "A",
       "rationale": "Small keys, no parameter-choice footguns and wide library support. Stated as a recommendation only; nothing is implemented against it."
     },
@@ -187,7 +209,10 @@
       "implementation_may_continue": true,
       "continue_conditions": "No allowlist value is hard-coded anywhere; the verifier refuses.",
       "decision_owner": "Platform Security",
-      "options": ["A. A single algorithm, no negotiation.", "B. A short allowlist with an explicit rejection of 'none'."],
+      "options": [
+        "A. A single algorithm, no negotiation.",
+        "B. A short allowlist with an explicit rejection of 'none'."
+      ],
       "recommended_option": "A",
       "rationale": "A single algorithm removes negotiation, which is where most signature-verification vulnerabilities live."
     },
@@ -200,7 +225,11 @@
       "implementation_may_continue": true,
       "continue_conditions": "No key material and no issuer trust list is stored in Phase 2 artifacts.",
       "decision_owner": "Platform Security",
-      "options": ["A. A Control Plane registry table.", "B. An external KMS/HSM as the authority.", "C. Static configuration per deployment."],
+      "options": [
+        "A. A Control Plane registry table.",
+        "B. An external KMS/HSM as the authority.",
+        "C. Static configuration per deployment."
+      ],
       "recommended_option": "B",
       "rationale": "Key custody belongs outside the application database; A can hold references to it without holding the keys."
     },
@@ -213,7 +242,11 @@
       "implementation_may_continue": true,
       "continue_conditions": "Contact-identity HMAC rotation is implemented as a mechanism only. No key policy, rotation schedule or revocation source is invented.",
       "decision_owner": "Platform Security",
-      "options": ["A. KMS-managed rotation with overlapping validity.", "B. Manual rotation under a runbook.", "C. No rotation before the pilot."],
+      "options": [
+        "A. KMS-managed rotation with overlapping validity.",
+        "B. Manual rotation under a runbook.",
+        "C. No rotation before the pilot."
+      ],
       "recommended_option": "A",
       "rationale": "Overlapping validity is what makes rotation possible without downtime, and it has to be designed before the first key is issued."
     },
@@ -226,7 +259,11 @@
       "implementation_may_continue": true,
       "continue_conditions": "No skew allowance is implemented. Expiry comparisons use clock_timestamp() with no tolerance.",
       "decision_owner": "Product Owner with Platform Security",
-      "options": ["A. Zero tolerance plus mandatory NTP.", "B. A small fixed allowance (for example 30 seconds).", "C. A configurable allowance with an upper bound."],
+      "options": [
+        "A. Zero tolerance plus mandatory NTP.",
+        "B. A small fixed allowance (for example 30 seconds).",
+        "C. A configurable allowance with an upper bound."
+      ],
       "recommended_option": "C",
       "rationale": "A bounded configurable value survives real deployment conditions without being an unbounded weakening."
     },
@@ -239,7 +276,11 @@
       "implementation_may_continue": true,
       "continue_conditions": "No transport is implemented. verifier_rt holds no receipt-consumption or governance-command privilege, which was verified by test.",
       "decision_owner": "Platform Security",
-      "options": ["A. Private CA with mTLS.", "B. Service-mesh identity.", "C. Bearer tokens over TLS."],
+      "options": [
+        "A. Private CA with mTLS.",
+        "B. Service-mesh identity.",
+        "C. Bearer tokens over TLS."
+      ],
       "recommended_option": "A",
       "rationale": "Mutual authentication is the property being relied on; a bearer token authenticates only one side."
     },
@@ -252,7 +293,11 @@
       "implementation_may_continue": true,
       "continue_conditions": "No service exists to deploy. Phase 2 defines the database boundary only.",
       "decision_owner": "Platform Security with Product Owner",
-      "options": ["A. A separate verifier service.", "B. A library inside each service.", "C. A sidecar per workload."],
+      "options": [
+        "A. A separate verifier service.",
+        "B. A library inside each service.",
+        "C. A sidecar per workload."
+      ],
       "recommended_option": "A",
       "rationale": "A separate service keeps key access out of application processes, which is the reason the boundary exists."
     },
@@ -265,7 +310,11 @@
       "implementation_may_continue": true,
       "continue_conditions": "No freshness or end-to-end revocation claim is made anywhere in Phase 2. Governance events record revocation in the database; propagation beyond it is not implemented.",
       "decision_owner": "Product Owner with Platform Security",
-      "options": ["A. Short-lived receipts, no revocation list.", "B. A revocation list consulted on every use.", "C. Both: short lifetimes plus a list for emergencies."],
+      "options": [
+        "A. Short-lived receipts, no revocation list.",
+        "B. A revocation list consulted on every use.",
+        "C. Both: short lifetimes plus a list for emergencies."
+      ],
       "recommended_option": "C",
       "rationale": "Short lifetimes bound the normal case; a list is the only answer for an urgent revocation, and the two are complementary."
     },
@@ -278,7 +327,11 @@
       "implementation_may_continue": true,
       "continue_conditions": "Unrelated work continues. M-05 is not claimed as addressed anywhere.",
       "decision_owner": "Supervisor",
-      "options": ["A. Supply the finding text so it can be addressed.", "B. Withdraw it if superseded.", "C. Restate it against the current head."],
+      "options": [
+        "A. Supply the finding text so it can be addressed.",
+        "B. Withdraw it if superseded.",
+        "C. Restate it against the current head."
+      ],
       "recommended_option": "C",
       "rationale": "The head has moved substantially since the finding was raised, so a restatement against the current head is both actionable and avoids work on a finding that may already be resolved."
     },
@@ -291,7 +344,11 @@
       "implementation_may_continue": true,
       "continue_conditions": "Unrelated work continues. M-06 is not claimed as addressed.",
       "decision_owner": "Supervisor",
-      "options": ["A. Supply the finding text.", "B. Withdraw it if superseded.", "C. Restate it against the current head."],
+      "options": [
+        "A. Supply the finding text.",
+        "B. Withdraw it if superseded.",
+        "C. Restate it against the current head."
+      ],
       "recommended_option": "C",
       "rationale": "As for M-05."
     },
@@ -347,10 +404,30 @@
       "rationale": "Their content has been consolidated into the #12 branch, and keeping four stale drafts open invites a reviewer to read superseded text. The confirmation that no unique content is lost should be produced before closing; the implementation can prepare that diff on request.",
       "evidence": {
         "verified_at": "2026-11-14",
-        "pr_8": {"head": "7d1ce9f3649a4125b5f19f5cfd292327d5a6b3f3", "base": "main@ba5e9d8", "state": "open", "draft": true},
-        "pr_9": {"head": "d72c401510045075441d881838a515cd1ea9921a", "base": "main@ba5e9d8", "state": "open", "draft": true},
-        "pr_10": {"head": "30cc32fff9583f0d85726cbd33d142579d97a2a1", "base": "main@ba5e9d8", "state": "open", "draft": true},
-        "pr_11": {"head": "ce20f5fa143d0556db92ac4a1db88153367ea909", "base": "main@ba5e9d8", "state": "open", "draft": true}
+        "pr_8": {
+          "head": "7d1ce9f3649a4125b5f19f5cfd292327d5a6b3f3",
+          "base": "main@ba5e9d8",
+          "state": "open",
+          "draft": true
+        },
+        "pr_9": {
+          "head": "d72c401510045075441d881838a515cd1ea9921a",
+          "base": "main@ba5e9d8",
+          "state": "open",
+          "draft": true
+        },
+        "pr_10": {
+          "head": "30cc32fff9583f0d85726cbd33d142579d97a2a1",
+          "base": "main@ba5e9d8",
+          "state": "open",
+          "draft": true
+        },
+        "pr_11": {
+          "head": "ce20f5fa143d0556db92ac4a1db88153367ea909",
+          "base": "main@ba5e9d8",
+          "state": "open",
+          "draft": true
+        }
       }
     },
     {

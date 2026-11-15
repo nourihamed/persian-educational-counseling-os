@@ -35,18 +35,18 @@ END; $t$;
 -- ========================= WS-DOM-01 =========================
 -- Definition versions
 SELECT wx_err('ASM-01 definition version cannot be inserted already published',
- $q$INSERT INTO test_definition_versions(version_id,test_id,version_no,status,question_count,scoring_policy_snapshot,published_at) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000001',9,'published',5,'{}'::jsonb,now())$q$,'23514','created as draft');
+ $q$INSERT INTO test_definition_versions(version_id,test_id,version_no,status,question_count,scoring_policy_snapshot,published_at) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000001',9,'published',5,'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb,now())$q$,'23514','created as draft');
 SELECT wx_err('ASM-02 published version content is immutable',
  $q$UPDATE test_definition_versions SET question_count=11 WHERE version_id='d4100000-0000-0000-0000-000000000001'$q$,'23514','immutable');
 SELECT wx_err('ASM-03 published version cannot be deleted',
  $q$DELETE FROM test_definition_versions WHERE version_id='d4100000-0000-0000-0000-000000000001'$q$,'23514','immutable');
 INSERT INTO test_definition_versions(version_id,test_id,version_no,question_count,scoring_policy_snapshot)
-VALUES ('d4100000-0000-0000-0000-000000000002','d4000000-0000-0000-0000-000000000001',2,3,'{"negative_marking":false,"version":"v2"}'::jsonb);
+VALUES ('d4100000-0000-0000-0000-000000000002','d4000000-0000-0000-0000-000000000001',2,3,'{"algorithm":"standard_negative","algorithm_version":2,"negative_marking":false}'::jsonb);
 INSERT INTO test_definition_version_questions(version_question_id,version_id,question_no,item_ref)
 SELECT ('d4210000-0000-0000-0000-0000000000'||lpad(g::text,2,'0'))::uuid,'d4100000-0000-0000-0000-000000000002',g,'synthetic-item-v2-'||g
   FROM generate_series(1,3) g;
 SELECT wx_err('ASM-04 attempt on a draft version rejected',
- $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{}'::jsonb)$q$,'23514','published definition version');
+ $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb)$q$,'23514','published definition version');
 UPDATE test_definition_versions SET status='published', published_at=now() WHERE version_id='d4100000-0000-0000-0000-000000000002';
 DO $t$ BEGIN
   IF (SELECT question_count FROM test_attempts WHERE attempt_id='e4000000-0000-0000-0000-000000000001')<>10 THEN RAISE EXCEPTION 'FAIL ASM-05'; END IF;
@@ -54,15 +54,15 @@ DO $t$ BEGIN
 END $t$;
 -- Attempt creation
 SELECT wx_err('ASM-06 attempt cannot be created already submitted',
- $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,state,started_at,submitted_at,question_count,correct_count,wrong_count,blank_count,score,scoring_policy_snapshot,submission_idempotency_key,submission_payload_hash) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001','submitted',now(),now(),3,3,0,0,100,'{}'::jsonb,'k-direct',sha256('x'::bytea))$q$,'23514','state started');
+ $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,state,started_at,submitted_at,question_count,correct_count,wrong_count,blank_count,score,scoring_policy_snapshot,submission_idempotency_key,submission_payload_hash) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001','submitted',now(),now(),3,3,0,0,100,'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb,'k-direct',sha256('x'::bytea))$q$,'23514','state started');
 SELECT wx_err('ASM-07 fixed-delivery attempt with a different question_count rejected',
- $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),4,'{}'::jsonb)$q$,'23514','differs from fixed definition');
+ $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),4,'{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb)$q$,'23514','differs from fixed definition');
 INSERT INTO test_definitions(test_id,title,subject_id,test_kind,scoring_policy_snapshot)
-SELECT 'd4000000-0000-0000-0000-000000000002','Other quiz',subject_id,'educational','{}'::jsonb FROM test_definitions WHERE test_id='d4000000-0000-0000-0000-000000000001';
+SELECT 'd4000000-0000-0000-0000-000000000002','Other quiz',subject_id,'educational','{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb FROM test_definitions WHERE test_id='d4000000-0000-0000-0000-000000000001';
 SELECT wx_err('ASM-08 attempt/version/test linkage must agree (version of another test)',
- $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{"negative_marking":false,"version":"v2"}'::jsonb)$q$,'23503');
+ $q$INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot) VALUES (gen_random_uuid(),'d4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{"algorithm":"standard_negative","algorithm_version":2,"negative_marking":false}'::jsonb)$q$,'23503');
 INSERT INTO test_attempts(attempt_id,test_id,definition_version_id,student_id,started_at,question_count,scoring_policy_snapshot)
-VALUES ('e4000000-0000-0000-0000-000000000002','d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{"negative_marking":false,"version":"v2"}'::jsonb);
+VALUES ('e4000000-0000-0000-0000-000000000002','d4000000-0000-0000-0000-000000000001','d4100000-0000-0000-0000-000000000002','e1000000-0000-0000-0000-000000000001',now(),3,'{"algorithm":"standard_negative","algorithm_version":2,"negative_marking":false}'::jsonb);
 -- Responses while started
 INSERT INTO test_responses(response_id,attempt_id,definition_version_id,version_question_id,question_no,response_state) VALUES
  ('f4000000-0000-0000-0000-000000000011','e4000000-0000-0000-0000-000000000002','d4100000-0000-0000-0000-000000000002','d4210000-0000-0000-0000-000000000001',1,'correct'),
@@ -112,7 +112,7 @@ SELECT wx_err('ASM-25 response cannot be added after submission',
 SELECT wx_err('ASM-26 submitted counters and score cannot be rewritten',
  $q$UPDATE test_attempts SET score=100 WHERE attempt_id='e4000000-0000-0000-0000-000000000002'$q$,'23514');
 SELECT wx_err('ASM-27 scoring snapshot of an attempt is immutable',
- $q$UPDATE test_attempts SET scoring_policy_snapshot='{"negative_marking":true}'::jsonb WHERE attempt_id='e4000000-0000-0000-0000-000000000002'$q$,'23514','immutable');
+ $q$UPDATE test_attempts SET scoring_policy_snapshot='{"algorithm":"standard_negative","algorithm_version":1,"negative_marking":true}'::jsonb WHERE attempt_id='e4000000-0000-0000-0000-000000000002'$q$,'23514','immutable');
 SELECT wx_err('ASM-28 analysis must not rewrite the submitted attempt',
  $q$UPDATE test_attempts SET state='analysed', score=90 WHERE attempt_id='e4000000-0000-0000-0000-000000000002'$q$,'23514','must not rewrite');
 SELECT wx_err('ASM-29 submitted attempt cannot be cancelled',
