@@ -269,6 +269,9 @@ jobs:
           # Freshness of the receipt validity window. The defect this covers was demonstrated: with now()
           # an expired receipt was consumed and applied. These tests take ~8s of deliberate waiting.
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -f $R/tests/receipt_60_freshness_tests.sql
+          # Batch 6 adversarial review, asserted from the catalog. This step is the only one that has every
+          # role AND every SECURITY DEFINER function loaded, which is what SEC-01..SEC-10 need.
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d receipt_test -c "SET app.workspace_key='$K'" -f $W/tests/workspace_privilege_hardening_tests.sql
           createdb receipt_race
           psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_schema_draft.sql
           psql -X -v ON_ERROR_STOP=1 -d receipt_race -f $W/workspace_activation_transactions.sql

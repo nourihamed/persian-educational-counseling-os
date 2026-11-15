@@ -743,3 +743,39 @@ determinism/replay and normalized planning inputs (Phase 12); Book/Edition, curr
 platform-versus-Workspace content ownership and subtopic-level mastery (WS-DOM-05) — so the curriculum
 contract's isolation tests cannot be run and are not claimed; plus everything listed at the end of the
 Batch 1–4 sections.
+
+## Batch 6 — adversarial privilege review (2026-11-15)
+
+`workspace_privilege_hardening_tests.sql` — SEC-01..SEC-10 (12 PASS lines), run inside the governance
+receipt step, which is the only step that has **every** role and **every** SECURITY DEFINER function
+loaded — which is what these assertions need.
+
+Every assertion queries the **catalog** and describes a property that must hold for all definer functions
+and all roles, rather than checking a list of remembered names. That is the point: reading the SQL is how
+the superuser-owned function survived several passes.
+
+| Test | Asserts |
+|---|---|
+| SEC-01 | No SECURITY DEFINER function is owned by a superuser. **This one found a real defect.** |
+| SEC-02 | Every definer function pins a search_path (an unpinned one resolves through the *caller's*). |
+| SEC-02b | Neither `PUBLIC` nor any application role may `CREATE` in `public` — the precondition for shadowing an unqualified name inside a definer function. |
+| SEC-02c | Reports definer functions still carrying `public` on their path as a NOTICE: tracked as hardening, **not** claimed fixed, because SEC-02b shows it is not exploitable. |
+| SEC-03 | Every definer owner is NOLOGIN. |
+| SEC-04 | No application role owns a table (an owner can disable triggers). |
+| SEC-05 | No Workspace role holds superuser / createrole / createdb / bypassrls. |
+| SEC-06 | `PUBLIC` holds no table privilege — one stray grant would reach every role in the cluster, including other Workspaces'. |
+| SEC-07 | No non-trigger definer function is executable by `PUBLIC`, except `assert_student_not_frozen`, which is PUBLIC on purpose. |
+| SEC-08 | **A limitation, asserted rather than hidden:** the table owner really *can* disable triggers, so no trigger-based guard contains the owner or a superuser. |
+| SEC-09 | Every table has a primary key. |
+| SEC-10 | **The headline negative result, asserted as a test:** no row-level security anywhere, and the runtime role holds SELECT on 47 tables in full, so counselor-to-counselor isolation inside a Workspace is **not** enforced here. Fails if the situation changes in either direction, so the record cannot rot. |
+
+### Sensitivity, measured
+With the `ALTER FUNCTION public.receipt_consume_grant_guard() OWNER TO ...` line removed from
+`receipt_02_roles_draft.sql`, the owner is `postgres` again and **SEC-01 fails** naming the function
+(exit 3).
+
+### Still NOT RUN / NOT IMPLEMENTED after Batch 6
+Object-level authorization, IDOR and uniform-404 behaviour (API properties; no API exists); background-job
+tenant context (no jobs run); file and notification ownership (neither subsystem exists); RLS policies and
+therefore RLS bypass testing — the absence is itself the finding (WS-ISO-01); counselor-to-counselor
+isolation; and everything listed at the end of the Batch 1–5 sections.

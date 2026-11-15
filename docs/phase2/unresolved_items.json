@@ -183,6 +183,24 @@
       "rationale": "The data model is a Phase 2 concern and the engine is not: the same split already worked for Activity, whose typed source columns and exactly-one-source CHECK were built in Phase 2 while nothing generates activities yet. Deciding the shape later is what makes it expensive, because by then plan_content blobs exist and have to be migrated. (C) is the only option that conflicts with the contract outright. This is a recommendation; nothing is built against it."
     },
     {
+      "id": "WS-ISO-01",
+      "title": "Counselor-to-counselor isolation inside one Workspace",
+      "status": "OPEN",
+      "why_unresolved": "The Supervisor brief requires that no counselor may access another counselor's students, even within the same Organization. The database does not enforce this and cannot today: measured on 2026-11-15, there is NO row-level security on any table in the Workspace database, and the Workspace runtime role holds SELECT on 47 tables in full. Tenant isolation in this design is per-Workspace — one database per Workspace with no cross-database grants, which the cross-database denial step does test — so every counselor inside a Workspace shares one runtime identity. Whether the boundary is enforced by row-level security keyed to the counselor assignment, by a per-counselor database role, or only in an application layer is an architecture decision that has not been made.",
+      "security_impact": "HIGH. It is an explicit requirement of the brief, and it is the one isolation claim this database currently cannot support. Until it is decided and built, any statement that counselors are isolated from each other rests entirely on application code that does not exist in this repository.",
+      "implementation_may_continue": true,
+      "continue_conditions": "SEC-10 records the negative result as a test rather than prose, and fails if the situation changes in either direction, so it cannot silently rot. Per-Workspace isolation is implemented and tested. No counselor-to-counselor isolation is claimed anywhere in the documentation, and PHASE2_EXIT_CRITERIA.md records it as NOT IMPLEMENTED.",
+      "decision_owner": "Product Owner with the architecture owner",
+      "options": [
+        "A. Row-level security on the student-scoped tables, keyed to the responsible counselor assignment, with a session identity the application must set and the database must be able to trust.",
+        "B. One database role per counselor, so the boundary is a grant rather than a policy.",
+        "C. Enforce it only in the application's authorization layer, and state plainly that the database does not.",
+        "D. Allow shared visibility inside a Workspace by policy, and narrow the brief's requirement to the Organization boundary."
+      ],
+      "recommended_option": "A",
+      "rationale": "It keeps the boundary inside the database, where it cannot be forgotten by a new query path, and it matches how the rest of this project treats authorization — the write barrier and the ledger guard are triggers precisely because a privilege check in application code binds only the callers that remember it. The hard part of (A) is the session identity: the database must not take the counselor's identity from a GUC the application sets, because this project already rejected session GUCs as an authorization mechanism in finding H-03. It would need the same privilege-backed, transaction-scoped grant pattern used for receipt consumption. (B) does not scale to many counselors per Workspace and multiplies role management. (C) is the current de facto state and is acceptable only if written down as such. (D) changes the requirement and is the Product Owner's call, not the implementation's."
+    },
+    {
       "id": "OQ-D",
       "title": "Control Plane topology and recovery — numeric objectives",
       "status": "PARTIALLY_DECIDED",

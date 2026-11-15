@@ -774,3 +774,112 @@ looking like an oversight, and the assertion fails loudly if someone adds them w
   custom curriculum) **cannot** be run and are not claimed.
 - No subtopic-level mastery; mastery stays at topic level.
 - **Phase 2 is not self-approved.** This is an implementation report, not a review.
+
+---
+
+## 11. Batch 6 — Tenant isolation, authorization and database hardening (2026-11-15)
+
+### 11.1 Method: interrogate the catalog, not the SQL text
+
+Batch 6 is an adversarial review. Reading the SQL is how the two problems below survived several previous
+passes, so the assertions in `workspace_privilege_hardening_tests.sql` query the **catalog** and describe
+properties that must hold for **every** SECURITY DEFINER function and **every** role — not for a list of
+names somebody remembered to check. SEC-01 is the one that found a real defect.
+
+### 11.2 Finding 1 — a SECURITY DEFINER function owned by a superuser
+
+`receipt_consume_grant_guard()` is `SECURITY DEFINER` and was **owned by `postgres`**, a superuser. A
+SECURITY DEFINER function owned by a superuser executes **as superuser** every time it runs.
+
+The cause is ordering, not intent: the function is created in `receipt_01_schema_draft.sql`, which runs
+**before** `receipt_02_roles_draft.sql` creates the role that should own it, so it inherited the loader's
+identity — and nothing ever reassigned it.
+
+**Severity, measured rather than asserted: MEDIUM, defence-in-depth, not exploitable as configured.**
+- It returns `trigger`, and PostgreSQL refuses to invoke a trigger function as an ordinary function, so
+  there is no direct call path.
+- Its body reads exactly one table, schema-qualified, and raises. Nothing dynamic.
+- Shadowing an unqualified name would need `CREATE` on a schema on its path, and the review **measured**
+  that `PUBLIC` cannot create in `public`, and neither can `runtime`, `worker`, `exporter`, `verifier_rt`,
+  `governance_adapter_rt` or `synth_exec`. Only `table_owner` and `function_owner` can, and both are
+  NOLOGIN and already trusted.
+
+It was still unnecessary privilege and a deviation from this project's own rule that every definer function
+is owned by a dedicated NOLOGIN role. **Fixed:** `receipt_02_roles_draft.sql` now reassigns ownership to
+`ws_<key>_receipt_consume_definer`, which already held the one grant the body needs, and the function's
+search_path was tightened from `pg_catalog, public` to `pg_catalog, pg_temp`.
+
+**Sensitivity measured:** with the `ALTER FUNCTION ... OWNER TO` line removed, the owner is `postgres`
+again and **SEC-01 fails** naming the function. Exit 3.
+
+### 11.3 A finding deliberately not inflated
+
+Two definer functions — `append_workspace_governance_event` and
+`consume_governance_receipt_and_apply` — still carry `public` on their search_path. The first instinct was
+to call that a vulnerability and mass-edit it. The measurement above says otherwise: exploiting it requires
+`CREATE` on `public`, which no application role has.
+
+So the test was split rather than overstated:
+- **SEC-02** requires every definer function to pin *a* search_path (an unpinned one resolves through the
+  **caller's** path, which is the real classic vector).
+- **SEC-02b** asserts the precondition that actually carries the weight: neither `PUBLIC` nor any
+  application role may `CREATE` in `public`. If that ever changes, every function with `public` on its
+  path becomes exploitable **at once**, and this fails.
+- **SEC-02c** reports the remaining two as a NOTICE, tracked as hardening, explicitly **not** claimed as
+  fixed.
+
+Claiming a vulnerability that cannot be exercised would be as misleading as ignoring one that can.
+
+### 11.4 Finding 2 — counselor-to-counselor isolation is not enforced, and cannot be today
+
+The brief requires: *"No counselor may access another counselor's students, even within the same
+Organization."*
+
+Measured: **no row-level security on any table**, and the Workspace runtime role holds `SELECT` on **47
+tables in full**. Isolation in this design is **per-Workspace** — one database per Workspace, no
+cross-database grants, which the cross-database denial step does test — so every counselor inside a
+Workspace shares one runtime identity.
+
+This is not a defect to patch in a batch; it is an **architecture decision that has not been made**, so it
+is recorded as **WS-ISO-01** with four options and a recommendation (row-level security keyed to the
+responsible counselor assignment — noting that the session identity must **not** come from a GUC the
+application sets, because this project already rejected session GUCs as an authorization mechanism in
+finding H-03).
+
+**SEC-10 asserts the negative result as a test rather than prose**, and fails if the situation changes in
+either direction, so the record cannot silently rot: if RLS is added, the assertion demands it be replaced
+with real isolation tests.
+
+### 11.5 What the rest of the review found: no further defects
+
+| Property | Result |
+|---|---|
+| Definer functions without a pinned search_path | **none** (SEC-02) |
+| Definer owners that can log in | **none** — all NOLOGIN (SEC-03) |
+| Tables owned by an application role | **none** (SEC-04) |
+| Workspace roles with superuser / createrole / createdb / bypassrls | **none** (SEC-05) |
+| Table privileges held by `PUBLIC` | **none** (SEC-06) |
+| Non-trigger definer functions executable by `PUBLIC` | **none** beyond `assert_student_not_frozen`, which is PUBLIC on purpose (SEC-07) |
+| Tables without a primary key | **none** (SEC-09) |
+| Foreign keys with a cascade or set-null | **none** (CUR-09, Batch 5) |
+| Polymorphic references without integrity | **none** — Activity and the assessment chain use typed columns with composite foreign keys |
+
+### 11.6 SEC-08 records a limitation instead of hiding it
+
+Every guard in this schema is a trigger or a CHECK. A **table owner can disable triggers** and a superuser
+can do anything, so neither identity is contained by any of it. SEC-08 does not assert that the owner is
+contained — it asserts that the owner **can** disable a trigger, so the threat model stays honest and no
+later reader mistakes the write barrier for something that binds the owner. Containing those identities is
+operational control of credentials, which is outside the database.
+
+### 11.7 What is NOT claimed for Batch 6
+
+- **No object-level authorization, IDOR or uniform-404 testing.** Those are API properties and there is no
+  API in this repository. The brief's "uniform 404 for cross-Workspace or nonexistent resources" cannot be
+  implemented or tested here, and is not.
+- **No background-job tenant context**, because there are no background jobs. The worker *role* exists and
+  its grants are tested; nothing runs as it.
+- **No file or notification ownership**, because neither subsystem exists.
+- **No RLS policies**, therefore no RLS bypass testing — the absence is the finding (WS-ISO-01).
+- **No counselor-to-counselor isolation**, as above.
+- **Phase 2 is not self-approved.** This is an implementation report, not a review.

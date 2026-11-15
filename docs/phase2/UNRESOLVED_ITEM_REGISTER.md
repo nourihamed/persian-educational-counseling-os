@@ -30,6 +30,7 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | OQ-ASM-2 | Which scoring algorithms are permitted | OPEN | MEDIUM (correctness) | Yes, shape enforced, values not | Product Owner |
 | WS-DOM-05 | Curriculum Book/Edition, successor mapping, content ownership | OPEN | MEDIUM (correctness, isolation later) | Yes, subtopics built | Product Owner + content licensing owner |
 | WS-PLAN-01 | Normalized PlanItem versus opaque `plan_content` JSON | OPEN | HIGH for the product promise | Yes, versioning built | Product Owner |
+| WS-ISO-01 | Counselor-to-counselor isolation inside one Workspace | OPEN | HIGH | Yes, negative result asserted | Product Owner + architecture owner |
 | OQ-D | Control Plane topology — numeric objectives | PARTIALLY DECIDED | HIGH at operation | Yes, schema only | Product Owner + operations |
 | OQ-E | Transfer cutover — boundary, duration, thresholds | PARTIALLY DECIDED | HIGH | Yes; boundary now implemented | Product Owner + operations |
 | PS-1 | Signature algorithm | DEFERRED | HIGH | Yes, fail-closed | Platform Security + Product Owner |
@@ -171,6 +172,34 @@ worked for Activity, whose typed source columns and exactly-one-source CHECK wer
 nothing generates activities yet. Deferring the shape is what makes it expensive, because by then
 `plan_content` blobs exist and must be migrated. (C) is the only option that conflicts with the contract
 outright. Nothing is built against this recommendation.
+
+### WS-ISO-01 — Counselor-to-counselor isolation inside one Workspace
+**Status:** OPEN. The Supervisor brief requires: *"No counselor may access another counselor's students,
+even within the same Organization."* **The database does not enforce this, and cannot today.**
+**Measured on 2026-11-15:** there is **no row-level security on any table** in the Workspace database, and
+the Workspace runtime role holds `SELECT` on **47 tables in full**. Isolation in this design is
+**per-Workspace** — one database per Workspace with no cross-database grants, which the cross-database
+denial step does test — so every counselor inside a Workspace shares one runtime identity.
+**Impact:** HIGH. It is an explicit requirement of the brief and the one isolation claim this database
+cannot currently support. Until it is decided and built, any statement that counselors are isolated from
+one another rests entirely on application code that does not exist in this repository.
+**Held how:** **SEC-10 records the negative result as a test, not as prose**, and fails if the situation
+changes in either direction, so the record cannot silently rot. Per-Workspace isolation is implemented and
+tested. Counselor-to-counselor isolation is claimed nowhere, and `PHASE2_EXIT_CRITERIA.md` records it as
+NOT IMPLEMENTED.
+**Options:** (A) row-level security on the student-scoped tables, keyed to the responsible counselor
+assignment; (B) one database role per counselor, so the boundary is a grant rather than a policy;
+(C) enforce it only in the application authorization layer and say so plainly; (D) allow shared visibility
+inside a Workspace by policy and narrow the requirement to the Organization boundary.
+**Recommendation: A.** It keeps the boundary inside the database, where a new query path cannot forget it,
+and it matches how this project already treats authorization — the write barrier and the ledger guard are
+triggers precisely because a check in application code binds only the callers that remember it. The hard
+part of (A) is the session identity: the database must **not** take the counselor's identity from a GUC the
+application sets, because this project already rejected session GUCs as an authorization mechanism in
+finding H-03. It would need the same privilege-backed, transaction-scoped grant pattern used for receipt
+consumption. (B) does not scale to many counselors per Workspace. (C) is the current de facto state and is
+acceptable only if written down as such. (D) changes the requirement, which is the Product Owner's call and
+not the implementation's.
 
 ### OQ-D — Control Plane topology and recovery
 **Status:** PARTIALLY DECIDED (Option A accepted): independent infrastructure, primary plus replica, independently controlled encrypted backups with restore drills, and student access fail-closed when ownership cannot be validated.

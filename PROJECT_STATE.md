@@ -9,8 +9,8 @@ write-barrier commit on `docs/product-owner-decisions-consolidation-2026-11-07` 
 
 | Kind | What it is | Result |
 |---|---|---|
-| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **22 implementation test steps**, **641 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
-| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL and a new test suite, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
+| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **22 implementation test steps**, **653 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
+| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL and new test suites, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
 
 Any commit that touches SQL or tests requires a fresh local run and a fresh Actions run at its own SHA.
 Documentation-only commits on top of a verified SHA change no SQL and no test, so they do not invalidate
@@ -642,5 +642,67 @@ Actions result has **not** been reported to the implementation agent.
 - **Still open, unchanged:** Q-007, Q-020, OQ-CRD-2/3, OQ-SAGA-1/2, OQ-ASM-1/2, WS-DOM-05, WS-PLAN-01,
   PS-1..PS-8, OQ-D and OQ-E numeric objectives, the transfer exception approval authority, M-05 and M-06
   definitions, and the disposition of PR #8–#11.
+- Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
+  prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**
+
+## Update 2026-11-15 (third) — Batch 6: adversarial privilege review
+
+Batch 5 was pushed as `4306d5660647bc71fcb947081d4d94e008b95fed` (parent `0b5a644`). Its GitHub Actions
+result has **not** been reported to the implementation agent.
+
+Batch 6 is an adversarial review. The assertions in `workspace_privilege_hardening_tests.sql` interrogate
+the **catalog** and state properties that must hold for **every** SECURITY DEFINER function and **every**
+role, rather than checking a list of remembered names — because reading the SQL is exactly how the first
+finding below survived several previous passes.
+
+- **Finding 1, fixed: a SECURITY DEFINER function was owned by a superuser.**
+  `receipt_consume_grant_guard()` is created in `receipt_01_schema_draft.sql`, **before**
+  `receipt_02_roles_draft.sql` creates the role that should own it, so it inherited the loader's identity —
+  `postgres` — and nothing reassigned it. A SECURITY DEFINER function owned by a superuser executes **as
+  superuser**.
+  **Severity MEDIUM, measured not asserted:** it returns `trigger` and PostgreSQL refuses to call a trigger
+  function directly; its body reads one schema-qualified table and raises; and shadowing an unqualified
+  name would need `CREATE` on a schema on its path, which the review **measured** that neither `PUBLIC`
+  nor any application role has. It was unnecessary privilege and a deviation from this project's own rule
+  that every definer function is owned by a dedicated NOLOGIN role. Ownership is now reassigned and its
+  search_path tightened from `pg_catalog, public` to `pg_catalog, pg_temp`.
+- **A finding deliberately not inflated.** Two definer functions still carry `public` on their search_path.
+  The first instinct was to call that a vulnerability; the measurement says it is not exploitable here,
+  because no application role can `CREATE` in `public`. So SEC-02 was split: SEC-02 requires a pinned
+  search_path, **SEC-02b asserts the precondition that actually carries the weight** (no `PUBLIC` and no
+  application role may `CREATE` in `public`, which if it ever changed would make every such function
+  exploitable at once), and SEC-02c reports the remaining two as a NOTICE tracked as hardening and
+  explicitly **not** claimed as fixed. Claiming a vulnerability that cannot be exercised would mislead a
+  reviewer as much as hiding one that can.
+- **Finding 2, NOT fixable in a batch: counselor-to-counselor isolation is not enforced.** The brief
+  requires that no counselor may access another counselor's students, even within the same Organization.
+  **Measured:** no row-level security on any table, and the Workspace runtime role holds `SELECT` on **47
+  tables in full**. Isolation in this design is **per-Workspace** — one database per Workspace with no
+  cross-database grants, which the cross-database denial step does test — so every counselor inside a
+  Workspace shares one runtime identity. This is an architecture decision nobody has made, so it is
+  recorded as **WS-ISO-01** with four options and a recommendation (row-level security keyed to the
+  responsible counselor assignment — noting the session identity must **not** come from a GUC the
+  application sets, because this project already rejected session GUCs as an authorization mechanism in
+  finding H-03). **SEC-10 asserts the negative result as a test rather than prose** and fails if the
+  situation changes in either direction, so the record cannot silently rot.
+- **No further defects found.** No unpinned definer search_path; no definer owner that can log in; no table
+  owned by an application role; no Workspace role with superuser/createrole/createdb/bypassrls; no table
+  privilege held by `PUBLIC`; no unexpected PUBLIC execute; every table has a primary key; no foreign key
+  with a cascade or set-null; no polymorphic reference without integrity.
+- **SEC-08 records a limitation instead of hiding it.** Every guard here is a trigger or a CHECK, and a
+  table owner can disable triggers. SEC-08 asserts the owner **can** do so, so nobody later mistakes the
+  write barrier for something that binds the owner. Containing that identity is operational credential
+  control, outside the database.
+- **Not claimed:** object-level authorization, IDOR and uniform-404 behaviour (API properties, no API
+  exists); background-job tenant context (nothing runs as the worker role); file and notification
+  ownership (neither subsystem exists); RLS policies and therefore RLS bypass testing — the absence is the
+  finding.
+- **Local verification:** PostgreSQL 16.15, cleared cluster (0 leftover databases, 0 leftover roles), all
+  22 implementation test steps passed, **653 PASS assertion lines**, 0 FAIL (the governance receipt step
+  rose from 111 to 123, which is exactly the 12 SEC assertions), plus the Python verifier unit tests,
+  plus the documentation consistency check reported separately. **GitHub Actions at this HEAD: NOT RUN.**
+- **Sensitivity measured:** with the `ALTER FUNCTION ... OWNER TO` line removed, the owner is `postgres`
+  again and **SEC-01 fails** naming the function (exit 3).
+- The register now carries **27 items** (WS-ISO-01 added).
 - Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
   prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**

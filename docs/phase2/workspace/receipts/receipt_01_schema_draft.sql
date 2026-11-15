@@ -118,8 +118,20 @@ CREATE TABLE receipt_consume_grants (
   granted_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (receipt_id, txid)
 );
+-- SECURITY DEFINER because the writer being guarded need not be able to read the capability table.
+--
+-- TWO PRIVILEGE PROBLEMS, both found and fixed by the Batch 6 adversarial review on 2026-11-15:
+--   * search_path included `public`. It is now pinned to pg_catalog, pg_temp. The body schema-qualifies
+--     everything it touches, so `public` bought nothing, and a function that runs with elevated privilege
+--     should not carry a writable schema on its name-resolution path.
+--   * OWNERSHIP. This function is created here, before receipt_02_roles_draft.sql creates the definer
+--     role, so at this moment it is owned by whoever loads the file — in practice a SUPERUSER. A
+--     SECURITY DEFINER function owned by a superuser runs AS superuser. receipt_02 now reassigns it to
+--     ws_<key>_receipt_consume_definer, which is NOLOGIN and holds only the privileges this body needs.
+--     SEC-01 and SEC-02 assert both properties from the catalog, for every definer function, so this
+--     cannot regress quietly.
 CREATE FUNCTION receipt_consume_grant_guard() RETURNS trigger LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.receipt_consume_grants g
                   WHERE g.receipt_id = NEW.receipt_id AND g.txid = txid_current()) THEN

@@ -57,6 +57,16 @@ REVOKE ALL ON TABLE receipt_consume_grants FROM PUBLIC, :"runtime_role", :"worke
 GRANT USAGE ON SCHEMA public TO :"definer_role";
 GRANT SELECT, INSERT, DELETE ON TABLE receipt_consume_grants TO :"definer_role";
 GRANT SELECT, UPDATE ON TABLE governance_proof_receipts TO :"definer_role";
+
+-- Batch 6, 2026-11-15. receipt_consume_grant_guard() is SECURITY DEFINER and is created in
+-- receipt_01_schema_draft.sql, BEFORE this role exists — so it was owned by whoever loaded that file, in
+-- practice a SUPERUSER, and therefore ran with superuser privilege every time the trigger fired. It was
+-- not directly callable (PostgreSQL refuses to invoke a trigger function as an ordinary function) and its
+-- body only reads one schema-qualified table, so it was not an exploitable hole; it was unnecessary
+-- privilege and a deviation from this project's own rule that every definer function is owned by a
+-- dedicated NOLOGIN role. Reassigned to the least privileged role that can do the job: the grant above
+-- gives it SELECT on receipt_consume_grants, the only table the body reads.
+ALTER FUNCTION public.receipt_consume_grant_guard() OWNER TO :"definer_role";
 GRANT SELECT ON TABLE receipt_adapter_allowlist TO :"definer_role";
 GRANT SELECT ON TABLE workspace_profile TO :"definer_role";
 GRANT SELECT ON TABLE workspace_governance_events TO :"definer_role";
