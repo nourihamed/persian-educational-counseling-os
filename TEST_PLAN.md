@@ -703,3 +703,43 @@ percentile and cohort comparison; a custom error taxonomy table (`test_responses
 free-text `custom_error_reason`, so custom reasons are not reusable or countable as categories);
 `test_attempt_questions` (correctly absent — adaptive delivery cannot be published); and everything listed
 at the end of the Batch 1, 2 and 3 sections.
+
+## Batch 5 — curriculum and student-ownership boundaries (2026-11-15)
+
+### `workspace_curriculum_tests.sql` — CUR-01..CUR-10 (10 PASS lines, own database in CI)
+Covers the one hierarchy level the Product Owner scoped in: `subtopics`. CUR-01..04 ordered membership and
+that order numbers are scoped to the parent topic rather than global; CUR-05/06 shape; CUR-07 a topic with
+subtopics cannot be deleted; CUR-08 archiving in place preserves references.
+
+- **CUR-09 asserts deletion behaviour from the catalog.** It fails if **any** foreign key in the Workspace
+  schema has a non-default delete action. There is no `ON DELETE` anywhere today, so this held by
+  convention and nothing checked it; a cascade or set-null added later would destroy the educational
+  history the curriculum contract requires be preserved.
+- **CUR-10 asserts an absence.** Book/Edition tables must not exist, so the WS-DOM-05 gap stays explicit
+  and dated rather than looking like an oversight — and the assertion fails loudly if someone adds them
+  without updating the register.
+
+### Freeze suite extended — FRZ-01b, FRZ-01c, FRZ-18b, FRZ-18c (step rose from 36 to 40 PASS lines)
+FRZ-01 asks "does every table in the coverage view have a trigger?" — which **cannot** catch a per-student
+table that is missing from the view. That is how five tables were unprotected.
+
+- **FRZ-01b** asks the opposite question from the catalog: which tables have a foreign key into a
+  per-student table and yet carry no barrier? Anything new fails **by name**. Eleven reviewed exclusions,
+  each stating one of only two valid reasons — the table is **shared** between students (barring it would
+  let one frozen student block writes others depend on), or it must be writable **while** frozen because it
+  is part of the freeze machinery (`workspace_inbox_events`: the inbox projection *applies* the fence).
+- **FRZ-01c** pins the five tables found in Batch 5, so an over-broad edit to FRZ-01b's exclusion list
+  cannot quietly drop them again.
+- **FRZ-18b/18c are behavioural**, not structural: a two-hop resolution that silently returned NULL would
+  leave the barrier open while still reporting as covered, because `assert_student_not_frozen()` returns
+  early for a NULL student. FRZ-18c exercises the two-hop guardian path (permission → link → student).
+
+FRZ-01b found the three guardian tables **immediately on being written**, after the first two had been
+fixed by hand — which is the argument for writing the audit rather than fixing the instances.
+
+### Still NOT RUN / NOT IMPLEMENTED after Batch 5
+`plan_items` and therefore any referential integrity for plan contents (WS-PLAN-01); the planning engine,
+determinism/replay and normalized planning inputs (Phase 12); Book/Edition, curriculum successor mapping,
+platform-versus-Workspace content ownership and subtopic-level mastery (WS-DOM-05) — so the curriculum
+contract's isolation tests cannot be run and are not claimed; plus everything listed at the end of the
+Batch 1–4 sections.

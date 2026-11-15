@@ -136,6 +136,20 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
 
+      - name: Curriculum hierarchy (subtopics) and deletion behaviour
+        run: |
+          set -euo pipefail
+          W=docs/phase2/workspace
+          # Its own database: this suite inserts its own subject/chapter/topic chain and must not collide
+          # with the schema regression suite's fixtures.
+          createdb -h localhost -U postgres workspace_curriculum_test
+          psql -X -v ON_ERROR_STOP=1 -d workspace_curriculum_test -f $W/workspace_schema_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -d workspace_curriculum_test -f $W/tests/workspace_curriculum_tests.sql
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
       - name: Workspace source transfer freeze and database write barrier
         run: |
           set -euo pipefail

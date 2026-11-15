@@ -380,6 +380,33 @@ CREATE TABLE topics (
   order_no integer NOT NULL CHECK (order_no>0),
   UNIQUE(chapter_id,order_no)
 );
+-- CURRICULUM_DOMAIN_CONTRACT.md section 1: "subtopic belongs to a topic". The canonical hierarchy is
+-- Grade -> Subject -> Book/Edition -> Chapter -> Topic -> Subtopic, and the contract itself records that
+-- this skeleton had Subject -> Chapter -> Topic and "no Book/Edition or Subtopic".
+--
+-- SCOPE, DECIDED BY THE PRODUCT OWNER ON 2026-11-15: subtopics only.
+-- Book/Edition, curriculum successor mapping and subtopic-level mastery are NOT built here. The contract
+-- is marked DRAFT / NOT APPROVED and its own section 7 leaves open whether books/editions are MVP-managed
+-- or imported, whether a Workspace may fork reference nodes or only overlay them, and whether
+-- subtopic-level mastery is mandatory. Those are recorded as WS-DOM-05 in
+-- docs/phase2/UNRESOLVED_ITEM_REGISTER.md rather than guessed at here.
+--
+-- Shape follows topics exactly: a parent reference, display title, and an order number unique within the
+-- parent. Titles and order numbers are display metadata and not identity, as the contract requires.
+-- Deletion is restricted by the foreign key, not cascaded: the contract requires that a referenced
+-- curriculum node be archived rather than deleted, and no ON DELETE action appears anywhere in this
+-- schema. CUR-01..CUR-09 cover this table.
+CREATE TABLE subtopics (
+  subtopic_id uuid PRIMARY KEY,
+  topic_id uuid NOT NULL REFERENCES topics(topic_id),
+  title text NOT NULL CHECK (length(btrim(title))>0),
+  order_no integer NOT NULL CHECK (order_no>0),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')),
+  UNIQUE(topic_id,order_no),
+  UNIQUE(subtopic_id,topic_id)   -- FK target for anything that must cite a subtopic of a known topic
+);
+CREATE INDEX subtopics_topic_order_idx ON subtopics(topic_id, order_no);
+
 CREATE TABLE student_topic_mastery (
   student_id uuid NOT NULL REFERENCES students(student_id),
   topic_id uuid NOT NULL REFERENCES topics(topic_id),

@@ -28,6 +28,8 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | OQ-SAGA-2 | Resolution of a quarantined inbox event | OPEN | HIGH | Yes, no release path | Product Owner + Platform Security |
 | OQ-ASM-1 | Item-bank ownership and `item_ref` | OPEN | MEDIUM | Yes, no cross-boundary reference | Product Owner |
 | OQ-ASM-2 | Which scoring algorithms are permitted | OPEN | MEDIUM (correctness) | Yes, shape enforced, values not | Product Owner |
+| WS-DOM-05 | Curriculum Book/Edition, successor mapping, content ownership | OPEN | MEDIUM (correctness, isolation later) | Yes, subtopics built | Product Owner + content licensing owner |
+| WS-PLAN-01 | Normalized PlanItem versus opaque `plan_content` JSON | OPEN | HIGH for the product promise | Yes, versioning built | Product Owner |
 | OQ-D | Control Plane topology — numeric objectives | PARTIALLY DECIDED | HIGH at operation | Yes, schema only | Product Owner + operations |
 | OQ-E | Transfer cutover — boundary, duration, thresholds | PARTIALLY DECIDED | HIGH | Yes; boundary now implemented | Product Owner + operations |
 | PS-1 | Signature algorithm | DEFERRED | HIGH | Yes, fail-closed | Platform Security + Product Owner |
@@ -121,6 +123,54 @@ freezing the set in the schema, and it is the only option under which a reviewer
 ---
 
 ## 2. Architecture decisions with open numbers
+
+### WS-DOM-05 — Curriculum Book/Edition, version successor mapping and content ownership
+**Status:** OPEN. `CURRICULUM_DOMAIN_CONTRACT.md` is marked **DRAFT / NOT APPROVED**. Its canonical
+hierarchy is Grade → Subject → Book/Edition → Chapter → Topic → Subtopic, and the contract itself records
+that the skeleton had Subject → Chapter → Topic with "no Book/Edition or Subtopic".
+**What was built on 2026-11-15, and what was not.** The Product Owner scoped the work to **subtopics only**.
+`subtopics` exists, is ordered within its parent topic, is archivable rather than deletable, and is tested
+(CUR-01..CUR-10). **Not built:** Book/Edition, explicit curriculum version successor mapping,
+platform-versus-Workspace content ownership metadata, and subtopic-level mastery evidence.
+**Why the rest is still unresolved:** the contract's own section 7 leaves open whether books/editions are
+MVP-managed or imported from a controlled source, whether a Workspace may fork reference nodes or only
+overlay them, who approves curriculum changes, and whether subtopic-level mastery is mandatory in MVP.
+**Impact:** low for security as it stands; medium for correctness and for tenant isolation once shared
+reference curriculum exists, because "platform content is read-only to Workspace runtime roles" and
+"Workspace A cannot read or write Workspace B's custom curriculum" cannot be tested while the ownership
+structures are absent.
+**Held how:** mastery stays at topic level. Every foreign key restricts deletion, so no curriculum node can
+be deleted out from under the history referencing it — CUR-09 asserts that from the catalog rather than
+trusting it, by failing if any foreign key in the schema has a non-default delete action.
+**Options:** (A) approve the contract and build this in **Phase 7 (Curriculum)**, where the roadmap puts it;
+(B) build Book/Edition now, deferring only mastery and licensing; (C) drop Book/Edition from MVP.
+**Recommendation: A.** Phase 7 is the roadmap's own home for curriculum, and the open items are licensing
+and governance questions needing the content owner rather than a schema decision. Building Book/Edition now
+would commit to an import model and an ownership model nobody has chosen, and that is hard to reverse once
+curriculum rows reference them.
+
+### WS-PLAN-01 — Normalized PlanItem versus today's opaque `plan_content` JSON
+**Status:** OPEN. `DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` is marked **DRAFT / NOT APPROVED**. Its
+section 1 requires that planning inputs and outputs "must be modeled as first-class domain data, not hidden
+inside an opaque JSON blob", and section 4 specifies a normalized PlanItem with **typed nullable foreign
+keys and exactly-one-source constraints** — explicitly not an unrestricted polymorphic reference. Today
+`student_plan_versions.plan_content` is `jsonb`, which is the shape the contract rejects.
+**Impact:** low for security; **high for the product's core promise.** With the plan in a blob there is no
+referential integrity from a plan item to the topic, activity, exam or review it schedules, no per-item
+status, no machine-readable deferral reason, and no way to answer "what was originally planned, what
+changed and why" by query — which the master prompt's sections 31, 72 and 81 require.
+**Held how:** Plan and PlanVersion identity, version numbering, immutability of a published version and
+version history all exist and are tested. `plan_content` is stored but **nothing in the database interprets
+it**, so no scheduling behaviour is implied or claimed. `student_plan_versions` is now covered by the
+transfer write barrier through its plan (FRZ-01c, FRZ-18b).
+**Options:** (A) build normalized `plan_items` in **Phase 12 (Planning Engine)**; (B) build the plan_items
+**data model** now in Phase 2 — typed FKs and exactly-one-source constraints, no scheduling logic;
+(C) keep `plan_content` as the authority and accept that plan contents have no referential integrity.
+**Recommendation: B.** The data model is a Phase 2 concern and the engine is not — the same split already
+worked for Activity, whose typed source columns and exactly-one-source CHECK were built in Phase 2 while
+nothing generates activities yet. Deferring the shape is what makes it expensive, because by then
+`plan_content` blobs exist and must be migrated. (C) is the only option that conflicts with the contract
+outright. Nothing is built against this recommendation.
 
 ### OQ-D — Control Plane topology and recovery
 **Status:** PARTIALLY DECIDED (Option A accepted): independent infrastructure, primary plus replica, independently controlled encrypted backups with restore drills, and student access fail-closed when ownership cannot be validated.

@@ -149,6 +149,40 @@
       "rationale": "A registry makes a historical score attributable to a named, versioned rule without freezing the set in the schema, and it is the only option under which a reviewer can tell what `algorithm_version: 2` meant at the time. Not decided; nothing in the implementation assumes it."
     },
     {
+      "id": "WS-DOM-05",
+      "title": "Curriculum Book/Edition, version successor mapping and curriculum content ownership",
+      "status": "OPEN",
+      "why_unresolved": "CURRICULUM_DOMAIN_CONTRACT.md is marked DRAFT / NOT APPROVED. Its canonical hierarchy is Grade -> Subject -> Book/Edition -> Chapter -> Topic -> Subtopic, and its own section 7 leaves open whether books/editions are MVP-managed or imported from a controlled source, whether a Workspace may fork reference nodes or only overlay them, who approves curriculum changes, and whether subtopic-level mastery is mandatory in MVP. The Product Owner scoped the 2026-11-15 work to subtopics only, so Book/Edition, explicit version successor mapping, platform-versus-Workspace content ownership metadata and subtopic-level mastery evidence remain unbuilt.",
+      "security_impact": "LOW for security as it stands, MEDIUM for correctness and for tenant isolation once shared reference curriculum exists: platform-owned content must be read-only to Workspace runtime roles, and one Workspace must not read or write another's custom curriculum. Neither property can be tested while the ownership structures are absent.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Subtopics are built and tested (CUR-01..CUR-10). No Book/Edition, successor mapping or ownership-overlay structure exists, and none is claimed. Every foreign key restricts deletion, so no curriculum node can be deleted out from under the history that references it (CUR-09 asserts this from the catalog). Mastery stays at topic level.",
+      "decision_owner": "Product Owner, with the content licensing owner (D-012)",
+      "options": [
+        "A. Approve the curriculum contract and build Book/Edition, successor mapping and ownership metadata in Phase 7 (Curriculum), where the roadmap already places it.",
+        "B. Build Book/Edition now in Phase 2 to complete the hierarchy, deferring only mastery and licensing.",
+        "C. Drop Book/Edition from MVP and keep Subject -> Chapter -> Topic -> Subtopic, recording that curriculum texts are not modelled."
+      ],
+      "recommended_option": "A",
+      "rationale": "Phase 7 is the roadmap's own home for curriculum, and the open questions in the contract's section 7 are licensing and governance questions that need the content owner rather than a schema decision. Building Book/Edition now (B) would commit to an import model and an ownership model that have not been chosen, and those choices are hard to reverse once curriculum rows reference them."
+    },
+    {
+      "id": "WS-PLAN-01",
+      "title": "Normalized PlanItem model versus today's opaque plan_content JSON",
+      "status": "OPEN",
+      "why_unresolved": "DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md is marked DRAFT / NOT APPROVED. Its section 1 states that planning inputs and outputs 'must be modeled as first-class domain data, not hidden inside an opaque JSON blob', and section 4 specifies a normalized PlanItem with typed nullable foreign keys and exactly-one-source constraints. Today student_plan_versions carries plan_content as jsonb, which is exactly the shape the contract rejects. The Product Owner scoped the 2026-11-15 work to exclude it.",
+      "security_impact": "LOW for security. HIGH for the product's core promise: with the plan in a blob there is no referential integrity from a plan item to the topic, activity, exam or review it schedules; no per-item status; no machine-readable deferral reason; and no way to answer 'what was originally planned, what changed and why' by query, which PROJECT_MASTER_PROMPT sections 31, 72 and 81 require.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Plan and PlanVersion identity, versioning, immutability of a published version and version history all exist and are tested. plan_content is stored but nothing in the database interprets it, so no scheduling behaviour is implied or claimed. student_plan_versions is now covered by the transfer write barrier through its plan (FRZ-01c, FRZ-18b).",
+      "decision_owner": "Product Owner",
+      "options": [
+        "A. Build normalized plan_items in Phase 12 (Planning Engine), where the roadmap places the engine that produces them.",
+        "B. Build the plan_items data model now in Phase 2 — typed FKs and exactly-one-source constraints, no scheduling logic — so the engine later has a schema to write into.",
+        "C. Keep plan_content as the authority and accept that plan contents have no referential integrity."
+      ],
+      "recommended_option": "B",
+      "rationale": "The data model is a Phase 2 concern and the engine is not: the same split already worked for Activity, whose typed source columns and exactly-one-source CHECK were built in Phase 2 while nothing generates activities yet. Deciding the shape later is what makes it expensive, because by then plan_content blobs exist and have to be migrated. (C) is the only option that conflicts with the contract outright. This is a recommendation; nothing is built against it."
+    },
+    {
       "id": "OQ-D",
       "title": "Control Plane topology and recovery — numeric objectives",
       "status": "PARTIALLY_DECIDED",

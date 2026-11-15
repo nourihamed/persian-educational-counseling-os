@@ -687,3 +687,90 @@ Contract section 9 lists open policy inputs. None was decided:
   context, as the other commands in this project already do. That note is in the draft file itself. No
   such command exists yet.
 - **Phase 2 is not self-approved.** This is an implementation report, not a review.
+
+---
+
+## 10. Batch 5 — Curriculum, Plan and Activity domain (2026-11-15)
+
+### 10.1 Verification matrix
+
+| Brief item | Verdict | Evidence |
+|---|---|---|
+| Curriculum and Subtopic relationships | **PARTIAL → subtopics built** | `subjects → chapters → topics` existed; **`subtopics` did not**. Built and tested (CUR-01..CUR-10). Book/Edition, successor mapping and subtopic-level mastery are **not** built — scoped out by the Product Owner on 2026-11-15 and recorded as **WS-DOM-05**. |
+| Base Plan and PlanItem | **Plan/PlanVersion VERIFIED; PlanItem NOT IMPLEMENTED** | `student_plans` and `student_plan_versions` exist with version numbering, publication immutability and retained history. `plan_content` is `jsonb` — the exact shape the planning contract rejects. Recorded as **WS-PLAN-01**, scoped out by the Product Owner. |
+| ProgramTemplate and Student Plan versioning | **VERIFIED** | `program_templates`/`program_versions` and `student_plans`/`student_plan_versions`, both guarded by `reject_published_version_mutation()`, which refuses UPDATE **and** DELETE on a published row. |
+| Activity linked to specialized authoritative entities | **VERIFIED** | Typed nullable source columns with composite foreign keys carrying `student_id`, plus `activities_source_matches_kind` making kind and source agree. ACT-01..26. No polymorphic reference anywhere. |
+| Class, ClassSession, ClassParticipant relationships | **VERIFIED** | `class_session_participants` has composite foreign keys to `class_sessions(class_session_id, class_id)` **and** `class_participants(class_id, student_id)`, so a session participant must already be a participant of that same class and the session must belong to it. Cross-class and cross-student rows are refused declaratively. |
+| Student ownership and Workspace boundaries | **FIVE GAPS FOUND AND FIXED** | See 10.2. |
+| Immutable published versions | **VERIFIED** | Program and plan versions; plus the published assessment versions from Batch 4. |
+| Audit history and safe updates | **VERIFIED** | Plan versions retain history; `source_program_version_id`, `input_snapshot` and `rule_version` are kept per version; guardian and governance tables are append-only. |
+| Referential integrity and deletion behaviour | **VERIFIED, and now asserted** | There is **no `ON DELETE` action anywhere** in the Workspace schema, so every foreign key restricts. CUR-09 asserts that from the catalog by failing if any foreign key has a non-default delete action — previously this held by convention and nothing checked it. |
+
+### 10.2 Five tables were per-student and had no write barrier
+
+The Batch 1 write barrier derived its table list from a **column scan**: anything with `student_id` or
+`enrollment_id`. That cannot see a table whose ownership runs through another table. Batch 1 had already
+been caught by this once (`counselor_assignments` and the two command logs, via `enrollment_id`, FRZ-18),
+and the fix then was to add an `enrollment` resolution path — without asking what *else* the scan was
+blind to.
+
+Auditing reachability from the catalog instead found five more:
+
+| Table | Reaches its student through | Consequence while frozen |
+|---|---|---|
+| `student_plan_versions` | `plan_id → student_plans` | a frozen student's plan could gain new versions through cutover |
+| `test_responses` | `attempt_id → test_attempts` | responses could be added to a started attempt mid-cutover |
+| `guardian_permissions` | `guardian_link_id → student_guardian_links` | guardian authority could change during cutover, so the destination would import a different authority set than the source froze |
+| `guardian_link_events` | `link_id → student_guardian_links` | as above |
+| `guardian_permission_events` | `permission_id → guardian_permissions → link` | as above, two hops out |
+
+`student_write_barrier()` gained `plan`, `attempt`, `guardian_link` and `guardian_permission` resolution
+paths. Barrier coverage went from **26 tables to 31**.
+
+**The audit is now a test, which is the part that matters.** FRZ-01 asks "does every table in the coverage
+view have a trigger?", which by construction cannot catch a table missing from the view. **FRZ-01b** asks
+the opposite question from the catalog: which tables have a foreign key into a per-student table and yet
+carry no barrier? Anything new fails **by name**. Its exclusion list carries eleven reviewed entries, each
+with one of only two valid reasons — the table is **shared** between students, so barring it would let one
+frozen student block writes other students depend on; or it must be writable **while** frozen because it is
+part of the freeze machinery. `workspace_inbox_events` is in the second group, and that is not a
+technicality: the inbox projection is what **applies** the fence, so barring it would stop the fence
+landing.
+
+FRZ-01b earned its keep immediately — it found the three guardian tables as soon as it was written, after
+the first two had been fixed by hand.
+
+**FRZ-18b and FRZ-18c test the new paths behaviourally**, not just structurally, because a two-hop lookup
+that silently returned NULL would leave the barrier wide open while still reporting as "covered":
+`assert_student_not_frozen()` returns early for a NULL student. FRZ-18c exercises the two-hop guardian
+path specifically.
+
+### 10.3 Scope held where the contracts are not approved
+
+Both `CURRICULUM_DOMAIN_CONTRACT.md` and `DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` are marked
+**DRAFT / NOT APPROVED**, and the brief says to resolve these "only to the extent already approved". The
+scope question was put to the Product Owner rather than decided here, and the answer was **subtopics only**.
+
+So `subtopics` is built, and these are recorded with options and recommendations instead:
+
+- **WS-DOM-05** — Book/Edition, curriculum version successor mapping, platform-versus-Workspace content
+  ownership metadata, subtopic-level mastery. Recommendation: Phase 7, where the roadmap already puts
+  curriculum.
+- **WS-PLAN-01** — normalized `plan_items` instead of the opaque `plan_content` blob. Recommendation: build
+  the **data model** in Phase 2 and the engine in Phase 12, the same split that already worked for Activity
+  — but this is a recommendation and nothing is built against it.
+
+CUR-10 asserts that Book/Edition tables are **absent**, so the gap stays explicit and dated rather than
+looking like an oversight, and the assertion fails loudly if someone adds them without updating WS-DOM-05.
+
+### 10.4 What is still not claimed
+
+- No `plan_items`, so plan contents have no referential integrity. `plan_content` is stored and **nothing in
+  the database interprets it**; no scheduling behaviour is implied.
+- No planning engine, no determinism or replay machinery, no normalized planning inputs (school timetable,
+  availability windows, sleep windows). Those are Phase 12.
+- No Book/Edition, no curriculum successor mapping, no platform-versus-Workspace content ownership, so the
+  curriculum contract's isolation tests (platform content read-only; Workspace A cannot reach Workspace B's
+  custom curriculum) **cannot** be run and are not claimed.
+- No subtopic-level mastery; mastery stays at topic level.
+- **Phase 2 is not self-approved.** This is an implementation report, not a review.

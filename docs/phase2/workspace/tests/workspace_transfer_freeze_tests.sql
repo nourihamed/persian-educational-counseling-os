@@ -45,6 +45,27 @@ INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state) VAL
  ('a9100000-0000-0000-0000-000000000002','e9000000-0000-0000-0000-000000000002',1,'requested');
 INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at)
 SELECT gen_random_uuid(),enrollment_id,'b9000000-0000-0000-0000-000000000001',true,'active',now() FROM enrollments;
+-- Fixtures for the indirect-path behavioural tests FRZ-18b/18c. They must exist BEFORE any freeze,
+-- because student_plans and student_guardian_links both carry student_id and are themselves barred once
+-- the student is frozen. A guardian link event accompanies the link, as WS-DOM-03 requires.
+INSERT INTO student_plans(plan_id, student_id)
+VALUES ('a9b00000-0000-0000-0000-000000000001','e9000000-0000-0000-0000-000000000001');
+-- The link and its event go in ONE transaction: the WS-DOM-03 guard is a deferred constraint trigger
+-- that checks at COMMIT, and psql autocommits each statement separately.
+BEGIN;
+INSERT INTO student_guardian_links(link_id,student_id,guardian_platform_user_id,relationship_type,
+                                   verification_state,legal_authority_ref,verified_at)
+VALUES ('a9b00000-0000-0000-0000-000000000002','e9000000-0000-0000-0000-000000000001',gen_random_uuid(),
+        'parent','verified','synthetic-authority-frz',clock_timestamp());
+INSERT INTO guardian_link_events(event_id,link_id,event_type,actor_ref,authn_event_ref,policy_version,effective_at)
+VALUES (gen_random_uuid(),'a9b00000-0000-0000-0000-000000000002','link_created','actor-frz','authn-frz',
+        'policy-frz',clock_timestamp());
+-- A link created already 'verified' needs its verified event too, not only link_created.
+INSERT INTO guardian_link_events(event_id,link_id,event_type,actor_ref,authn_event_ref,evidence_ref,
+                                 policy_version,effective_at)
+VALUES (gen_random_uuid(),'a9b00000-0000-0000-0000-000000000002','verified','actor-frz','authn-frz',
+        'evidence-frz','policy-frz',clock_timestamp());
+COMMIT;
 INSERT INTO credit_wallets(wallet_id,unit_code) VALUES('c9100000-0000-0000-0000-000000000001','CRD');
 INSERT INTO credit_transactions(transaction_id,wallet_id,transaction_kind,amount,idempotency_key,reason)
 VALUES(gen_random_uuid(),'c9100000-0000-0000-0000-000000000001','grant',50,'freeze-fixture-grant','synthetic opening credit');
@@ -62,6 +83,97 @@ DO $t$ DECLARE n integer; missing text; BEGIN
   SELECT count(*) INTO n FROM student_write_barrier_coverage;
   IF n < 15 THEN RAISE EXCEPTION 'FAIL FRZ-01: only % guarded tables, the catalog scan looks wrong',n; END IF;
   RAISE NOTICE 'PASS FRZ-01 all % student-scoped tables carry the write barrier',n;
+END $t$;
+
+-- ===================================================================================================
+-- FRZ-01b  INDIRECT reachability audit. FRZ-01 above asks "does every table in the coverage view have a
+--          trigger?", which cannot catch a per-student table that is MISSING FROM THE VIEW. That is how
+--          this project was caught twice: counselor_assignments and friends reach a student through an
+--          enrollment (Batch 1), and student_plan_versions and test_responses reach one through
+--          student_plans and test_attempts (Batch 5) — none of them carries a student_id or
+--          enrollment_id column, so a column scan cannot see them.
+--
+--          This test asks the opposite question from the catalog: which tables have a foreign key into a
+--          per-student table and yet carry no barrier? Anything new fails BY NAME. The exclusion list is
+--          for genuinely SHARED tables, and each entry states why sharing makes a barrier wrong there:
+--          freezing one student must not block writes that other students depend on.
+-- ===================================================================================================
+DO $t$
+DECLARE
+  v_unguarded text;
+  v_n integer;
+  -- Reviewed exemptions. Adding a name here is a review decision, and each states its reason. There are
+  -- only two valid reasons: the table is SHARED between students, so barring it would let one frozen
+  -- student block writes other students depend on; or it must be writable WHILE a student is frozen,
+  -- because it is part of the freeze/cutover machinery itself.
+  v_shared text[] := ARRAY[
+    -- shared between students
+    'class_sessions',                     -- belongs to a class shared by many students
+    'test_definitions',                   -- a definition is shared; attempts are per-student
+    'test_definition_version_questions',  -- membership of a shared definition version
+    'exam_definition_version_subjects',   -- blueprint of a shared exam definition
+    'topics',                             -- curriculum, shared
+    'subtopics',                          -- curriculum, shared
+    'chapters',                           -- curriculum, shared
+    -- already covered by FRZ-01 through a direct key column
+    'class_participants',
+    -- must be writable WHILE the student is frozen
+    'student_transfer_freezes',           -- the freeze record itself
+    'student_write_barrier_bypass',       -- the transaction-scoped exemption
+    'workspace_inbox_events'              -- Saga transport: the inbox projection APPLIES the fence, so
+                                          -- barring it would make the fence unable to land. It is not
+                                          -- student educational data, and only the inbox roles can write it.
+  ];
+BEGIN
+  SELECT count(*), string_agg(t.relname || ' -> ' || t.parent, ', ' ORDER BY t.relname)
+    INTO v_n, v_unguarded
+    FROM (
+      SELECT DISTINCT c.relname, k.confrelid::regclass::text AS parent
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_constraint k ON k.conrelid = c.oid AND k.contype = 'f'
+       WHERE n.nspname = 'public' AND c.relkind = 'r'
+         -- a parent that is itself per-student
+         AND k.confrelid::regclass::text IN (
+               SELECT table_name FROM public.student_scoped_tables
+               UNION ALL SELECT 'students')
+         AND c.relname NOT IN (SELECT table_name FROM public.student_write_barrier_coverage)
+         AND NOT (c.relname = ANY (v_shared))
+    ) t;
+
+  IF v_n > 0 THEN
+    RAISE EXCEPTION 'FAIL FRZ-01b % table(s) reach a student indirectly but carry NO write barrier: %. '
+                    'A frozen student''s rows in these tables could still be written through cutover. '
+                    'Give student_write_barrier() a resolution path for each (see the plan/attempt arms) '
+                    'and list it in student_scoped_tables, or — if the table is genuinely SHARED between '
+                    'students — add it to v_shared in this test with the reason.', v_n, v_unguarded;
+  END IF;
+  RAISE NOTICE 'PASS FRZ-01b no per-student table reaches a student indirectly without a barrier '
+               '(% reviewed shared exclusion(s))', coalesce(array_length(v_shared,1),0);
+END $t$;
+
+-- FRZ-01c  The two tables found in Batch 5 are specifically guarded, so an over-broad edit to the
+--          exclusion list above cannot quietly drop them again.
+DO $t$
+DECLARE r record; v_missing text[] := ARRAY[]::text[];
+BEGIN
+  FOR r IN SELECT * FROM (VALUES
+      ('student_plan_versions','plan_id','plan'),
+      ('test_responses','attempt_id','attempt'),
+      ('guardian_permissions','guardian_link_id','guardian_link'),
+      ('guardian_link_events','link_id','guardian_link'),
+      ('guardian_permission_events','permission_id','guardian_permission')
+    ) AS t(tbl, col, kind)
+  LOOP
+    IF NOT EXISTS (SELECT 1 FROM public.student_write_barrier_coverage
+                    WHERE table_name = r.tbl AND key_column = r.col) THEN
+      v_missing := v_missing || (r.tbl || ' (' || r.col || '/' || r.kind || ')');
+    END IF;
+  END LOOP;
+  IF array_length(v_missing,1) IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL FRZ-01c these lost their barrier: %', array_to_string(v_missing, ', ');
+  END IF;
+  RAISE NOTICE 'PASS FRZ-01c the five indirectly-owned tables found in Batch 5 are guarded through their owners';
 END $t$;
 
 -- ============================ only the controller may freeze ============================
@@ -127,6 +239,21 @@ SELECT fz_err('FRZ-17 the table owner cannot update a frozen student''s own row'
  $q$UPDATE students SET display_name='Renamed while frozen' WHERE student_id='e9000000-0000-0000-0000-000000000001'$q$,'23514','frozen for transfer case');
 SELECT fz_err('FRZ-18 the table owner cannot delete a frozen student''s rows',
  $q$DELETE FROM counselor_assignments WHERE enrollment_id='a9100000-0000-0000-0000-000000000001'$q$,'23514','frozen for transfer case');
+
+-- FRZ-18b/18c  THE INDIRECT PATHS, TESTED BEHAVIOURALLY. FRZ-01b/01c prove the triggers are installed;
+--              these prove the resolution actually reaches the student. A two-hop lookup that silently
+--              returned NULL would leave the barrier open while still looking "covered", because
+--              assert_student_not_frozen() returns early for a NULL student.
+SELECT fz_err('FRZ-18b a frozen student''s plan version is refused (resolved plan_id -> student_plans)',
+ $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status)
+    VALUES (gen_random_uuid(),'a9b00000-0000-0000-0000-000000000001',1,'{}'::jsonb,'r1','{}'::jsonb,'draft')$q$,
+ '23514','frozen for transfer case');
+
+SELECT fz_err('FRZ-18c a frozen student''s guardian permission is refused (resolved through the link)',
+ $q$INSERT INTO guardian_permissions(permission_id,guardian_link_id,scope_key,authority_ref,valid_from)
+    VALUES (gen_random_uuid(),'a9b00000-0000-0000-0000-000000000002','progress_summary',
+            'synthetic-authority-frz',clock_timestamp())$q$,
+ '23514','frozen for transfer case');
 SET SESSION AUTHORIZATION :"runtime_role";
 -- The barrier binds the SECURITY DEFINER commands too, not only direct table access.
 SELECT fz_err('FRZ-19 the archive command is refused for a frozen student',

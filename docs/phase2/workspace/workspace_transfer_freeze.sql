@@ -169,6 +169,21 @@ BEGIN
     USING CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
   IF TG_ARGV[1] = 'enrollment' THEN
     SELECT e.student_id INTO v_student FROM public.enrollments e WHERE e.enrollment_id = v_key;
+  ELSIF TG_ARGV[1] = 'plan' THEN
+    -- student_plan_versions reaches its student only through student_plans. Added 2026-11-15; see below.
+    SELECT p.student_id INTO v_student FROM public.student_plans p WHERE p.plan_id = v_key;
+  ELSIF TG_ARGV[1] = 'attempt' THEN
+    -- test_responses reaches its student only through test_attempts. Added 2026-11-15; see below.
+    SELECT a.student_id INTO v_student FROM public.test_attempts a WHERE a.attempt_id = v_key;
+  ELSIF TG_ARGV[1] = 'guardian_link' THEN
+    -- guardian_permissions and guardian_link_events reach the student through the link.
+    SELECT l.student_id INTO v_student FROM public.student_guardian_links l WHERE l.link_id = v_key;
+  ELSIF TG_ARGV[1] = 'guardian_permission' THEN
+    -- guardian_permission_events are two hops out: permission -> link -> student.
+    SELECT l.student_id INTO v_student
+      FROM public.guardian_permissions gp
+      JOIN public.student_guardian_links l ON l.link_id = gp.guardian_link_id
+     WHERE gp.permission_id = v_key;
   ELSE
     v_student := v_key;
   END IF;
@@ -176,13 +191,22 @@ BEGIN
   RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
 END; $body$;
 
--- Every student-scoped table in this database gets the barrier. The two freeze tables are excluded for an
--- obvious reason: the freeze commands and the inbox fence must be able to write them WHILE a student is
--- frozen. Both are unreachable for every ordinary identity, so excluding them opens no write surface.
 -- Every student-scoped table in this database gets the barrier. The list is derived from the catalog so a
 -- table added later without a barrier is visible as a gap rather than silently unprotected (see the
--- barrier coverage view below). student_transfer_freezes itself is excluded: the freeze commands must be
--- able to write it while the student is frozen.
+-- coverage view and FRZ-01/FRZ-02 below).
+--
+-- student_transfer_freezes and student_write_barrier_bypass are excluded for an obvious reason: the freeze
+-- commands and the inbox fence must be able to write them WHILE a student is frozen. Both are unreachable
+-- for every ordinary identity, so excluding them opens no write surface.
+--
+-- THE HARD PART IS KNOWING WHICH TABLES ARE STUDENT-SCOPED.
+-- Scanning for a student_id or enrollment_id column is not enough, and this project has now been caught by
+-- that twice. Batch 1: counselor_assignments, activation_command_log and archive_command_log reach a
+-- student only through an enrollment (FRZ-18). Batch 5: student_plan_versions reaches its student only
+-- through student_plans, and test_responses only through test_attempts — so a frozen student's plan
+-- versions and test responses could still be written straight through cutover. Both are listed explicitly
+-- below, and FRZ-02 now audits indirect reachability from the catalog so a third one fails the suite by
+-- name instead of being missed.
 CREATE VIEW student_scoped_tables AS
   SELECT c.relname AS table_name,
          CASE WHEN EXISTS (SELECT 1 FROM pg_attribute a
@@ -199,7 +223,28 @@ CREATE VIEW student_scoped_tables AS
                   WHERE a.attrelid = c.oid AND a.attnum > 0
                     AND a.attname IN ('student_id','enrollment_id'))
    UNION ALL
-  SELECT 'enrollments', 'student_id', 'student';
+  SELECT 'enrollments', 'student_id', 'student'
+   UNION ALL
+  -- Per-student tables that carry neither key column. Each is listed with the column that reaches its
+  -- owner and the resolution path student_write_barrier() must use.
+  SELECT 'student_plan_versions', 'plan_id', 'plan'
+   WHERE to_regclass('public.student_plan_versions') IS NOT NULL
+   UNION ALL
+  SELECT 'test_responses', 'attempt_id', 'attempt'
+   WHERE to_regclass('public.test_responses') IS NOT NULL
+   UNION ALL
+  -- Guardian authority is per-student too. A frozen student's guardian permissions must not change
+  -- mid-cutover: the destination Workspace would then import a different authority set than the one the
+  -- source froze. Found by the FRZ-01b indirect-reachability audit on 2026-11-15, immediately after that
+  -- audit was written to catch exactly this.
+  SELECT 'guardian_permissions', 'guardian_link_id', 'guardian_link'
+   WHERE to_regclass('public.guardian_permissions') IS NOT NULL
+   UNION ALL
+  SELECT 'guardian_link_events', 'link_id', 'guardian_link'
+   WHERE to_regclass('public.guardian_link_events') IS NOT NULL
+   UNION ALL
+  SELECT 'guardian_permission_events', 'permission_id', 'guardian_permission'
+   WHERE to_regclass('public.guardian_permission_events') IS NOT NULL;
 
 DO $install$
 DECLARE r record;

@@ -9,8 +9,8 @@ write-barrier commit on `docs/product-owner-decisions-consolidation-2026-11-07` 
 
 | Kind | What it is | Result |
 |---|---|---|
-| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **21 implementation test steps**, **627 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
-| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL and six new test suites, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
+| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **22 implementation test steps**, **641 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus one **documentation** consistency check (6 PASS lines, explicitly *not* implementation evidence) |
+| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** This batch adds SQL and a new test suite, so earlier Actions evidence does not cover it. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The Batch 1 commit `cc8cd64` was pushed; its Actions result has **not** been reported to the implementation agent, which has no Actions access and cannot read job logs. |
 
 Any commit that touches SQL or tests requires a fresh local run and a fresh Actions run at its own SHA.
 Documentation-only commits on top of a verified SHA change no SQL and no test, so they do not invalidate
@@ -586,5 +586,61 @@ be false** (below), which is the reason for not taking them at face value.
 - **Still open, unchanged:** Q-007, Q-020, OQ-CRD-2/3, OQ-SAGA-1/2, OQ-ASM-1, OQ-ASM-2, PS-1..PS-8, OQ-D and
   OQ-E numeric objectives, the transfer exception approval authority, M-05 and M-06 definitions, and the
   disposition of PR #8–#11. The register now carries 24 items.
+- Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
+  prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**
+
+## Update 2026-11-15 (second) — Batch 5: curriculum, plan and activity domain
+
+Batch 4 was pushed as `0b5a6443f883f8dfe056248f1d3741cd36e244d6` (verified, parent `db94176`). Its GitHub
+Actions result has **not** been reported to the implementation agent.
+
+- **Five per-student tables had no transfer write barrier.** The Batch 1 barrier derived its table list
+  from a **column scan** — anything carrying `student_id` or `enrollment_id` — which by construction cannot
+  see a table whose ownership runs through another table. Batch 1 was already caught by this once
+  (`counselor_assignments` and the two command logs, FRZ-18) and the fix then added an `enrollment`
+  resolution path **without asking what else the scan was blind to**. Auditing reachability from the
+  catalog found: `student_plan_versions` (via `student_plans`), `test_responses` (via `test_attempts`),
+  and `guardian_permissions`, `guardian_link_events` and `guardian_permission_events` (via the guardian
+  link, the last of those two hops out). While a student was frozen, their plan versions, test responses
+  and **guardian authority** could all still be written through cutover — so the destination Workspace
+  would import a different authority set than the source froze. Coverage went from **26 tables to 31**.
+- **The audit is now a test, which is the part that matters.** FRZ-01 asks "does every table in the
+  coverage view have a trigger?", which cannot catch a table missing from the view. **FRZ-01b** asks the
+  opposite question from the catalog — which tables have a foreign key into a per-student table and carry
+  no barrier — and fails **by name**. Its eleven reviewed exclusions each state one of only two valid
+  reasons: the table is **shared** between students, or it must be writable **while** frozen because it is
+  part of the freeze machinery (`workspace_inbox_events` is in that group, and not as a technicality: the
+  inbox projection is what *applies* the fence). FRZ-01b found the three guardian tables as soon as it was
+  written, after the first two had been fixed by hand.
+- **FRZ-18b/18c test the new paths behaviourally**, because a two-hop lookup that silently returned NULL
+  would leave the barrier open while still reporting as covered — `assert_student_not_frozen()` returns
+  early for a NULL student.
+- **Subtopics built; the rest scoped out by the Product Owner.** Both `CURRICULUM_DOMAIN_CONTRACT.md` and
+  `DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` are marked **DRAFT / NOT APPROVED**, and the brief says to
+  resolve them "only to the extent already approved". The scope question was **put to the Product Owner
+  rather than decided**, and the answer on 2026-11-15 was **subtopics only**. `subtopics` is built, ordered
+  within its parent, archivable rather than deletable, and tested (CUR-01..CUR-10).
+- **Deletion behaviour is now asserted rather than assumed.** There is **no `ON DELETE` action anywhere**
+  in the Workspace schema, so every foreign key restricts — but nothing checked it. CUR-09 fails if any
+  foreign key in the schema has a non-default delete action, because a cascade or set-null would destroy
+  the educational history the curriculum contract requires be preserved.
+- **Verified without change:** ProgramTemplate and plan versioning with publication immutability on both
+  UPDATE and DELETE; Activity's typed source columns with composite foreign keys and the kind/source
+  agreement CHECK (no polymorphic reference anywhere); and the Class/ClassSession/ClassParticipant chain,
+  where `class_session_participants` carries composite foreign keys to both the session's class and the
+  class participant, so cross-class and cross-student rows are refused declaratively.
+- **Two register items added, with options and recommendations, decided by nobody here:** **WS-DOM-05**
+  (Book/Edition, curriculum successor mapping, content ownership, subtopic mastery — recommendation: Phase 7)
+  and **WS-PLAN-01** (normalized `plan_items` instead of the opaque `plan_content` blob, which is the exact
+  shape the planning contract rejects — recommendation: data model in Phase 2, engine in Phase 12, the
+  split that already worked for Activity). The register now carries **26 items**. CUR-10 asserts the
+  Book/Edition tables are absent so the gap stays explicit and dated.
+- **Local verification:** PostgreSQL 16.15, cleared cluster (0 leftover databases, 0 leftover roles), all
+  **22** implementation test steps passed, **641 PASS assertion lines**, 0 FAIL (curriculum 10 new; the
+  freeze step rose from 36 to 40), plus the Python verifier unit tests, plus the documentation consistency
+  check reported separately. **GitHub Actions at this HEAD: NOT RUN.**
+- **Still open, unchanged:** Q-007, Q-020, OQ-CRD-2/3, OQ-SAGA-1/2, OQ-ASM-1/2, WS-DOM-05, WS-PLAN-01,
+  PS-1..PS-8, OQ-D and OQ-E numeric objectives, the transfer exception approval authority, M-05 and M-06
+  definitions, and the disposition of PR #8–#11.
 - Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
   prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**
