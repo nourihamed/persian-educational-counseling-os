@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "generated_for": "Phase 2 — Database & Domain Model, Independent-Supervisor-Governed Implementation",
-  "generated_at": "2026-11-14",
-  "generated_by": "implementation agent (NOT the Supervisor, NOT the Product Owner)",
+  "generated_at": "2026-11-18",
+  "generated_by": "implementation agent recording explicit Product Owner decisions; not the Supervisor",
   "rules": [
     "An item is closed only by its named decision owner, never by documenting it here.",
-    "No item in this register has been resolved by the implementation.",
+    "The implementation agent cannot make Product Owner or Supervisor decisions; explicit owner decisions may be recorded, while implementation and independent closure evidence remain separate.",
     "status values: OPEN | PARTIALLY_DECIDED | DEFERRED | RESOLVED | FACTUALLY_CORRECTED",
     "implementation_may_continue states whether SAFE work unrelated to the undecided part may proceed; it never means the item is answered."
   ],
@@ -209,11 +209,11 @@
     {
       "id": "WS-DOM-05",
       "title": "Curriculum Book/Edition, version successor mapping and curriculum content ownership",
-      "status": "OPEN",
-      "why_unresolved": "CURRICULUM_DOMAIN_CONTRACT.md is marked DRAFT / NOT APPROVED. Its canonical hierarchy is Grade -> Subject -> Book/Edition -> Chapter -> Topic -> Subtopic, and its own section 7 leaves open whether books/editions are MVP-managed or imported from a controlled source, whether a Workspace may fork reference nodes or only overlay them, who approves curriculum changes, and whether subtopic-level mastery is mandatory in MVP. The Product Owner scoped the 2026-11-15 work to subtopics only, so Book/Edition, explicit version successor mapping, platform-versus-Workspace content ownership metadata and subtopic-level mastery evidence remain unbuilt.",
+      "status": "PARTIALLY_DECIDED",
+      "why_unresolved": "Product Owner selected Option A on 2026-11-18: Book/Edition, successor mapping and content-ownership metadata are deferred to Phase 7 (Curriculum), so they are not Phase 2 blockers. Four curriculum governance questions remain open for explicit Product Owner decision: controlled content source, Workspace fork versus overlay, curriculum-change approval authority, and whether subtopic mastery is mandatory in MVP. No Book/Edition schema or ownership model is authorized in Phase 2.",
       "security_impact": "LOW for security as it stands, MEDIUM for correctness and for tenant isolation once shared reference curriculum exists: platform-owned content must be read-only to Workspace runtime roles, and one Workspace must not read or write another's custom curriculum. Neither property can be tested while the ownership structures are absent.",
       "implementation_may_continue": true,
-      "continue_conditions": "Subtopics are built and tested (CUR-01..CUR-10). No Book/Edition, successor mapping or ownership-overlay structure exists, and none is claimed. Every foreign key restricts deletion, so no curriculum node can be deleted out from under the history that references it (CUR-09 asserts this from the catalog). Mastery stays at topic level.",
+      "continue_conditions": "Phase 2 may proceed without Book/Edition, successor mapping or content-ownership structures. Keep mastery at Topic level; subtopic mastery is not made mandatory by this decision. The four governance questions remain open and must be resolved before Phase 7 implementation. Do not treat proposed defaults as approved policy.",
       "decision_owner": "Product Owner, with the content licensing owner (D-012)",
       "options": [
         "A. Approve the curriculum contract and build Book/Edition, successor mapping and ownership metadata in Phase 7 (Curriculum), where the roadmap already places it.",
@@ -227,17 +227,42 @@
       ],
       "code_can_resolve": "partly",
       "code_resolution_note": "Book/Edition and successor mapping are schema work once the ownership model is decided; curriculum subtopics were built in Batch 5 within what was approved.",
-      "recommended_gate_impact": "BLOCKING",
-      "closure_evidence": "Decided curriculum ownership and edition model, then schema, migration notes and CUR tests. Until then the Educational-domain exit area stays NOT READY."
+      "recommended_gate_impact": "LATER_PHASE",
+      "closure_evidence": "Before Phase 7 implementation: explicit Product Owner decisions for the four governance questions and approved Curriculum contract; then Book/Edition and successor-mapping schema, ownership/authorization model, migration notes and CUR tests. This item does not block the Phase 2 gate.",
+      "product_owner_decision": {
+        "date": "2026-11-18",
+        "selected_option": "A",
+        "gate_impact": "LATER_PHASE",
+        "decision": "Defer Book/Edition, curriculum version successor mapping and content ownership metadata to Phase 7 (Curriculum); do not implement them in Phase 2.",
+        "open_questions": [
+          {
+            "question": "Source of reference curriculum content",
+            "decision_owner": "Product Owner; content steward to be designated"
+          },
+          {
+            "question": "Workspace fork versus overlay of reference content",
+            "decision_owner": "Product Owner"
+          },
+          {
+            "question": "Authority approving curriculum changes",
+            "decision_owner": "Product Owner; content steward to be designated"
+          },
+          {
+            "question": "Whether subtopic-level mastery is mandatory in MVP",
+            "decision_owner": "Product Owner"
+          }
+        ],
+        "note": "No proposed default for these four questions is approved by this decision."
+      }
     },
     {
       "id": "WS-PLAN-01",
       "title": "Normalized PlanItem model versus today's opaque plan_content JSON",
-      "status": "OPEN",
-      "why_unresolved": "DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md is marked DRAFT / NOT APPROVED. Its section 1 states that planning inputs and outputs 'must be modeled as first-class domain data, not hidden inside an opaque JSON blob', and section 4 specifies a normalized PlanItem with typed nullable foreign keys and exactly-one-source constraints. Today student_plan_versions carries plan_content as jsonb, which is exactly the shape the contract rejects. The Product Owner scoped the 2026-11-15 work to exclude it.",
+      "status": "PARTIALLY_DECIDED",
+      "why_unresolved": "Product Owner selected Option B on 2026-11-18. The Phase 2 data model is now decided, but implementation and verification remain outstanding. New PlanItems must use one typed nullable FK from the approved source set (topic, subtopic, activity, exam, review, assignment), with exactly-one-source enforcement; no unrestricted polymorphic reference and no scheduling engine logic in Phase 2.",
       "security_impact": "LOW for security. HIGH for the product's core promise: with the plan in a blob there is no referential integrity from a plan item to the topic, activity, exam or review it schedules; no per-item status; no machine-readable deferral reason; and no way to answer 'what was originally planned, what changed and why' by query, which PROJECT_MASTER_PROMPT sections 31, 72 and 81 require.",
       "implementation_may_continue": true,
-      "continue_conditions": "Plan and PlanVersion identity, versioning, immutability of a published version and version history all exist and are tested. plan_content is stored but nothing in the database interprets it, so no scheduling behaviour is implied or claimed. student_plan_versions is now covered by the transfer write barrier through its plan (FRZ-01c, FRZ-18b).",
+      "continue_conditions": "Implement normalized PlanItem as the authoritative representation for new plan versions. Preserve legacy plan_content JSON only for historical compatibility/migration; do not keep two independently editable sources of truth. Published PlanVersions remain immutable. Record item status transitions and auditable changes (actor, timestamp, reason). Defer all scheduling/generation logic.",
       "decision_owner": "Product Owner",
       "options": [
         "A. Build normalized plan_items in Phase 12 (Planning Engine), where the roadmap places the engine that produces them.",
@@ -252,7 +277,44 @@
       "code_can_resolve": "partly",
       "code_resolution_note": "A normalized PlanItem model is schema work once chosen; today plan_content is opaque JSON, so planning constraints cannot be enforced by the database.",
       "recommended_gate_impact": "BLOCKING",
-      "closure_evidence": "A decided PlanItem model, then schema, constraints and tests for the planning invariants (no conflicts, no impossible workload, no duplicates)."
+      "closure_evidence": "Normalized PlanItem schema with typed FKs and exactly-one-source constraint; approved status and deferral-reason vocabularies; referential, tenant/authorization, immutability, migration and audit-history tests; evidence that legacy JSON is not a second writable authority.",
+      "product_owner_decision": {
+        "date": "2026-11-18",
+        "selected_option": "B",
+        "gate_impact": "BLOCKING",
+        "permitted_sources": [
+          "topic",
+          "subtopic",
+          "activity",
+          "exam",
+          "review",
+          "assignment"
+        ],
+        "status_vocabulary": [
+          "planned",
+          "in_progress",
+          "completed",
+          "partially_completed",
+          "deferred",
+          "skipped",
+          "cancelled"
+        ],
+        "deferral_reason_vocabulary": [
+          "insufficient_time",
+          "schedule_conflict",
+          "prerequisite_not_mastered",
+          "difficulty",
+          "illness_or_absence",
+          "resource_unavailable",
+          "higher_priority_task",
+          "student_requested",
+          "counselor_adjustment",
+          "other"
+        ],
+        "json_policy": "Normalized PlanItem is authoritative for new plan versions. Retain legacy plan_content JSON only for historical compatibility/migration; do not allow independent editing of both representations. Any JSON needed for output/printing is derived from normalized records.",
+        "audit_requirements": "Record item status transitions and changes with actor, timestamp and reason; preserve published PlanVersion immutability.",
+        "scope": "Phase 2 data model only; no scheduling/generation logic."
+      }
     },
     {
       "id": "WS-ISO-01",
