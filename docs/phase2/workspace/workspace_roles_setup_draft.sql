@@ -426,6 +426,18 @@ BEGIN
   EXECUTE format('GRANT SELECT ON TABLE student_scoped_tables TO %I', 'ws_'||k||'_runtime');
 END $iso$;
 
+-- WS-PLAN-01 (workspace_plan_items_draft.sql). Plan items and their status history are INSERT-only for the
+-- runtime: no UPDATE and no DELETE are granted, so the insert-only rule does not rest on a trigger alone.
+DO $plan$
+DECLARE k text := current_setting('app.workspace_key');
+BEGIN
+  IF to_regclass('public.plan_items') IS NULL THEN
+    RETURN;
+  END IF;
+  EXECUTE format('GRANT SELECT,INSERT ON TABLE plan_items,plan_item_status_events TO %I', 'ws_'||k||'_runtime');
+  EXECUTE format('GRANT SELECT ON TABLE plan_item_current_status,plan_version_rendered TO %I', 'ws_'||k||'_runtime');
+END $plan$;
+
 -- Default privileges remain deny-by-default for future migrations.
 SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC',
   'ws_'||current_setting('app.workspace_key')||'_table_owner') \gexec

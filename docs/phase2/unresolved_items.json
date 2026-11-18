@@ -275,7 +275,7 @@
         "PRODUCT_OWNER_DECISION"
       ],
       "code_can_resolve": "partly",
-      "code_resolution_note": "A normalized PlanItem model is schema work once chosen; today plan_content is opaque JSON, so planning constraints cannot be enforced by the database.",
+      "code_resolution_note": "Implemented on 2026-11-18 as draft SQL exactly within the decision: workspace_plan_items_draft.sql (plan_items with six typed, student-bound source FKs and an exactly-one-source CHECK; insert-only definitions; versioned change with predecessor, reason and author; append-only, sequence-numbered status transitions with actor, timestamp and reason; output JSON derived; legacy JSON only for legacy versions). Tests PLN-C1..C4, PLN-01..63 and the WS-PLN-RACE-01..03 concurrency race. No scheduling logic.",
       "recommended_gate_impact": "BLOCKING",
       "closure_evidence": "Normalized PlanItem schema with typed FKs and exactly-one-source constraint; approved status and deferral-reason vocabularies; referential, tenant/authorization, immutability, migration and audit-history tests; evidence that legacy JSON is not a second writable authority.",
       "product_owner_decision": {
@@ -314,7 +314,8 @@
         "json_policy": "Normalized PlanItem is authoritative for new plan versions. Retain legacy plan_content JSON only for historical compatibility/migration; do not allow independent editing of both representations. Any JSON needed for output/printing is derived from normalized records.",
         "audit_requirements": "Record item status transitions and changes with actor, timestamp and reason; preserve published PlanVersion immutability.",
         "scope": "Phase 2 data model only; no scheduling/generation logic."
-      }
+      },
+      "implementation_status": "IMPLEMENTED (draft SQL), LOCAL EVIDENCE ONLY, NOT YET INDEPENDENTLY VERIFIED. Gate impact stays BLOCKING, as the decision says, until CI on the resulting SHA and the Supervisor's independent review confirm it."
     },
     {
       "id": "WS-ISO-01",

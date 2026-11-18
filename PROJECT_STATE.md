@@ -8,8 +8,8 @@ prepared for independent review (`docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md
 what was implemented and what the evidence is, not what was approved.
 
 **Branch:** `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, **Draft, open, unmerged**).
-**Last HEAD verified on GitHub:** `467a0294b03f9ffc494509509f9c0ece595b2bd3` (Supervisor corrections; same tree
-as the locally verified commit). This status update is a documentation-only commit on top of it.
+**Last HEAD verified on GitHub:** `b7d4b2826036a41c05d46dd3f98b4c92c3f769b9` (Product Owner decisions for WS-PLAN-01 and
+WS-DOM-05, recorded on the branch on 2026-11-18). This update belongs to the WS-PLAN-01 implementation commit on top of it.
 **Behind `main`:** yes, by two commits — `4004360` (adds `cp_30_role_privilege_tests.sql`, 89 lines) and
 `5bb8e4e` (reverts it). Net content difference from the merge base `ba5e9d8` to `main` `5bb8e4e`: **zero
 files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-pushed (BRANCH-SYNC).
@@ -20,8 +20,11 @@ files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-p
 |---|---|---|
 | **GitHub Actions** (independent of the agent) | runs at `fc3416ed`: **43725323633** and **43725318826** (push and pull_request) | **FAILED.** Reported by the Supervisor: every SQL/database step passed; **step 28, the repository secret scan, failed**; step 29, the register consistency check, was **skipped** because it followed a failed step. The agent has no Actions access and did not read those logs. |
 | **Actions failure, reproduced locally** | the `fc3416ed` scanner run on the exact `fc3416ed` tree | two findings, both in `docs/phase2/workspace/tests/workspace_operations_tests.sql`: line **165** `[iranian-mobile]` and line **171** `[e164]` — the OPS-17/OPS-18 refusal-test fixtures. Neither is a credential. The Supervisor is asked to confirm these against the CI log. |
-| **Local verification** (agent-executed, **not independently reproduced**) | full workflow on a cleared PostgreSQL 16.15 cluster, after `git add`, on the tree of the next commit | **24 implementation steps passed, 852 PASS assertion lines, 0 FAIL**, plus Python verifier tests (15 + 6, OK); repository secret scan PASS (incl. history content); register check PASS (32 items). Local evidence is **not** CI evidence. |
+| **Local verification** (agent-executed, **not independently reproduced**) | full workflow on a cleared PostgreSQL 16.15 cluster, after `git add`, on the tree of the WS-PLAN-01 commit (parent `b7d4b28`) | **25 implementation steps passed, 916 PASS assertion lines, 0 FAIL** (852 before, +61 PLN, +3 WS-PLN-RACE), plus Python verifier tests (15 + 6, OK); secret scan PASS (incl. history content); register check PASS incl. REG-09. Local evidence is **not** CI evidence. |
 | **GitHub Actions at `467a0294b03f9ffc494509509f9c0ece595b2bd3`** (independent of the agent) | `postgres-draft-tests`, runs [44362679187](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362679187) (job 135008003418) and [44362668276](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362668276) (job 135007959995) | **success, both** (2026-11-18 17:50 UTC). Read by the agent from the PR's check-run conclusions; the agent did **not** read the step logs, so per-step PASS counts in CI are not reported here. This is the first Actions success on any SQL change since `ad3bf28`. It is CI evidence for the draft SQL and synthetic suites only — **not** approval of anything. |
+| **GitHub Actions at `b51908011404eb79ee01021916ceb2ad34d12200`** | runs 44365217344, 44365200112 | **success, both** (documentation-only commit) |
+| **GitHub Actions at `b7d4b2826036a41c05d46dd3f98b4c92c3f769b9`** (the three Supervisor/Product-Owner decision-recording commits) | runs 44369152676, 44369143862 | **FAILED, both.** Reproduced locally as the register check **REG-08**: the §6 classification row for WS-DOM-05 still read `BLOCKING` while the JSON read `LATER_PHASE`. Realigned in the WS-PLAN-01 commit. The check worked as designed. |
+| **GitHub Actions at the WS-PLAN-01 commit** | — | **NOT RUN** until pushed. |
 | **Design-only contracts** | documents under `docs/phase2/**` with no executable test | are **not** implementation evidence anywhere in this file |
 
 ### Why the Batch 8 local result was wrong
@@ -54,8 +57,11 @@ Batches 1–8 as recorded in the dated entries below, and on 2026-11-18:
   tested (ISO-C1..ISO-54); the caller is **not** bound to a membership, and the shared runtime role still reads
   every student-scoped table in full (ISO-GAP-01..03, printed as OPEN, not PASS). Needs a Platform Security
   decision on caller binding (`docs/phase2/workspace/WS_ISO_01_COUNSELOR_ISOLATION_PROPOSAL.md`).
-- **WS-PLAN-01, WS-DOM-05** — planning and curriculum domain decisions; the Educational-domain exit area stays
-  NOT READY.
+- **WS-PLAN-01 — decided (Option B, Product Owner, 2026-11-18) and implemented as draft SQL; still BLOCKING** until CI on
+  the resulting SHA and the Supervisor's independent review confirm it (`workspace_plan_items_draft.sql`; PLN-C1..C4,
+  PLN-01..63, WS-PLN-RACE-01..03). No scheduling logic exists.
+- **WS-DOM-05 — decided (Option A): deferred to Phase 7, `LATER_PHASE`, no longer a Phase 2 blocker.** Its four
+  governance questions remain open.
 - **PR-8-11-DISPOSITION** — four open draft PRs; PR integration NOT READY.
 - **M-05, M-06** — Supervisor findings whose text was never supplied; cannot be addressed or closed.
 

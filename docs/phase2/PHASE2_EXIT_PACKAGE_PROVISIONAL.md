@@ -45,7 +45,7 @@ check step 30.
 | 2 | Clock discipline at security decisions | receipt consume, contact change, guardian effective view | CLK-01..03, RC-FRESH-01..04, CC-FRESH-01..03 | Implemented (schema) |
 | 3 | Student Credit lifecycle | `workspace_schema_draft.sql` ledger guard, entitlements | CRD-01..47, WS-CRD-LOCK, WS-CRD-LAST-01..05 | Implemented (schema); **OQ-CRD-2/3 open**; commercial lifecycle deferred to Phase 21/22 |
 | 4 | Assessment, exam, analysis | `workspace_assessment_exam_draft.sql` | EXM suite | Implemented (schema); **OQ-ASM-1/2 open** |
-| 5 | Curriculum, plan, activity | subtopics; activity taxonomy | CUR-01..10, ACT-01..26 | **Partial** — **WS-PLAN-01, WS-DOM-05 open (recommended BLOCKING)** |
+| 5 | Curriculum, plan, activity | subtopics; activity taxonomy | CUR-01..10, ACT-01..26 | **Partial** — WS-PLAN-01 decided (B) and its data model implemented 2026-11-18 (`workspace_plan_items_draft.sql`, PLN-C1..63, WS-PLN-RACE-01..03), pending independent verification; WS-DOM-05 decided (A), deferred to Phase 7. Before the decisions: **WS-PLAN-01, WS-DOM-05 open (recommended BLOCKING)** |
 | 6 | Adversarial privilege review | role setup, ownership fixes | SEC-01..10 | Implemented (schema); produced **WS-ISO-01** |
 | 7 | Contact identity, HMAC rotation, concurrency | Control Plane cp_07/cp_08 | CID-RACE-A1..B3, CID-01..05b | Implemented (schema); **PS-1..PS-4 deferred** |
 | 8 | Files, notifications, retention, operations | `workspace_operations_draft.sql` | OPS-01..64 | **Partial** — delivery, erasure completeness and authorities open |
@@ -83,8 +83,8 @@ edition model; manager explicit-permission vocabulary; any production migration.
 | Finding | Severity | State |
 |---|---|---|
 | **WS-ISO-01** — counselor-to-counselor isolation fails open inside a Workspace | **CRITICAL (design), BLOCKING** | boundary implemented; caller binding needs a Platform Security decision |
-| WS-PLAN-01 — plan content is opaque JSON; planning invariants unenforceable by the database | HIGH, recommended BLOCKING | Product Owner decision |
-| WS-DOM-05 — curriculum edition/ownership model | MEDIUM, recommended BLOCKING for domain completeness | Product Owner decision |
+| WS-PLAN-01 — plan content was opaque JSON | HIGH, BLOCKING until verified | **decided B; data model implemented, pending CI at the resulting SHA and Supervisor review** — earlier: Product Owner decision |
+| WS-DOM-05 — curriculum edition/ownership model | MEDIUM, **LATER_PHASE** | decided A: deferred to Phase 7; four governance questions open |
 | WS-DOM-02 — governance commands lack verifiable authority | HIGH, fail-closed | depends on Issue #13 / PS-* |
 | M-05, M-06 — Supervisor findings never defined to the agent | UNKNOWN | Supervisor to define or withdraw |
 | REPO-HIST-CONTACTS — contact-shaped fixtures in Git history | LOW | Product Owner decision |
@@ -136,10 +136,10 @@ it, recommended gate impact and closure evidence; JSON and Markdown agreement is
 
 | Recommended gate impact | Items |
 |---|---|
-| **BLOCKING** | WS-ISO-01, WS-PLAN-01, WS-DOM-05, PR-8-11-DISPOSITION |
+| **BLOCKING** | WS-ISO-01, WS-PLAN-01 (implemented, pending verification), PR-8-11-DISPOSITION |
 | **Unknown until defined** | M-05, M-06 |
 | Non-blocking, held fail-closed | Q-007, Q-020, OQ-CRD-2, OQ-CRD-3, OQ-SAGA-1, OQ-SAGA-2, OQ-ASM-1, OQ-ASM-2, PS-1, PS-2, PS-3, PS-5, PS-8, WS-DOM-02, TRANSFER-EXC-AUTH, BRANCH-SYNC, OPS-HOLD-AUTH, OPS-DISP-AUTH, REPO-HIST-CONTACTS |
-| Later phase | OQ-D, OQ-E, PS-4, PS-6, PS-7, OPS-RETENTION-SCOPE, OPS-NOTIF-DELIVERY |
+| Later phase | WS-DOM-05 (Phase 7, by decision), OQ-D, OQ-E, PS-4, PS-6, PS-7, OPS-RETENTION-SCOPE, OPS-NOTIF-DELIVERY |
 
 Owners: Product Owner (most), Platform Security (PS-*, WS-ISO-01 caller binding, WS-DOM-02, OQ-SAGA-1),
 Supervisor (M-05, M-06), operations owner (OQ-D, OQ-E, OPS-RETENTION-SCOPE). **Not all are decisions only:**
@@ -187,7 +187,7 @@ note rather than rewritten), `PHASE2_EXIT_CRITERIA.md`, `UNRESOLVED_ITEM_REGISTE
   migrations is unplanned work; the load order is currently encoded only in the CI workflow.
 - **WS-ISO-01 enforcement** changes the result of every query run as the runtime role and needs
   supporting indexes; it is a coordinated change across every suite, not a patch (proposal §7).
-- **Opaque `plan_content` JSON** (WS-PLAN-01) will need a data migration once a normalized model is chosen.
+- **Legacy `plan_content` JSON** (WS-PLAN-01): new versions are normalized, but any legacy versions need a migration path into items when real data exists; none exists now (D-014).
 - **Trigger-heavy integrity** depends on triggers staying enabled; a maintenance script run as the owner can
   disable them (SEC-08).
 - **Historical fixtures in Git** (REPO-HIST-CONTACTS) stay unless history is rewritten.
@@ -202,10 +202,10 @@ note rather than rewritten), `PHASE2_EXIT_CRITERIA.md`, `UNRESOLVED_ITEM_REGISTE
 1. **WS-ISO-01 is CRITICAL and fails open.** A core product security requirement is not enforced by the
    database, and the fix needs a decision that has not been made.
 2. **GitHub Actions passed at `467a029`** after failing at `fc3416ed`. That is CI evidence for draft SQL and synthetic suites, not for the gate; Actions results for Batches 1–7 heads were never reported.
-3. **The domain model is incomplete** for planning (WS-PLAN-01) and curriculum editions (WS-DOM-05).
+3. **WS-PLAN-01's data model is implemented but not yet independently verified**; curriculum editions are deferred to Phase 7 by decision (WS-DOM-05).
 4. **Two Supervisor findings (M-05, M-06) are undefined** and cannot be shown addressed.
 5. **PR integration is unresolved** (PR #8–#11; the branch is behind `main`).
 
 What would move it, in order: the WS-ISO-01 caller-binding decision and its
-enforcement; the WS-PLAN-01 and WS-DOM-05 decisions and their schema; M-05/M-06 defined or withdrawn; the PR
+enforcement; independent verification of the WS-PLAN-01 data model; M-05/M-06 defined or withdrawn; the PR
 disposition. **None of these can be closed by the implementation agent alone, and none is claimed.**

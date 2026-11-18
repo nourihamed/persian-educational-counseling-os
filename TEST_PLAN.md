@@ -955,3 +955,39 @@ row. Control: changing WS-ISO-01's Markdown gate impact to `NON_BLOCKING_FAIL_CL
 ### Still NOT RUN after 2026-11-18
 GitHub Actions at the new HEAD. Any test of counselor isolation as each counselor's own database identity — it
 cannot exist until the caller-binding decision. Everything listed at the end of the Batch 1–8 sections.
+
+## 2026-11-18 — WS-PLAN-01 normalized PlanItem data model
+
+### `workspace_plan_items_tests.sql` — PLN-C1..C4, PLN-01..PLN-63 (61 PASS lines)
+- **Catalog:** barrier coverage, no UPDATE/DELETE for the runtime, exactly-one-source CHECK with no polymorphic column,
+  and the approved vocabularies pinned exactly.
+- **Items (PLN-01..17):** one item per approved source kind; zero or two sources refused; another student's exam
+  refused; a mismatched student refused; counselor B and a manager refused; unknown time zone refused; UTC derived
+  (and a supplied wrong value replaced); UPDATE, DELETE and TRUNCATE refused — both by grants and, for an identity
+  holding the privilege, by the trigger.
+- **Versions (PLN-20..29b):** normalized version carries no JSON; no items on legacy versions; author required;
+  no items after publication; v2 requires predecessor and reason; cross-plan supersession refused; no regression to
+  legacy; version metadata fixed; v1 unchanged by v2.
+- **Transitions (PLN-30..46):** stale transition refused; deferral rules both ways; out-of-vocabulary status and
+  reason refused; `other` without a note accepted; reason required otherwise; skipped sequence refused; cross-counselor
+  actor refused; mismatched student refused; full history retained; history immutable.
+- **Derived output (PLN-50..52)** and **boundaries (PLN-60..63):** the counselor boundary covers both new tables;
+  a frozen student's plan gains no item and records no transition.
+
+### `workspace_plan_item_status_race.sh` — WS-PLN-RACE-01..03
+Two sessions transition the same `planned` item. The second blocks on the first one's uncommitted sequence number
+and fails with unique_violation. History does not fork. Control: with the unique key dropped, both commit, and
+there are two rows with seq_no 1.
+
+| Control | Result |
+|---|---|
+| exactly-one-source CHECK dropped | fails PLN-C3 (after the NULL fix; before it, PLN-07) |
+| JSON-exclusivity CHECK dropped | fails PLN-20 |
+| counselor check removed from the item guard | fails PLN-11 |
+| item guard lets UPDATE through | fails PLN-15b |
+| stale-transition check removed | fails PLN-31 |
+| supersession rule removed | fails PLN-25 |
+| unique (plan_item_id, seq_no) dropped | fails WS-PLN-RACE-01..03 |
+
+**NOT RUN / NOT BUILT:** scheduling, conflict detection, generation, replay, and the contract §8 acceptance tests that
+depend on an engine. There is no transition graph because the decision fixed the states, not the edges.

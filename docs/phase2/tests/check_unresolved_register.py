@@ -149,6 +149,35 @@ def main():
     blocking = [it["id"] for it in items if it.get("recommended_gate_impact") == "BLOCKING"]
     print(f"NOTE REG blocking items recommended to the Supervisor: {', '.join(blocking) or 'none'}")
 
+    # REG-09: a recorded Product Owner vocabulary must be EXACTLY the one the draft SQL enforces. The register
+    # records the decision and workspace_plan_items_draft.sql implements it; without this check, either one
+    # could be edited and the other would still read as consistent. Applies once the SQL exists.
+    import re as _re
+    plan_sql = ROOT / "docs/phase2/workspace/workspace_plan_items_draft.sql"
+    plan = next((it for it in items if it.get("id") == "WS-PLAN-01"), None)
+    pod = (plan or {}).get("product_owner_decision") or {}
+    if plan_sql.exists() and pod:
+        sql = plan_sql.read_text(encoding="utf-8")
+        def check_list(label, values, pattern):
+            m = _re.search(pattern, sql, _re.S)
+            if not m:
+                fail(f"REG-09 could not find the {label} CHECK in {plan_sql.name}")
+                return
+            found = _re.findall(r"'([a-z_]+)'", m.group(1))
+            if sorted(found) != sorted(values):
+                fail(f"REG-09 {label}: the decision records {sorted(values)} but the SQL enforces {sorted(found)}")
+        check_list("status vocabulary", pod.get("status_vocabulary", []),
+                   r"to_status\s+text NOT NULL CHECK \(to_status\s+IN \(([^)]*)\)\)")
+        check_list("deferral-reason vocabulary", pod.get("deferral_reason_vocabulary", []),
+                   r"deferral_reason\s+text CHECK \(deferral_reason IN \(([^)]*)\)\)")
+        srcs = sorted(_re.findall(r"^\s+(topic|subtopic|activity|exam|review|assignment)_id\s", sql, _re.M))
+        if sorted(set(srcs)) != sorted(pod.get("permitted_sources", [])):
+            fail(f"REG-09 permitted sources: the decision records {sorted(pod.get('permitted_sources', []))} "
+                 f"but plan_items declares {sorted(set(srcs))}")
+        if not any("REG-09" in f for f in failures):
+            print("PASS REG-09 the WS-PLAN-01 sources, statuses and deferral reasons recorded in the register are "
+                  "exactly those the draft SQL enforces")
+
     if not any("REG-05" in f for f in failures):
         print("PASS REG-05 no item is recorded as RESOLVED by the implementation")
     if not any("REG-06" in f for f in failures):

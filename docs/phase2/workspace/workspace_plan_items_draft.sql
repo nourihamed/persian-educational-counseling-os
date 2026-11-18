@@ -1,0 +1,339 @@
+-- WORKSPACE DB — DRAFT: the normalized PlanItem DATA MODEL (WS-PLAN-01, Product Owner decision Option B,
+-- 2026-11-18, recorded in DECISION_LOG.md and the unresolved-item register). Synthetic only (D-014).
+-- NOT a migration. Apply AFTER workspace_transfer_freeze.sql (write barrier) and
+-- workspace_counselor_scope_draft.sql (counselor boundary), BEFORE workspace_roles_setup_draft.sql.
+--
+-- WHAT THE DECISION APPROVED, AND THEREFORE WHAT IS BUILT
+--   * Each PlanItem references EXACTLY ONE source, through typed nullable foreign keys — `topic`,
+--     `subtopic`, `activity`, `exam`, `review`, `assignment` — with an exactly-one-source CHECK. No
+--     `source_type/source_id`.
+--   * Status vocabulary: planned, in_progress, completed, partially_completed, deferred, skipped, cancelled.
+--   * Deferral reasons: insufficient_time, schedule_conflict, prerequisite_not_mastered, difficulty,
+--     illness_or_absence, resource_unavailable, higher_priority_task, student_requested,
+--     counselor_adjustment, other. `deferred` requires a reason; `other` MAY carry a note.
+--   * Normalized items are authoritative for new plan versions. `plan_content` survives only for legacy
+--     versions; it is never a second editable source, and any JSON for output is DERIVED from the items.
+--   * Published versions stay immutable. Item changes and status transitions are auditable with actor,
+--     timestamp and reason.
+--
+-- HOW "AUDITABLE" AND "IMMUTABLE" ARE RECONCILED
+--   A plan item's DEFINITION (what, when, for how long) is insert-only: it cannot be updated or deleted,
+--   even in a draft, because a draft that can be silently rewritten has no history. A change to a plan is
+--   a NEW plan version that names the version it supersedes and states why — the master prompt's "Week 1
+--   Plan v1, v2, v3", and the contract's "adjustments create a new version with a parent/supersedes
+--   reference and a reason". Items may be ADDED to a version only while it is a draft.
+--   An item's EXECUTION STATUS changes over time, including on a published version. It therefore lives in
+--   an append-only event table, one row per transition with actor, timestamp and reason; the current
+--   status is derived, never stored twice. Two concurrent transitions from the same state cannot both
+--   succeed: each event carries the next sequence number and (plan_item_id, seq_no) is unique.
+--
+-- WHAT IS DELIBERATELY NOT BUILT (no decision covers it; each listed so nobody infers it)
+--   * NO scheduling logic, ranking, conflict detection, generation or replay (Phase 12, as decided).
+--   * No priority, urgency, estimated workload scale, dependencies, conflict groups, generation
+--     provenance, idempotency key or carry-forward link — the contract lists them, the decision did not
+--     settle their vocabularies, and contract §9 forbids inventing weights or thresholds.
+--   * No transition graph. The decision fixed the states, not which state may follow which, so the only
+--     transition rules enforced are integrity rules: you transition FROM the current state, TO a different
+--     one, in order. Whether e.g. `completed` is terminal is an open question.
+--   * Which actor may make which transition, and whether a student may edit generated items (contract
+--     §9), are open. A student may record transitions on their own items; a membership must be a counselor
+--     who can reach the student (the WS-ISO-01 boundary); managers are refused, as everywhere.
+--   * Whether an empty normalized version may be published, and whether status may be recorded on a draft
+--     version's items, are open and not enforced either way.
+--   * Engine-created items will need a non-membership actor; none exists until Phase 12.
+BEGIN;
+
+-- ======================================================================================================
+-- 1. Plan versions: content model, supersession and actor
+-- ======================================================================================================
+-- Added here rather than in workspace_schema_draft.sql so suites that do not load this file keep their
+-- legacy fixtures; in this file's databases every NEW version is normalized by default.
+ALTER TABLE student_plan_versions
+  ADD COLUMN content_model text NOT NULL DEFAULT 'normalized'
+    CHECK (content_model IN ('normalized','legacy_json')),
+  ADD COLUMN supersedes_plan_version_id uuid REFERENCES student_plan_versions(plan_version_id),
+  ADD COLUMN change_reason text,
+  ADD COLUMN created_by_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  -- One source of truth: a normalized version's plan_content carries nothing. Output JSON is derived
+  -- (plan_version_rendered, below), so there is no second document to keep in step.
+  ADD CONSTRAINT normalized_version_has_no_json_content
+    CHECK (content_model <> 'normalized' OR plan_content = '{}'::jsonb);
+ALTER TABLE student_plan_versions
+  ADD CONSTRAINT student_plan_versions_id_plan_key UNIQUE (plan_version_id, plan_id);
+
+CREATE FUNCTION guard_plan_version_model() RETURNS trigger LANGUAGE plpgsql AS $body$
+DECLARE v_prev_plan uuid; v_prev_no integer;
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    IF (NEW.content_model, NEW.supersedes_plan_version_id, NEW.change_reason, NEW.created_by_membership_id)
+       IS DISTINCT FROM
+       (OLD.content_model, OLD.supersedes_plan_version_id, OLD.change_reason, OLD.created_by_membership_id) THEN
+      RAISE EXCEPTION 'a plan version''s content model, supersession, change reason and author are fixed at '
+                      'creation' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF NEW.content_model = 'legacy_json' THEN
+    -- Legacy JSON exists for historical compatibility and migration only. Once a plan has a normalized
+    -- version, it does not regress to JSON.
+    IF EXISTS (SELECT 1 FROM public.student_plan_versions v
+                WHERE v.plan_id = NEW.plan_id AND v.content_model = 'normalized') THEN
+      RAISE EXCEPTION 'plan % already has a normalized version; a legacy_json version cannot follow it',
+        NEW.plan_id USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  -- Normalized: attributable, and an adjustment names what it adjusts and why.
+  IF NEW.created_by_membership_id IS NULL THEN
+    RAISE EXCEPTION 'a normalized plan version must record the membership that created it'
+      USING ERRCODE='check_violation';
+  END IF;
+  IF NEW.version_no > 1 THEN
+    IF NEW.supersedes_plan_version_id IS NULL OR coalesce(length(btrim(NEW.change_reason)),0) = 0 THEN
+      RAISE EXCEPTION 'plan version % of plan % must name the version it supersedes and the reason for the '
+                      'change', NEW.version_no, NEW.plan_id USING ERRCODE='check_violation';
+    END IF;
+    SELECT v.plan_id, v.version_no INTO v_prev_plan, v_prev_no
+      FROM public.student_plan_versions v WHERE v.plan_version_id = NEW.supersedes_plan_version_id;
+    IF v_prev_plan IS DISTINCT FROM NEW.plan_id OR v_prev_no >= NEW.version_no THEN
+      RAISE EXCEPTION 'a plan version may only supersede an EARLIER version of the SAME plan'
+        USING ERRCODE='check_violation';
+    END IF;
+  ELSIF NEW.supersedes_plan_version_id IS NOT NULL THEN
+    RAISE EXCEPTION 'version 1 of a plan supersedes nothing' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER student_plan_versions_model_guard
+  BEFORE INSERT OR UPDATE ON student_plan_versions
+  FOR EACH ROW EXECUTE FUNCTION guard_plan_version_model();
+
+-- Ownership-bound targets for the composite foreign keys below.
+ALTER TABLE student_plans ADD CONSTRAINT student_plans_id_student_key UNIQUE (plan_id, student_id);
+CREATE UNIQUE INDEX activities_id_student_key ON activities(activity_id, student_id);
+
+-- ======================================================================================================
+-- 2. Plan items — the definition, insert-only
+-- ======================================================================================================
+CREATE TABLE plan_items (
+  plan_item_id       uuid PRIMARY KEY,
+  plan_version_id    uuid NOT NULL,
+  plan_id            uuid NOT NULL,
+  student_id         uuid NOT NULL,
+  item_no            integer NOT NULL CHECK (item_no > 0),
+  -- exactly one typed source (decision: topic, subtopic, activity, exam, review, assignment)
+  topic_id           uuid REFERENCES topics(topic_id),
+  subtopic_id        uuid REFERENCES subtopics(subtopic_id),
+  activity_id        uuid,
+  exam_id            uuid,
+  review_id          uuid,
+  assignment_id      uuid,
+  -- when, in the student's local calendar; the UTC projection is derived, never supplied
+  planned_local_date date NOT NULL,
+  planned_start_local time,
+  planned_minutes    integer CHECK (planned_minutes IS NULL OR planned_minutes > 0),
+  timezone_name      text NOT NULL,
+  planned_start_utc  timestamptz,
+  note               text,
+  created_by_membership_id uuid NOT NULL REFERENCES workspace_memberships(membership_id),
+  created_at         timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE (plan_version_id, item_no),
+  UNIQUE (plan_item_id, student_id),
+  -- the item belongs to the version, the version to the plan, the plan to the student: one chain
+  FOREIGN KEY (plan_version_id, plan_id) REFERENCES student_plan_versions(plan_version_id, plan_id),
+  FOREIGN KEY (plan_id, student_id)      REFERENCES student_plans(plan_id, student_id),
+  -- student-owned sources are bound to THIS student, so an item cannot schedule another student's work
+  FOREIGN KEY (activity_id, student_id)   REFERENCES activities(activity_id, student_id),
+  FOREIGN KEY (exam_id, student_id)       REFERENCES exams(exam_id, student_id),
+  FOREIGN KEY (review_id, student_id)     REFERENCES reviews(review_id, student_id),
+  FOREIGN KEY (assignment_id, student_id) REFERENCES assignments(assignment_id, student_id),
+  CONSTRAINT plan_item_exactly_one_source
+    CHECK (num_nonnulls(topic_id, subtopic_id, activity_id, exam_id, review_id, assignment_id) = 1),
+  CHECK ((planned_start_local IS NULL) = (planned_start_utc IS NULL))
+);
+CREATE INDEX plan_items_student_date_idx ON plan_items(student_id, planned_local_date);
+
+CREATE FUNCTION guard_plan_item() RETURNS trigger LANGUAGE plpgsql AS $body$
+DECLARE v_status text; v_model text;
+BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    RAISE EXCEPTION 'a plan item is insert-only; change a plan by creating a new plan version that '
+                    'supersedes it, with a reason' USING ERRCODE='check_violation';
+  END IF;
+  SELECT v.status, v.content_model INTO v_status, v_model
+    FROM public.student_plan_versions v WHERE v.plan_version_id = NEW.plan_version_id;
+  IF v_model IS DISTINCT FROM 'normalized' THEN
+    RAISE EXCEPTION 'plan items belong only to normalized plan versions; a legacy_json version keeps its '
+                    'content in plan_content' USING ERRCODE='check_violation';
+  END IF;
+  IF v_status IS DISTINCT FROM 'draft' THEN
+    RAISE EXCEPTION 'items can only be added to a DRAFT plan version; a published version is immutable'
+      USING ERRCODE='check_violation';
+  END IF;
+  IF NOT public.counselor_may_access_student(NEW.created_by_membership_id, NEW.student_id) THEN
+    RAISE EXCEPTION 'membership % is not an active, accepted counselor of student %; it cannot plan for '
+                    'that student', NEW.created_by_membership_id, NEW.student_id USING ERRCODE='check_violation';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_timezone_names z WHERE z.name = NEW.timezone_name) THEN
+    RAISE EXCEPTION 'unknown time zone %', NEW.timezone_name USING ERRCODE='check_violation';
+  END IF;
+  -- Derived, so it cannot disagree with the local values. PostgreSQL's resolution of a local time that is
+  -- ambiguous or skipped at a DST transition is deterministic; whether that rule is the PRODUCT's rule
+  -- (contract §8 test 10) is for Phase 12. Iran has observed no DST since 2022, so the case is real only for
+  -- other zones.
+  NEW.planned_start_utc := CASE WHEN NEW.planned_start_local IS NULL THEN NULL
+                                ELSE (NEW.planned_local_date + NEW.planned_start_local) AT TIME ZONE NEW.timezone_name END;
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER plan_items_guard
+  BEFORE INSERT OR UPDATE OR DELETE ON plan_items
+  FOR EACH ROW EXECUTE FUNCTION guard_plan_item();
+
+-- ======================================================================================================
+-- 3. Status transitions — append-only, one row per change, with actor, time and reason
+-- ======================================================================================================
+CREATE TABLE plan_item_status_events (
+  event_id            uuid PRIMARY KEY,
+  plan_item_id        uuid NOT NULL,
+  student_id          uuid NOT NULL,
+  seq_no              integer NOT NULL CHECK (seq_no > 0),
+  from_status         text NOT NULL CHECK (from_status IN ('planned','in_progress','completed','partially_completed','deferred','skipped','cancelled')),
+  to_status           text NOT NULL CHECK (to_status   IN ('planned','in_progress','completed','partially_completed','deferred','skipped','cancelled')),
+  deferral_reason     text CHECK (deferral_reason IN ('insufficient_time','schedule_conflict','prerequisite_not_mastered',
+                        'difficulty','illness_or_absence','resource_unavailable','higher_priority_task',
+                        'student_requested','counselor_adjustment','other')),
+  reason_note         text,
+  actor_kind          text NOT NULL CHECK (actor_kind IN ('membership','student')),
+  actor_membership_id uuid REFERENCES workspace_memberships(membership_id),
+  occurred_at         timestamptz NOT NULL DEFAULT clock_timestamp(),
+  FOREIGN KEY (plan_item_id, student_id) REFERENCES plan_items(plan_item_id, student_id),
+  -- Concurrent transitions from the same state compute the same seq_no; this makes the second one fail
+  -- instead of forking the history.
+  UNIQUE (plan_item_id, seq_no),
+  CHECK (to_status <> from_status),
+  -- decision: `deferred` requires a reason, and only `deferred` carries one
+  CHECK ((to_status = 'deferred') = (deferral_reason IS NOT NULL)),
+  -- decision: every transition is auditable with a reason. For `deferred` the reason code is the reason
+  -- and the note is optional ("other may carry an explanatory note"); for every other transition the
+  -- reason is the note, so it is required.
+  CHECK (to_status = 'deferred' OR length(btrim(coalesce(reason_note,''))) > 0),
+  CHECK ((actor_kind = 'membership') = (actor_membership_id IS NOT NULL))
+);
+
+CREATE FUNCTION plan_item_current_status_of(p_item uuid) RETURNS text
+LANGUAGE sql STABLE AS $body$
+  SELECT coalesce((SELECT e.to_status FROM public.plan_item_status_events e
+                    WHERE e.plan_item_id = p_item ORDER BY e.seq_no DESC LIMIT 1), 'planned');
+$body$;
+
+CREATE FUNCTION guard_plan_item_status_event() RETURNS trigger LANGUAGE plpgsql AS $body$
+DECLARE v_current text; v_next integer;
+BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    RAISE EXCEPTION 'plan item status history is append-only' USING ERRCODE='check_violation';
+  END IF;
+  SELECT coalesce(max(e.seq_no), 0) + 1 INTO v_next
+    FROM public.plan_item_status_events e WHERE e.plan_item_id = NEW.plan_item_id;
+  IF NEW.seq_no <> v_next THEN
+    RAISE EXCEPTION 'transition % of plan item % is out of order: the next one is %',
+      NEW.seq_no, NEW.plan_item_id, v_next USING ERRCODE='check_violation';
+  END IF;
+  v_current := public.plan_item_current_status_of(NEW.plan_item_id);
+  IF NEW.from_status <> v_current THEN
+    -- A stale transition: the caller believed the item was in another state. Refused rather than applied,
+    -- so a history can never read planned -> completed while the item had already been cancelled.
+    RAISE EXCEPTION 'plan item % is %, not %; refusing a stale transition',
+      NEW.plan_item_id, v_current, NEW.from_status USING ERRCODE='check_violation';
+  END IF;
+  IF NEW.actor_kind = 'membership'
+     AND NOT public.counselor_may_access_student(NEW.actor_membership_id, NEW.student_id) THEN
+    RAISE EXCEPTION 'membership % is not an active, accepted counselor of student %',
+      NEW.actor_membership_id, NEW.student_id USING ERRCODE='check_violation';
+  END IF;
+  -- actor_kind = 'student' means the student the item belongs to (student_id is bound to the item by the
+  -- composite foreign key). That the CALLER is that student cannot be verified by the database — the same
+  -- caller-binding gap as WS-ISO-01.
+  RETURN NEW;
+END; $body$;
+CREATE TRIGGER plan_item_status_events_guard
+  BEFORE INSERT OR UPDATE OR DELETE ON plan_item_status_events
+  FOR EACH ROW EXECUTE FUNCTION guard_plan_item_status_event();
+
+CREATE VIEW plan_item_current_status AS
+  SELECT i.plan_item_id, i.plan_version_id, i.student_id,
+         coalesce(e.to_status, 'planned') AS status,
+         e.deferral_reason, e.reason_note, e.occurred_at AS status_changed_at
+    FROM public.plan_items i
+    LEFT JOIN LATERAL (SELECT * FROM public.plan_item_status_events x
+                        WHERE x.plan_item_id = i.plan_item_id ORDER BY x.seq_no DESC LIMIT 1) e ON true;
+
+-- ======================================================================================================
+-- 4. Output JSON is DERIVED from the items, never stored beside them
+-- ======================================================================================================
+CREATE VIEW plan_version_rendered AS
+  SELECT v.plan_version_id, v.plan_id, v.version_no, v.status AS version_status,
+         CASE WHEN v.content_model = 'legacy_json' THEN v.plan_content
+              ELSE jsonb_build_object(
+                'plan_version_id', v.plan_version_id,
+                'version_no', v.version_no,
+                'items', coalesce((
+                  SELECT jsonb_agg(jsonb_build_object(
+                           'item_no', i.item_no,
+                           'source', CASE WHEN i.topic_id      IS NOT NULL THEN 'topic'
+                                          WHEN i.subtopic_id   IS NOT NULL THEN 'subtopic'
+                                          WHEN i.activity_id   IS NOT NULL THEN 'activity'
+                                          WHEN i.exam_id       IS NOT NULL THEN 'exam'
+                                          WHEN i.review_id     IS NOT NULL THEN 'review'
+                                          ELSE 'assignment' END,
+                           'source_id', coalesce(i.topic_id, i.subtopic_id, i.activity_id, i.exam_id,
+                                                 i.review_id, i.assignment_id),
+                           'planned_local_date', i.planned_local_date,
+                           'planned_start_local', i.planned_start_local,
+                           'planned_minutes', i.planned_minutes,
+                           'timezone', i.timezone_name,
+                           'status', s.status,
+                           'deferral_reason', s.deferral_reason) ORDER BY i.item_no)
+                    FROM public.plan_items i
+                    JOIN public.plan_item_current_status s ON s.plan_item_id = i.plan_item_id
+                   WHERE i.plan_version_id = v.plan_version_id), '[]'::jsonb))
+         END AS rendered,
+         v.content_model
+    FROM public.student_plan_versions v;
+
+-- ======================================================================================================
+-- 5. The transfer barrier and TRUNCATE
+-- ======================================================================================================
+-- The barrier is installed by a catalog-driven loop in workspace_transfer_freeze.sql, which ran before
+-- these tables existed, so it is attached here with the same function. FRZ-style coverage is asserted by
+-- PLN-C1 rather than assumed.
+DO $install$
+DECLARE r record; n integer := 0;
+BEGIN
+  FOR r IN SELECT table_name, key_column, key_kind FROM public.student_scoped_tables
+            WHERE table_name IN ('plan_items','plan_item_status_events') ORDER BY table_name
+  LOOP
+    -- Same trigger NAME as the freeze file's loop, so student_write_barrier_coverage sees it.
+    EXECUTE format(
+      'CREATE TRIGGER %I BEFORE INSERT OR UPDATE OR DELETE ON public.%I
+         FOR EACH ROW EXECUTE FUNCTION public.student_write_barrier(%L, %L)',
+      'zz_transfer_write_barrier_' || r.table_name, r.table_name, r.key_column, r.key_kind);
+    n := n + 1;
+  END LOOP;
+  IF n <> 2 THEN
+    RAISE EXCEPTION 'expected student_scoped_tables to list both plan tables, found %', n;
+  END IF;
+END
+$install$;
+
+CREATE FUNCTION reject_plan_truncate() RETURNS trigger LANGUAGE plpgsql AS $body$
+BEGIN
+  RAISE EXCEPTION '% is append-only; TRUNCATE is refused', TG_TABLE_NAME USING ERRCODE='check_violation';
+END; $body$;
+CREATE TRIGGER plan_items_no_truncate BEFORE TRUNCATE ON plan_items
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_plan_truncate();
+CREATE TRIGGER plan_item_status_events_no_truncate BEFORE TRUNCATE ON plan_item_status_events
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_plan_truncate();
+
+COMMIT;

@@ -228,6 +228,28 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
 
+      - name: Normalized PlanItem data model (WS-PLAN-01, Product Owner decision B) and the concurrent-transition race
+        run: |
+          set -euo pipefail
+          W=docs/phase2/workspace
+          K=a1000000000000000000000000000063
+          load() {
+            createdb -h localhost -U postgres "$1"
+            for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_plan_items_draft workspace_operations_draft; do
+              psql -X -v ON_ERROR_STOP=1 -d "$1" -f $W/$f.sql
+            done
+            psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d "$1" -f $W/workspace_roles_setup_draft.sql
+          }
+          load workspace_plan_items_test
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_plan_items_test -f $W/tests/workspace_plan_items_tests.sql
+          # The race needs its own database: it adds a scratch signal table and its fixtures.
+          load workspace_plan_items_race
+          bash $W/tests/workspace_plan_item_status_race.sh workspace_plan_items_race $K
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
       - name: Apply Workspace draft and run schema regression suite
         run: |
           createdb workspace_test
