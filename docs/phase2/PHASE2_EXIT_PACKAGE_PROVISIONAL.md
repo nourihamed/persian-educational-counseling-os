@@ -31,7 +31,7 @@
 | Last Actions run the agent was told passed | run 43551722112 (job 132315462233) at `ad3bf28` | passed | independent CI; predates every batch below |
 | Actions for Batches 1–7 heads (`cc8cd64` … `d6d81f8b`) | — | **never reported to the agent** | unknown |
 | Local full workflow at the next commit | cleared PostgreSQL 16.15, run after `git add` | **24 implementation steps passed, 852 PASS lines, 0 FAIL**; Python verifier 15 + 6 OK; secret scan PASS; register check PASS | local, agent-executed, **not independently reproduced** |
-| Actions at the next commit | — | **NOT RUN** | — |
+| Actions at `467a029` (the corrections commit) | runs [44362679187](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362679187) (job 135008003418) and [44362668276](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362668276) (job 135007959995) | **success, both** | independent CI; conclusions read from the PR check runs, step logs not read by the agent |
 
 Step numbering: GitHub's step N is the workflow's step N−2 (GitHub adds "Set up job" and "Initialize
 containers"). After this commit's new isolation step, the secret scan is GitHub step 29 and the register
@@ -56,7 +56,7 @@ Requirement-to-test traceability is maintained per batch in `TEST_PLAN.md` and p
 
 ## 4. Implemented · partial · deferred · not implemented
 
-**Implemented at schema level, with local executable evidence** (no Actions evidence since `ad3bf28`):
+**Implemented at schema level, with local executable evidence** (GitHub Actions success at `467a029`):
 the transfer freeze record, write barrier on all 32 student-scoped tables (both sides of an UPDATE, forward-only
 owner key) and in-flight transaction barrier; clock discipline at every security decision point found;
 the Student Credit ledger with one authoritative guard and the non-negative-balance invariant; the assessment
@@ -115,7 +115,7 @@ completeness.
 
 ## 7. NOT-RUN tests
 
-- **GitHub Actions at the next commit.** Every local result in this package is unverified by CI until then.
+- ~~GitHub Actions at the corrections commit~~ — ran and succeeded at `467a029`. Not run for this documentation-only status commit, which changes no SQL, test or workflow file.
 - **Actions results for Batches 1–7** were never reported to the agent.
 - **Counselor isolation as each counselor's own database identity** — cannot exist until WS-ISO-01's caller
   binding is decided.
@@ -193,7 +193,7 @@ note rather than rewritten), `PHASE2_EXIT_CRITERIA.md`, `UNRESOLVED_ITEM_REGISTE
 - **Historical fixtures in Git** (REPO-HIST-CONTACTS) stay unless history is rewritten.
 - **Test-suite cost:** 24 sequential database steps with fresh databases each; acceptable now, but some race
   suites rely on process coordination that will need care in parallel CI.
-- **Evidence gap:** no Actions evidence for any SQL change since `ad3bf28`.
+- **Evidence gap:** Actions results for the Batch 1–7 heads were never reported; only `fc3416ed` (failed) and `467a029` (success) have known results since `ad3bf28`.
 
 ## 12. Recommended gate status
 
@@ -201,11 +201,11 @@ note rather than rewritten), `PHASE2_EXIT_CRITERIA.md`, `UNRESOLVED_ITEM_REGISTE
 
 1. **WS-ISO-01 is CRITICAL and fails open.** A core product security requirement is not enforced by the
    database, and the fix needs a decision that has not been made.
-2. **GitHub Actions has not passed on any SQL change since `ad3bf28`**, and failed at the last verified head.
+2. **GitHub Actions passed at `467a029`** after failing at `fc3416ed`. That is CI evidence for draft SQL and synthetic suites, not for the gate; Actions results for Batches 1–7 heads were never reported.
 3. **The domain model is incomplete** for planning (WS-PLAN-01) and curriculum editions (WS-DOM-05).
 4. **Two Supervisor findings (M-05, M-06) are undefined** and cannot be shown addressed.
 5. **PR integration is unresolved** (PR #8–#11; the branch is behind `main`).
 
-What would move it, in order: the CI result at the new head; the WS-ISO-01 caller-binding decision and its
+What would move it, in order: the WS-ISO-01 caller-binding decision and its
 enforcement; the WS-PLAN-01 and WS-DOM-05 decisions and their schema; M-05/M-06 defined or withdrawn; the PR
 disposition. **None of these can be closed by the implementation agent alone, and none is claimed.**

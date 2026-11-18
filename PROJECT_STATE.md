@@ -8,9 +8,8 @@ prepared for independent review (`docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md
 what was implemented and what the evidence is, not what was approved.
 
 **Branch:** `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, **Draft, open, unmerged**).
-**Last HEAD verified on GitHub:** `fc3416ed329d70d341bb0efe647fe6ac6bc76945` (Batch 8). This document belongs
-to the **next** commit; its SHA is assigned when the Product Owner applies the patch, and is reported in the
-handoff, not here.
+**Last HEAD verified on GitHub:** `467a0294b03f9ffc494509509f9c0ece595b2bd3` (Supervisor corrections; same tree
+as the locally verified commit). This status update is a documentation-only commit on top of it.
 **Behind `main`:** yes, by two commits — `4004360` (adds `cp_30_role_privilege_tests.sql`, 89 lines) and
 `5bb8e4e` (reverts it). Net content difference from the merge base `ba5e9d8` to `main` `5bb8e4e`: **zero
 files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-pushed (BRANCH-SYNC).
@@ -22,7 +21,7 @@ files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-p
 | **GitHub Actions** (independent of the agent) | runs at `fc3416ed`: **43725323633** and **43725318826** (push and pull_request) | **FAILED.** Reported by the Supervisor: every SQL/database step passed; **step 28, the repository secret scan, failed**; step 29, the register consistency check, was **skipped** because it followed a failed step. The agent has no Actions access and did not read those logs. |
 | **Actions failure, reproduced locally** | the `fc3416ed` scanner run on the exact `fc3416ed` tree | two findings, both in `docs/phase2/workspace/tests/workspace_operations_tests.sql`: line **165** `[iranian-mobile]` and line **171** `[e164]` — the OPS-17/OPS-18 refusal-test fixtures. Neither is a credential. The Supervisor is asked to confirm these against the CI log. |
 | **Local verification** (agent-executed, **not independently reproduced**) | full workflow on a cleared PostgreSQL 16.15 cluster, after `git add`, on the tree of the next commit | **24 implementation steps passed, 852 PASS assertion lines, 0 FAIL**, plus Python verifier tests (15 + 6, OK); repository secret scan PASS (incl. history content); register check PASS (32 items). Local evidence is **not** CI evidence. |
-| **GitHub Actions at the next commit** | — | **NOT RUN** until the patch is pushed. |
+| **GitHub Actions at `467a0294b03f9ffc494509509f9c0ece595b2bd3`** (independent of the agent) | `postgres-draft-tests`, runs [44362679187](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362679187) (job 135008003418) and [44362668276](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362668276) (job 135007959995) | **success, both** (2026-11-18 17:50 UTC). Read by the agent from the PR's check-run conclusions; the agent did **not** read the step logs, so per-step PASS counts in CI are not reported here. This is the first Actions success on any SQL change since `ad3bf28`. It is CI evidence for the draft SQL and synthetic suites only — **not** approval of anything. |
 | **Design-only contracts** | documents under `docs/phase2/**` with no executable test | are **not** implementation evidence anywhere in this file |
 
 ### Why the Batch 8 local result was wrong
@@ -73,7 +72,7 @@ Batches 1–8 as recorded in the dated entries below, and on 2026-11-18:
 
 ## Failed tests
 - At `fc3416ed` in GitHub Actions: the repository secret scan (step 28). Register check skipped (step 29).
-- At the next commit, locally: none. In Actions: not run yet.
+- At `467a029`: none, locally or in GitHub Actions (both runs succeeded).
 
 ## Open questions
 32 register items, all classified in `docs/phase2/UNRESOLVED_ITEM_REGISTER.md` §6. 13 can be resolved partly or
@@ -81,9 +80,8 @@ wholly by code once their named decision is made; 19 are decisions, Supervisor d
 dependencies that code cannot close.
 
 ## Next actions
-1. Product Owner applies and pushes the patch; the Supervisor confirms the CI failure lines above against the log
-   of runs 43725323633/43725318826.
-2. GitHub Actions at the new HEAD — reported by whoever can read it.
+1. The Supervisor confirms the CI failure lines above against the log of runs 43725323633/43725318826.
+2. ~~GitHub Actions at the new HEAD~~ — done: success at `467a029` (runs 44362679187, 44362668276).
 3. Platform Security decision on WS-ISO-01 caller binding (option B recommended, A fallback).
 4. Supervisor independent review of the PROVISIONAL exit package. **The implementation agent does not approve
    the phase.**
