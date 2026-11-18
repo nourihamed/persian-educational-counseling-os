@@ -1,6 +1,6 @@
 # Unresolved-item register — Phase 2
 
-**Date:** 2026-11-14
+**Date:** 2026-11-18
 **Written by:** the implementation agent. This is **not** a Supervisor review and **not** a Product Owner decision.
 **Machine-readable twin:** `docs/phase2/unresolved_items.json` (same items, same fields; the JSON is authoritative for tooling, this file for reading).
 
@@ -28,8 +28,8 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | OQ-SAGA-2 | Resolution of a quarantined inbox event | OPEN | HIGH | Yes, no release path | Product Owner + Platform Security |
 | OQ-ASM-1 | Item-bank ownership and `item_ref` | OPEN | MEDIUM | Yes, no cross-boundary reference | Product Owner |
 | OQ-ASM-2 | Which scoring algorithms are permitted | OPEN | MEDIUM (correctness) | Yes, shape enforced, values not | Product Owner |
-| WS-DOM-05 | Curriculum Book/Edition, successor mapping, content ownership | OPEN | MEDIUM (correctness, isolation later) | Yes, subtopics built | Product Owner + content licensing owner |
-| WS-PLAN-01 | Normalized PlanItem versus opaque `plan_content` JSON | OPEN | HIGH for the product promise | Yes, versioning built | Product Owner |
+| WS-DOM-05 | Curriculum Book/Edition, successor mapping, content ownership | PARTIALLY DECIDED | MEDIUM (correctness, isolation later) | Yes — Phase 7 | Product Owner; four governance questions remain |
+| WS-PLAN-01 | Normalized PlanItem versus opaque `plan_content` JSON | PARTIALLY DECIDED | HIGH for the product promise | Yes — implementation required in Phase 2 | Product Owner decision recorded; implementation pending |
 | WS-ISO-01 | Counselor-to-counselor isolation inside one Workspace | OPEN | **CRITICAL, BLOCKING — fails open** | Other work only; gate may not pass | Product Owner + architecture owner |
 | OQ-D | Control Plane topology — numeric objectives | PARTIALLY DECIDED | HIGH at operation | Yes, schema only | Product Owner + operations |
 | OQ-E | Transfer cutover — boundary, duration, thresholds | PARTIALLY DECIDED | HIGH | Yes; boundary now implemented | Product Owner + operations |
@@ -131,6 +131,10 @@ freezing the set in the schema, and it is the only option under which a reviewer
 ## 2. Architecture decisions with open numbers
 
 ### WS-DOM-05 — Curriculum Book/Edition, version successor mapping and content ownership
+**Product Owner decision (2026-11-18): Option A — DEFER TO PHASE 7. Gate impact: `LATER_PHASE`.** Book/Edition, explicit curriculum-version successor mapping, and platform-versus-Workspace content-ownership metadata are not to be implemented in Phase 2. This resolves the Phase 2 blocker classification, not the four governance questions below.
+
+**Still requiring explicit Product Owner decisions before Phase 7:** (1) source of reference-content ingestion; (2) whether Workspace may fork reference nodes or only overlay them; (3) who approves curriculum changes; (4) whether subtopic-level mastery is mandatory in MVP. No proposed default is approved by this decision. Until then, retain Topic-level mastery as the MVP requirement and do not invent a content licensing/ownership policy.
+
 **Status:** OPEN. `CURRICULUM_DOMAIN_CONTRACT.md` is marked **DRAFT / NOT APPROVED**. Its canonical
 hierarchy is Grade → Subject → Book/Edition → Chapter → Topic → Subtopic, and the contract itself records
 that the skeleton had Subject → Chapter → Topic with "no Book/Edition or Subtopic".
@@ -156,6 +160,12 @@ would commit to an import model and an ownership model nobody has chosen, and th
 curriculum rows reference them.
 
 ### WS-PLAN-01 — Normalized PlanItem versus today's opaque `plan_content` JSON
+**Product Owner decision (2026-11-18): Option B — BUILD THE DATA MODEL IN PHASE 2. Gate impact: `BLOCKING` until implementation and tests pass.** The approved PlanItem source set is `topic`, `subtopic`, `activity`, `exam`, `review`, `assignment`. Each PlanItem must reference exactly one source through a typed nullable FK; unrestricted polymorphic `source_type/source_id` is prohibited.
+
+**Approved item statuses:** `planned`, `in_progress`, `completed`, `partially_completed`, `deferred`, `skipped`, `cancelled`. **Approved deferral reasons:** `insufficient_time`, `schedule_conflict`, `prerequisite_not_mastered`, `difficulty`, `illness_or_absence`, `resource_unavailable`, `higher_priority_task`, `student_requested`, `counselor_adjustment`, `other`. `deferred` requires a reason; `other` may carry an explanatory note. These vocabularies do not authorize scheduling logic in Phase 2.
+
+**JSON policy:** normalized PlanItem is authoritative for new plan versions. Preserve legacy `plan_content` only for historical compatibility/migration. Do not keep two independently editable sources of truth; any JSON needed for printing/output must be derived. Published PlanVersions remain immutable. Item changes and status transitions must be auditable with actor, timestamp and reason.
+
 **Status:** OPEN. `DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` is marked **DRAFT / NOT APPROVED**. Its
 section 1 requires that planning inputs and outputs "must be modeled as first-class domain data, not hidden
 inside an opaque JSON blob", and section 4 specifies a normalized PlanItem with **typed nullable foreign
