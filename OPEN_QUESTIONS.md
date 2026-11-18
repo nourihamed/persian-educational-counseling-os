@@ -469,3 +469,14 @@ legal hold), **OPS-DISP-AUTH** (who authorizes and who executes an irreversible 
 contract's requester-is-not-approver rule) and **OPS-RETENTION-SCOPE** (completeness beyond the primary row:
 objects, exports, caches, indexes, replicas, backups and restore-time suppression, none of which exists in
 this repository). No role can place a hold or call the gate, so all three are held fail-closed.
+
+### WS-ISO-01 status note (2026-11-18)
+
+Reclassified **CRITICAL and BLOCKING** on Supervisor instruction: counselor-to-counselor isolation inside a
+Workspace fails open at the database. The boundary half is implemented and tested
+(`docs/phase2/workspace/workspace_counselor_scope_draft.sql`, ISO-C1..ISO-54). The open question is
+**how the database learns which membership is calling** — a Platform Security decision; options and the
+recommendation (signed principal assertion verified in the database, per-membership login roles as fallback)
+are in `docs/phase2/workspace/WS_ISO_01_COUNSELOR_ISOLATION_PROPOSAL.md`. Two sub-questions are also open and
+were not decided: whether enrollment lifecycle states narrow a counselor's access, and the explicit permission
+that would let a manager reach a student (managers are denied meanwhile).

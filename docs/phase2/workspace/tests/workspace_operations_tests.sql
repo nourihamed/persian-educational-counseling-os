@@ -6,7 +6,8 @@
 --
 -- WHAT THESE TESTS PROVE
 --   * A stored file object's facts cannot be rewritten and its state machine is forward-only.
---   * A notification cannot be addressed to someone who is not an active member of this Workspace, the
+--   * A notification cannot be addressed to someone who is not an active member of this Workspace (and, for
+--     a notification about a student, a counselor able to reach that student — OPS-13c, 2026-11-18), the
 --     student it is about, or a verified guardian OF THAT STUDENT; it cannot carry a plaintext contact
 --     number; it cannot be re-pointed or rewritten after the fact; and it is covered by the transfer
 --     write barrier, which could not even be expressed before this batch.
@@ -54,14 +55,26 @@ VALUES(true,'a6000000-0000-0000-0000-000000000001','organization');
 INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES
  ('b6000000-0000-0000-0000-000000000001','c6000000-0000-0000-0000-000000000001','active'),
  ('b6000000-0000-0000-0000-000000000002','c6000000-0000-0000-0000-000000000002','suspended');
-INSERT INTO membership_roles(membership_id,role_key) VALUES ('b6000000-0000-0000-0000-000000000001','counselor');
+INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES
+ ('b6000000-0000-0000-0000-000000000003','c6000000-0000-0000-0000-000000000003','active');
+INSERT INTO membership_roles(membership_id,role_key) VALUES ('b6000000-0000-0000-0000-000000000001','counselor'),
+                                                           ('b6000000-0000-0000-0000-000000000003','counselor');
 INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state) VALUES
  ('e6000000-0000-0000-0000-000000000001','f6000000-0000-0000-0000-000000000001','Ops Student A','grade_10','active'),
  ('e6000000-0000-0000-0000-000000000002','f6000000-0000-0000-0000-000000000002','Ops Student B','grade_11','active'),
  ('e6000000-0000-0000-0000-000000000003','f6000000-0000-0000-0000-000000000003','Freeze Target','grade_12','active');
 INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state) VALUES
  ('a6100000-0000-0000-0000-000000000001','e6000000-0000-0000-0000-000000000001',1,'requested'),
+ ('a6100000-0000-0000-0000-000000000002','e6000000-0000-0000-0000-000000000002',1,'requested'),
  ('a6100000-0000-0000-0000-000000000003','e6000000-0000-0000-0000-000000000003',1,'requested');
+-- Counselor scope (added 2026-11-18 with the WS-ISO-01 boundary). b6..01 is the accepted counselor of
+-- students A and 3; b6..03 is the accepted counselor of student B only, and has a PROPOSED (unaccepted)
+-- assignment to A, which must grant nothing.
+INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at) VALUES
+ ('a6110000-0000-0000-0000-000000000001','a6100000-0000-0000-0000-000000000001','b6000000-0000-0000-0000-000000000001',true,'active',clock_timestamp()),
+ ('a6110000-0000-0000-0000-000000000003','a6100000-0000-0000-0000-000000000003','b6000000-0000-0000-0000-000000000001',true,'active',clock_timestamp()),
+ ('a6110000-0000-0000-0000-000000000002','a6100000-0000-0000-0000-000000000002','b6000000-0000-0000-0000-000000000003',true,'active',clock_timestamp()),
+ ('a6110000-0000-0000-0000-000000000004','a6100000-0000-0000-0000-000000000001','b6000000-0000-0000-0000-000000000003',false,'active',NULL);
 -- A verified guardian of student A only. Guardian projections need their event in the SAME transaction
 -- (WS-DOM-03, a deferred constraint trigger), so the link and its two events go together.
 BEGIN;
@@ -147,6 +160,17 @@ SELECT ops_err('OPS-14 a SUSPENDED membership is not a recipient',
     VALUES (gen_random_uuid(),'c6000000-0000-0000-0000-000000000002',
             'e6000000-0000-0000-0000-000000000001','weekly_summary','v1','{}','ops-idem-5')$$,
   '23514','not an active member');
+SELECT ops_err('OPS-13c an active COUNSELOR of this Workspace is not a recipient for a student assigned to another counselor',
+  $$INSERT INTO in_app_notifications(notification_id,recipient_platform_user_id,student_id,notification_type,
+      template_version,payload,idempotency_key)
+    VALUES (gen_random_uuid(),'c6000000-0000-0000-0000-000000000003',
+            'e6000000-0000-0000-0000-000000000001','weekly_summary','v1','{}','ops-idem-13c')$$,
+  '23514','able to reach that student');
+SELECT ops_ok('OPS-13d that counselor IS a recipient for their own student',
+  $$INSERT INTO in_app_notifications(notification_id,recipient_platform_user_id,student_id,notification_type,
+      template_version,payload,idempotency_key)
+    VALUES (gen_random_uuid(),'c6000000-0000-0000-0000-000000000003',
+            'e6000000-0000-0000-0000-000000000002','weekly_summary','v1','{}','ops-idem-13d')$$);
 SELECT ops_err('OPS-15 a stranger is not a recipient',
   $$INSERT INTO in_app_notifications(notification_id,recipient_platform_user_id,student_id,notification_type,
       template_version,payload,idempotency_key)
@@ -162,13 +186,13 @@ SELECT ops_err('OPS-17 a plaintext Iranian mobile NESTED in the payload is refus
   $$INSERT INTO in_app_notifications(notification_id,recipient_platform_user_id,student_id,notification_type,
       template_version,payload,idempotency_key)
     VALUES (gen_random_uuid(),'c6000000-0000-0000-0000-000000000001','e6000000-0000-0000-0000-000000000001',
-            'contact_changed','v1','{"meta":{"lines":["new number 09121234567"]}}','ops-idem-8')$$,
+            'contact_changed','v1','{"meta":{"lines":["new number 09000000000"]}}','ops-idem-8')$$,  -- NOT-A-REAL-CONTACT: all-zero subscriber body, synthetic fixture; this test asserts the payload is REFUSED
   '23514','plaintext contact number');
 SELECT ops_err('OPS-18 an E.164 number in the payload is refused',
   $$INSERT INTO in_app_notifications(notification_id,recipient_platform_user_id,student_id,notification_type,
       template_version,payload,idempotency_key)
     VALUES (gen_random_uuid(),'c6000000-0000-0000-0000-000000000001','e6000000-0000-0000-0000-000000000001',
-            'contact_changed','v1','{"display":"+14155550123"}','ops-idem-9')$$,
+            'contact_changed','v1','{"display":"+10000000000"}','ops-idem-9')$$,  -- NOT-A-REAL-CONTACT: all-zero E.164 body, synthetic fixture; this test asserts the payload is REFUSED
   '23514','plaintext contact number');
 SELECT ops_ok('OPS-19 a masked display is accepted',
   $$INSERT INTO in_app_notifications(notification_id,recipient_platform_user_id,student_id,notification_type,

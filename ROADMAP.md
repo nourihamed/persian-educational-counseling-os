@@ -1,5 +1,9 @@
 # ROADMAP.md
-## Current Phase 2 status — 2026-11-09 (authoritative addendum)
+> **2026-11-18:** the current Phase 2 status is in `PROJECT_STATE.md` (top block) and the provisional exit
+> package `docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md`. Gate NOT READY. The 2026-11-09 addendum below is
+> history and was not re-reconciled against Batches 1–8.
+
+## Phase 2 status — 2026-11-09 (historical addendum; superseded by PROJECT_STATE.md)
 
 - Phase 2 remains **NOT READY**; PR #12 is Open/Draft/Unmerged. No changes have been merged into main.
 - Latest verified successful SQL CI is Run #336 (PostgreSQL 16) at exact SHA `52bd0347b3aba4f816d996065122ed0d362bae5f`; it passed the CP/Workspace SQL suites and `WS-CAP-RACE-01`. It predates the subsequent removal of `workspace_memberships.role_key` and the new `WS-ROLE-SOURCE-01` assertion; fresh CI for current HEAD is not yet verified. It predates the subsequent removal of `workspace_memberships.role_key` and the new `WS-ROLE-SOURCE-01` assertion; fresh CI for current HEAD is not yet verified.

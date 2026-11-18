@@ -1,5 +1,6 @@
 -- WORKSPACE DB — DRAFT: files, notifications, retention and legal hold (Batch 8).
--- Apply AFTER workspace_schema_draft.sql, workspace_activation_transactions.sql,
+-- Apply AFTER workspace_schema_draft.sql, workspace_activation_transactions.sql, workspace_counselor_scope_draft.sql
+-- (which must itself follow workspace_transfer_freeze.sql),
 -- workspace_governance_events_draft.sql, workspace_archive_transactions.sql, workspace_inbox_projection.sql
 -- and workspace_transfer_freeze.sql. Synthetic only (D-014). NOT a migration.
 --
@@ -30,8 +31,9 @@
 -- WHAT IS ENFORCED HERE
 --   * File object facts are immutable and the state machine is forward-only, with `archived` terminal.
 --   * A notification names the student it concerns, so the transfer barrier covers it through the existing
---     catalog-driven coverage view; its recipient must be a member of this Workspace, the student itself,
---     or a verified guardian OF THAT STUDENT; its payload may not carry a plaintext contact number; and
+--     catalog-driven coverage view; its recipient must be a member of this Workspace (for a notification about a
+--     student, one who can reach that student; corrected 2026-11-18), the student itself, or a verified
+--     guardian OF THAT STUDENT; its payload may not carry a plaintext contact number; and
 --     its content is immutable once written.
 --   * A legal hold resolves its target through a reviewed entity-type registry and is refused if the
 --     target does not exist. Placement facts are immutable, release is one-way and a hold cannot be
@@ -132,8 +134,21 @@ BEGIN
   END IF;
   -- 1. an ACTIVE member of this Workspace. 'invited' and 'suspended' are not recipients: a suspended
   --    membership must not keep receiving student information.
-  IF EXISTS (SELECT 1 FROM public.workspace_memberships m
-              WHERE m.platform_user_id = p_recipient AND m.status = 'active') THEN
+  --    For a notification ABOUT A STUDENT, membership is not enough: the member must be able to reach that
+  --    student through an active, accepted counselor assignment (workspace_counselor_scope_draft.sql).
+  --    CORRECTED 2026-11-18. As first written in Batch 8, this branch accepted ANY active member as the
+  --    recipient of a notification about ANY student, which is a cross-counselor disclosure path: counselor
+  --    B could be sent a notification about counselor A's student. OPS-13c is the regression test.
+  --    Managers are not special-cased: the explicit manager permission the contract requires has no
+  --    defined vocabulary yet, so a manager is refused here, which is the contract's own default.
+  IF p_student IS NULL THEN
+    IF EXISTS (SELECT 1 FROM public.workspace_memberships m
+                WHERE m.platform_user_id = p_recipient AND m.status = 'active') THEN
+      RETURN;
+    END IF;
+  ELSIF EXISTS (SELECT 1 FROM public.workspace_memberships m
+                 WHERE m.platform_user_id = p_recipient AND m.status = 'active'
+                   AND public.counselor_may_access_student(m.membership_id, p_student)) THEN
     RETURN;
   END IF;
   IF p_student IS NOT NULL THEN
@@ -153,8 +168,8 @@ BEGIN
       RETURN;
     END IF;
   END IF;
-  RAISE EXCEPTION 'recipient % is not an active member of this Workspace, not the student the notification '
-                  'is about, and not a verified guardian of that student', p_recipient
+  RAISE EXCEPTION 'recipient % is not an active member of this Workspace able to reach that student, not the '
+                  'student the notification is about, and not a verified guardian of that student', p_recipient
     USING ERRCODE='check_violation';
 END; $body$;
 

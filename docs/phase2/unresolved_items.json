@@ -25,7 +25,14 @@
         "C. Defer the whole parent panel out of the MVP."
       ],
       "recommended_option": "A",
-      "rationale": "Phase 23 (Parent Panel) is far from the current phase, so nothing is blocked by waiting, and a legally wrong matrix cannot be fixed retroactively once data has been disclosed."
+      "rationale": "Phase 23 (Parent Panel) is far from the current phase, so nothing is blocked by waiting, and a legally wrong matrix cannot be fixed retroactively once data has been disclosed.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "The authority MECHANISMS (verified links, per-child permissions, effective-permission view, recipient rule) exist and are tested; the matrix VALUES are a legal decision.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "An approved guardian access matrix with Iranian legal review, then one test per scope asserting allow and deny."
     },
     {
       "id": "Q-020",
@@ -42,7 +49,14 @@
         "C. Keep it open until the first offboarding feature is scheduled (Phase 4 or later)."
       ],
       "recommended_option": "A",
-      "rationale": "The draft schedule already enumerates the categories, so the remaining work is review rather than design, and a single interim number (option B) would almost certainly be wrong for billing and audit records."
+      "rationale": "The draft schedule already enumerates the categories, so the remaining work is review rather than design, and a single interim number (option B) would almost certainly be wrong for billing and audit records.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Periods are legal/tax decisions. Once decided, recording them is a new immutable policy version with an approval_ref; no schema change is needed.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "Approved period per category R1..R9 recorded as approved policy versions; OPS-40 updated deliberately; the disposition gate's positive path exercised against the real policy."
     },
     {
       "id": "OQ-CRD-2",
@@ -60,7 +74,14 @@
         "D. The period is extended by the archived duration, so the counselor loses no paid time."
       ],
       "recommended_option": "D",
-      "rationale": "It matches what the counselor paid for (a quantity of service, not a wall-clock window), it cannot destroy paid credit, and unlike C it is bounded. This is a recommendation for the Product Owner, not a decision: nothing in the implementation assumes it."
+      "rationale": "It matches what the counselor paid for (a quantity of service, not a wall-clock window), it cannot destroy paid credit, and unlike C it is bounded. This is a recommendation for the Product Owner, not a decision: nothing in the implementation assumes it.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Nothing expires or returns a reserved entitlement; the rule itself is undecided.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A Product Owner rule for post-period disposition, then implementation and CRD tests for each outcome."
     },
     {
       "id": "OQ-CRD-3",
@@ -78,7 +99,14 @@
         "D. A platform-wide default with per-product override."
       ],
       "recommended_option": "A",
-      "rationale": "It keeps the billing rule in the billing domain, which is where the money and the audit trail already are, and leaves B available later as a bounded override. Not decided; the entry point stays fail-closed."
+      "rationale": "It keeps the billing rule in the billing domain, which is where the money and the audit trail already are, and leaves B available later as a bounded override. Not decided; the entry point stays fail-closed.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "Code can implement any chosen source; the production activation path stays fail-closed until the source is chosen.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A decided entitlement-duration source, resolve_student_entitlement_period() implemented against it, and the fail-closed test replaced by allow/deny tests."
     },
     {
       "id": "OQ-SAGA-1",
@@ -95,7 +123,15 @@
         "C. Keep the whole item closed until Phase 18/19."
       ],
       "recommended_option": "B",
-      "rationale": "Canonical encoding is independent of the cipher choice and is the part that silently breaks compatibility if decided late; it can be settled without pre-empting Platform Security."
+      "rationale": "Canonical encoding is independent of the cipher choice and is the part that silently breaks compatibility if decided late; it can be settled without pre-empting Platform Security.",
+      "item_class": [
+        "PLATFORM_SECURITY_DECISION",
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "Implementable once the wire format and signature scheme are chosen; until then envelopes are rejected.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "Approved canonical format and signature scheme, published test vectors, and verifier tests that reject every malformed or mis-signed envelope."
     },
     {
       "id": "OQ-SAGA-2",
@@ -112,7 +148,15 @@
         "C. Platform-admin release with audit."
       ],
       "recommended_option": "A",
-      "rationale": "It keeps the immutable-event guarantee intact and needs no new authority: re-drive and re-issue already exist. B and C both create a privileged path that would have to be defended against misuse."
+      "rationale": "It keeps the immutable-event guarantee intact and needs no new authority: re-drive and re-issue already exist. B and C both create a privileged path that would have to be defended against misuse.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION",
+        "PLATFORM_SECURITY_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "A quarantined event stays quarantined; who may release it, and how, is undecided.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A decided release authority and procedure, then tests that only that authority can release and that release is audited."
     },
     {
       "id": "OQ-ASM-1",
@@ -129,7 +173,14 @@
         "C. Both, distinguished by a reference kind, with integrity enforced per kind."
       ],
       "recommended_option": "A",
-      "rationale": "It is the only option that gives enforceable referential integrity inside Phase 2's tenancy model, and C can be added later without rewriting A."
+      "rationale": "It is the only option that gives enforceable referential integrity inside Phase 2's tenancy model, and C can be added later without rewriting A.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Item-bank ownership is a content/licensing decision.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "Decided ownership and item_ref semantics, then schema constraints and ASM tests."
     },
     {
       "id": "OQ-ASM-2",
@@ -146,7 +197,14 @@
         "C. Free-form names, with governance left to process rather than the database."
       ],
       "recommended_option": "A",
-      "rationale": "A registry makes a historical score attributable to a named, versioned rule without freezing the set in the schema, and it is the only option under which a reviewer can tell what `algorithm_version: 2` meant at the time. Not decided; nothing in the implementation assumes it."
+      "rationale": "A registry makes a historical score attributable to a named, versioned rule without freezing the set in the schema, and it is the only option under which a reviewer can tell what `algorithm_version: 2` meant at the time. Not decided; nothing in the implementation assumes it.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Which scoring algorithms are allowed is a pedagogical decision; the schema already refuses unversioned scoring.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "An approved algorithm list with versioning rules, then tests that refuse anything else."
     },
     {
       "id": "WS-DOM-05",
@@ -163,7 +221,14 @@
         "C. Drop Book/Edition from MVP and keep Subject -> Chapter -> Topic -> Subtopic, recording that curriculum texts are not modelled."
       ],
       "recommended_option": "A",
-      "rationale": "Phase 7 is the roadmap's own home for curriculum, and the open questions in the contract's section 7 are licensing and governance questions that need the content owner rather than a schema decision. Building Book/Edition now (B) would commit to an import model and an ownership model that have not been chosen, and those choices are hard to reverse once curriculum rows reference them."
+      "rationale": "Phase 7 is the roadmap's own home for curriculum, and the open questions in the contract's section 7 are licensing and governance questions that need the content owner rather than a schema decision. Building Book/Edition now (B) would commit to an import model and an ownership model that have not been chosen, and those choices are hard to reverse once curriculum rows reference them.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "Book/Edition and successor mapping are schema work once the ownership model is decided; curriculum subtopics were built in Batch 5 within what was approved.",
+      "recommended_gate_impact": "BLOCKING",
+      "closure_evidence": "Decided curriculum ownership and edition model, then schema, migration notes and CUR tests. Until then the Educational-domain exit area stays NOT READY."
     },
     {
       "id": "WS-PLAN-01",
@@ -180,25 +245,40 @@
         "C. Keep plan_content as the authority and accept that plan contents have no referential integrity."
       ],
       "recommended_option": "B",
-      "rationale": "The data model is a Phase 2 concern and the engine is not: the same split already worked for Activity, whose typed source columns and exactly-one-source CHECK were built in Phase 2 while nothing generates activities yet. Deciding the shape later is what makes it expensive, because by then plan_content blobs exist and have to be migrated. (C) is the only option that conflicts with the contract outright. This is a recommendation; nothing is built against it."
+      "rationale": "The data model is a Phase 2 concern and the engine is not: the same split already worked for Activity, whose typed source columns and exactly-one-source CHECK were built in Phase 2 while nothing generates activities yet. Deciding the shape later is what makes it expensive, because by then plan_content blobs exist and have to be migrated. (C) is the only option that conflicts with the contract outright. This is a recommendation; nothing is built against it.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "A normalized PlanItem model is schema work once chosen; today plan_content is opaque JSON, so planning constraints cannot be enforced by the database.",
+      "recommended_gate_impact": "BLOCKING",
+      "closure_evidence": "A decided PlanItem model, then schema, constraints and tests for the planning invariants (no conflicts, no impossible workload, no duplicates)."
     },
     {
       "id": "WS-ISO-01",
       "title": "Counselor-to-counselor isolation inside one Workspace",
       "status": "OPEN",
-      "why_unresolved": "The Supervisor brief requires that no counselor may access another counselor's students, even within the same Organization. The database does not enforce this and cannot today: measured on 2026-11-15, there is NO row-level security on any table in the Workspace database, and the Workspace runtime role holds SELECT on 47 tables in full. Tenant isolation in this design is per-Workspace — one database per Workspace with no cross-database grants, which the cross-database denial step does test — so every counselor inside a Workspace shares one runtime identity. Whether the boundary is enforced by row-level security keyed to the counselor assignment, by a per-counselor database role, or only in an application layer is an architecture decision that has not been made.",
-      "security_impact": "HIGH. It is an explicit requirement of the brief, and it is the one isolation claim this database currently cannot support. Until it is decided and built, any statement that counselors are isolated from each other rests entirely on application code that does not exist in this repository.",
+      "why_unresolved": "The Supervisor brief requires that no counselor may access another counselor's students, even within the same Organization. The database does not enforce this and cannot today: measured on 2026-11-15, there is NO row-level security on any table in the Workspace database, and the Workspace runtime role holds SELECT on 47 tables in full. Tenant isolation in this design is per-Workspace — one database per Workspace with no cross-database grants, which the cross-database denial step does test — so every counselor inside a Workspace shares one runtime identity. Whether the boundary is enforced by row-level security keyed to the counselor assignment, by a per-counselor database role, or only in an application layer is an architecture decision that has not been made. UPDATE 2026-11-18: the boundary is now implemented in workspace_counselor_scope_draft.sql (counselor_may_access_student, counselor_visible_students, counselor_may_access_row, counselor_caseload_report) and tested by ISO-C1..ISO-54 against guessed ids, list queries, a report, related records in all 32 student-scoped tables, note visibility and revocation; two write paths are enforced (counselor notes; the notification recipient rule, which Batch 8 had left open to any active member). What remains is binding the caller: every boundary function takes the membership as an argument and the database cannot verify it, so enforcement is not possible without a Platform Security decision on the principal mechanism.",
+      "security_impact": "CRITICAL as a design finding, and BLOCKING for the Phase 2 gate. It is a core product security requirement (master prompt section 3; API authorization contract sections 4 and 6; role-grantability matrix), and the database currently fails OPEN on it: the single runtime role every counselor shares reads all 32 student-scoped tables in full, including other counselors' private notes (ISO-GAP-01..03, measured). Exposure today is nil only because no API or deployment exists; the first code path built on this schema would inherit cross-counselor access by default. The boundary half is now implemented (2026-11-18); the caller-binding half is not.",
       "implementation_may_continue": true,
-      "continue_conditions": "SEC-10 records the negative result as a test rather than prose, and fails if the situation changes in either direction, so it cannot silently rot. Per-Workspace isolation is implemented and tested. No counselor-to-counselor isolation is claimed anywhere in the documentation, and PHASE2_EXIT_CRITERIA.md records it as NOT IMPLEMENTED.",
-      "decision_owner": "Product Owner with the architecture owner",
+      "continue_conditions": "Other implementation may continue; the Phase 2 gate may not pass. SEC-10 and ISO-GAP-01..03 assert the residual as OPEN lines that fail the suite if the measurement changes, so the record cannot go stale silently. No document claims counselor-to-counselor isolation is enforced.",
+      "decision_owner": "Platform Security (caller binding) with the Product Owner and the architecture owner",
       "options": [
-        "A. Row-level security on the student-scoped tables, keyed to the responsible counselor assignment, with a session identity the application must set and the database must be able to trust.",
-        "B. One database role per counselor, so the boundary is a grant rather than a policy.",
-        "C. Enforce it only in the application's authorization layer, and state plainly that the database does not.",
-        "D. Allow shared visibility inside a Workspace by policy, and narrow the brief's requirement to the Organization boundary."
+        "A. Per-membership database login roles mapped to memberships by a reviewed table; row-level security reads session_user. Identity is verified by PostgreSQL itself; cost is one role per staff member and constraints on connection pooling.",
+        "B. A short-lived signed principal assertion verified inside the database by a SECURITY DEFINER function (the receipt-verifier pattern this project already has), which records the verified membership for the current transaction only; row-level security reads that. Works with pooling; depends on PS-1..PS-4.",
+        "C. Enforce in the API only, keeping the database boundary functions as defence in depth. Weakest: any other code path with the runtime role bypasses it, which is exactly today's state.",
+        "D. One Workspace per counselor. Removes the problem by construction but contradicts the Organization model the product requires."
       ],
-      "recommended_option": "A",
-      "rationale": "It keeps the boundary inside the database, where it cannot be forgotten by a new query path, and it matches how the rest of this project treats authorization — the write barrier and the ledger guard are triggers precisely because a privilege check in application code binds only the callers that remember it. The hard part of (A) is the session identity: the database must not take the counselor's identity from a GUC the application sets, because this project already rejected session GUCs as an authorization mechanism in finding H-03. It would need the same privilege-backed, transaction-scoped grant pattern used for receipt consumption. (B) does not scale to many counselors per Workspace and multiplies role management. (C) is the current de facto state and is acceptable only if written down as such. (D) changes the requirement and is the Product Owner's call, not the implementation's."
+      "recommended_option": "B, with A as the fallback if PS-1..PS-4 cannot be decided in time",
+      "rationale": "B binds the caller cryptographically without one database role per person and reuses infrastructure already designed and tested here (Ed25519 receipt verification, fail-closed verifier). A is simpler and PostgreSQL-native and is the right fallback. C leaves the database failing open, which is the finding. D contradicts the approved Organization model. Session GUCs are not an option: H-03 already rejected them as an authorization mechanism, because the application sets them and so can forge them.",
+      "item_class": [
+        "IMPLEMENTATION_DEFECT",
+        "PLATFORM_SECURITY_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "The BOUNDARY (who may reach which student) is implemented and tested as of 2026-11-18. Binding the CALLER to a membership needs a Platform Security decision; after it, enforcement (row-level security over the 32 student-scoped tables) is implementation work. This is the only item whose current state fails OPEN rather than closed.",
+      "recommended_gate_impact": "BLOCKING",
+      "closure_evidence": "A decided caller-binding mechanism; row-level security on every student-scoped table keyed to counselor_may_access_student; ISO-GAP-01..03 turned from OPEN into failing-if-reachable assertions; cross-counselor negative tests run AS each counselor's own identity rather than as the shared runtime role; independent review."
     },
     {
       "id": "OQ-D",
@@ -215,7 +295,15 @@
         "C. Defer to Phase 28 (Production Readiness)."
       ],
       "recommended_option": "B",
-      "rationale": "The brief forbids inventing SLOs, and numbers set without measurement would be either unachievable or meaningless. Measurement needs a running system, so this belongs with Phase 27/28 work, but the split-brain prevention rule should be decided earlier because it constrains the design."
+      "rationale": "The brief forbids inventing SLOs, and numbers set without measurement would be either unachievable or meaningless. Measurement needs a running system, so this belongs with Phase 27/28 work, but the split-brain prevention rule should be decided earlier because it constrains the design.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION",
+        "LATER_OPERATIONAL_DEPENDENCY"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Numeric RPO/RTO and topology are operational decisions; nothing in Phase 2 deploys anything.",
+      "recommended_gate_impact": "LATER_PHASE",
+      "closure_evidence": "Decided objectives, then an operations phase with measured restore and failover drills."
     },
     {
       "id": "OQ-E",
@@ -232,7 +320,15 @@
         "C. Leave the freeze open-ended and require manual operator confirmation per transfer."
       ],
       "recommended_option": "B",
-      "rationale": "A duration invented without a measured workload is the kind of number the brief forbids. C is acceptable as an interim operating rule while B is being measured, and the database already supports it because the freeze has no timeout."
+      "rationale": "A duration invented without a measured workload is the kind of number the brief forbids. C is acceptable as an interim operating rule while B is being measured, and the database already supports it because the freeze has no timeout.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION",
+        "LATER_OPERATIONAL_DEPENDENCY"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "The database half of the freeze is implemented and tested; the controller, its timeouts and acceptance thresholds need decisions and a service that does not exist.",
+      "recommended_gate_impact": "LATER_PHASE",
+      "closure_evidence": "Decided thresholds, a controller implementation, and end-to-end cutover tests including timeout and recovery."
     },
     {
       "id": "PS-1",
@@ -250,7 +346,14 @@
         "D. HMAC with a shared key."
       ],
       "recommended_option": "A",
-      "rationale": "Small keys, no parameter-choice footguns and wide library support. Stated as a recommendation only; nothing is implemented against it."
+      "rationale": "Small keys, no parameter-choice footguns and wide library support. Stated as a recommendation only; nothing is implemented against it.",
+      "item_class": [
+        "PLATFORM_SECURITY_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "An algorithm choice.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A recorded Platform Security decision, then verifier tests against the chosen algorithm."
     },
     {
       "id": "PS-2",
@@ -266,7 +369,14 @@
         "B. A short allowlist with an explicit rejection of 'none'."
       ],
       "recommended_option": "A",
-      "rationale": "A single algorithm removes negotiation, which is where most signature-verification vulnerabilities live."
+      "rationale": "A single algorithm removes negotiation, which is where most signature-verification vulnerabilities live.",
+      "item_class": [
+        "PLATFORM_SECURITY_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Allowlist values are a security decision.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A recorded allowlist and tests refusing everything outside it."
     },
     {
       "id": "PS-3",
@@ -283,7 +393,14 @@
         "C. Static configuration per deployment."
       ],
       "recommended_option": "B",
-      "rationale": "Key custody belongs outside the application database; A can hold references to it without holding the keys."
+      "rationale": "Key custody belongs outside the application database; A can hold references to it without holding the keys.",
+      "item_class": [
+        "PLATFORM_SECURITY_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "The registry can be implemented once its design is decided; the external-custody *_ref shape is already in the schema.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A decided registry design, implementation, and tests that a revoked or unknown key is refused."
     },
     {
       "id": "PS-4",
@@ -300,7 +417,15 @@
         "C. No rotation before the pilot."
       ],
       "recommended_option": "A",
-      "rationale": "Overlapping validity is what makes rotation possible without downtime, and it has to be designed before the first key is issued."
+      "rationale": "Overlapping validity is what makes rotation possible without downtime, and it has to be designed before the first key is issued.",
+      "item_class": [
+        "PLATFORM_SECURITY_DECISION",
+        "LATER_OPERATIONAL_DEPENDENCY"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Key provisioning, storage, rotation and revocation are operational procedures.",
+      "recommended_gate_impact": "LATER_PHASE",
+      "closure_evidence": "Documented procedures and a rotation drill."
     },
     {
       "id": "PS-5",
@@ -317,7 +442,15 @@
         "C. A configurable allowance with an upper bound."
       ],
       "recommended_option": "C",
-      "rationale": "A bounded configurable value survives real deployment conditions without being an unbounded weakening."
+      "rationale": "A bounded configurable value survives real deployment conditions without being an unbounded weakening.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION",
+        "PLATFORM_SECURITY_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "A clock-skew allowance is a policy value.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A decided value and boundary tests at exactly the allowance."
     },
     {
       "id": "PS-6",
@@ -334,7 +467,15 @@
         "C. Bearer tokens over TLS."
       ],
       "recommended_option": "A",
-      "rationale": "Mutual authentication is the property being relied on; a bearer token authenticates only one side."
+      "rationale": "Mutual authentication is the property being relied on; a bearer token authenticates only one side.",
+      "item_class": [
+        "PLATFORM_SECURITY_DECISION",
+        "LATER_OPERATIONAL_DEPENDENCY"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "CA, trust store and mTLS identity are deployment concerns.",
+      "recommended_gate_impact": "LATER_PHASE",
+      "closure_evidence": "Deployed channel with tests that an unauthenticated peer is refused."
     },
     {
       "id": "PS-7",
@@ -351,7 +492,15 @@
         "C. A sidecar per workload."
       ],
       "recommended_option": "A",
-      "rationale": "A separate service keeps key access out of application processes, which is the reason the boundary exists."
+      "rationale": "A separate service keeps key access out of application processes, which is the reason the boundary exists.",
+      "item_class": [
+        "PLATFORM_SECURITY_DECISION",
+        "LATER_OPERATIONAL_DEPENDENCY"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "A deployment-topology decision.",
+      "recommended_gate_impact": "LATER_PHASE",
+      "closure_evidence": "A decided topology and its threat review."
     },
     {
       "id": "PS-8",
@@ -368,7 +517,15 @@
         "C. Both: short lifetimes plus a list for emergencies."
       ],
       "recommended_option": "C",
-      "rationale": "Short lifetimes bound the normal case; a list is the only answer for an urgent revocation, and the two are complementary."
+      "rationale": "Short lifetimes bound the normal case; a list is the only answer for an urgent revocation, and the two are complementary.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION",
+        "PLATFORM_SECURITY_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "The propagation mechanism is implementable once the revocation source is chosen; today revocation freshness is not guaranteed and receipts are fail-closed.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A decided revocation source, propagation implementation, and tests that a revoked membership cannot use a receipt or be notified after revocation."
     },
     {
       "id": "M-05",
@@ -385,7 +542,14 @@
         "C. Restate it against the current head."
       ],
       "recommended_option": "C",
-      "rationale": "The head has moved substantially since the finding was raised, so a restatement against the current head is both actionable and avoids work on a finding that may already be resolved."
+      "rationale": "The head has moved substantially since the finding was raised, so a restatement against the current head is both actionable and avoids work on a finding that may already be resolved.",
+      "item_class": [
+        "SUPERVISOR_FINDING"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "The finding text was never supplied, so it cannot be acted on.",
+      "recommended_gate_impact": "UNKNOWN_UNTIL_DEFINED",
+      "closure_evidence": "The Supervisor supplies the finding text or withdraws it; then normal remediation and evidence."
     },
     {
       "id": "M-06",
@@ -402,7 +566,14 @@
         "C. Restate it against the current head."
       ],
       "recommended_option": "C",
-      "rationale": "As for M-05."
+      "rationale": "As for M-05.",
+      "item_class": [
+        "SUPERVISOR_FINDING"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Same as M-05.",
+      "recommended_gate_impact": "UNKNOWN_UNTIL_DEFINED",
+      "closure_evidence": "Same as M-05."
     },
     {
       "id": "WS-DOM-02",
@@ -419,7 +590,15 @@
         "C. Defer governance commands entirely out of Phase 2."
       ],
       "recommended_option": "A1/B3",
-      "rationale": "It is the option already proposed and reviewed in Issue #13, and it is the only one that lets a role grant carry evidence of who authorized it. B would make the database its own authority, which is what the current fail-closed design deliberately avoids."
+      "rationale": "It is the option already proposed and reviewed in Issue #13, and it is the only one that lets a role grant carry evidence of who authorized it. B would make the database its own authority, which is what the current fail-closed design deliberately avoids.",
+      "item_class": [
+        "PLATFORM_SECURITY_DECISION",
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "The competing role source is closed; the trusted authorization adapter is implementable once Issue #13 and PS-1..PS-8 are decided. Governance commands are uncallable by application roles meanwhile.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A verified authorization adapter, an enforced grantability/anti-self-escalation matrix, and tests that a forged or self-granted role is refused."
     },
     {
       "id": "TRANSFER-EXC-AUTH",
@@ -436,7 +615,14 @@
         "C. Two-person platform-admin exception."
       ],
       "recommended_option": "A",
-      "rationale": "The control exists precisely for the single-actor case, and an exception path reintroduces exactly the risk it was built to prevent. If an exception is required for operational reasons, C is preferable to B because it does not rely on one administrator's judgement."
+      "rationale": "The control exists precisely for the single-actor case, and an exception path reintroduces exactly the risk it was built to prevent. If an exception is required for operational reasons, C is preferable to B because it does not rely on one administrator's judgement.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Who may authorize an exception is a governance decision; exceptions are refused meanwhile.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A decided authority, then tests that only it can authorize and that every exception is audited."
     },
     {
       "id": "PR-8-11-DISPOSITION",
@@ -480,7 +666,14 @@
           "state": "open",
           "draft": true
         }
-      }
+      },
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "A process decision about four open pull requests.",
+      "recommended_gate_impact": "BLOCKING",
+      "closure_evidence": "A Product Owner instruction per PR (merge, close as superseded, or rebase) and its execution by the Product Owner."
     },
     {
       "id": "BRANCH-SYNC",
@@ -508,7 +701,14 @@
         ],
         "net_changed_files_merge_base_to_main": 0,
         "previous_claim": "FACTUALLY_CORRECTED / not behind main — this was wrong and is retracted"
-      }
+      },
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "Two commits with zero net content; a merge of main into the branch would resolve it, but merging is not authorized.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "An authorized merge (or the PR #8-#11 disposition moving main) and a re-verification that the branch contains main."
     },
     {
       "id": "OPS-HOLD-AUTH",
@@ -531,7 +731,14 @@
         "mechanism": "docs/phase2/workspace/workspace_operations_draft.sql section 4",
         "tests": "OPS-30..OPS-36, OPS-51 in docs/phase2/workspace/tests/workspace_operations_tests.sql",
         "grants": "no application role holds INSERT/UPDATE/DELETE on legal_holds (asserted, not assumed)"
-      }
+      },
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Who places and releases a hold is a legal-authority decision; nobody can write the table meanwhile.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A decided authority, a grant to exactly that role, and tests that every other role is refused."
     },
     {
       "id": "OPS-DISP-AUTH",
@@ -554,7 +761,15 @@
         "mechanism": "assert_destructive_disposition_allowed() in docs/phase2/workspace/workspace_operations_draft.sql section 5",
         "tests": "OPS-47, OPS-48, OPS-50 in docs/phase2/workspace/tests/workspace_operations_tests.sql",
         "measured": "the gate refuses for five distinct named reasons and ALLOWS only with a synthetic approved policy inserted inside the test, which is how its refusals are shown to be decisions rather than an unconditional raise"
-      }
+      },
+      "item_class": [
+        "PRODUCT_OWNER_DECISION",
+        "LATER_OPERATIONAL_DEPENDENCY"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Who authorizes and executes disposition is undecided; the gate is uncallable meanwhile.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A decided authority matrix with requester != approver, an executor identity, and tests that self-approval is refused."
     },
     {
       "id": "OPS-RETENTION-SCOPE",
@@ -576,7 +791,14 @@
       "evidence": {
         "not_implemented": "no object store, export, cache, index, replica or backup tooling exists in this repository",
         "documented": "docs/phase2/operations/DATA_RETENTION_IMPLEMENTATION_CONTRACT.md section 7; PHASE2_EXIT_CRITERIA.md"
-      }
+      },
+      "item_class": [
+        "LATER_OPERATIONAL_DEPENDENCY"
+      ],
+      "code_can_resolve": "partly",
+      "code_resolution_note": "A suppression ledger and completeness verification are implementable once the hosting target is decided; none of the systems involved exists yet.",
+      "recommended_gate_impact": "LATER_PHASE",
+      "closure_evidence": "An implemented suppression ledger, a restore drill that re-applies suppression, and a verification report per disposition."
     },
     {
       "id": "OPS-NOTIF-DELIVERY",
@@ -599,7 +821,38 @@
         "implemented": "insert-time recipient isolation and payload hygiene: docs/phase2/workspace/workspace_operations_draft.sql section 2",
         "tests": "OPS-10..OPS-24, OPS-45, OPS-46",
         "not_implemented": "no notification worker, queue or delivery path exists in this repository"
-      }
+      },
+      "item_class": [
+        "LATER_OPERATIONAL_DEPENDENCY"
+      ],
+      "code_can_resolve": "yes",
+      "code_resolution_note": "Delivery-time re-authorization is ordinary implementation in the notification phase; no decision blocks it beyond PS-8.",
+      "recommended_gate_impact": "LATER_PHASE",
+      "closure_evidence": "A notification worker that re-checks authority and ownership generation in the delivery transaction, with tests for revocation and transfer between queueing and delivery."
+    },
+    {
+      "id": "REPO-HIST-CONTACTS",
+      "title": "Contact-shaped test fixtures remain in Git history",
+      "status": "OPEN",
+      "why_unresolved": "The history content scan added on 2026-11-18 found 110 contact-shaped strings in old blobs and nothing else: six repeated-digit Iranian-mobile-shaped fixtures from the 2026-10-27..31 constraint tests and two test-run logs that echoed them, plus the two Batch 8 OPS-17/OPS-18 fixtures that failed CI. None was taken from data. They cannot be called unassigned numbers: the 0912-0917 prefixes are allocated, so a repeated-digit body may belong to a real subscriber. One of the Batch 8 values is in the North American fictional range (555-01xx) and is not a subscriber number. Removing any of them from history requires rewriting history and force-pushing, which is prohibited on this branch.",
+      "security_impact": "LOW. They are not credentials, so nothing needs rotating or revoking. The residual risk is that a real subscriber's number appears in a test fixture in a repository history, against the spirit of D-014.",
+      "implementation_may_continue": true,
+      "continue_conditions": "Every finding is excepted individually in docs/phase2/tests/secret_scan_history_exceptions.json by (blob SHA, pattern, SHA-256 of the matched value), so a different finding in the same blob still fails CI; the working tree carries no such literal; the scanner never prints a detected number in full.",
+      "decision_owner": "Product Owner",
+      "options": [
+        "A. Accept the residual and keep the hashed exceptions.",
+        "B. Rewrite history to purge the blobs (filter-repo plus force-push), with every collaborator re-cloning; requires lifting the force-push prohibition.",
+        "C. Make the repository's visibility and access restrictions the compensating control and record that."
+      ],
+      "recommended_option": "A, with C recorded",
+      "rationale": "The values are not secrets and were not taken from people, so the benefit of a history rewrite is small and its cost (breaking every clone, invalidating every cited SHA in this project's evidence trail) is large. If any value is later shown to be a real person's number, B becomes the right answer.",
+      "item_class": [
+        "PRODUCT_OWNER_DECISION"
+      ],
+      "code_can_resolve": "no",
+      "code_resolution_note": "Only a history rewrite removes them, and that is a decision, not code.",
+      "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
+      "closure_evidence": "A recorded Product Owner decision; if B, a post-rewrite scan with zero history exceptions."
     }
   ]
 }

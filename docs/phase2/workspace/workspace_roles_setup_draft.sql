@@ -414,6 +414,18 @@ BEGIN
                  'FROM %I,%I,%I', 'ws_'||k||'_runtime', 'ws_'||k||'_worker', 'ws_'||k||'_exporter');
 END $batch8$;
 
+-- WS-ISO-01 boundary functions (workspace_counselor_scope_draft.sql) are SECURITY INVOKER and resolve a
+-- row's owner through the student_scoped_tables catalog view, so the runtime needs to read that VIEW. It
+-- holds no data: it lists table names and key columns derived from the system catalog.
+DO $iso$
+DECLARE k text := current_setting('app.workspace_key');
+BEGIN
+  IF to_regprocedure('public.counselor_may_access_row(uuid,text,text)') IS NULL THEN
+    RETURN;
+  END IF;
+  EXECUTE format('GRANT SELECT ON TABLE student_scoped_tables TO %I', 'ws_'||k||'_runtime');
+END $iso$;
+
 -- Default privileges remain deny-by-default for future migrations.
 SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC',
   'ws_'||current_setting('app.workspace_key')||'_table_owner') \gexec

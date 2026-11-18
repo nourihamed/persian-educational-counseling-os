@@ -920,3 +920,38 @@ re-authorization, which needs a worker (OPS-NOTIF-DELIVERY, overlapping PS-8). N
 (Q-020). No notification channel adapter, and no anti-virus or content scanning: `quarantined → available`
 is enforced as a transition, but what clears a scan is a service that does not exist. Nothing about the
 table owner or a superuser, per SEC-08. Plus everything listed at the end of the Batch 1–7 sections.
+
+## 2026-11-18 — Supervisor corrections
+
+### `workspace_counselor_isolation_tests.sql` — ISO-C1..ISO-54 (42 PASS lines, 3 OPEN lines)
+The WS-ISO-01 **boundary**, in one Workspace with seven memberships (two counselors with their own students, a
+co-assigned counselor, an unaccepted assignment, a suspended counselor, an assistant, a manager). Catalog
+coverage of all 32 student-scoped tables (ISO-C1/C2); direct ids (ISO-01..09); guessed ids of related records,
+including indirect and two-hop owners and an existence-oracle check (ISO-10..19b); private-note visibility
+(ISO-20..23); list (ISO-30..32); report totals (ISO-33/34); write paths (ISO-40..43); revocation through every
+surface (ISO-50..54). **ISO-GAP-01..03 are OPEN lines, not PASS lines**: they measure that the shared runtime role
+still reads counselor B's rows and that no student-scoped table has RLS, and they fail if that changes.
+**They prove the boundary is correct, not that cross-counselor access is prevented at the database.**
+
+| Control | Result |
+|---|---|
+| acceptance condition removed from the predicate | fails ISO-04 |
+| counselor-role condition removed | fails ISO-06 |
+| private-note visibility rule removed | fails ISO-21 |
+| report computed over all students | fails ISO-33 |
+| counselor-note trigger dropped | fails ISO-40 |
+| Batch 8 recipient rule restored | fails OPS-13c |
+
+### `check_no_secret_material.py` — SEC-REPO-01..05 (repository check, NOT implementation evidence)
+SEC-REPO-03 now scans historical blob **content**; SEC-REPO-04 warns about untracked files it did not scan;
+SEC-REPO-05 has nine planted cases including the "synthetic"-on-the-line regression. Controls: a PEM block
+committed and then deleted is found in history; a shallow clone fails closed; the pre-2026-11-18 line-level
+allowlist fails SEC-REPO-05.
+
+### `check_unresolved_register.py` — REG-07/REG-08 (documentation check, NOT implementation evidence)
+REG-07 requires every item's classification; REG-08 requires the Markdown table to agree with the JSON row by
+row. Control: changing WS-ISO-01's Markdown gate impact to `NON_BLOCKING_FAIL_CLOSED` fails REG-08.
+
+### Still NOT RUN after 2026-11-18
+GitHub Actions at the new HEAD. Any test of counselor isolation as each counselor's own database identity — it
+cannot exist until the caller-binding decision. Everything listed at the end of the Batch 1–8 sections.

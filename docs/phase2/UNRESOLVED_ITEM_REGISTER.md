@@ -30,7 +30,7 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | OQ-ASM-2 | Which scoring algorithms are permitted | OPEN | MEDIUM (correctness) | Yes, shape enforced, values not | Product Owner |
 | WS-DOM-05 | Curriculum Book/Edition, successor mapping, content ownership | OPEN | MEDIUM (correctness, isolation later) | Yes, subtopics built | Product Owner + content licensing owner |
 | WS-PLAN-01 | Normalized PlanItem versus opaque `plan_content` JSON | OPEN | HIGH for the product promise | Yes, versioning built | Product Owner |
-| WS-ISO-01 | Counselor-to-counselor isolation inside one Workspace | OPEN | HIGH | Yes, negative result asserted | Product Owner + architecture owner |
+| WS-ISO-01 | Counselor-to-counselor isolation inside one Workspace | OPEN | **CRITICAL, BLOCKING — fails open** | Other work only; gate may not pass | Product Owner + architecture owner |
 | OQ-D | Control Plane topology — numeric objectives | PARTIALLY DECIDED | HIGH at operation | Yes, schema only | Product Owner + operations |
 | OQ-E | Transfer cutover — boundary, duration, thresholds | PARTIALLY DECIDED | HIGH | Yes; boundary now implemented | Product Owner + operations |
 | PS-1 | Signature algorithm | DEFERRED | HIGH | Yes, fail-closed | Platform Security + Product Owner |
@@ -51,6 +51,7 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | OPS-DISP-AUTH | Who authorizes and who executes an irreversible disposition | OPEN | HIGH at pilot; zero today | Yes, the gate is uncallable | Product Owner + operations |
 | OPS-RETENTION-SCOPE | Disposition completeness beyond the primary row | OPEN | HIGH at pilot, as incompleteness | Yes, completeness not claimed | Product Owner + operations (after OQ-D) |
 | OPS-NOTIF-DELIVERY | Delivery-time re-check of notification authority and generation | OPEN | HIGH once delivery exists | Yes, insert-time rule only | Product Owner + Platform Security |
+| REPO-HIST-CONTACTS | Contact-shaped test fixtures remain in Git history | OPEN | LOW; not credentials | Yes, each excepted by hash | Product Owner |
 
 ---
 
@@ -177,33 +178,53 @@ nothing generates activities yet. Deferring the shape is what makes it expensive
 `plan_content` blobs exist and must be migrated. (C) is the only option that conflicts with the contract
 outright. Nothing is built against this recommendation.
 
-### WS-ISO-01 — Counselor-to-counselor isolation inside one Workspace
-**Status:** OPEN. The Supervisor brief requires: *"No counselor may access another counselor's students,
-even within the same Organization."* **The database does not enforce this, and cannot today.**
-**Measured on 2026-11-15:** there is **no row-level security on any table** in the Workspace database, and
-the Workspace runtime role holds `SELECT` on **47 tables in full**. Isolation in this design is
-**per-Workspace** — one database per Workspace with no cross-database grants, which the cross-database
-denial step does test — so every counselor inside a Workspace shares one runtime identity.
-**Impact:** HIGH. It is an explicit requirement of the brief and the one isolation claim this database
-cannot currently support. Until it is decided and built, any statement that counselors are isolated from
-one another rests entirely on application code that does not exist in this repository.
-**Held how:** **SEC-10 records the negative result as a test, not as prose**, and fails if the situation
-changes in either direction, so the record cannot silently rot. Per-Workspace isolation is implemented and
-tested. Counselor-to-counselor isolation is claimed nowhere, and `PHASE2_EXIT_CRITERIA.md` records it as
-NOT IMPLEMENTED.
-**Options:** (A) row-level security on the student-scoped tables, keyed to the responsible counselor
-assignment; (B) one database role per counselor, so the boundary is a grant rather than a policy;
-(C) enforce it only in the application authorization layer and say so plainly; (D) allow shared visibility
-inside a Workspace by policy and narrow the requirement to the Organization boundary.
-**Recommendation: A.** It keeps the boundary inside the database, where a new query path cannot forget it,
-and it matches how this project already treats authorization — the write barrier and the ledger guard are
-triggers precisely because a check in application code binds only the callers that remember it. The hard
-part of (A) is the session identity: the database must **not** take the counselor's identity from a GUC the
-application sets, because this project already rejected session GUCs as an authorization mechanism in
-finding H-03. It would need the same privilege-backed, transaction-scoped grant pattern used for receipt
-consumption. (B) does not scale to many counselors per Workspace. (C) is the current de facto state and is
-acceptable only if written down as such. (D) changes the requirement, which is the Product Owner's call and
-not the implementation's.
+### WS-ISO-01 — Counselor-to-counselor isolation inside one Workspace — CRITICAL, BLOCKING
+**Status:** OPEN. **Severity: CRITICAL as a design finding, and BLOCKING for the Phase 2 gate** (Supervisor
+instruction of 2026-11-18: it must not be treated as an ordinary future enhancement). The requirement is
+approved and unambiguous — master prompt §3; `API_AUTHORIZATION_CONTRACT.md` §4 *"Counselor reads/writes are
+restricted to students with active counselor assignment"* and §6 *"Counselor cannot read another counselor's
+student absent explicit scope"*; the role-grantability matrix *"a Counselor is confined to assigned students"*.
+**What the database does about it, measured:** it **fails OPEN**. The single Workspace runtime role, shared by
+every counselor, holds `SELECT` on 47 tables in full; no student-scoped table has row-level security
+(ISO-GAP-03: 0 of 32); and that role reads counselor B's study session and every author's
+`private_to_author` note directly (ISO-GAP-01, ISO-GAP-02). This is the **only** register item whose current
+state fails open rather than closed. Exposure today is nil only because no API or deployment exists; the
+first code path built on this schema would inherit cross-counselor access by default.
+**The exact missing boundary, in two halves.** (1) *Which* students a counselor membership may reach: the
+schema **recorded** the assignment (`counselor_assignments`) and **nothing consumed it** — no policy, view,
+function or grant was keyed to it. (2) *Which* membership is calling: the database has no notion of it.
+**What was built on 2026-11-18** (`workspace_counselor_scope_draft.sql`, ISO-C1..ISO-54, 42 PASS lines):
+half (1), completely — `counselor_may_access_student` (active **and accepted** assignment, active membership,
+counselor role; managers denied until an explicit-permission vocabulary exists, which is the contract's own
+default), the list (`counselor_visible_students`), any row of any of the 32 student-scoped tables by its own
+id (`counselor_may_access_row`, sharing the transfer barrier's owner resolution so the two boundaries cannot
+disagree, with `private_to_author` notes visible to their author only), a report
+(`counselor_caseload_report`), and two write paths that need no caller identity because the row names the
+actor: counselor notes, and the notification recipient rule — which **Batch 8 itself had left open to any
+active member** (corrected; OPS-13c). Every one of those has a measured negative control.
+**What is NOT built, and why:** half (2). Every boundary function takes the membership as an **argument**, and
+nothing stops a caller passing someone else's. Binding the caller is a Platform Security decision.
+**Options for half (2):** (A) per-membership database login roles mapped to memberships, with row-level
+security reading `session_user` — PostgreSQL verifies the identity, at the cost of one role per staff member
+and constraints on pooling; (B) a short-lived signed principal assertion verified **inside** the database by a
+SECURITY DEFINER function (the receipt-verifier pattern this project already has), recording the verified
+membership for the current transaction only, with row-level security reading that — works with pooling,
+depends on PS-1..PS-4; (C) API-only enforcement with the database functions as defence in depth — leaves the
+database failing open, which is the finding; (D) one Workspace per counselor — contradicts the Organization
+model.
+**Recommendation: B, with A as the fallback** if PS-1..PS-4 cannot be decided in time. Session GUCs are **not**
+an option: H-03 already rejected them, because the application sets them and can therefore forge them.
+**Minimum safe correction once decided:** enable row-level security on every table in `student_scoped_tables`
+with one policy shape, `USING (counselor_may_access_student(current_verified_membership(), <owner>))`, the
+owner resolved as the barrier resolves it; give the runtime role no `BYPASSRLS`; route any legitimate
+cross-student operation (transfer export, reporting to a manager with explicit permission) through reviewed
+SECURITY DEFINER functions; then turn ISO-GAP-01..03 into failing-if-reachable assertions and re-run the
+ISO suite **as each counselor's own identity**. Full proposal: `docs/phase2/workspace/WS_ISO_01_COUNSELOR_ISOLATION_PROPOSAL.md`.
+**Held how:** SEC-10 and ISO-GAP-01..03 assert the residual as OPEN lines (not PASS lines) that fail the suite
+if the measurement changes; nothing claims the isolation is enforced.
+**Not decided here (sub-questions):** whether a suspended or awaiting-consent enrollment narrows access (the
+approved rule names the assignment, so the predicate uses exactly that); the explicit permission that lets a
+manager reach a student.
 
 ### OQ-D — Control Plane topology and recovery
 **Status:** PARTIALLY DECIDED (Option A accepted): independent infrastructure, primary plus replica, independently controlled encrypted backups with restore drills, and student access fail-closed when ownership cannot be validated.
@@ -215,7 +236,7 @@ not the implementation's.
 
 ### OQ-E — Transfer cutover: freeze boundary, duration, recovery, thresholds
 **Status:** PARTIALLY DECIDED (Option B accepted): controlled source write freeze, final snapshot, destination staging and import, integrity validation, then the atomic Control Plane ownership switch. Freeze duration, the precise freeze boundary, failure recovery and acceptance thresholds were explicitly left to detailed design and tests.
-**What changed on 2026-11-14:** the **database half of the freeze boundary is now implemented and tested** — `docs/phase2/workspace/workspace_transfer_freeze.sql` adds a durable freeze record, a write barrier on all 27 student-scoped tables, an in-flight transaction barrier with a recorded watermark, and a permanent fence once the source observes the switch. Before this, the Control Plane recorded that a freeze had happened and the Workspace database enforced nothing, so a source Workspace could keep writing a student straight through cutover.
+**What changed on 2026-11-14:** the **database half of the freeze boundary is now implemented and tested** — `docs/phase2/workspace/workspace_transfer_freeze.sql` adds a durable freeze record, a write barrier on all student-scoped tables (27 at the time; 31 after Batch 5 found five indirectly reached tables unprotected; 32 after Batch 8 gave notifications a student reference), an in-flight transaction barrier with a recorded watermark, and a permanent fence once the source observes the switch. Before this, the Control Plane recorded that a freeze had happened and the Workspace database enforced nothing, so a source Workspace could keep writing a student straight through cutover.
 **Still open and NOT implemented:** freeze duration, drain timeout, acceptance thresholds, and the freeze of application, worker, import and export surfaces — those surfaces do not exist in this repository (`backend/`, `frontend/`, `scripts/`, `tests/` contain only `.gitkeep`), so they are not claimed.
 **Options:** (A) set a maximum freeze duration and acceptance threshold now as a product promise; (B) derive both from measured transfer runs once a service layer exists; (C) leave the freeze open-ended with manual operator confirmation per transfer.
 **Recommendation: B, with C as the interim operating rule.** A duration invented without a measured workload is the kind of number the brief forbids, and the database already supports (C) because the freeze has no timeout.
@@ -422,6 +443,65 @@ a check performed only at creation binds only the creator. (B) makes the transfe
 matches the generation fencing the inbox projection already uses, so recording the generation on the row
 is worth doing when the worker is built. (C) is a useful optimization but fails open if an invalidation is
 missed. (D) narrows the window without closing it.
+
+### REPO-HIST-CONTACTS — contact-shaped test fixtures remain in Git history
+**Status:** OPEN. The history content scan added on 2026-11-18 found **110 contact-shaped strings in old blobs
+and nothing else** — no credential, no key, no PEM block anywhere in the history. They are six repeated-digit
+Iranian-mobile-shaped fixtures from the 2026-10-27..31 constraint tests, two committed test-run logs that
+echoed them, and the two Batch 8 OPS-17/OPS-18 fixtures that failed CI. None was taken from data. **They are
+not claimed to be unassigned:** the 0912–0917 prefixes are allocated, so a repeated-digit body may belong to a
+real subscriber. (One Batch 8 value is in the North American fictional range 555-01xx.)
+**Impact:** LOW — not credentials, nothing to rotate or revoke. **Held how:** each finding is excepted
+individually by (blob SHA, pattern, SHA-256 of the value) in `secret_scan_history_exceptions.json`, so a
+different finding in the same blob still fails; the working tree holds no such literal; the scanner never
+prints a detected number in full. **Options:** (A) accept and keep the hashed exceptions; (B) rewrite history
+and force-push — prohibited on this branch, so only the Product Owner can lift that; (C) record repository
+access restrictions as the compensating control. **Recommendation: A, with C recorded**: a rewrite breaks every
+clone and invalidates every SHA cited in this project's evidence trail, for values that are not secrets.
+
+## 6. Classification of every item (2026-11-18)
+
+Requested by the Supervisor: for every item, its kind, whether code can resolve it, and what closes it. The
+recommended gate impact is the implementation agent's **recommendation** to the Supervisor, not a ruling.
+`BLOCKING` items keep the Phase 2 gate closed; `NON_BLOCKING_FAIL_CLOSED` items are held by a database
+behaviour that refuses rather than guesses; `LATER_PHASE` items belong to a phase that has not started.
+**Not every item is a decision only.** `code_can_resolve` is `partly` or `yes` for 13 of the 32: after the
+named decision, the remaining work is ordinary implementation with tests.
+
+| ID | Kind | Code can resolve | Recommended gate impact | Closure evidence |
+|---|---|---|---|---|
+| Q-007 | PRODUCT_OWNER_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | An approved guardian access matrix with Iranian legal review, then one test per scope asserting allow and deny. |
+| Q-020 | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | Approved period per category R1..R9 recorded as approved policy versions; OPS-40 updated deliberately; the disposition gate's positive path exercised against the real policy. |
+| OQ-CRD-2 | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A Product Owner rule for post-period disposition, then implementation and CRD tests for each outcome. |
+| OQ-CRD-3 | PRODUCT_OWNER_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | A decided entitlement-duration source, resolve_student_entitlement_period() implemented against it, and the fail-closed test replaced by allow/deny tests. |
+| OQ-SAGA-1 | PLATFORM_SECURITY_DECISION, PRODUCT_OWNER_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | Approved canonical format and signature scheme, published test vectors, and verifier tests that reject every malformed or mis-signed envelope. |
+| OQ-SAGA-2 | PRODUCT_OWNER_DECISION, PLATFORM_SECURITY_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A decided release authority and procedure, then tests that only that authority can release and that release is audited. |
+| OQ-ASM-1 | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | Decided ownership and item_ref semantics, then schema constraints and ASM tests. |
+| OQ-ASM-2 | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | An approved algorithm list with versioning rules, then tests that refuse anything else. |
+| WS-DOM-05 | PRODUCT_OWNER_DECISION | partly | BLOCKING | Decided curriculum ownership and edition model, then schema, migration notes and CUR tests. Until then the Educational-domain exit area stays NOT READY. |
+| WS-PLAN-01 | PRODUCT_OWNER_DECISION | partly | BLOCKING | A decided PlanItem model, then schema, constraints and tests for the planning invariants (no conflicts, no impossible workload, no duplicates). |
+| WS-ISO-01 | IMPLEMENTATION_DEFECT, PLATFORM_SECURITY_DECISION | partly | BLOCKING | A decided caller-binding mechanism; row-level security on every student-scoped table keyed to counselor_may_access_student; ISO-GAP-01..03 turned from OPEN into failing-if-reachable assertions; cross-counselor negative tests run AS each counselor's own identity rather than as the shared runtime role; independent review. |
+| OQ-D | PRODUCT_OWNER_DECISION, LATER_OPERATIONAL_DEPENDENCY | no | LATER_PHASE | Decided objectives, then an operations phase with measured restore and failover drills. |
+| OQ-E | PRODUCT_OWNER_DECISION, LATER_OPERATIONAL_DEPENDENCY | partly | LATER_PHASE | Decided thresholds, a controller implementation, and end-to-end cutover tests including timeout and recovery. |
+| PS-1 | PLATFORM_SECURITY_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A recorded Platform Security decision, then verifier tests against the chosen algorithm. |
+| PS-2 | PLATFORM_SECURITY_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A recorded allowlist and tests refusing everything outside it. |
+| PS-3 | PLATFORM_SECURITY_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | A decided registry design, implementation, and tests that a revoked or unknown key is refused. |
+| PS-4 | PLATFORM_SECURITY_DECISION, LATER_OPERATIONAL_DEPENDENCY | no | LATER_PHASE | Documented procedures and a rotation drill. |
+| PS-5 | PRODUCT_OWNER_DECISION, PLATFORM_SECURITY_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A decided value and boundary tests at exactly the allowance. |
+| PS-6 | PLATFORM_SECURITY_DECISION, LATER_OPERATIONAL_DEPENDENCY | no | LATER_PHASE | Deployed channel with tests that an unauthenticated peer is refused. |
+| PS-7 | PLATFORM_SECURITY_DECISION, LATER_OPERATIONAL_DEPENDENCY | no | LATER_PHASE | A decided topology and its threat review. |
+| PS-8 | PRODUCT_OWNER_DECISION, PLATFORM_SECURITY_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | A decided revocation source, propagation implementation, and tests that a revoked membership cannot use a receipt or be notified after revocation. |
+| M-05 | SUPERVISOR_FINDING | no | UNKNOWN_UNTIL_DEFINED | The Supervisor supplies the finding text or withdraws it; then normal remediation and evidence. |
+| M-06 | SUPERVISOR_FINDING | no | UNKNOWN_UNTIL_DEFINED | Same as M-05. |
+| WS-DOM-02 | PLATFORM_SECURITY_DECISION, PRODUCT_OWNER_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | A verified authorization adapter, an enforced grantability/anti-self-escalation matrix, and tests that a forged or self-granted role is refused. |
+| TRANSFER-EXC-AUTH | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A decided authority, then tests that only it can authorize and that every exception is audited. |
+| PR-8-11-DISPOSITION | PRODUCT_OWNER_DECISION | no | BLOCKING | A Product Owner instruction per PR (merge, close as superseded, or rebase) and its execution by the Product Owner. |
+| BRANCH-SYNC | PRODUCT_OWNER_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | An authorized merge (or the PR #8-#11 disposition moving main) and a re-verification that the branch contains main. |
+| OPS-HOLD-AUTH | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A decided authority, a grant to exactly that role, and tests that every other role is refused. |
+| OPS-DISP-AUTH | PRODUCT_OWNER_DECISION, LATER_OPERATIONAL_DEPENDENCY | no | NON_BLOCKING_FAIL_CLOSED | A decided authority matrix with requester != approver, an executor identity, and tests that self-approval is refused. |
+| OPS-RETENTION-SCOPE | LATER_OPERATIONAL_DEPENDENCY | partly | LATER_PHASE | An implemented suppression ledger, a restore drill that re-applies suppression, and a verification report per disposition. |
+| OPS-NOTIF-DELIVERY | LATER_OPERATIONAL_DEPENDENCY | yes | LATER_PHASE | A notification worker that re-checks authority and ownership generation in the delivery transaction, with tests for revocation and transfer between queueing and delivery. |
+| REPO-HIST-CONTACTS | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A recorded Product Owner decision; if B, a post-rewrite scan with zero history exceptions. |
 
 ## What this register deliberately does not do
 

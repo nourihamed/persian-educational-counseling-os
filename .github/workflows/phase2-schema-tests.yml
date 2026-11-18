@@ -39,6 +39,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # FULL history. The repository secret scan reads the content of every historical blob
+          # (SEC-REPO-03); in the default shallow checkout it cannot, and it FAILS CLOSED rather than
+          # report a history it never read.
+          fetch-depth: 0
 
       - name: Install PostgreSQL client
         run: |
@@ -197,11 +202,27 @@ jobs:
           # Its own database: OPS-45 freezes a student for the notification fence test and OPS-48 inserts
           # a SYNTHETIC approved retention policy, neither of which may leak into another suite.
           createdb -h localhost -U postgres workspace_operations_test
-          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_operations_draft; do
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_operations_draft; do
             psql -X -v ON_ERROR_STOP=1 -d workspace_operations_test -f $W/$f.sql
           done
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_operations_test -f $W/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_operations_test -f $W/tests/workspace_operations_tests.sql
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+
+      - name: Counselor-to-counselor isolation BOUNDARY (WS-ISO-01 — boundary only; the residual is printed as OPEN, not PASS)
+        run: |
+          set -euo pipefail
+          W=docs/phase2/workspace
+          K=a1000000000000000000000000000062
+          createdb -h localhost -U postgres workspace_counselor_isolation_test
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_operations_draft; do
+            psql -X -v ON_ERROR_STOP=1 -d workspace_counselor_isolation_test -f $W/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_counselor_isolation_test -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_counselor_isolation_test -f $W/tests/workspace_counselor_isolation_tests.sql
         env:
           PGHOST: localhost
           PGUSER: postgres
@@ -416,7 +437,7 @@ jobs:
           createdb -h localhost -U postgres workspace_clock_test
           # workspace_operations_draft is loaded too so the CLK-01 catalog scan covers the Batch 8
           # disposition gate, which decides from an effective date.
-          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_operations_draft; do
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_operations_draft; do
             psql -X -v ON_ERROR_STOP=1 -d workspace_clock_test -f $W/$f.sql
           done
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_clock_test -f $W/workspace_roles_setup_draft.sql
@@ -434,7 +455,12 @@ jobs:
       # REPOSITORY CHECK — deliberately not an implementation test. It proves the absence of the secret
       # SHAPES it scans for, not the absence of secrets; real assurance needs a secret-scanning service,
       # which is an operational control outside this repository. Do not count it as test evidence.
-      - name: No secret or key material in tracked files or committed file names (repository check, NOT implementation evidence)
+      # `!cancelled()`: both repository checks run even when an EARLIER step failed, so each reports its
+      # own result instead of being skipped (runs 43725323633 and 43725318826 skipped the register check
+      # because the secret scan before it failed). This does NOT soften the outcome: any failed step still
+      # fails the job, and these two steps fail it in their own right when they find something.
+      - name: No secret or key material in tracked files, committed file names or historical file contents (repository check, NOT implementation evidence)
+        if: ${{ !cancelled() }}
         run: python3 -I docs/phase2/tests/check_no_secret_material.py
 
       # DOCUMENTATION CONSISTENCY CHECK — deliberately not an implementation test.
@@ -442,4 +468,5 @@ jobs:
       # unresolved-item register from drifting apart, and stops an item being silently marked RESOLVED or
       # marked continuable without a fail-closed condition. Do not count it as test evidence.
       - name: Unresolved-item register consistency (documentation check, NOT implementation evidence)
+        if: ${{ !cancelled() }}
         run: python3 -I docs/phase2/tests/check_unresolved_register.py

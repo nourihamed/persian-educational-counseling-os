@@ -39,13 +39,22 @@ MANDATORY = [
     "TRANSFER-EXC-AUTH",
     "PR-8-11-DISPOSITION",
     "BRANCH-SYNC",
+    # Added 2026-11-18 on Supervisor instruction: a core product security requirement, BLOCKING.
+    "WS-ISO-01",
 ]
 
 REQUIRED_FIELDS = [
     "id", "title", "status", "why_unresolved", "security_impact",
     "implementation_may_continue", "decision_owner", "options",
     "recommended_option", "rationale",
+    # Classification fields, required since 2026-11-18 (Supervisor instruction E).
+    "item_class", "code_can_resolve", "code_resolution_note", "recommended_gate_impact", "closure_evidence",
 ]
+
+ALLOWED_CLASS = {"PRODUCT_OWNER_DECISION", "PLATFORM_SECURITY_DECISION", "SUPERVISOR_FINDING",
+                 "IMPLEMENTATION_DEFECT", "LATER_OPERATIONAL_DEPENDENCY"}
+ALLOWED_CODE = {"yes", "partly", "no"}
+ALLOWED_GATE = {"BLOCKING", "NON_BLOCKING_FAIL_CLOSED", "LATER_PHASE", "UNKNOWN_UNTIL_DEFINED"}
 
 ALLOWED_STATUS = {"OPEN", "PARTIALLY_DECIDED", "DEFERRED", "RESOLVED", "FACTUALLY_CORRECTED"}
 
@@ -79,6 +88,13 @@ def main():
         if it.get("status") == "RESOLVED":
             fail(f"REG-05 item {it.get('id')!r} is marked RESOLVED. The implementation cannot resolve a "
                  f"register item; only its named decision owner can.")
+        cls = it.get("item_class") or []
+        if not isinstance(cls, list) or not cls or any(c not in ALLOWED_CLASS for c in cls):
+            fail(f"REG-07 item {it.get('id')!r} has item_class {cls!r}; each must be one of {sorted(ALLOWED_CLASS)}")
+        if it.get("code_can_resolve") not in ALLOWED_CODE:
+            fail(f"REG-07 item {it.get('id')!r} has code_can_resolve {it.get('code_can_resolve')!r}")
+        if it.get("recommended_gate_impact") not in ALLOWED_GATE:
+            fail(f"REG-07 item {it.get('id')!r} has recommended_gate_impact {it.get('recommended_gate_impact')!r}")
         if it.get("implementation_may_continue") is True and not it.get("continue_conditions"):
             fail(f"REG-06 item {it.get('id')!r} says implementation may continue but states no fail-closed "
                  f"condition. 'May continue' without a condition is how an open question becomes an "
@@ -97,6 +113,41 @@ def main():
             fail(f"REG-04 item {i} is in the JSON but not in {MD_PATH.name}; the two halves have drifted")
     if not any("REG-04" in f for f in failures):
         print("PASS REG-04 every machine-readable item appears in the human-readable register")
+
+    if not any("REG-07" in f for f in failures):
+        print(f"PASS REG-07 every item is classified (kind, code-resolvable, gate impact, closure evidence)")
+
+    # REG-08: the Markdown classification table must AGREE with the JSON row by row, not merely mention
+    # each id. This is what makes "the two halves agree" a checked statement.
+    rows = {}
+    in_table = False
+    for line in md.splitlines():
+        if line.startswith("## 6. Classification of every item"):
+            in_table = True
+            continue
+        if in_table and line.startswith("## "):
+            break
+        if in_table and line.startswith("| ") and not line.startswith("| ID ") and not line.startswith("|---"):
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) >= 4:
+                rows[cells[0]] = cells
+    for it in items:
+        r = rows.get(it.get("id"))
+        if r is None:
+            fail(f"REG-08 item {it.get('id')} has no row in the Markdown classification table")
+            continue
+        want = [it["id"], ", ".join(it.get("item_class", [])), it.get("code_can_resolve"),
+                it.get("recommended_gate_impact")]
+        if r[:4] != want:
+            fail(f"REG-08 item {it.get('id')} disagrees between JSON {want} and Markdown {r[:4]}")
+    extra = set(rows) - set(ids)
+    if extra:
+        fail(f"REG-08 the Markdown classification table has rows for unknown items: {sorted(extra)}")
+    if not any("REG-08" in f for f in failures):
+        print(f"PASS REG-08 the Markdown classification table agrees with the JSON for all {len(items)} items")
+
+    blocking = [it["id"] for it in items if it.get("recommended_gate_impact") == "BLOCKING"]
+    print(f"NOTE REG blocking items recommended to the Supervisor: {', '.join(blocking) or 'none'}")
 
     if not any("REG-05" in f for f in failures):
         print("PASS REG-05 no item is recorded as RESOLVED by the implementation")

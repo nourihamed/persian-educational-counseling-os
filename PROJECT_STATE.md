@@ -1,32 +1,92 @@
-# CURRENT PROJECT STATE — PHASE 2 (updated 2026-11-14)
+# CURRENT PROJECT STATE — PHASE 2 (updated 2026-11-18)
 
-**Document date:** 2026-11-14. **Branch HEAD this document describes:** the Batch 1 source-freeze and
-write-barrier commit on `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, Draft, open,
-**unmerged**).
-**Phase 2 gate: NOT READY. Phase 3: NOT AUTHORIZED.** D-014 synthetic-only remains in force.
+**Current phase:** Phase 2 — Database & Domain Model. **Milestone:** all eight implementation batches of the
+Supervisor brief attempted, plus the 2026-11-18 Supervisor corrections; a **PROVISIONAL** exit evidence package
+prepared for independent review (`docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md`).
+**Phase 2 gate: NOT READY. Phase 3: NOT AUTHORIZED. D-014 synthetic-only remains in force.**
+**Attempting a batch is not acceptance of it.** No batch has been accepted by the Supervisor; this file reports
+what was implemented and what the evidence is, not what was approved.
 
-## Verification status at this HEAD — local and CI are reported separately
+**Branch:** `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, **Draft, open, unmerged**).
+**Last HEAD verified on GitHub:** `fc3416ed329d70d341bb0efe647fe6ac6bc76945` (Batch 8). This document belongs
+to the **next** commit; its SHA is assigned when the Product Owner applies the patch, and is reported in the
+handoff, not here.
+**Behind `main`:** yes, by two commits — `4004360` (adds `cp_30_role_privilege_tests.sql`, 89 lines) and
+`5bb8e4e` (reverts it). Net content difference from the merge base `ba5e9d8` to `main` `5bb8e4e`: **zero
+files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-pushed (BRANCH-SYNC).
 
-| Kind | What it is | Result |
+## Evidence at a glance — five kinds, never merged into one
+
+| Kind | What it is | Status |
 |---|---|---|
-| **Local verification** (implementation agent, author-executed, **not independently reproduced**) | The complete workflow run on a cleared PostgreSQL **16.15** cluster, every database created fresh for its step | **ALL_STEPS_PASSED** — **23 implementation test steps**, **808 PASS assertion lines**, 0 FAIL, plus the Python verifier-contract unit tests (15 and 6 tests, `OK`), plus two checks reported separately and explicitly *not* implementation evidence (register consistency, 6 PASS lines; repository secret scan, 2 lines) |
-| **GitHub Actions verification** (independent of the agent) | `postgres-draft-tests` on PostgreSQL 16 | **NOT RUN at this HEAD.** Every batch since has added SQL and new test suites, so earlier Actions evidence does not cover them. The last SHA whose Actions result the Product Owner reported is `ad3bf28` — run [43551722112](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/43551722112), job 132315462233. The later pushes (Batch 1 `cc8cd64` through Batch 7 `d6d81f8b`) have **no** reported Actions result; the implementation agent has no Actions access and cannot read job logs. |
+| **GitHub Actions** (independent of the agent) | runs at `fc3416ed`: **43725323633** and **43725318826** (push and pull_request) | **FAILED.** Reported by the Supervisor: every SQL/database step passed; **step 28, the repository secret scan, failed**; step 29, the register consistency check, was **skipped** because it followed a failed step. The agent has no Actions access and did not read those logs. |
+| **Actions failure, reproduced locally** | the `fc3416ed` scanner run on the exact `fc3416ed` tree | two findings, both in `docs/phase2/workspace/tests/workspace_operations_tests.sql`: line **165** `[iranian-mobile]` and line **171** `[e164]` — the OPS-17/OPS-18 refusal-test fixtures. Neither is a credential. The Supervisor is asked to confirm these against the CI log. |
+| **Local verification** (agent-executed, **not independently reproduced**) | full workflow on a cleared PostgreSQL 16.15 cluster, after `git add`, on the tree of the next commit | **24 implementation steps passed, 852 PASS assertion lines, 0 FAIL**, plus Python verifier tests (15 + 6, OK); repository secret scan PASS (incl. history content); register check PASS (32 items). Local evidence is **not** CI evidence. |
+| **GitHub Actions at the next commit** | — | **NOT RUN** until the patch is pushed. |
+| **Design-only contracts** | documents under `docs/phase2/**` with no executable test | are **not** implementation evidence anywhere in this file |
 
-Any commit that touches SQL or tests requires a fresh local run and a fresh Actions run at its own SHA.
-Documentation-only commits on top of a verified SHA change no SQL and no test, so they do not invalidate
-its results.
+### Why the Batch 8 local result was wrong
+Batch 8 was reported as passing the secret scan locally. It did not pass in CI. Cause: **the agent ran the
+scanner before `git add`**, while the new test file was untracked, and `git ls-files` lists only tracked files —
+so the two fixtures were never scanned. The scanner now prints a `WARN SEC-REPO-04` line naming every untracked
+file it did not scan, and the operating rule is: repository checks run after `git add`, on the tree that will be
+committed. This is recorded as an error in the agent's own verification, not as a scanner defect.
 
-The two are different kinds of evidence and neither substitutes for the other. The local run is executed by
-the implementation agent and is not independently reproduced. The Actions run is executed by CI at the exact
-SHA. **Neither is approval of Phase 2, of production security, or of anything beyond the draft SQL and
-synthetic test suites they execute.**
+## Completed (implemented, with local evidence; none accepted yet)
+Batches 1–8 as recorded in the dated entries below, and on 2026-11-18:
+- **Secret scan repaired, not weakened.** The two CI findings were replaced by marked all-zero fixtures under a
+  per-line, contact-patterns-only exception. **History CONTENT scanning implemented** (the old docstring claimed
+  history coverage it did not have): 1,361 blobs read, 110 contact-shaped fixture strings found and excepted one
+  by one by (blob SHA, pattern, SHA-256 of the value) — no credential, key or PEM block anywhere in the history.
+  A **Batch 7 scanner defect** was found by its own self-test: the word "synthetic" anywhere on a line exempted
+  every pattern on it, including a PEM header. Fixed; regression cases added. CI checkout now uses
+  `fetch-depth: 0`, and a shallow clone fails closed.
+- **Register check runs on its own.** Both repository checks use `if: !cancelled()`, so a failure in one no
+  longer hides the other, while any failed step still fails the job.
+- **WS-ISO-01 classified CRITICAL and BLOCKING; its boundary half implemented** (see Blocked).
+- **Every register item classified** (32 items): kind, whether code can resolve it, recommended gate impact,
+  closure evidence; the checker now requires those fields and that the Markdown table agrees row by row.
 
-Open decisions that this HEAD does **not** close, and which no local or CI result can close:
-**OQ-CRD-2** (disposition of a reserved entitlement after its original period ends) and **OQ-CRD-3** (the
-authoritative source of the entitlement duration) both remain **OPEN**; the production-intended activation
-path stays fail-closed while OQ-CRD-3 is open. OQ-CRD-1 is RESOLVED (Product Owner, 2026-11-14). Q-007,
-Q-020, OQ-SAGA-1, OQ-SAGA-2, OQ-ASM-1, PS-1..PS-8, the transfer exception approval authority and the
-OQ-D/OQ-E numeric objectives all remain open.
+## In progress
+- The PROVISIONAL exit evidence package, for independent review.
+
+## Blocked — recommended BLOCKING for the Phase 2 gate
+- **WS-ISO-01 — CRITICAL, fails open.** The boundary (which students a counselor may reach) is implemented and
+  tested (ISO-C1..ISO-54); the caller is **not** bound to a membership, and the shared runtime role still reads
+  every student-scoped table in full (ISO-GAP-01..03, printed as OPEN, not PASS). Needs a Platform Security
+  decision on caller binding (`docs/phase2/workspace/WS_ISO_01_COUNSELOR_ISOLATION_PROPOSAL.md`).
+- **WS-PLAN-01, WS-DOM-05** — planning and curriculum domain decisions; the Educational-domain exit area stays
+  NOT READY.
+- **PR-8-11-DISPOSITION** — four open draft PRs; PR integration NOT READY.
+- **M-05, M-06** — Supervisor findings whose text was never supplied; cannot be addressed or closed.
+
+## Known bugs / defects found and their state
+| Defect | Found | State |
+|---|---|---|
+| Transfer write barrier did not cover five per-student tables reached only indirectly | Batch 5 | fixed (26 → 31 tables), FRZ-01b/01c/18b/18c |
+| Transfer write barrier read only the NEW side of an UPDATE — a frozen student's rows could be moved to another student or orphaned with NULL | Batch 8 | fixed (both sides, forward-only owner key), FRZ-38..43; pre-fix function fails FRZ-38 |
+| Notification recipient rule accepted ANY active member for a notification about ANY student | 2026-11-18 (introduced in Batch 8) | fixed, OPS-13c / ISO-43 |
+| Secret-scan allowlist exempted whole lines containing "synthetic" | 2026-11-18 (introduced in Batch 7) | fixed, SEC-REPO-05 regression cases |
+| Secret scan claimed history coverage it did not have | 2026-11-18 (Supervisor) | implemented SEC-REPO-03 |
+| Batch 8 reported a local scan PASS that CI failed | 2026-11-18 (CI) | root cause recorded above |
+| Counselor-to-counselor isolation not enforced at the database | Batch 6 (measured), reclassified 2026-11-18 | **OPEN, CRITICAL** |
+
+## Failed tests
+- At `fc3416ed` in GitHub Actions: the repository secret scan (step 28). Register check skipped (step 29).
+- At the next commit, locally: none. In Actions: not run yet.
+
+## Open questions
+32 register items, all classified in `docs/phase2/UNRESOLVED_ITEM_REGISTER.md` §6. 13 can be resolved partly or
+wholly by code once their named decision is made; 19 are decisions, Supervisor definitions or operational
+dependencies that code cannot close.
+
+## Next actions
+1. Product Owner applies and pushes the patch; the Supervisor confirms the CI failure lines above against the log
+   of runs 43725323633/43725318826.
+2. GitHub Actions at the new HEAD — reported by whoever can read it.
+3. Platform Security decision on WS-ISO-01 caller binding (option B recommended, A fallback).
+4. Supervisor independent review of the PROVISIONAL exit package. **The implementation agent does not approve
+   the phase.**
 
 ---
 
@@ -878,3 +938,14 @@ message, 9 files, +894/−1). Its GitHub Actions result has **not** been reporte
   have no reported result.
 - Phase 2 gate: **NOT READY** pending independent Supervisor review. Phase 3: unauthorized. Real data:
   prohibited (D-014). PR #12: Draft, open, unmerged. **This entry is not approval of anything.**
+
+## Correction 2026-11-18 — the Batch 8 entry above overstated its repository-check result
+
+The Batch 8 entry says two repository checks were "reported separately" alongside an all-passing local run.
+The secret scan **did not pass in CI**: GitHub Actions runs **43725323633** and **43725318826** at `fc3416ed`
+failed at step 28 (reported by the Supervisor), with the register check skipped at step 29. Reproduced
+locally on the exact tree: `workspace_operations_tests.sql` lines 165 and 171, the OPS-17/OPS-18 fixtures.
+The local "pass" came from running the scanner before `git add`. The entry above is left as written, because
+rewriting a dated record to agree with later evidence is exactly what this file must not do; the current
+status is at the top of the file. The Batch 8 SQL/database results were not affected: every database step
+passed in both Actions runs.
