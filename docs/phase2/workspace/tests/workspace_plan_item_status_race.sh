@@ -23,7 +23,7 @@
 set -u
 DB="${1:?database}"; KEY="${2:?key}"; MODE="${3:-}"
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
-RT="ws_${KEY}_runtime"
+RT="ws_${KEY}_synth_plan_writer"   # F-01: the runtime cannot write transitions; only the synthetic writer can
 ITEM='a3600000-0000-0000-0000-000000000001'
 STU='e3000000-0000-0000-0000-000000000001'
 
@@ -43,6 +43,8 @@ INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snaps
 VALUES ('a3510000-0000-0000-0000-000000000001','a3500000-0000-0000-0000-000000000001',1,'{}','manual-v1','{}','draft','b3000000-0000-0000-0000-00000000000a');
 INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
 VALUES ('$ITEM','a3510000-0000-0000-0000-000000000001','a3500000-0000-0000-0000-000000000001','$STU',1,'a3220000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b3000000-0000-0000-0000-00000000000a');
+-- F-03: transitions are refused on a DRAFT version's items, so the plan is published first.
+UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='a3510000-0000-0000-0000-000000000001';
 -- Scratch coordination table: no student_id, so no guard or barrier applies to it.
 CREATE TABLE pln_race_signal(name text PRIMARY KEY);
 GRANT SELECT, INSERT ON pln_race_signal TO PUBLIC;
@@ -55,8 +57,8 @@ fi
 cat > "$W/a.sql" <<SQL
 SET SESSION AUTHORIZATION $RT;
 BEGIN;
-INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
-VALUES (gen_random_uuid(),'$ITEM','$STU',1,'planned','in_progress','race-a','student');
+INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+VALUES (gen_random_uuid(),'$ITEM','$STU',1,'planned','in_progress','race-a','membership','b3000000-0000-0000-0000-00000000000a');
 DO \$\$ BEGIN
   FOR i IN 1..1200 LOOP
     EXIT WHEN EXISTS (SELECT 1 FROM public.pln_race_signal WHERE name='go');
@@ -78,8 +80,8 @@ done
 
 cat > "$W/b.sql" <<SQL
 SET SESSION AUTHORIZATION $RT;
-INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
-VALUES (gen_random_uuid(),'$ITEM','$STU',1,'planned','completed','race-b','student');
+INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+VALUES (gen_random_uuid(),'$ITEM','$STU',1,'planned','completed','race-b','membership','b3000000-0000-0000-0000-00000000000a');
 SQL
 psql -X -q -d "$DB" -f "$W/b.sql" >"$W/b.log" 2>&1 & pb=$!
 

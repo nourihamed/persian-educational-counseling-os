@@ -16,8 +16,8 @@
 |---|---|
 | Repository | `nourihamed/persian-educational-counseling-os` (private) |
 | Branch / PR | `docs/product-owner-decisions-consolidation-2026-11-07` · PR #12 · **Draft, open, unmerged** |
-| Last HEAD verified on GitHub | `fc3416ed329d70d341bb0efe647fe6ac6bc76945` (Batch 8), verified 2026-11-18 by `git fetch` |
-| This package | belongs to the commit **after** `fc3416ed`; that SHA exists only once the Product Owner applies and pushes the patch, and is reported in the handoff, not in this file |
+| Last HEAD verified on GitHub | `d75d039919c806a27a7d5b50021af6920fdd5f0c` (WS-PLAN-01 data model), verified 2026-11-18 by `git fetch`; reviewed NOT ACCEPTED by the Supervisor (F-01..F-04) |
+| This package | updated in the F-01..F-04 remediation commit **after** `d75d039`; that SHA exists only once the Product Owner applies and pushes the patch, and is reported in the handoff, not in this file |
 | `main` | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6` — the branch is **2 commits behind**: `4004360` adds `docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql` (89 lines), `5bb8e4e` reverts it. Net difference from merge base `ba5e9d8` to `main`: **0 files**. Not merged, rebased or force-pushed (BRANCH-SYNC). |
 | `SUPERVISOR_REVIEW.md` | not edited by the implementation agent |
 
@@ -30,12 +30,14 @@
 | Reproduction of that failure | `fc3416ed` scanner on the exact `fc3416ed` tree | 2 findings: `workspace_operations_tests.sql:165 [iranian-mobile]`, `:171 [e164]` | local; **to be confirmed against the CI log** |
 | Last Actions run the agent was told passed | run 43551722112 (job 132315462233) at `ad3bf28` | passed | independent CI; predates every batch below |
 | Actions for Batches 1–7 heads (`cc8cd64` … `d6d81f8b`) | — | **never reported to the agent** | unknown |
-| Local full workflow at the next commit | cleared PostgreSQL 16.15, run after `git add` | **24 implementation steps passed, 852 PASS lines, 0 FAIL**; Python verifier 15 + 6 OK; secret scan PASS; register check PASS | local, agent-executed, **not independently reproduced** |
+| Local full workflow at the remediation commit | cleared PostgreSQL 16.15, run after `git add` | **25 implementation steps passed, 938 PASS lines, 0 FAIL**; Python verifier 15 + 6 OK; secret scan PASS; register check PASS | local, agent-executed, **not independently reproduced** |
 | Actions at `467a029` (the corrections commit) | runs [44362679187](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362679187) (job 135008003418) and [44362668276](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362668276) (job 135007959995) | **success, both** | independent CI; conclusions read from the PR check runs, step logs not read by the agent |
+| Actions at `b7d4b28` (Product Owner decision records) | runs 44369152676, 44369143862 | **FAILED** — register check REG-08 (WS-DOM-05 §6 row); fixed in `d75d039` | independent CI |
+| Actions at `d75d039` (WS-PLAN-01 data model) | runs 44376897878, 44376886372 | **passed**, as reported by the Supervisor; reviewed NOT ACCEPTED (F-01..F-04) | independent CI |
+| Actions at the remediation commit | — | **NOT RUN** until pushed | — |
 
 Step numbering: GitHub's step N is the workflow's step N−2 (GitHub adds "Set up job" and "Initialize
-containers"). After this commit's new isolation step, the secret scan is GitHub step 29 and the register
-check step 30.
+containers"). The workflow has 29 YAML steps; the secret scan is GitHub step 30 and the register check step 31.
 
 ## 3. Scope and traceability
 
@@ -45,7 +47,7 @@ check step 30.
 | 2 | Clock discipline at security decisions | receipt consume, contact change, guardian effective view | CLK-01..03, RC-FRESH-01..04, CC-FRESH-01..03 | Implemented (schema) |
 | 3 | Student Credit lifecycle | `workspace_schema_draft.sql` ledger guard, entitlements | CRD-01..47, WS-CRD-LOCK, WS-CRD-LAST-01..05 | Implemented (schema); **OQ-CRD-2/3 open**; commercial lifecycle deferred to Phase 21/22 |
 | 4 | Assessment, exam, analysis | `workspace_assessment_exam_draft.sql` | EXM suite | Implemented (schema); **OQ-ASM-1/2 open** |
-| 5 | Curriculum, plan, activity | subtopics; activity taxonomy | CUR-01..10, ACT-01..26 | **Partial** — WS-PLAN-01 decided (B) and its data model implemented 2026-11-18 (`workspace_plan_items_draft.sql`, PLN-C1..63, WS-PLN-RACE-01..03), pending independent verification; WS-DOM-05 decided (A), deferred to Phase 7. Before the decisions: **WS-PLAN-01, WS-DOM-05 open (recommended BLOCKING)** |
+| 5 | Curriculum, plan, activity | subtopics; activity taxonomy | CUR-01..10, ACT-01..26 | **Partial** — WS-PLAN-01 decided (B); data model implemented at `d75d039`, reviewed NOT ACCEPTED, F-01..F-04 remediated (`workspace_plan_items_draft.sql`; PLN-C1..C4, PLN-01..80, WS-PLN-RACE-01..03, PLN-M01..M08), pending independent verification; WS-DOM-05 decided (A), deferred to Phase 7 |
 | 6 | Adversarial privilege review | role setup, ownership fixes | SEC-01..10 | Implemented (schema); produced **WS-ISO-01** |
 | 7 | Contact identity, HMAC rotation, concurrency | Control Plane cp_07/cp_08 | CID-RACE-A1..B3, CID-01..05b | Implemented (schema); **PS-1..PS-4 deferred** |
 | 8 | Files, notifications, retention, operations | `workspace_operations_draft.sql` | OPS-01..64 | **Partial** — delivery, erasure completeness and authorities open |
@@ -56,7 +58,8 @@ Requirement-to-test traceability is maintained per batch in `TEST_PLAN.md` and p
 
 ## 4. Implemented · partial · deferred · not implemented
 
-**Implemented at schema level, with local executable evidence** (GitHub Actions success at `467a029`):
+**Implemented at schema level, with local executable evidence** (GitHub Actions success at `467a029` and, for the
+first WS-PLAN-01 model, at `d75d039`; the remediation commit is NOT RUN until pushed):
 the transfer freeze record, write barrier on all 32 student-scoped tables (both sides of an UPDATE, forward-only
 owner key) and in-flight transaction barrier; clock discipline at every security decision point found;
 the Student Credit ledger with one authoritative guard and the non-negative-balance invariant; the assessment
@@ -83,10 +86,11 @@ edition model; manager explicit-permission vocabulary; any production migration.
 | Finding | Severity | State |
 |---|---|---|
 | **WS-ISO-01** — counselor-to-counselor isolation fails open inside a Workspace | **CRITICAL (design), BLOCKING** | boundary implemented; caller binding needs a Platform Security decision |
-| WS-PLAN-01 — plan content was opaque JSON | HIGH, BLOCKING until verified | **decided B; data model implemented, pending CI at the resulting SHA and Supervisor review** — earlier: Product Owner decision |
+| WS-PLAN-01 — plan content was opaque JSON | HIGH, BLOCKING until verified | decided B; model at `d75d039` NOT ACCEPTED; **F-01..F-04 remediated, pending CI at the new SHA and Supervisor review**. Open within it: who may record transitions (needs WS-ISO-01 caller binding), whether drafts carry status, whether an empty plan may be published, the transition graph — all fail closed |
 | WS-DOM-05 — curriculum edition/ownership model | MEDIUM, **LATER_PHASE** | decided A: deferred to Phase 7; four governance questions open |
 | WS-DOM-02 — governance commands lack verifiable authority | HIGH, fail-closed | depends on Issue #13 / PS-* |
-| M-05, M-06 — Supervisor findings never defined to the agent | UNKNOWN | Supervisor to define or withdraw |
+| M-05 — duplicate JSON object keys not rejected at raw ingress | MEDIUM, **NON_BLOCKING_TECHNICAL_DEBT** | defined by the Supervisor 2026-11-18; not implemented (needs a raw-ingress layer) |
+| M-06 — no single machine-readable canonicalization vector source for SQL and Python | MEDIUM, **NON_BLOCKING_TECHNICAL_DEBT** | defined by the Supervisor 2026-11-18; not implemented |
 | REPO-HIST-CONTACTS — contact-shaped fixtures in Git history | LOW | Product Owner decision |
 | All others | see register §6 | 19 held fail-closed, 7 later-phase |
 
@@ -115,7 +119,7 @@ completeness.
 
 ## 7. NOT-RUN tests
 
-- ~~GitHub Actions at the corrections commit~~ — ran and succeeded at `467a029`. Not run for this documentation-only status commit, which changes no SQL, test or workflow file.
+- **GitHub Actions at the F-01..F-04 remediation commit** — NOT RUN until pushed.
 - **Actions results for Batches 1–7** were never reported to the agent.
 - **Counselor isolation as each counselor's own database identity** — cannot exist until WS-ISO-01's caller
   binding is decided.
@@ -126,8 +130,11 @@ completeness.
 - **Backup, restore, failover, load and performance tests** (OQ-D; later phases).
 - **Rotation recovery across a process crash**; production key management (PS-1..PS-4).
 - **Transfer controller end to end**, including freeze timeout and recovery (OQ-E).
-- **Planning invariants** (no conflicts, no impossible workload, no duplicates) — unenforceable while plan
-  content is opaque JSON (WS-PLAN-01).
+- **Planning invariants** (no conflicts, no impossible workload, no duplicates) — no planning engine exists;
+  the normalized items make them expressible, but nothing schedules.
+- **Plan writes by a real counselor or student identity** — no application identity may write plan items or
+  transitions until caller binding exists (WS-ISO-01). Only the synthetic writer is tested.
+- **A production migration** of historical plan versions at volume, and its rollback (`WS_PLAN_01_MIGRATION_NOTES.md` §4).
 
 ## 8. Unresolved items and owners
 
@@ -137,12 +144,12 @@ it, recommended gate impact and closure evidence; JSON and Markdown agreement is
 | Recommended gate impact | Items |
 |---|---|
 | **BLOCKING** | WS-ISO-01, WS-PLAN-01 (implemented, pending verification), PR-8-11-DISPOSITION |
-| **Unknown until defined** | M-05, M-06 |
+| Non-blocking technical debt | M-05, M-06 (defined by the Supervisor 2026-11-18) |
 | Non-blocking, held fail-closed | Q-007, Q-020, OQ-CRD-2, OQ-CRD-3, OQ-SAGA-1, OQ-SAGA-2, OQ-ASM-1, OQ-ASM-2, PS-1, PS-2, PS-3, PS-5, PS-8, WS-DOM-02, TRANSFER-EXC-AUTH, BRANCH-SYNC, OPS-HOLD-AUTH, OPS-DISP-AUTH, REPO-HIST-CONTACTS |
 | Later phase | WS-DOM-05 (Phase 7, by decision), OQ-D, OQ-E, PS-4, PS-6, PS-7, OPS-RETENTION-SCOPE, OPS-NOTIF-DELIVERY |
 
 Owners: Product Owner (most), Platform Security (PS-*, WS-ISO-01 caller binding, WS-DOM-02, OQ-SAGA-1),
-Supervisor (M-05, M-06), operations owner (OQ-D, OQ-E, OPS-RETENTION-SCOPE). **Not all are decisions only:**
+Supervisor (M-05/M-06 closure review), operations owner (OQ-D, OQ-E, OPS-RETENTION-SCOPE). **Not all are decisions only:**
 13 can be resolved partly or wholly by code once their decision is made — including WS-ISO-01, WS-PLAN-01,
 WS-DOM-05, OQ-E, PS-3, PS-8, WS-DOM-02, OPS-RETENTION-SCOPE and OPS-NOTIF-DELIVERY.
 
@@ -187,13 +194,13 @@ note rather than rewritten), `PHASE2_EXIT_CRITERIA.md`, `UNRESOLVED_ITEM_REGISTE
   migrations is unplanned work; the load order is currently encoded only in the CI workflow.
 - **WS-ISO-01 enforcement** changes the result of every query run as the runtime role and needs
   supporting indexes; it is a coordinated change across every suite, not a patch (proposal §7).
-- **Legacy `plan_content` JSON** (WS-PLAN-01): new versions are normalized, but any legacy versions need a migration path into items when real data exists; none exists now (D-014).
+- **Legacy `plan_content` JSON** (WS-PLAN-01): historical rows are backfilled as `legacy_json` and stay readable; only the migration identity may create one. Whether legacy content is ever converted into items is a Product Owner question (D-014: no real data exists).
 - **Trigger-heavy integrity** depends on triggers staying enabled; a maintenance script run as the owner can
   disable them (SEC-08).
 - **Historical fixtures in Git** (REPO-HIST-CONTACTS) stay unless history is rewritten.
-- **Test-suite cost:** 24 sequential database steps with fresh databases each; acceptable now, but some race
+- **Test-suite cost:** 25 sequential database steps with fresh databases each; acceptable now, but some race
   suites rely on process coordination that will need care in parallel CI.
-- **Evidence gap:** Actions results for the Batch 1–7 heads were never reported; only `fc3416ed` (failed) and `467a029` (success) have known results since `ad3bf28`.
+- **Evidence gap:** Actions results for the Batch 1–7 heads were never reported; known results since `ad3bf28`: `fc3416ed` failed, `467a029` and `b519080` succeeded, `b7d4b28` failed (REG-08), `d75d039` passed.
 
 ## 12. Recommended gate status
 
@@ -201,11 +208,11 @@ note rather than rewritten), `PHASE2_EXIT_CRITERIA.md`, `UNRESOLVED_ITEM_REGISTE
 
 1. **WS-ISO-01 is CRITICAL and fails open.** A core product security requirement is not enforced by the
    database, and the fix needs a decision that has not been made.
-2. **GitHub Actions passed at `467a029`** after failing at `fc3416ed`. That is CI evidence for draft SQL and synthetic suites, not for the gate; Actions results for Batches 1–7 heads were never reported.
-3. **WS-PLAN-01's data model is implemented but not yet independently verified**; curriculum editions are deferred to Phase 7 by decision (WS-DOM-05).
-4. **Two Supervisor findings (M-05, M-06) are undefined** and cannot be shown addressed.
+2. **GitHub Actions passed at `d75d039` and the Supervisor still found F-01..F-04.** CI is evidence for draft SQL and synthetic suites, not for the gate; Actions at the remediation commit are NOT RUN.
+3. **WS-PLAN-01 was NOT ACCEPTED at `d75d039`;** its remediation is not yet independently reviewed. Curriculum editions are deferred to Phase 7 by decision (WS-DOM-05).
+4. **M-05 and M-06 are now defined** as MEDIUM technical debt, non-blocking, and are not implemented.
 5. **PR integration is unresolved** (PR #8–#11; the branch is behind `main`).
 
 What would move it, in order: the WS-ISO-01 caller-binding decision and its
-enforcement; independent verification of the WS-PLAN-01 data model; M-05/M-06 defined or withdrawn; the PR
+enforcement; independent review of the WS-PLAN-01 remediation; the PR
 disposition. **None of these can be closed by the implementation agent alone, and none is claimed.**

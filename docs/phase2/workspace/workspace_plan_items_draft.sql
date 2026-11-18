@@ -36,11 +36,33 @@
 --     transition rules enforced are integrity rules: you transition FROM the current state, TO a different
 --     one, in order. Whether e.g. `completed` is terminal is an open question.
 --   * Which actor may make which transition, and whether a student may edit generated items (contract
---     §9), are open. A student may record transitions on their own items; a membership must be a counselor
---     who can reach the student (the WS-ISO-01 boundary); managers are refused, as everywhere.
---   * Whether an empty normalized version may be published, and whether status may be recorded on a draft
---     version's items, are open and not enforced either way.
+--     §9), are open Product Owner questions. They are held FAIL-CLOSED, not answered (see below).
 --   * Engine-created items will need a non-membership actor; none exists until Phase 12.
+--
+-- CORRECTED AFTER THE SUPERVISOR REVIEW OF d75d039 (2026-11-18). FOUR FINDINGS, EACH NOW FAIL-CLOSED
+--   F-01 CRITICAL — actor impersonation. As first written, the runtime could INSERT plan items and status
+--     transitions, and the actor was whatever the row SAID: actor_kind='student' skipped every check, and a
+--     membership id was validated against the counselor boundary but never bound to the caller. Any code
+--     path holding the shared runtime role could therefore record a transition "as the student", or as
+--     another counselor, for any student. The database cannot authenticate either kind of actor today —
+--     that is exactly the WS-ISO-01 caller-binding gap, which needs a Platform Security decision this file
+--     does not make. So:
+--       - NO application role may insert plan items or status transitions: the runtime holds SELECT only;
+--       - actor_kind = 'student' is refused outright, because no student identity can be authenticated;
+--       - the only writer is a dedicated NOLOGIN SYNTHETIC test identity (D-014), named in
+--         plan_privileged_identities and checked by ROLE MEMBERSHIP, which PostgreSQL verifies — never by a
+--         session variable or GUC, which the caller sets.
+--     A membership id on a row remains ATTRIBUTION, not proof of who wrote it.
+--   F-02 HIGH — new legacy_json versions were creatable by the runtime. Now the runtime may not even name
+--     content_model (column-level INSERT privilege excludes it, so every runtime-created version is
+--     normalized), and a legacy_json insert is accepted only from the dedicated NOLOGIN migration identity.
+--   F-03 MEDIUM — open semantics were permissive. Publishing an EMPTY normalized version and recording
+--     status on a DRAFT version's items are now refused, pending Product Owner decisions; the refusal says
+--     so. No transition graph is invented.
+--   F-04 MEDIUM — the backfill. Adding the column with DEFAULT 'normalized' would have classified every
+--     historical row as normalized and the empty-JSON CHECK would then have failed on any real history.
+--     Existing rows are now classified legacy_json at the moment the column is added; only rows created
+--     afterwards default to normalized. See WS_PLAN_01_MIGRATION_NOTES.md and PLN-M01..M08.
 BEGIN;
 
 -- ======================================================================================================
@@ -48,8 +70,13 @@ BEGIN;
 -- ======================================================================================================
 -- Added here rather than in workspace_schema_draft.sql so suites that do not load this file keep their
 -- legacy fixtures; in this file's databases every NEW version is normalized by default.
+-- F-04: every row that exists when this runs is HISTORICAL, so it is classified legacy_json; only rows created
+-- afterwards default to normalized (the SET DEFAULT below). PostgreSQL fills the new column for existing rows
+-- from the DEFAULT given in ADD COLUMN, and the CHECK is validated against those rows in the same statement —
+-- so with DEFAULT 'normalized' here, any historical row whose plan_content is not '{}' would make this
+-- statement fail, and one whose content happened to be '{}' would silently become "normalized" with no items.
 ALTER TABLE student_plan_versions
-  ADD COLUMN content_model text NOT NULL DEFAULT 'normalized'
+  ADD COLUMN content_model text NOT NULL DEFAULT 'legacy_json'
     CHECK (content_model IN ('normalized','legacy_json')),
   ADD COLUMN supersedes_plan_version_id uuid REFERENCES student_plan_versions(plan_version_id),
   ADD COLUMN change_reason text,
@@ -58,8 +85,30 @@ ALTER TABLE student_plan_versions
   -- (plan_version_rendered, below), so there is no second document to keep in step.
   ADD CONSTRAINT normalized_version_has_no_json_content
     CHECK (content_model <> 'normalized' OR plan_content = '{}'::jsonb);
+ALTER TABLE student_plan_versions ALTER COLUMN content_model SET DEFAULT 'normalized';
 ALTER TABLE student_plan_versions
   ADD CONSTRAINT student_plan_versions_id_plan_key UNIQUE (plan_version_id, plan_id);
+
+-- ======================================================================================================
+-- 0. The privileged identities, by ROLE, verified by PostgreSQL (F-01, F-02)
+-- ======================================================================================================
+-- Written only by the table owner (workspace_roles_setup_draft.sql fills it). A purpose with no row means no
+-- identity holds it, and every check below then refuses — fail closed by absence.
+CREATE TABLE plan_privileged_identities (
+  purpose   text PRIMARY KEY CHECK (purpose IN ('synthetic_plan_writer','legacy_plan_migrator')),
+  role_name text NOT NULL,
+  note      text NOT NULL
+);
+CREATE FUNCTION plan_identity_is(p_purpose text) RETURNS boolean
+LANGUAGE sql STABLE AS $body$
+  -- current_user, not a setting: SET ROLE and SET SESSION AUTHORIZATION change it, and only for an identity
+  -- PostgreSQL has let the session assume. pg_has_role is true for a superuser, which no trigger contains
+  -- anyway (SEC-08).
+  SELECT coalesce((SELECT pg_catalog.pg_has_role(current_user, i.role_name, 'MEMBER')
+                     FROM public.plan_privileged_identities i
+                    WHERE i.purpose = p_purpose
+                      AND EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname = i.role_name)), false);
+$body$;
 
 CREATE FUNCTION guard_plan_version_model() RETURNS trigger LANGUAGE plpgsql AS $body$
 DECLARE v_prev_plan uuid; v_prev_no integer;
@@ -71,10 +120,25 @@ BEGIN
       RAISE EXCEPTION 'a plan version''s content model, supersession, change reason and author are fixed at '
                       'creation' USING ERRCODE='check_violation';
     END IF;
+    -- F-03: whether an EMPTY normalized version may be published is an open Product Owner question. Until it
+    -- is answered, the conservative answer is no: a published plan with nothing in it is a statement that
+    -- the student has nothing planned, and nobody has decided that may be published.
+    IF NEW.status = 'published' AND OLD.status <> 'published' AND NEW.content_model = 'normalized'
+       AND NOT EXISTS (SELECT 1 FROM public.plan_items i WHERE i.plan_version_id = NEW.plan_version_id) THEN
+      RAISE EXCEPTION 'publishing an EMPTY normalized plan version is refused pending a Product Owner decision '
+                      '(WS-PLAN-01 open question)' USING ERRCODE='check_violation';
+    END IF;
     RETURN NEW;
   END IF;
 
   IF NEW.content_model = 'legacy_json' THEN
+    -- F-02: legacy JSON is for historical compatibility and migration ONLY. A new legacy version is accepted
+    -- solely from the dedicated migration identity. The runtime cannot get here at all — it holds no INSERT
+    -- privilege on content_model — so this is the second wall, not the first.
+    IF NOT public.plan_identity_is('legacy_plan_migrator') THEN
+      RAISE EXCEPTION 'a legacy_json plan version can only be written by the migration identity; new plan '
+                      'versions are normalized' USING ERRCODE='insufficient_privilege';
+    END IF;
     -- Legacy JSON exists for historical compatibility and migration only. Once a plan has a normalized
     -- version, it does not regress to JSON.
     IF EXISTS (SELECT 1 FROM public.student_plan_versions v
@@ -162,6 +226,13 @@ BEGIN
     RAISE EXCEPTION 'a plan item is insert-only; change a plan by creating a new plan version that '
                     'supersedes it, with a reason' USING ERRCODE='check_violation';
   END IF;
+  -- F-01: created_by_membership_id is what the row CLAIMS. No application identity can be bound to a
+  -- membership yet (WS-ISO-01), so no application identity may plan; only the synthetic writer may.
+  IF NOT public.plan_identity_is('synthetic_plan_writer') THEN
+    RAISE EXCEPTION 'no application identity can be authenticated as a plan author until the WS-ISO-01 '
+                    'caller binding exists; plan items are writable only by the synthetic test identity'
+      USING ERRCODE='insufficient_privilege';
+  END IF;
   SELECT v.status, v.content_model INTO v_status, v_model
     FROM public.student_plan_versions v WHERE v.plan_version_id = NEW.plan_version_id;
   IF v_model IS DISTINCT FROM 'normalized' THEN
@@ -234,6 +305,24 @@ BEGIN
   IF TG_OP <> 'INSERT' THEN
     RAISE EXCEPTION 'plan item status history is append-only' USING ERRCODE='check_violation';
   END IF;
+  -- F-01: neither kind of actor can be authenticated by the database today.
+  IF NEW.actor_kind = 'student' THEN
+    RAISE EXCEPTION 'actor_kind student is refused: the database cannot authenticate a student, and a '
+                    'student_id on the row is not proof of who wrote it (WS-ISO-01)'
+      USING ERRCODE='insufficient_privilege';
+  END IF;
+  IF NOT public.plan_identity_is('synthetic_plan_writer') THEN
+    RAISE EXCEPTION 'no application identity can be authenticated as a plan actor until the WS-ISO-01 caller '
+                    'binding exists; transitions are writable only by the synthetic test identity'
+      USING ERRCODE='insufficient_privilege';
+  END IF;
+  -- F-03: whether status may be recorded on a DRAFT version's items is an open Product Owner question;
+  -- refused until it is answered. A draft is not yet a plan anyone is executing.
+  IF (SELECT v.status FROM public.plan_items i JOIN public.student_plan_versions v
+        ON v.plan_version_id = i.plan_version_id WHERE i.plan_item_id = NEW.plan_item_id) IS DISTINCT FROM 'published' THEN
+    RAISE EXCEPTION 'status transitions on items of a DRAFT plan version are refused pending a Product Owner '
+                    'decision (WS-PLAN-01 open question)' USING ERRCODE='check_violation';
+  END IF;
   SELECT coalesce(max(e.seq_no), 0) + 1 INTO v_next
     FROM public.plan_item_status_events e WHERE e.plan_item_id = NEW.plan_item_id;
   IF NEW.seq_no <> v_next THEN
@@ -252,9 +341,8 @@ BEGIN
     RAISE EXCEPTION 'membership % is not an active, accepted counselor of student %',
       NEW.actor_membership_id, NEW.student_id USING ERRCODE='check_violation';
   END IF;
-  -- actor_kind = 'student' means the student the item belongs to (student_id is bound to the item by the
-  -- composite foreign key). That the CALLER is that student cannot be verified by the database — the same
-  -- caller-binding gap as WS-ISO-01.
+  -- actor_kind = 'student' is refused above; the CHECK still allows the value so the decision, once made,
+  -- does not need a schema change.
   RETURN NEW;
 END; $body$;
 CREATE TRIGGER plan_item_status_events_guard

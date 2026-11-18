@@ -262,7 +262,7 @@
       "why_unresolved": "Product Owner selected Option B on 2026-11-18. The Phase 2 data model is now decided, but implementation and verification remain outstanding. New PlanItems must use one typed nullable FK from the approved source set (topic, subtopic, activity, exam, review, assignment), with exactly-one-source enforcement; no unrestricted polymorphic reference and no scheduling engine logic in Phase 2.",
       "security_impact": "LOW for security. HIGH for the product's core promise: with the plan in a blob there is no referential integrity from a plan item to the topic, activity, exam or review it schedules; no per-item status; no machine-readable deferral reason; and no way to answer 'what was originally planned, what changed and why' by query, which PROJECT_MASTER_PROMPT sections 31, 72 and 81 require.",
       "implementation_may_continue": true,
-      "continue_conditions": "Implement normalized PlanItem as the authoritative representation for new plan versions. Preserve legacy plan_content JSON only for historical compatibility/migration; do not keep two independently editable sources of truth. Published PlanVersions remain immutable. Record item status transitions and auditable changes (actor, timestamp, reason). Defer all scheduling/generation logic.",
+      "continue_conditions": "Implement normalized PlanItem as the authoritative representation for new plan versions. Preserve legacy plan_content JSON only for historical compatibility/migration; do not keep two independently editable sources of truth. Published PlanVersions remain immutable. Record item status transitions and auditable changes (actor, timestamp, reason). Defer all scheduling/generation logic. Corrected 2026-11-18: plan items and status transitions are writable only by a NOLOGIN synthetic identity until WS-ISO-01 caller binding is decided and verified; this is fail-closed, not an authority model.",
       "decision_owner": "Product Owner",
       "options": [
         "A. Build normalized plan_items in Phase 12 (Planning Engine), where the roadmap places the engine that produces them.",
@@ -315,13 +315,13 @@
         "audit_requirements": "Record item status transitions and changes with actor, timestamp and reason; preserve published PlanVersion immutability.",
         "scope": "Phase 2 data model only; no scheduling/generation logic."
       },
-      "implementation_status": "IMPLEMENTED (draft SQL), LOCAL EVIDENCE ONLY, NOT YET INDEPENDENTLY VERIFIED. Gate impact stays BLOCKING, as the decision says, until CI on the resulting SHA and the Supervisor's independent review confirm it."
+      "implementation_status": "IMPLEMENTED (draft SQL) at d75d039 and CORRECTED for Supervisor findings F-01..F-04 (2026-11-18): no application identity may write plan items or transitions (synthetic writer only), the student actor is refused, the runtime cannot create legacy_json, empty publication and draft-item transitions are refused pending decisions, and historical rows migrate as legacy_json. LOCAL EVIDENCE plus CI pending on the new SHA. NOT ACCEPTED. Gate impact stays BLOCKING until independent review."
     },
     {
       "id": "WS-ISO-01",
       "title": "Counselor-to-counselor isolation inside one Workspace",
       "status": "OPEN",
-      "why_unresolved": "The Supervisor brief requires that no counselor may access another counselor's students, even within the same Organization. The database does not enforce this and cannot today: measured on 2026-11-15, there is NO row-level security on any table in the Workspace database, and the Workspace runtime role holds SELECT on 47 tables in full. Tenant isolation in this design is per-Workspace — one database per Workspace with no cross-database grants, which the cross-database denial step does test — so every counselor inside a Workspace shares one runtime identity. Whether the boundary is enforced by row-level security keyed to the counselor assignment, by a per-counselor database role, or only in an application layer is an architecture decision that has not been made. UPDATE 2026-11-18: the boundary is now implemented in workspace_counselor_scope_draft.sql (counselor_may_access_student, counselor_visible_students, counselor_may_access_row, counselor_caseload_report) and tested by ISO-C1..ISO-54 against guessed ids, list queries, a report, related records in all 32 student-scoped tables, note visibility and revocation; two write paths are enforced (counselor notes; the notification recipient rule, which Batch 8 had left open to any active member). What remains is binding the caller: every boundary function takes the membership as an argument and the database cannot verify it, so enforcement is not possible without a Platform Security decision on the principal mechanism.",
+      "why_unresolved": "The Supervisor brief requires that no counselor may access another counselor's students, even within the same Organization. The database does not enforce this and cannot today: measured on 2026-11-15, there is NO row-level security on any table in the Workspace database, and the Workspace runtime role holds SELECT on 47 tables in full. Tenant isolation in this design is per-Workspace — one database per Workspace with no cross-database grants, which the cross-database denial step does test — so every counselor inside a Workspace shares one runtime identity. Whether the boundary is enforced by row-level security keyed to the counselor assignment, by a per-counselor database role, or only in an application layer is an architecture decision that has not been made. UPDATE 2026-11-18: the boundary is now implemented in workspace_counselor_scope_draft.sql (counselor_may_access_student, counselor_visible_students, counselor_may_access_row, counselor_caseload_report) and tested by ISO-C1..ISO-54 against guessed ids, list queries, a report, related records in all 32 student-scoped tables, note visibility and revocation; two write paths are enforced (counselor notes; the notification recipient rule, which Batch 8 had left open to any active member). What remains is binding the caller: every boundary function takes the membership as an argument and the database cannot verify it, so enforcement is not possible without a Platform Security decision on the principal mechanism. UPDATE 2026-11-18 (Supervisor F-01 on d75d039): the same gap appeared in the WS-PLAN-01 model, where the runtime could record a plan transition 'as the student' or as another counselor. It is now fail-closed there (no application identity may write plan items or transitions). The same principle — a caller-supplied membership or student id is attribution, not proof — applies to every pre-existing runtime write path that names an actor (for example counselor notes and plan-version authors); those remain exposed until caller binding exists.",
       "security_impact": "CRITICAL as a design finding, and BLOCKING for the Phase 2 gate. It is a core product security requirement (master prompt section 3; API authorization contract sections 4 and 6; role-grantability matrix), and the database currently fails OPEN on it: the single runtime role every counselor shares reads all 32 student-scoped tables in full, including other counselors' private notes (ISO-GAP-01..03, measured). Exposure today is nil only because no API or deployment exists; the first code path built on this schema would inherit cross-counselor access by default. The boundary half is now implemented (2026-11-18); the caller-binding half is not.",
       "implementation_may_continue": true,
       "continue_conditions": "Other implementation may continue; the Phase 2 gate may not pass. SEC-10 and ISO-GAP-01..03 assert the residual as OPEN lines that fail the suite if the measurement changes, so the record cannot go stale silently. No document claims counselor-to-counselor isolation is enforced.",
@@ -592,51 +592,51 @@
     },
     {
       "id": "M-05",
-      "title": "Supervisor finding M-05 — definition not in the implementation record",
+      "title": "Supervisor finding M-05 — reject duplicate JSON object keys at raw ingress, before JSONB",
       "status": "OPEN",
-      "why_unresolved": "The finding is referenced in the Supervisor review material but its text was never supplied to the implementation. It cannot be acted on, and guessing what it says would be inventing a finding.",
-      "security_impact": "UNKNOWN. It cannot be assessed without the definition.",
+      "why_unresolved": "Defined by the Supervisor on 2026-11-18 as MEDIUM technical debt / security hardening: duplicate object keys must be rejected at raw ingress BEFORE the value becomes JSONB. PostgreSQL's jsonb silently keeps the LAST of duplicate keys, so a payload whose meaning depends on which duplicate a parser honours can be read one way by an upstream verifier or signer and stored another way. The check therefore has to run on the raw text, where the duplicates still exist; it cannot be a database CHECK on a jsonb column. No raw-ingress layer (API, inbox transport or verifier entry point) exists in this repository.",
+      "security_impact": "MEDIUM (Supervisor classification). A parser-differential: signed or hashed content and stored content can disagree.",
       "implementation_may_continue": true,
-      "continue_conditions": "Unrelated work continues. M-05 is not claimed as addressed anywhere.",
-      "decision_owner": "Supervisor",
+      "continue_conditions": "Not implemented and not claimed. No component accepts raw JSON from outside the database today; the inbox production path is fail-closed (OQ-SAGA-1).",
+      "decision_owner": "Supervisor (finding owner); implementation in the ingress layer that will receive raw JSON",
       "options": [
-        "A. Supply the finding text so it can be addressed.",
-        "B. Withdraw it if superseded.",
-        "C. Restate it against the current head."
+        "A. Reject duplicates in the shared raw-JSON parser used by every ingress path, before any conversion to JSONB.",
+        "B. Reject duplicates only at the receipt/inbox verifier boundary.",
+        "C. Accept duplicates and document last-key-wins."
       ],
-      "recommended_option": "C",
-      "rationale": "The head has moved substantially since the finding was raised, so a restatement against the current head is both actionable and avoids work on a finding that may already be resolved.",
+      "recommended_option": "A",
+      "rationale": "The Supervisor's closure criterion is ingress-wide. One shared parser makes the rule testable once and impossible to forget on a new path; B leaves other ingress paths with the differential; C is the behaviour the finding rejects.",
       "item_class": [
         "SUPERVISOR_FINDING"
       ],
-      "code_can_resolve": "no",
-      "code_resolution_note": "The finding text was never supplied, so it cannot be acted on.",
-      "recommended_gate_impact": "UNKNOWN_UNTIL_DEFINED",
-      "closure_evidence": "The Supervisor supplies the finding text or withdraws it; then normal remediation and evidence."
+      "code_can_resolve": "yes",
+      "code_resolution_note": "Ordinary implementation once a raw-ingress layer exists: a strict parser that raises on a repeated key, with tests at every ingress path.",
+      "recommended_gate_impact": "NON_BLOCKING_TECHNICAL_DEBT",
+      "closure_evidence": "Supervisor-defined: duplicate JSON object keys are rejected at raw ingress before JSONB — evidenced by tests that submit a duplicate-key document to every ingress path and observe a refusal before storage."
     },
     {
       "id": "M-06",
-      "title": "Supervisor finding M-06 — definition not in the implementation record",
+      "title": "Supervisor finding M-06 — one shared machine-readable canonicalization vector source for SQL and Python",
       "status": "OPEN",
-      "why_unresolved": "Same as M-05. One reference in SUPERVISOR_REVIEW.md associates M-06 with load-scenario order and an L-10 dependency, but that is not a sufficient definition to implement against, and SUPERVISOR_REVIEW.md is Supervisor-owned and must not be edited by the implementation.",
-      "security_impact": "UNKNOWN.",
+      "why_unresolved": "Defined by the Supervisor on 2026-11-18 as MEDIUM technical debt / security hardening: SQL and Python must consume ONE machine-readable source of canonicalization test vectors. Today the receipt canonical form is exercised by Python vectors (docs/phase2/workspace/receipts/verifier_interface/canonical/test_vectors_v1.py) and by SQL receipt tests separately, so the two implementations could drift and each would still pass its own vectors.",
+      "security_impact": "MEDIUM (Supervisor classification). A canonical-form disagreement between components makes a valid signature fail or a different payload verify.",
       "implementation_may_continue": true,
-      "continue_conditions": "Unrelated work continues. M-06 is not claimed as addressed.",
-      "decision_owner": "Supervisor",
+      "continue_conditions": "Not implemented and not claimed. The production verifier remains fail-closed (PS-1..PS-4).",
+      "decision_owner": "Supervisor (finding owner); implementation in the receipt verifier test suites",
       "options": [
-        "A. Supply the finding text.",
-        "B. Withdraw it if superseded.",
-        "C. Restate it against the current head."
+        "A. One versioned vector file (for example JSON) read by both the SQL suite and the Python suite, with a check that neither carries a private copy.",
+        "B. Generate SQL fixtures from the Python vectors at build time.",
+        "C. Keep separate vectors and compare them by review."
       ],
-      "recommended_option": "C",
-      "rationale": "As for M-05.",
+      "recommended_option": "A",
+      "rationale": "A is the Supervisor's closure criterion stated literally and is checkable mechanically. B still yields two copies at test time; C relies on review, which is how the drift would arise.",
       "item_class": [
         "SUPERVISOR_FINDING"
       ],
-      "code_can_resolve": "no",
-      "code_resolution_note": "Same as M-05.",
-      "recommended_gate_impact": "UNKNOWN_UNTIL_DEFINED",
-      "closure_evidence": "Same as M-05."
+      "code_can_resolve": "yes",
+      "code_resolution_note": "Ordinary implementation: extract the vectors into one machine-readable file, point both suites at it, and add a check that no second vector list exists.",
+      "recommended_gate_impact": "NON_BLOCKING_TECHNICAL_DEBT",
+      "closure_evidence": "Supervisor-defined: a single machine-readable canonicalization vector source consumed by both SQL and Python tests, with a check that no independent copy exists."
     },
     {
       "id": "WS-DOM-02",

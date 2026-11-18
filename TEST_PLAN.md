@@ -342,7 +342,7 @@ Guardian/parent and student legal authority tests remain blocked by Q-007 and mu
 | receipt_50 | H-03 suite | PASS (21 notices) |
 | Full workflow steps 02 to 12 | fresh PostgreSQL 16.15 database | ALL PASS (local run) |
 | GitHub Actions | corrective commit | NOT YET RUN (pending push) |
-| M-05, M-06 | residual findings | OPEN (definitions not in implementation record) |
+| M-05, M-06 | residual findings | OPEN — defined by the Supervisor on 2026-11-18 as MEDIUM technical debt (see the 2026-11-18 F-01..F-04 section) |
 
 ## Phase 2 exit findings — implementation batch (2026-11-13; author-executed, NOT independently reproduced)
 | ID | Check | Where | Status |
@@ -991,3 +991,59 @@ there are two rows with seq_no 1.
 
 **NOT RUN / NOT BUILT:** scheduling, conflict detection, generation, replay, and the contract §8 acceptance tests that
 depend on an engine. There is no transition graph because the decision fixed the states, not the edges.
+
+## 2026-11-18 — Supervisor findings F-01..F-04 on `d75d039`
+
+The Supervisor reviewed `d75d039` as NOT ACCEPTED. The plan suite is now PLN-C1..C4, PLN-01..80 (**75 PASS lines**),
+plus WS-PLN-RACE-01..03 and a new migration suite. Plan rows are now written by `ws_<key>_synth_plan_writer`;
+historical legacy fixtures by `ws_<key>_plan_migrator`. Both are NOLOGIN and checked by role membership.
+
+### F-01 — the runtime cannot write a plan row in anyone's name
+- **PLN-C2** (rewritten): the runtime holds no INSERT, UPDATE or DELETE on `plan_items` or `plan_item_status_events`
+  and cannot name `content_model`; the writer holds INSERT only.
+- **PLN-70** the runtime records a transition claiming to be the student → 42501.
+- **PLN-71** the runtime records a transition claiming to be counselor A → 42501.
+- **PLN-72** the runtime creates a plan item → 42501.
+- **PLN-73 / PLN-74** an intruder role holding INSERT but not the writer identity → refused by the trigger.
+- **PLN-76** even the writer cannot record `actor_kind='student'` → refused (no student identity can be verified).
+- **PLN-80** no application role is a member of either identity; both are NOLOGIN.
+
+### F-02 — no new `legacy_json` versions from the runtime
+- **PLN-28** the runtime naming `content_model` → 42501. **PLN-28b** a runtime-created version is `normalized`.
+- **PLN-75** an intruder holding INSERT on the column → refused by the trigger.
+- **PLN-79** the migrator can create a legacy v1. **PLN-79b** not after a normalized version exists.
+  **PLN-79c** a legacy version reads back unchanged.
+
+### F-03 — open semantics fail closed
+- **PLN-77** a transition on an item of a DRAFT version → refused.
+- **PLN-78** publishing a normalized version with no items → refused.
+- No transition graph is asserted, because none is decided.
+
+### F-04 — `workspace_plan_items_migration_tests.sql`, PLN-M01..M08 (8 PASS lines)
+Its own database. `workspace_plan_items_migration_fixture.sql` loads three historical versions **before** the
+plan draft: one published with JSON, one draft whose JSON is `'{}'`, one draft with JSON.
+- **M01** all three are `legacy_json`. **M02** the `'{}'` draft is not relabelled as normalized.
+- **M03** nothing stored changed. **M04** rendered output equals the stored JSON.
+- **M05** the default for new rows is `normalized`. **M06** a new normalized version supersedes a historical one.
+- **M07** relabelling is refused. **M08** a published historical row stays immutable.
+
+| Negative control (measured) | Result |
+|---|---|
+| student-actor refusal removed | fails PLN-76 |
+| synthetic-writer check removed from the transition guard | fails PLN-73 |
+| migrator check removed from the version guard | fails PLN-75 |
+| runtime granted INSERT on status events | fails PLN-C2 |
+| runtime granted INSERT (content_model) | fails PLN-C2 |
+| empty-publication check removed | fails PLN-78 |
+| draft-version transition check removed | fails PLN-77 |
+| `d75d039` form `ADD COLUMN ... DEFAULT 'normalized'` | the migration itself fails: `check constraint "normalized_version_has_no_json_content" ... is violated by some row` |
+| race without the unique key (rerun) | fails WS-PLN-RACE-02/03 (two rows) |
+
+### M-05 and M-06 — recorded, NOT implemented, no tests
+- **M-05** closes when duplicate JSON object keys are rejected at raw ingress, before conversion to JSONB, shown by
+  tests that submit duplicate-key payloads. JSONB itself keeps the last value silently, so this needs an ingress layer.
+- **M-06** closes when one machine-readable canonicalization vector file is consumed by both the SQL and the Python
+  tests, with a check that neither keeps a private copy.
+
+**NOT RUN:** plan writes under a real counselor or student identity (needs WS-ISO-01 caller binding); a migration at
+volume and its rollback; GitHub Actions at the remediation commit.

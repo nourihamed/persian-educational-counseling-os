@@ -8,8 +8,9 @@ prepared for independent review (`docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md
 what was implemented and what the evidence is, not what was approved.
 
 **Branch:** `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, **Draft, open, unmerged**).
-**Last HEAD verified on GitHub:** `b7d4b2826036a41c05d46dd3f98b4c92c3f769b9` (Product Owner decisions for WS-PLAN-01 and
-WS-DOM-05, recorded on the branch on 2026-11-18). This update belongs to the WS-PLAN-01 implementation commit on top of it.
+**Last HEAD verified on GitHub:** `d75d039919c806a27a7d5b50021af6920fdd5f0c` (WS-PLAN-01 normalized PlanItem data model,
+Product Owner decision B). The Supervisor reviewed it as **NOT ACCEPTED** (findings F-01 CRITICAL, F-02 HIGH, F-03 and
+F-04 MEDIUM). This update belongs to the remediation commit on top of `d75d039`; its SHA exists only once pushed.
 **Behind `main`:** yes, by two commits — `4004360` (adds `cp_30_role_privilege_tests.sql`, 89 lines) and
 `5bb8e4e` (reverts it). Net content difference from the merge base `ba5e9d8` to `main` `5bb8e4e`: **zero
 files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-pushed (BRANCH-SYNC).
@@ -20,11 +21,12 @@ files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-p
 |---|---|---|
 | **GitHub Actions** (independent of the agent) | runs at `fc3416ed`: **43725323633** and **43725318826** (push and pull_request) | **FAILED.** Reported by the Supervisor: every SQL/database step passed; **step 28, the repository secret scan, failed**; step 29, the register consistency check, was **skipped** because it followed a failed step. The agent has no Actions access and did not read those logs. |
 | **Actions failure, reproduced locally** | the `fc3416ed` scanner run on the exact `fc3416ed` tree | two findings, both in `docs/phase2/workspace/tests/workspace_operations_tests.sql`: line **165** `[iranian-mobile]` and line **171** `[e164]` — the OPS-17/OPS-18 refusal-test fixtures. Neither is a credential. The Supervisor is asked to confirm these against the CI log. |
-| **Local verification** (agent-executed, **not independently reproduced**) | full workflow on a cleared PostgreSQL 16.15 cluster, after `git add`, on the tree of the WS-PLAN-01 commit (parent `b7d4b28`) | **25 implementation steps passed, 916 PASS assertion lines, 0 FAIL** (852 before, +61 PLN, +3 WS-PLN-RACE), plus Python verifier tests (15 + 6, OK); secret scan PASS (incl. history content); register check PASS incl. REG-09. Local evidence is **not** CI evidence. |
+| **Local verification** (agent-executed, **not independently reproduced**) | full workflow on a cleared PostgreSQL 16.15 cluster, after `git add`, on the tree of the F-01..F-04 remediation commit (parent `d75d039`) | **25 implementation steps passed, 938 PASS assertion lines, 0 FAIL** (852 before WS-PLAN-01; the plan step now prints 86: 75 PLN, 3 WS-PLN-RACE, 8 PLN-M migration), plus Python verifier tests (15 + 6, OK); secret scan PASS (incl. history content); register check PASS incl. REG-09. Local evidence is **not** CI evidence. |
 | **GitHub Actions at `467a0294b03f9ffc494509509f9c0ece595b2bd3`** (independent of the agent) | `postgres-draft-tests`, runs [44362679187](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362679187) (job 135008003418) and [44362668276](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362668276) (job 135007959995) | **success, both** (2026-11-18 17:50 UTC). Read by the agent from the PR's check-run conclusions; the agent did **not** read the step logs, so per-step PASS counts in CI are not reported here. This is the first Actions success on any SQL change since `ad3bf28`. It is CI evidence for the draft SQL and synthetic suites only — **not** approval of anything. |
 | **GitHub Actions at `b51908011404eb79ee01021916ceb2ad34d12200`** | runs 44365217344, 44365200112 | **success, both** (documentation-only commit) |
 | **GitHub Actions at `b7d4b2826036a41c05d46dd3f98b4c92c3f769b9`** (the three Supervisor/Product-Owner decision-recording commits) | runs 44369152676, 44369143862 | **FAILED, both.** Reproduced locally as the register check **REG-08**: the §6 classification row for WS-DOM-05 still read `BLOCKING` while the JSON read `LATER_PHASE`. Realigned in the WS-PLAN-01 commit. The check worked as designed. |
-| **GitHub Actions at the WS-PLAN-01 commit** | — | **NOT RUN** until pushed. |
+| **GitHub Actions at `d75d039919c806a27a7d5b50021af6920fdd5f0c`** (WS-PLAN-01 data model) | runs 44376897878, 44376886372 | **passed**, as reported by the Supervisor. CI passing did not make it acceptable: the Supervisor's review found F-01..F-04, which the tests did not cover. |
+| **GitHub Actions at the F-01..F-04 remediation commit** | — | **NOT RUN** until pushed. |
 | **Design-only contracts** | documents under `docs/phase2/**` with no executable test | are **not** implementation evidence anywhere in this file |
 
 ### Why the Batch 8 local result was wrong
@@ -57,13 +59,23 @@ Batches 1–8 as recorded in the dated entries below, and on 2026-11-18:
   tested (ISO-C1..ISO-54); the caller is **not** bound to a membership, and the shared runtime role still reads
   every student-scoped table in full (ISO-GAP-01..03, printed as OPEN, not PASS). Needs a Platform Security
   decision on caller binding (`docs/phase2/workspace/WS_ISO_01_COUNSELOR_ISOLATION_PROPOSAL.md`).
-- **WS-PLAN-01 — decided (Option B, Product Owner, 2026-11-18) and implemented as draft SQL; still BLOCKING** until CI on
-  the resulting SHA and the Supervisor's independent review confirm it (`workspace_plan_items_draft.sql`; PLN-C1..C4,
-  PLN-01..63, WS-PLN-RACE-01..03). No scheduling logic exists.
+- **WS-PLAN-01 — decided (Option B, Product Owner, 2026-11-18); data model implemented at `d75d039` and reviewed
+  NOT ACCEPTED by the Supervisor; F-01..F-04 remediated in the following commit; still BLOCKING** until CI on that
+  SHA and the Supervisor's independent review confirm it (`workspace_plan_items_draft.sql`; PLN-C1..C4, PLN-01..80,
+  WS-PLN-RACE-01..03, PLN-M01..M08; `WS_PLAN_01_MIGRATION_NOTES.md`). No scheduling logic exists.
+  - F-01: the shared runtime can no longer create plan items or status transitions, so it cannot write one in a
+    student's or another counselor's name. Writes need a dedicated NOLOGIN synthetic-writer identity, checked by role
+    membership. `actor_kind='student'` is refused outright. **No caller binding was invented** — that stays WS-ISO-01.
+  - F-02: the runtime cannot name `content_model`; `legacy_json` is accepted only from a NOLOGIN migration identity.
+  - F-03: transitions on a draft version's items, and publishing an empty normalized version, are refused pending
+    Product Owner decisions. No transition graph is defined.
+  - F-04: historical rows are backfilled as `legacy_json`; only new rows default to `normalized`.
 - **WS-DOM-05 — decided (Option A): deferred to Phase 7, `LATER_PHASE`, no longer a Phase 2 blocker.** Its four
   governance questions remain open.
 - **PR-8-11-DISPOSITION** — four open draft PRs; PR integration NOT READY.
-- **M-05, M-06** — Supervisor findings whose text was never supplied; cannot be addressed or closed.
+- **M-05, M-06 — now defined by the Supervisor (2026-11-18), MEDIUM Technical Debt / Security Hardening,
+  `NON_BLOCKING_TECHNICAL_DEBT`, not implemented.** M-05: reject duplicate JSON object keys at raw ingress, before
+  JSONB. M-06: one shared machine-readable canonicalization vector source for SQL and Python.
 
 ## Known bugs / defects found and their state
 | Defect | Found | State |
@@ -75,10 +87,15 @@ Batches 1–8 as recorded in the dated entries below, and on 2026-11-18:
 | Secret scan claimed history coverage it did not have | 2026-11-18 (Supervisor) | implemented SEC-REPO-03 |
 | Batch 8 reported a local scan PASS that CI failed | 2026-11-18 (CI) | root cause recorded above |
 | Counselor-to-counselor isolation not enforced at the database | Batch 6 (measured), reclassified 2026-11-18 | **OPEN, CRITICAL** |
+| Runtime could record a plan transition as the student or as another counselor (F-01) | 2026-11-18 (Supervisor, `d75d039`) | fixed for plan tables, PLN-70..76; other runtime write paths naming an actor remain under WS-ISO-01 |
+| Runtime could create new `legacy_json` versions (F-02) | 2026-11-18 (Supervisor) | fixed, PLN-28, PLN-75 |
+| `ADD COLUMN ... DEFAULT 'normalized'` would fail or relabel historical rows (F-04) | 2026-11-18 (Supervisor) | fixed, PLN-M01..M08; the old form fails the migration fixture |
 
 ## Failed tests
 - At `fc3416ed` in GitHub Actions: the repository secret scan (step 28). Register check skipped (step 29).
 - At `467a029`: none, locally or in GitHub Actions (both runs succeeded).
+- At `b7d4b28`: register check REG-08 (both runs failed), fixed in `d75d039`.
+- At `d75d039`: none in GitHub Actions (passed per the Supervisor); the Supervisor's review found F-01..F-04 instead.
 
 ## Open questions
 32 register items, all classified in `docs/phase2/UNRESOLVED_ITEM_REGISTER.md` §6. 13 can be resolved partly or
@@ -87,12 +104,22 @@ dependencies that code cannot close.
 
 ## Next actions
 1. The Supervisor confirms the CI failure lines above against the log of runs 43725323633/43725318826.
-2. ~~GitHub Actions at the new HEAD~~ — done: success at `467a029` (runs 44362679187, 44362668276).
+2. GitHub Actions at the F-01..F-04 remediation commit, then the Supervisor's independent review of it.
 3. Platform Security decision on WS-ISO-01 caller binding (option B recommended, A fallback).
 4. Supervisor independent review of the PROVISIONAL exit package. **The implementation agent does not approve
    the phase.**
 
 ---
+
+### Update 2026-11-18 — Supervisor findings F-01..F-04 on `d75d039` remediated (draft SQL; synthetic)
+- Scope limited to the findings, as instructed. No Product Owner or Platform Security decision taken.
+  `SUPERVISOR_REVIEW.md` not edited. PR #12 not merged, rebased or force-pushed. `main` untouched. Phase 3 not started.
+- Identities: `ws_<key>_synth_plan_writer` (synthetic test writer) and `ws_<key>_plan_migrator` (migration only), both
+  NOLOGIN, recorded in `plan_privileged_identities` and checked with `pg_has_role`. No application role is a member.
+  An identity holding INSERT but not membership is refused by the triggers (PLN-73..75).
+- **Consequence stated plainly:** at schema level no application role can create plan items or transitions now. That
+  is the fail-closed outcome F-01 asked for, and it lasts until caller binding exists (WS-ISO-01).
+- Local: 25 steps, 938 PASS lines, 0 FAIL. Every new rule has a measured negative control (TEST_PLAN.md).
 
 ## Historical reconciliation notes (2026-11-09 onward)
 

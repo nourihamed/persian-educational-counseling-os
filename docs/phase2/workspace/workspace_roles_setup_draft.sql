@@ -426,16 +426,55 @@ BEGIN
   EXECUTE format('GRANT SELECT ON TABLE student_scoped_tables TO %I', 'ws_'||k||'_runtime');
 END $iso$;
 
--- WS-PLAN-01 (workspace_plan_items_draft.sql). Plan items and their status history are INSERT-only for the
--- runtime: no UPDATE and no DELETE are granted, so the insert-only rule does not rest on a trigger alone.
+-- WS-PLAN-01 (workspace_plan_items_draft.sql), corrected after the Supervisor review of d75d039.
+--   F-01: the runtime holds SELECT ONLY on plan items and their status history. It cannot write either,
+--         because no application identity can yet be authenticated as the actor a row names (WS-ISO-01).
+--         The only writer is a dedicated NOLOGIN synthetic test identity (D-014).
+--   F-02: the runtime may INSERT plan versions but may not NAME content_model (column-level privilege), so
+--         everything it creates is normalized. legacy_json is writable only by a dedicated NOLOGIN migration
+--         identity, which can do nothing else.
+--   Both identities are recorded in plan_privileged_identities, and the triggers check ROLE MEMBERSHIP —
+--   verified by PostgreSQL, unlike a session variable, which the caller sets.
 DO $plan$
-DECLARE k text := current_setting('app.workspace_key');
+DECLARE
+  k text := current_setting('app.workspace_key');
+  rt text := 'ws_'||k||'_runtime';
+  wr text := 'ws_'||k||'_synth_plan_writer';
+  mg text := 'ws_'||k||'_plan_migrator';
 BEGIN
   IF to_regclass('public.plan_items') IS NULL THEN
     RETURN;
   END IF;
-  EXECUTE format('GRANT SELECT,INSERT ON TABLE plan_items,plan_item_status_events TO %I', 'ws_'||k||'_runtime');
-  EXECUTE format('GRANT SELECT ON TABLE plan_item_current_status,plan_version_rendered TO %I', 'ws_'||k||'_runtime');
+  FOREACH k IN ARRAY ARRAY[wr, mg] LOOP
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = k) THEN
+      EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS', k);
+    END IF;
+  END LOOP;
+  DELETE FROM plan_privileged_identities;
+  INSERT INTO plan_privileged_identities(purpose, role_name, note) VALUES
+   ('synthetic_plan_writer', wr, 'SYNTHETIC ONLY (D-014). Stands in for an authenticated actor until WS-ISO-01 caller binding exists. Not a production identity.'),
+   ('legacy_plan_migrator',  mg, 'Migration of historical legacy_json plan versions only. Not granted to any application role.');
+
+  -- runtime: read plan items, history and derived views; never write them
+  EXECUTE format('REVOKE ALL ON TABLE plan_items, plan_item_status_events FROM %I', rt);
+  EXECUTE format('GRANT SELECT ON TABLE plan_items, plan_item_status_events, plan_item_current_status, '
+                 'plan_version_rendered, plan_privileged_identities TO %I', rt);
+  -- runtime: create plan versions WITHOUT being able to choose legacy_json
+  EXECUTE format('REVOKE INSERT ON TABLE student_plan_versions FROM %I', rt);
+  EXECUTE format('GRANT INSERT (plan_version_id, plan_id, version_no, source_program_version_id, input_snapshot, '
+                 'rule_version, plan_content, status, approved_by_membership_id, created_at, published_at, '
+                 'supersedes_plan_version_id, change_reason, created_by_membership_id) '
+                 'ON TABLE student_plan_versions TO %I', rt);
+
+  -- synthetic writer: exactly what writing items and transitions needs, and nothing else
+  EXECUTE format('GRANT SELECT, INSERT ON TABLE plan_items, plan_item_status_events TO %I', wr);
+  EXECUTE format('GRANT SELECT ON TABLE plan_item_current_status, plan_version_rendered, plan_privileged_identities, '
+                 'student_plan_versions, student_plans, counselor_assignments, enrollments, workspace_memberships, '
+                 'membership_roles, students, topics, subtopics, activities, exams, reviews, assignments TO %I', wr);
+
+  -- migration identity: insert plan versions (including legacy_json) and read what the guard reads
+  EXECUTE format('GRANT SELECT, INSERT ON TABLE student_plan_versions TO %I', mg);
+  EXECUTE format('GRANT SELECT ON TABLE plan_privileged_identities, plan_items, student_plans TO %I', mg);
 END $plan$;
 
 -- Default privileges remain deny-by-default for future migrations.

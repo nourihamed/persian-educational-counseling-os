@@ -29,7 +29,7 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | OQ-ASM-1 | Item-bank ownership and `item_ref` | OPEN | MEDIUM | Yes, no cross-boundary reference | Product Owner |
 | OQ-ASM-2 | Which scoring algorithms are permitted | OPEN | MEDIUM (correctness) | Yes, shape enforced, values not | Product Owner |
 | WS-DOM-05 | Curriculum Book/Edition, successor mapping, content ownership | PARTIALLY DECIDED | MEDIUM (correctness, isolation later) | Yes — Phase 7 | Product Owner; four governance questions remain |
-| WS-PLAN-01 | Normalized PlanItem versus opaque `plan_content` JSON | PARTIALLY DECIDED | HIGH for the product promise | Yes — implementation required in Phase 2 | Product Owner decision recorded; implementation pending |
+| WS-PLAN-01 | Normalized PlanItem versus opaque `plan_content` JSON | PARTIALLY DECIDED | HIGH for the product promise | Yes — implementation required in Phase 2 | Product Owner decision recorded; implemented at `d75d039`, NOT ACCEPTED; F-01..F-04 remediated, pending independent review |
 | WS-ISO-01 | Counselor-to-counselor isolation inside one Workspace | OPEN | **CRITICAL, BLOCKING — fails open** | Other work only; gate may not pass | Product Owner + architecture owner |
 | OQ-D | Control Plane topology — numeric objectives | PARTIALLY DECIDED | HIGH at operation | Yes, schema only | Product Owner + operations |
 | OQ-E | Transfer cutover — boundary, duration, thresholds | PARTIALLY DECIDED | HIGH | Yes; boundary now implemented | Product Owner + operations |
@@ -41,8 +41,8 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | PS-6 | CA, trust store, mTLS identity | DEFERRED | HIGH | Yes, no transport exists | Platform Security |
 | PS-7 | Verifier/adapter deployment topology | DEFERRED | MEDIUM | Yes, nothing to deploy | Platform Security + Product Owner |
 | PS-8 | Revocation source and propagation | DEFERRED | HIGH | Yes, no freshness claimed | Product Owner + Platform Security |
-| M-05 | Supervisor finding — text never supplied | OPEN | UNKNOWN | Yes, not claimed addressed | Supervisor |
-| M-06 | Supervisor finding — text never supplied | OPEN | UNKNOWN | Yes, not claimed addressed | Supervisor |
+| M-05 | Duplicate JSON object keys not rejected at raw ingress before JSONB | OPEN | MEDIUM (technical debt) | Yes, non-blocking | Supervisor (closure review) |
+| M-06 | No single canonicalization vector source shared by SQL and Python | OPEN | MEDIUM (technical debt) | Yes, non-blocking | Supervisor (closure review) |
 | WS-DOM-02 | Role source of truth and trusted authorization | PARTIALLY DECIDED | HIGH | Yes, fail-closed | Platform Security + Product Owner (Issue #13) |
 | TRANSFER-EXC-AUTH | Who may authorize an approval-conflict exception | OPEN | HIGH | Yes, exception impossible to enable | Product Owner |
 | PR-8-11-DISPOSITION | Disposition of PR #8–#11 | OPEN | Process only | Yes, no PR touched | Product Owner on Supervisor advice |
@@ -163,6 +163,8 @@ curriculum rows reference them.
 **Product Owner decision (2026-11-18): Option B — BUILD THE DATA MODEL IN PHASE 2. Gate impact: `BLOCKING` until implementation and tests pass.** The approved PlanItem source set is `topic`, `subtopic`, `activity`, `exam`, `review`, `assignment`. Each PlanItem must reference exactly one source through a typed nullable FK; unrestricted polymorphic `source_type/source_id` is prohibited.
 
 **Approved item statuses:** `planned`, `in_progress`, `completed`, `partially_completed`, `deferred`, `skipped`, `cancelled`. **Approved deferral reasons:** `insufficient_time`, `schedule_conflict`, `prerequisite_not_mastered`, `difficulty`, `illness_or_absence`, `resource_unavailable`, `higher_priority_task`, `student_requested`, `counselor_adjustment`, `other`. `deferred` requires a reason; `other` may carry an explanatory note. These vocabularies do not authorize scheduling logic in Phase 2.
+
+**Corrected 2026-11-18 for Supervisor findings F-01..F-04 on `d75d039` — still NOT ACCEPTED, still `BLOCKING`.** F-01 (CRITICAL, actor impersonation): the runtime could write plan items and transitions and the actor was whatever the row said; now no application identity may write either (a NOLOGIN synthetic identity is the only writer, checked by role membership), and `actor_kind='student'` is refused outright. F-02 (HIGH): the runtime may no longer name `content_model`, and `legacy_json` is accepted only from the NOLOGIN migration identity. F-03 (MEDIUM): publishing an empty normalized version and recording status on draft items are refused pending Product Owner decisions. F-04 (MEDIUM): historical rows are classified `legacy_json` when the column is added; `WS_PLAN_01_MIGRATION_NOTES.md`, PLN-M01..M08.
 
 **Implemented 2026-11-18 (draft SQL; local evidence only; NOT yet independently verified — the gate impact stays `BLOCKING` until CI on the resulting SHA and the Supervisor's review confirm it).** `workspace_plan_items_draft.sql`: `plan_items` with the six typed, student-bound source foreign keys and an exactly-one-source CHECK; item definitions insert-only, added only to a draft; a change is a new version naming the version it supersedes, with a reason and an author; status transitions append-only, sequence-numbered, with actor, timestamp and reason, and current status derived; normalized versions carry no JSON, output JSON derived (`plan_version_rendered`); legacy JSON only on explicit `legacy_json` versions, which cannot follow a normalized one. Tests: PLN-C1..C4, PLN-01..PLN-63 (61 PASS lines) and WS-PLN-RACE-01..03, each rule with a measured negative control. **Not built, because the decision does not cover it:** scheduling, ranking, conflicts, generation, a transition graph, priority, dependencies, provenance, carry-forward.
 
@@ -289,14 +291,23 @@ None of PS-1..PS-8 is answered, and none is assumed. The production verifier is 
 
 ## 4. Supervisor findings whose text was never supplied
 
-### M-05 and M-06
-**Status:** OPEN, and **not actionable by the implementation.** Both are referenced in the Supervisor review material, but their text was never supplied. One reference associates M-06 with load-scenario order and an L-10 dependency; that is not a definition to implement against, and `SUPERVISOR_REVIEW.md` is Supervisor-owned and must not be edited here.
-**Why they are not guessed:** inventing a finding's content would be inventing the finding. Neither is claimed as addressed anywhere in this project's documentation.
-**Impact:** UNKNOWN — it cannot be assessed without the definitions.
-**Options:** (A) supply the finding text; (B) withdraw if superseded; (C) restate against the current head.
-**Recommendation: C.** The head has moved substantially since they were raised, so a restatement is both actionable and avoids work on something that may already be fixed.
+### M-05 and M-06 — defined by the Supervisor on 2026-11-18: MEDIUM technical debt / security hardening
+**Status:** OPEN, now **actionable** — the Supervisor supplied both definitions with closure criteria. **Gate impact:
+`NON_BLOCKING_TECHNICAL_DEBT`.** Neither is implemented, and neither is claimed as addressed.
 
----
+- **M-05 — reject duplicate JSON object keys at raw ingress, before JSONB.** PostgreSQL's `jsonb` silently keeps the
+  last of duplicate keys, so a document an upstream signer or verifier read one way can be stored another way. The check
+  must run on the raw text, where duplicates still exist; a CHECK on a `jsonb` column cannot see them. No raw-ingress
+  layer exists in this repository, and the inbox production path is fail-closed. **Closure (Supervisor):** duplicate
+  keys rejected at raw ingress before JSONB, shown by a duplicate-key document refused at every ingress path.
+  **Recommendation:** one shared strict parser used by every ingress path.
+- **M-06 — one shared machine-readable canonicalization vector source for SQL and Python.** The canonical form is
+  exercised today by Python vectors (`receipts/verifier_interface/canonical/test_vectors_v1.py`) and by SQL receipt
+  tests separately, so the two could drift and each still pass its own vectors. **Closure (Supervisor):** a single
+  machine-readable vector source consumed by both suites, with a check that no independent copy exists.
+  **Recommendation:** one versioned vector file read by both suites.
+
+The earlier text of this section said both were undefined; that was true until 2026-11-18 and is kept in Git history.
 
 ## 5. Repository and process items
 
@@ -476,7 +487,8 @@ clone and invalidates every SHA cited in this project's evidence trail, for valu
 Requested by the Supervisor: for every item, its kind, whether code can resolve it, and what closes it. The
 recommended gate impact is the implementation agent's **recommendation** to the Supervisor, not a ruling.
 `BLOCKING` items keep the Phase 2 gate closed; `NON_BLOCKING_FAIL_CLOSED` items are held by a database
-behaviour that refuses rather than guesses; `LATER_PHASE` items belong to a phase that has not started.
+behaviour that refuses rather than guesses; `LATER_PHASE` items belong to a phase that has not started;
+`NON_BLOCKING_TECHNICAL_DEBT` items are Supervisor-defined hardening that does not block the gate.
 **Not every item is a decision only.** `code_can_resolve` is `partly` or `yes` for 13 of the 32: after the
 named decision, the remaining work is ordinary implementation with tests.
 
@@ -503,8 +515,8 @@ named decision, the remaining work is ordinary implementation with tests.
 | PS-6 | PLATFORM_SECURITY_DECISION, LATER_OPERATIONAL_DEPENDENCY | no | LATER_PHASE | Deployed channel with tests that an unauthenticated peer is refused. |
 | PS-7 | PLATFORM_SECURITY_DECISION, LATER_OPERATIONAL_DEPENDENCY | no | LATER_PHASE | A decided topology and its threat review. |
 | PS-8 | PRODUCT_OWNER_DECISION, PLATFORM_SECURITY_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | A decided revocation source, propagation implementation, and tests that a revoked membership cannot use a receipt or be notified after revocation. |
-| M-05 | SUPERVISOR_FINDING | no | UNKNOWN_UNTIL_DEFINED | The Supervisor supplies the finding text or withdraws it; then normal remediation and evidence. |
-| M-06 | SUPERVISOR_FINDING | no | UNKNOWN_UNTIL_DEFINED | Same as M-05. |
+| M-05 | SUPERVISOR_FINDING | yes | NON_BLOCKING_TECHNICAL_DEBT | Supervisor-defined: duplicate JSON object keys are rejected at raw ingress before JSONB — evidenced by tests that submit a duplicate-key document to every ingress path and observe a refusal before storage. |
+| M-06 | SUPERVISOR_FINDING | yes | NON_BLOCKING_TECHNICAL_DEBT | Supervisor-defined: a single machine-readable canonicalization vector source consumed by both SQL and Python tests, with a check that no independent copy exists. |
 | WS-DOM-02 | PLATFORM_SECURITY_DECISION, PRODUCT_OWNER_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | A verified authorization adapter, an enforced grantability/anti-self-escalation matrix, and tests that a forged or self-granted role is refused. |
 | TRANSFER-EXC-AUTH | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A decided authority, then tests that only it can authorize and that every exception is audited. |
 | PR-8-11-DISPOSITION | PRODUCT_OWNER_DECISION | no | BLOCKING | A Product Owner instruction per PR (merge, close as superseded, or rebase) and its execution by the Product Owner. |

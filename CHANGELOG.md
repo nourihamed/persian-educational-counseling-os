@@ -4,6 +4,30 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-11-18 — Supervisor findings F-01..F-04 on `d75d039` remediated; M-05/M-06 recorded (draft SQL; synthetic)
+`fix/security/test/docs:` The Supervisor reviewed `d75d039` as NOT ACCEPTED, although CI passed there (runs
+44376897878, 44376886372).
+- **F-01 (CRITICAL):** the shared runtime could record a plan transition, or create a plan item, naming any student
+  or counselor as the actor. The database believed whatever actor it was given.
+  - The runtime now holds no INSERT on `plan_items` or `plan_item_status_events`.
+  - The triggers accept writes only from the NOLOGIN `ws_<key>_synth_plan_writer`, checked with `pg_has_role`, never
+    a session variable.
+  - `actor_kind='student'` is refused for every writer.
+  - No caller-binding mechanism was invented; WS-ISO-01 stays CRITICAL and BLOCKING.
+- **F-02 (HIGH):** the runtime cannot name `content_model` (column-level INSERT). `legacy_json` is accepted only from
+  the NOLOGIN `ws_<key>_plan_migrator`. Read compatibility is unchanged.
+- **F-03 (MEDIUM):** transitions on a draft version's items, and publishing an empty normalized version, are refused
+  pending Product Owner decisions. No transition graph.
+- **F-04 (MEDIUM):** the column is added with `DEFAULT 'legacy_json'` and only then switched to `'normalized'`, so
+  historical rows stay legacy and unchanged.
+  - New synthetic migration fixture and PLN-M01..M08, run in their own database.
+  - The `d75d039` form fails that fixture. Notes in `WS_PLAN_01_MIGRATION_NOTES.md`.
+- **Tests:** PLN-70..80 added, and every new rule has a measured negative control.
+- **M-05 and M-06** are recorded with the Supervisor's definitions as MEDIUM, `NON_BLOCKING_TECHNICAL_DEBT`, and are not
+  implemented. The register checker accepts that gate value.
+- **Local:** 25 steps, 938 PASS lines, 0 FAIL. Actions at this commit: NOT RUN.
+- Phase 2 NOT READY. Phase 3 not authorized. D-014 in force.
+
 ### 2026-11-18 — WS-PLAN-01 normalized PlanItem data model (Product Owner decision B; draft SQL; synthetic)
 `feat/test/docs:` Implements exactly what the recorded decision covers. `workspace_plan_items_draft.sql`: `plan_items` with six typed, student-bound source foreign keys (topic, subtopic, activity, exam, review, assignment) and an exactly-one-source CHECK — no `source_type/source_id`; item definitions insert-only and added only to a draft version; a change is a new plan version that names the earlier version of the same plan it supersedes, with a reason and an author; status transitions in an append-only, sequence-numbered table with actor, timestamp and reason, using exactly the seven approved statuses and ten deferral reasons (`deferred` requires a reason, `other`'s note optional); current status derived; normalized versions carry no JSON and output JSON is derived (`plan_version_rendered`); legacy JSON only on explicit `legacy_json` versions, which cannot follow a normalized one; UTC projection derived from local date, time and a validated zone; both tables inside the transfer write barrier and the counselor boundary; runtime holds no UPDATE/DELETE. Tests: PLN-C1..C4, PLN-01..63 (61 PASS lines) and the WS-PLN-RACE-01..03 concurrent-transition race; negative controls for exactly-one-source, JSON exclusivity, counselor check, insert-only, stale transitions, supersession and the sequence key each fail their named test. **The catalog assertion PLN-C3 initially passed with its own constraint dropped** (a NULL comparison) — found by the control and fixed. REG-09 now checks that the vocabularies recorded in the register are exactly those the SQL enforces. **Also:** GitHub Actions at `b7d4b28` (runs 44369152676, 44369143862) failed; reproduced locally as REG-08, the §6 classification row for WS-DOM-05 not updated with the decision — realigned. No scheduling logic, transition graph, priority, dependencies, provenance or carry-forward is built: the decision does not cover them. WS-PLAN-01 stays BLOCKING until independently verified; Phase 2 NOT READY.
 

@@ -228,7 +228,7 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
 
-      - name: Normalized PlanItem data model (WS-PLAN-01, Product Owner decision B) and the concurrent-transition race
+      - name: Normalized PlanItem data model (WS-PLAN-01, decision B) — fail-closed actors, concurrent-transition race, historical-row migration
         run: |
           set -euo pipefail
           W=docs/phase2/workspace
@@ -245,6 +245,18 @@ jobs:
           # The race needs its own database: it adds a scratch signal table and its fixtures.
           load workspace_plan_items_race
           bash $W/tests/workspace_plan_item_status_race.sh workspace_plan_items_race $K
+          # F-04: the migration must be safe on rows that exist BEFORE it runs, so historical rows are loaded
+          # between the base drafts and the plan draft.
+          createdb -h localhost -U postgres workspace_plan_items_migration
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft; do
+            psql -X -v ON_ERROR_STOP=1 -d workspace_plan_items_migration -f $W/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -d workspace_plan_items_migration -f $W/tests/workspace_plan_items_migration_fixture.sql
+          for f in workspace_plan_items_draft workspace_operations_draft; do
+            psql -X -v ON_ERROR_STOP=1 -d workspace_plan_items_migration -f $W/$f.sql
+          done
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_plan_items_migration -f $W/workspace_roles_setup_draft.sql
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_plan_items_migration -f $W/tests/workspace_plan_items_migration_tests.sql
         env:
           PGHOST: localhost
           PGUSER: postgres
