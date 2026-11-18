@@ -615,3 +615,24 @@ clarification, not evidence of implementation quality and not gate approval.
 - Deferral does not remove required base schema, tenant ownership, authorization, audit, idempotency or security contracts.
 
 **Status note:** These decisions do not close Q-007, Q-020, PS-1..PS-8, transfer exception approval authority, numeric OQ-D objectives, or any implementation/test finding. D-014 synthetic-only restriction remains. Phase 2 remains NOT READY.
+
+
+## 2026-11-18 — Product Owner decisions: WS-PLAN-01 and WS-DOM-05
+
+**Authority:** Explicit Product Owner approval in the 2026-11-18 conversation. These are product/domain decisions, not evidence of implementation quality and not Phase 2 gate approval. No D-number is assigned pending the collision-free crosswalk required by OQ-C.
+
+### WS-PLAN-01 — Normalized PlanItem data model (Option B; Phase 2)
+- **Gate impact: BLOCKING until implementation and verification pass.** Phase 2 must define the normalized PlanItem data model; scheduling/generation logic remains out of scope.
+- Permitted typed sources: `topic`, `subtopic`, `activity`, `exam`, `review`, `assignment`.
+- Every PlanItem references exactly one source using typed nullable foreign keys and an exactly-one-source constraint. Unrestricted polymorphic `source_type/source_id` is prohibited.
+- Status vocabulary: `planned`, `in_progress`, `completed`, `partially_completed`, `deferred`, `skipped`, `cancelled`.
+- Deferral-reason vocabulary: `insufficient_time`, `schedule_conflict`, `prerequisite_not_mastered`, `difficulty`, `illness_or_absence`, `resource_unavailable`, `higher_priority_task`, `student_requested`, `counselor_adjustment`, `other`. A `deferred` item requires a reason; `other` may carry an explanatory note.
+- Normalized PlanItem is authoritative for new plan versions. Legacy `plan_content` JSON may remain only for historical compatibility/migration; it must not be a second independently editable source of truth. JSON needed for printing/output must be derived from normalized data.
+- Published PlanVersions remain immutable. Item changes and status transitions must be auditable with actor, timestamp and reason.
+
+### WS-DOM-05 — Curriculum Book/Edition and ownership (Option A; Phase 7)
+- **Gate impact: LATER_PHASE; not a Phase 2 blocker.** Defer Book/Edition, explicit curriculum-version successor mapping, and platform-versus-Workspace content ownership metadata to Phase 7 (Curriculum). Do not implement these structures in Phase 2.
+- Four governance questions remain OPEN and require explicit Product Owner decisions before Phase 7: (1) source of reference-content ingestion; (2) Workspace fork versus overlay; (3) authority approving curriculum changes; (4) whether subtopic-level mastery is mandatory in MVP.
+- This decision does not approve proposed defaults for those questions. Until separately decided, do not invent content licensing/ownership policy; Topic-level mastery remains the MVP requirement and subtopic mastery is not mandatory by this decision.
+
+**Status note:** WS-PLAN-01 remains implementation-pending and blocking until its schema, constraints, audit semantics and tests are evidenced. WS-DOM-05 is deferred to Phase 7, with the four governance questions still open. Neither decision approves Phase 2, authorizes Phase 3, or relaxes D-014 synthetic-only restrictions.
