@@ -433,21 +433,50 @@ END $iso$;
 --   F-02: the runtime may INSERT plan versions but may not NAME content_model (column-level privilege), so
 --         everything it creates is normalized. legacy_json is writable only by a dedicated NOLOGIN migration
 --         identity, which can do nothing else.
---   Both identities are recorded in plan_privileged_identities, and the triggers check ROLE MEMBERSHIP —
---   verified by PostgreSQL, unlike a session variable, which the caller sets.
+--   Both identities are recorded in plan_privileged_identities, and the triggers check the IDENTITY
+--   (current_user, set by PostgreSQL, unlike a session variable, which the caller sets). Since F-05 this is
+--   identity, not membership: holding the role is grounds for refusal, not acceptance.
 DO $plan$
 DECLARE
   k text := current_setting('app.workspace_key');
   rt text := 'ws_'||k||'_runtime';
   wr text := 'ws_'||k||'_synth_plan_writer';
   mg text := 'ws_'||k||'_plan_migrator';
+  k0 text := current_setting('app.workspace_key');  -- k is reused as a loop variable below
+  inv text[];
+  bad text;
 BEGIN
   IF to_regclass('public.plan_items') IS NULL THEN
     RETURN;
   END IF;
+  -- F-05: an EXISTING privileged role is validated, never trusted and never silently repaired. Roles are
+  -- cluster-wide, so a role of this name may predate this bootstrap, and nothing says who created it or why
+  -- it looks the way it does. Any unexpected attribute or membership aborts the bootstrap. No reviewed
+  -- procedure for repairing such a role exists (who may provision these identities is an open operational
+  -- decision), so stopping is the only safe outcome.
   FOREACH k IN ARRAY ARRAY[wr, mg] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = k) THEN
-      EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS', k);
+      EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION', k);
+    ELSE
+      SELECT string_agg(x, ', ') INTO bad FROM (
+        SELECT unnest(ARRAY[
+          CASE WHEN r.rolcanlogin    THEN 'LOGIN' END,
+          CASE WHEN r.rolsuper       THEN 'SUPERUSER' END,
+          CASE WHEN r.rolcreaterole  THEN 'CREATEROLE' END,
+          CASE WHEN r.rolbypassrls   THEN 'BYPASSRLS' END,
+          CASE WHEN r.rolreplication THEN 'REPLICATION' END,
+          CASE WHEN r.rolcreatedb    THEN 'CREATEDB' END,
+          CASE WHEN r.rolinherit     THEN 'INHERIT' END]) AS x
+          FROM pg_roles r WHERE r.rolname = k
+        UNION ALL
+        SELECT 'held by ' || m.member::regrole::text FROM pg_auth_members m WHERE m.roleid = k::regrole
+        UNION ALL
+        SELECT 'member of ' || m.roleid::regrole::text FROM pg_auth_members m WHERE m.member = k::regrole
+      ) z WHERE x IS NOT NULL;
+      IF bad IS NOT NULL THEN
+        RAISE EXCEPTION 'F-05: pre-existing privileged role % is unsafe (%); bootstrap aborted, nothing repaired', k, bad
+          USING ERRCODE = 'insufficient_privilege';
+      END IF;
     END IF;
   END LOOP;
   DELETE FROM plan_privileged_identities;
@@ -475,6 +504,21 @@ BEGIN
   -- migration identity: insert plan versions (including legacy_json) and read what the guard reads
   EXECUTE format('GRANT SELECT, INSERT ON TABLE student_plan_versions TO %I', mg);
   EXECUTE format('GRANT SELECT ON TABLE plan_privileged_identities, plan_items, student_plans TO %I', mg);
+
+  -- F-05: after every grant above, the whole boundary is checked against the actual catalog, for the actual
+  -- role inventory of this file (the $roles$ list). It runs in THIS block on purpose: a violation aborts the
+  -- block's transaction, so the identity records and grants above are rolled back too, and no session can
+  -- then act as a privileged identity (plan_identity_is() finds no record). This is the point-in-time
+  -- check; plan_identity_is() re-checks the privileged identities' own state on every write.
+  inv := ARRAY['ws_'||k0||'_table_owner', 'ws_'||k0||'_function_owner', 'ws_'||k0||'_governance_owner',
+               'ws_'||k0||'_runtime', 'ws_'||k0||'_worker', 'ws_'||k0||'_exporter',
+               'ws_'||k0||'_runtime_login', 'ws_'||k0||'_worker_login', 'ws_'||k0||'_exporter_login'];
+  SELECT string_agg(x, '; ') INTO bad FROM public.plan_identity_boundary_violations(inv) x;
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION 'F-05: plan identity boundary violated; bootstrap aborted, nothing recorded: %', bad
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RAISE NOTICE 'F-05: plan identity boundary verified (% application roles, 2 privileged identities)', cardinality(inv);
 END $plan$;
 
 -- Default privileges remain deny-by-default for future migrations.

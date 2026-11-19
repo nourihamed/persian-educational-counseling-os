@@ -39,6 +39,11 @@
 --     §9), are open Product Owner questions. They are held FAIL-CLOSED, not answered (see below).
 --   * Engine-created items will need a non-membership actor; none exists until Phase 12.
 --
+-- CORRECTED AFTER THE SUPERVISOR REVIEW OF 8df7d5e (2026-11-19), FINDING F-05 (HIGH): the privileged
+-- identities are checked by IDENTITY, not membership. See plan_identity_is() and
+-- plan_identity_boundary_violations(); tests in tests/workspace_plan_identity_membership_tests.sql (F05-*) and
+-- tests/workspace_plan_identity_bootstrap_tests.sh (F05-BOOT-*).
+--
 -- CORRECTED AFTER THE SUPERVISOR REVIEW OF d75d039 (2026-11-18). FOUR FINDINGS, EACH NOW FAIL-CLOSED
 --   F-01 CRITICAL — actor impersonation. As first written, the runtime could INSERT plan items and status
 --     transitions, and the actor was whatever the row SAID: actor_kind='student' skipped every check, and a
@@ -50,8 +55,8 @@
 --       - NO application role may insert plan items or status transitions: the runtime holds SELECT only;
 --       - actor_kind = 'student' is refused outright, because no student identity can be authenticated;
 --       - the only writer is a dedicated NOLOGIN SYNTHETIC test identity (D-014), named in
---         plan_privileged_identities and checked by ROLE MEMBERSHIP, which PostgreSQL verifies — never by a
---         session variable or GUC, which the caller sets.
+--         plan_privileged_identities and checked by IDENTITY (current_user, as PostgreSQL sets it; since F-05 not
+--         membership) — never by a session variable or GUC, which the caller sets.
 --     A membership id on a row remains ATTRIBUTION, not proof of who wrote it.
 --   F-02 HIGH — new legacy_json versions were creatable by the runtime. Now the runtime may not even name
 --     content_model (column-level INSERT privilege excludes it, so every runtime-created version is
@@ -99,15 +104,127 @@ CREATE TABLE plan_privileged_identities (
   role_name text NOT NULL,
   note      text NOT NULL
 );
+-- F-05 (Supervisor review of 8df7d5e): the check is IDENTITY, not membership.
+-- The earlier form was pg_has_role(current_user, role, 'MEMBER'). That is true for ANY role holding the
+-- privileged role directly or through a chain, with or without INHERIT or SET. A single stray
+-- `GRANT writer TO runtime` would therefore have turned the shared runtime into a plan author.
+-- Now the session must BE the privileged role (current_user = role), and the role must be in the state the
+-- bootstrap requires. That state is re-checked here on every call, so a later change fails closed without
+-- waiting for the next bootstrap:
+--   * NOLOGIN, NOSUPERUSER, NOCREATEROLE, NOBYPASSRLS, NOREPLICATION, NOCREATEDB, NOINHERIT;
+--   * NO pg_auth_members row in either direction. Nobody holds it (so no SET ROLE path exists, whatever the
+--     INHERIT/SET/ADMIN options), and it holds nothing.
+-- With no members and NOLOGIN, the only way for current_user to become the role is a superuser running
+-- SET ROLE or SET SESSION AUTHORIZATION: the isolated synthetic test harness. A superuser is not
+-- accepted as itself (current_user is then the superuser's name). A superuser can bypass any in-database
+-- control anyway, so who may act as superuser is an operational decision, recorded as open, not one made here.
+-- search_path is pinned and every relation is schema-qualified, so a session cannot shadow a catalog or
+-- table with a temporary object.
 CREATE FUNCTION plan_identity_is(p_purpose text) RETURNS boolean
-LANGUAGE sql STABLE AS $body$
-  -- current_user, not a setting: SET ROLE and SET SESSION AUTHORIZATION change it, and only for an identity
-  -- PostgreSQL has let the session assume. pg_has_role is true for a superuser, which no trigger contains
-  -- anyway (SEC-08).
-  SELECT coalesce((SELECT pg_catalog.pg_has_role(current_user, i.role_name, 'MEMBER')
-                     FROM public.plan_privileged_identities i
-                    WHERE i.purpose = p_purpose
-                      AND EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname = i.role_name)), false);
+LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $body$
+  SELECT coalesce((
+    SELECT r.rolname = current_user
+       AND NOT r.rolcanlogin AND NOT r.rolsuper AND NOT r.rolcreaterole AND NOT r.rolbypassrls
+       AND NOT r.rolreplication AND NOT r.rolcreatedb AND NOT r.rolinherit
+       AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m WHERE m.roleid = r.oid OR m.member = r.oid)
+      FROM public.plan_privileged_identities i
+      JOIN pg_catalog.pg_roles r ON r.rolname = i.role_name
+     WHERE i.purpose = p_purpose), false);
+$body$;
+
+-- F-05: what the bootstrap must establish, as a list of violations (an empty result is the only pass).
+-- p_inventory is the Workspace's application role inventory, passed by workspace_roles_setup_draft.sql
+-- from its own role list: owners, runtime, worker, exporter and their login identities. It does not
+-- exempt anything: the membership checks look at EVERY role in the cluster (pg_auth_members is
+-- cluster-wide). A privileged role that cannot be found, or a row that does not resolve, is a violation;
+-- nothing unclassified passes.
+CREATE FUNCTION plan_identity_boundary_violations(p_inventory text[]) RETURNS SETOF text
+LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $body$
+  WITH need(purpose) AS (VALUES ('synthetic_plan_writer'), ('legacy_plan_migrator')),
+  priv AS (
+    SELECT n.purpose, i.role_name, r.oid, r.rolcanlogin, r.rolsuper, r.rolcreaterole, r.rolbypassrls,
+           r.rolreplication, r.rolcreatedb, r.rolinherit
+      FROM need n
+      LEFT JOIN public.plan_privileged_identities i ON i.purpose = n.purpose
+      LEFT JOIN pg_catalog.pg_roles r ON r.rolname = i.role_name),
+  guarded(tbl) AS (VALUES ('public.plan_items'), ('public.plan_item_status_events'),
+                          ('public.student_plan_versions'), ('public.plan_privileged_identities')),
+  security_functions(sig) AS (VALUES ('public.plan_identity_is(text)'), ('public.guard_plan_item()'),
+                          ('public.guard_plan_item_status_event()'), ('public.guard_plan_version_model()'),
+                          ('public.plan_identity_boundary_violations(text[])')),
+  guard_triggers(tbl, tg) AS (VALUES ('public.plan_items','plan_items_guard'),
+                          ('public.plan_item_status_events','plan_item_status_events_guard'),
+                          ('public.student_plan_versions','student_plan_versions_model_guard')),
+  owners AS (
+    SELECT DISTINCT c.relowner AS oid FROM guarded g JOIN pg_catalog.pg_class c ON c.oid = g.tbl::regclass
+    UNION SELECT p.proowner FROM security_functions f JOIN pg_catalog.pg_proc p ON p.oid = f.sig::regprocedure)
+  -- the privileged identities themselves
+  SELECT format('%s: no privileged identity is recorded', n.purpose)
+    FROM need n WHERE NOT EXISTS (SELECT 1 FROM public.plan_privileged_identities i WHERE i.purpose = n.purpose)
+  UNION ALL SELECT format('%s: role %s does not exist', purpose, role_name) FROM priv WHERE role_name IS NOT NULL AND oid IS NULL
+  UNION ALL SELECT format('%s: role %s has LOGIN', purpose, role_name)       FROM priv WHERE rolcanlogin
+  UNION ALL SELECT format('%s: role %s has SUPERUSER', purpose, role_name)   FROM priv WHERE rolsuper
+  UNION ALL SELECT format('%s: role %s has CREATEROLE', purpose, role_name)  FROM priv WHERE rolcreaterole
+  UNION ALL SELECT format('%s: role %s has BYPASSRLS', purpose, role_name)   FROM priv WHERE rolbypassrls
+  UNION ALL SELECT format('%s: role %s has REPLICATION', purpose, role_name) FROM priv WHERE rolreplication
+  UNION ALL SELECT format('%s: role %s has CREATEDB', purpose, role_name)    FROM priv WHERE rolcreatedb
+  UNION ALL SELECT format('%s: role %s has INHERIT', purpose, role_name)     FROM priv WHERE rolinherit
+  UNION ALL SELECT format('%s: role %s is the same role as another privileged identity or an application role', p.purpose, p.role_name)
+    FROM priv p WHERE p.role_name = ANY (p_inventory)
+       OR EXISTS (SELECT 1 FROM priv q WHERE q.purpose <> p.purpose AND q.role_name = p.role_name)
+  -- membership in EITHER direction, whatever the INHERIT / SET / ADMIN options: nobody may hold it, it holds nothing
+  UNION ALL SELECT format('%s: role %s is held by %s (admin=%s inherit=%s set=%s)', p.purpose, p.role_name,
+                         m.member::regrole, m.admin_option, m.inherit_option, m.set_option)
+    FROM priv p JOIN pg_catalog.pg_auth_members m ON m.roleid = p.oid
+  UNION ALL SELECT format('%s: role %s is itself a member of %s', p.purpose, p.role_name, m.roleid::regrole)
+    FROM priv p JOIN pg_catalog.pg_auth_members m ON m.member = p.oid
+  -- a privileged identity owns nothing, in any database of the cluster (it could otherwise alter what it owns)
+  UNION ALL SELECT format('%s: role %s owns objects (%s)', p.purpose, p.role_name, count(*))
+    FROM priv p JOIN pg_catalog.pg_shdepend d ON d.refobjid = p.oid AND d.deptype = 'o'
+   GROUP BY p.purpose, p.role_name
+  -- the application inventory: no cluster-level authority, and no path to a privileged identity
+  UNION ALL SELECT format('application role %s does not exist', a) FROM unnest(p_inventory) a
+   WHERE NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname = a)
+  UNION ALL SELECT format('application role %s has %s', r.rolname, attr)
+    FROM pg_catalog.pg_roles r
+    CROSS JOIN LATERAL (VALUES ('SUPERUSER', r.rolsuper), ('CREATEROLE', r.rolcreaterole),
+                               ('BYPASSRLS', r.rolbypassrls), ('REPLICATION', r.rolreplication)) v(attr, val)
+   WHERE r.rolname = ANY (p_inventory) AND v.val
+  UNION ALL SELECT format('application role %s can reach privileged identity %s', a, p.role_name)
+    FROM unnest(p_inventory) a JOIN priv p ON p.oid IS NOT NULL
+   WHERE EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname = a)
+     AND pg_catalog.pg_has_role(a, p.oid, 'MEMBER')
+  -- whoever owns the guarded tables and security functions can disable or replace them, so nobody may hold
+  -- an owner role, and an owner is never a privileged identity
+  UNION ALL SELECT format('owner %s of the plan security objects is held by %s', o.oid::regrole, m.member::regrole)
+    FROM owners o JOIN pg_catalog.pg_auth_members m ON m.roleid = o.oid
+  UNION ALL SELECT format('owner %s of the plan security objects is a privileged identity', o.oid::regrole)
+    FROM owners o JOIN priv p ON p.oid = o.oid
+  UNION ALL SELECT format('owner %s of the plan security objects can log in or has cluster authority', r.rolname)
+    FROM owners o JOIN pg_catalog.pg_roles r ON r.oid = o.oid
+   WHERE r.rolcanlogin OR r.rolsuper OR r.rolcreaterole OR r.rolbypassrls OR r.rolreplication
+  -- the guard triggers exist and are enabled
+  UNION ALL SELECT format('guard trigger %s on %s is missing', g.tg, g.tbl) FROM guard_triggers g
+   WHERE NOT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger t WHERE t.tgrelid = g.tbl::regclass AND t.tgname = g.tg)
+  UNION ALL SELECT format('guard trigger %s on %s is not enabled (tgenabled=%s)', g.tg, g.tbl, t.tgenabled)
+    FROM guard_triggers g JOIN pg_catalog.pg_trigger t ON t.tgrelid = g.tbl::regclass AND t.tgname = g.tg
+   WHERE t.tgenabled NOT IN ('O','A')
+  -- no alternate write path: no non-owner application role, and not PUBLIC, may write the identity record or
+  -- the plan tables (column privileges included). student_plan_versions is excluded here on purpose: the
+  -- runtime's column-scoped INSERT on it is intended (F-02) and asserted by PLN-C2/PLN-28.
+  UNION ALL SELECT format('%s holds %s on %s', a, priv_name, t.tbl)
+    FROM unnest(p_inventory || ARRAY['public']) a
+    CROSS JOIN (VALUES ('public.plan_items'), ('public.plan_item_status_events'), ('public.plan_privileged_identities')) t(tbl)
+    CROSS JOIN (VALUES ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE')) v(priv_name)
+   WHERE (a = 'public' OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname = a))
+     AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_roles r ON r.oid = c.relowner
+                      WHERE c.oid = t.tbl::regclass AND r.rolname = a)
+     AND CASE WHEN a = 'public'
+              THEN EXISTS (SELECT 1 FROM pg_catalog.pg_class c, LATERAL pg_catalog.aclexplode(c.relacl) x
+                            WHERE c.oid = t.tbl::regclass AND x.grantee = 0 AND x.privilege_type = v.priv_name)
+              ELSE pg_catalog.has_table_privilege(a, t.tbl, v.priv_name)
+                   OR (v.priv_name IN ('INSERT','UPDATE')
+                       AND pg_catalog.has_any_column_privilege(a, t.tbl, v.priv_name)) END;
 $body$;
 
 CREATE FUNCTION guard_plan_version_model() RETURNS trigger LANGUAGE plpgsql AS $body$

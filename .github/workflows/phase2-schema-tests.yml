@@ -228,7 +228,7 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
 
-      - name: Normalized PlanItem data model (WS-PLAN-01, decision B) — fail-closed actors, concurrent-transition race, historical-row migration
+      - name: Normalized PlanItem data model (WS-PLAN-01, decision B) — fail-closed actors, privileged-identity membership (F-05), concurrent-transition race, historical-row migration, role bootstrap validation (F-05)
         run: |
           set -euo pipefail
           W=docs/phase2/workspace
@@ -242,6 +242,8 @@ jobs:
           }
           load workspace_plan_items_test
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_plan_items_test -f $W/tests/workspace_plan_items_tests.sql
+          # F-05: adversarial role membership, SET ROLE, grant/alter/replace attempts, against the same database
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_plan_items_test -f $W/tests/workspace_plan_identity_membership_tests.sql
           # The race needs its own database: it adds a scratch signal table and its fixtures.
           load workspace_plan_items_race
           bash $W/tests/workspace_plan_item_status_race.sh workspace_plan_items_race $K
@@ -257,6 +259,8 @@ jobs:
           done
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_plan_items_migration -f $W/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_plan_items_migration -f $W/tests/workspace_plan_items_migration_tests.sql
+          # F-05: the bootstrap must abort on unsafe PRE-EXISTING privileged roles (own databases and keys)
+          bash $W/tests/workspace_plan_identity_bootstrap_tests.sh
         env:
           PGHOST: localhost
           PGUSER: postgres

@@ -16,8 +16,8 @@
 |---|---|
 | Repository | `nourihamed/persian-educational-counseling-os` (private) |
 | Branch / PR | `docs/product-owner-decisions-consolidation-2026-11-07` · PR #12 · **Draft, open, unmerged** |
-| Last HEAD verified on GitHub | `d75d039919c806a27a7d5b50021af6920fdd5f0c` (WS-PLAN-01 data model), verified 2026-11-18 by `git fetch`; reviewed NOT ACCEPTED by the Supervisor (F-01..F-04) |
-| This package | updated in the F-01..F-04 remediation commit **after** `d75d039`; that SHA exists only once the Product Owner applies and pushes the patch, and is reported in the handoff, not in this file |
+| Last HEAD verified on GitHub | `8df7d5eea03a3712afed00e4e4ef3028ce01c09e` (F-01..F-04 remediation), verified 2026-11-19 by `git fetch`; the Supervisor's review raised F-05 (HIGH) |
+| This package | updated in the F-05 remediation commit **after** `8df7d5e`; that SHA exists only once the Product Owner applies and pushes the patch, and is reported in the handoff, not in this file |
 | `main` | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6` — the branch is **2 commits behind**: `4004360` adds `docs/phase2/control_plane/tests/cp_30_role_privilege_tests.sql` (89 lines), `5bb8e4e` reverts it. Net difference from merge base `ba5e9d8` to `main`: **0 files**. Not merged, rebased or force-pushed (BRANCH-SYNC). |
 | `SUPERVISOR_REVIEW.md` | not edited by the implementation agent |
 
@@ -30,14 +30,15 @@
 | Reproduction of that failure | `fc3416ed` scanner on the exact `fc3416ed` tree | 2 findings: `workspace_operations_tests.sql:165 [iranian-mobile]`, `:171 [e164]` | local; **to be confirmed against the CI log** |
 | Last Actions run the agent was told passed | run 43551722112 (job 132315462233) at `ad3bf28` | passed | independent CI; predates every batch below |
 | Actions for Batches 1–7 heads (`cc8cd64` … `d6d81f8b`) | — | **never reported to the agent** | unknown |
-| Local full workflow at the remediation commit | cleared PostgreSQL 16.15, run after `git add` | **25 implementation steps passed, 938 PASS lines, 0 FAIL**; Python verifier 15 + 6 OK; secret scan PASS; register check PASS | local, agent-executed, **not independently reproduced** |
+| Local full workflow at the F-05 remediation commit | cleared PostgreSQL 16.15, run after `git add` | **25 implementation steps passed, 1031 PASS lines, 0 FAIL**; Python verifier 15 + 6 OK; secret scan PASS; register check PASS | local, agent-executed, **not independently reproduced** |
 | Actions at `467a029` (the corrections commit) | runs [44362679187](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362679187) (job 135008003418) and [44362668276](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362668276) (job 135007959995) | **success, both** | independent CI; conclusions read from the PR check runs, step logs not read by the agent |
 | Actions at `b7d4b28` (Product Owner decision records) | runs 44369152676, 44369143862 | **FAILED** — register check REG-08 (WS-DOM-05 §6 row); fixed in `d75d039` | independent CI |
 | Actions at `d75d039` (WS-PLAN-01 data model) | runs 44376897878, 44376886372 | **passed**, as reported by the Supervisor; reviewed NOT ACCEPTED (F-01..F-04) | independent CI |
-| Actions at the remediation commit | — | **NOT RUN** until pushed | — |
+| Actions at `8df7d5e` (F-01..F-04 remediation) | runs [44382515348](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44382515348) (job 135078318581) and [44383233656](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44383233656) (job 135080826317) | **success, both**; reviewed, F-05 raised | independent CI |
+| Actions at the F-05 remediation commit | — | **NOT RUN** until pushed | — |
 
 Step numbering: GitHub's step N is the workflow's step N−2 (GitHub adds "Set up job" and "Initialize
-containers"). The workflow has 29 YAML steps; the secret scan is GitHub step 30 and the register check step 31.
+containers"). The workflow has 29 YAML steps. GitHub numbering (YAML step + 2, for "Set up job" and "Initialize containers"): counselor isolation is step **15**, PlanItem with its race, migration and F-05 suites step **16**, secret scan step **30**, register check step **31**. The 2026-11-18 handoff said 13 and 14 for the first two; that was wrong (YAML numbering), and the Supervisor's correction is adopted.
 
 ## 3. Scope and traceability
 
@@ -47,7 +48,7 @@ containers"). The workflow has 29 YAML steps; the secret scan is GitHub step 30 
 | 2 | Clock discipline at security decisions | receipt consume, contact change, guardian effective view | CLK-01..03, RC-FRESH-01..04, CC-FRESH-01..03 | Implemented (schema) |
 | 3 | Student Credit lifecycle | `workspace_schema_draft.sql` ledger guard, entitlements | CRD-01..47, WS-CRD-LOCK, WS-CRD-LAST-01..05 | Implemented (schema); **OQ-CRD-2/3 open**; commercial lifecycle deferred to Phase 21/22 |
 | 4 | Assessment, exam, analysis | `workspace_assessment_exam_draft.sql` | EXM suite | Implemented (schema); **OQ-ASM-1/2 open** |
-| 5 | Curriculum, plan, activity | subtopics; activity taxonomy | CUR-01..10, ACT-01..26 | **Partial** — WS-PLAN-01 decided (B); data model implemented at `d75d039`, reviewed NOT ACCEPTED, F-01..F-04 remediated (`workspace_plan_items_draft.sql`; PLN-C1..C4, PLN-01..80, WS-PLN-RACE-01..03, PLN-M01..M08), pending independent verification; WS-DOM-05 decided (A), deferred to Phase 7 |
+| 5 | Curriculum, plan, activity | subtopics; activity taxonomy | CUR-01..10, ACT-01..26 | **Partial** — WS-PLAN-01 decided (B); data model implemented at `d75d039`, reviewed NOT ACCEPTED, F-01..F-04 remediated at `8df7d5e`, F-05 remediated after it (`workspace_plan_items_draft.sql`; PLN-C1..C4, PLN-01..80, WS-PLN-RACE-01..03, PLN-M01..M08, F05-00..16, F05-BOOT-01..14), pending independent verification; WS-DOM-05 decided (A), deferred to Phase 7 |
 | 6 | Adversarial privilege review | role setup, ownership fixes | SEC-01..10 | Implemented (schema); produced **WS-ISO-01** |
 | 7 | Contact identity, HMAC rotation, concurrency | Control Plane cp_07/cp_08 | CID-RACE-A1..B3, CID-01..05b | Implemented (schema); **PS-1..PS-4 deferred** |
 | 8 | Files, notifications, retention, operations | `workspace_operations_draft.sql` | OPS-01..64 | **Partial** — delivery, erasure completeness and authorities open |
@@ -86,7 +87,7 @@ edition model; manager explicit-permission vocabulary; any production migration.
 | Finding | Severity | State |
 |---|---|---|
 | **WS-ISO-01** — counselor-to-counselor isolation fails open inside a Workspace | **CRITICAL (design), BLOCKING** | boundary implemented; caller binding needs a Platform Security decision |
-| WS-PLAN-01 — plan content was opaque JSON | HIGH, BLOCKING until verified | decided B; model at `d75d039` NOT ACCEPTED; **F-01..F-04 remediated, pending CI at the new SHA and Supervisor review**. Open within it: who may record transitions (needs WS-ISO-01 caller binding), whether drafts carry status, whether an empty plan may be published, the transition graph — all fail closed |
+| WS-PLAN-01 — plan content was opaque JSON | HIGH, BLOCKING until verified | decided B; model at `d75d039` NOT ACCEPTED; F-01..F-04 remediated at `8df7d5e`; **F-05 remediated, pending CI at the new SHA and Supervisor review**. Open within it: who may provision or assume the privileged identities (Platform Security / Operations); who may record transitions (needs WS-ISO-01 caller binding), whether drafts carry status, whether an empty plan may be published, the transition graph — all fail closed |
 | WS-DOM-05 — curriculum edition/ownership model | MEDIUM, **LATER_PHASE** | decided A: deferred to Phase 7; four governance questions open |
 | WS-DOM-02 — governance commands lack verifiable authority | HIGH, fail-closed | depends on Issue #13 / PS-* |
 | M-05 — duplicate JSON object keys not rejected at raw ingress | MEDIUM, **NON_BLOCKING_TECHNICAL_DEBT** | defined by the Supervisor 2026-11-18; not implemented (needs a raw-ingress layer) |
@@ -119,7 +120,7 @@ completeness.
 
 ## 7. NOT-RUN tests
 
-- **GitHub Actions at the F-01..F-04 remediation commit** — NOT RUN until pushed.
+- **GitHub Actions at the F-05 remediation commit** — NOT RUN until pushed.
 - **Actions results for Batches 1–7** were never reported to the agent.
 - **Counselor isolation as each counselor's own database identity** — cannot exist until WS-ISO-01's caller
   binding is decided.
@@ -132,6 +133,8 @@ completeness.
 - **Transfer controller end to end**, including freeze timeout and recovery (OQ-E).
 - **Planning invariants** (no conflicts, no impossible workload, no duplicates) — no planning engine exists;
   the normalized items make them expressible, but nothing schedules.
+- **Acting as a privileged plan identity outside a superuser test session** — by design impossible now (F-05);
+  the production provisioning of these identities is undecided.
 - **Plan writes by a real counselor or student identity** — no application identity may write plan items or
   transitions until caller binding exists (WS-ISO-01). Only the synthetic writer is tested.
 - **A production migration** of historical plan versions at volume, and its rollback (`WS_PLAN_01_MIGRATION_NOTES.md` §4).
@@ -208,8 +211,8 @@ note rather than rewritten), `PHASE2_EXIT_CRITERIA.md`, `UNRESOLVED_ITEM_REGISTE
 
 1. **WS-ISO-01 is CRITICAL and fails open.** A core product security requirement is not enforced by the
    database, and the fix needs a decision that has not been made.
-2. **GitHub Actions passed at `d75d039` and the Supervisor still found F-01..F-04.** CI is evidence for draft SQL and synthetic suites, not for the gate; Actions at the remediation commit are NOT RUN.
-3. **WS-PLAN-01 was NOT ACCEPTED at `d75d039`;** its remediation is not yet independently reviewed. Curriculum editions are deferred to Phase 7 by decision (WS-DOM-05).
+2. **GitHub Actions passed at `d75d039` and at `8df7d5e`, and the Supervisor still found F-01..F-04 and then F-05.** CI is evidence for draft SQL and synthetic suites, not for the gate; Actions at the F-05 remediation commit are NOT RUN.
+3. **WS-PLAN-01 is not accepted;** the F-05 remediation is not yet independently reviewed. Curriculum editions are deferred to Phase 7 by decision (WS-DOM-05).
 4. **M-05 and M-06 are now defined** as MEDIUM technical debt, non-blocking, and are not implemented.
 5. **PR integration is unresolved** (PR #8–#11; the branch is behind `main`).
 

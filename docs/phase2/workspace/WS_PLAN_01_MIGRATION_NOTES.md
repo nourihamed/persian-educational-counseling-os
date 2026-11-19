@@ -36,8 +36,8 @@ An empty test database shows neither problem, which is why this was missed.
    with a reason. History is then preserved, and "what was planned, what changed and why" stays answerable.
 5. **No new `legacy_json` version can be created by the runtime.** The runtime cannot name
    `content_model` at all (column-level privilege). The trigger accepts `legacy_json` only from the
-   dedicated NOLOGIN migration identity `ws_<key>_plan_migrator`. That identity is checked by role
-   membership, never by a session variable.
+   dedicated NOLOGIN migration identity `ws_<key>_plan_migrator`. That identity is checked by identity
+   (`current_user`; since F-05, not membership), never by a session variable.
 6. **A plan that already has a normalized version cannot regress to `legacy_json`**, not even through
    the migration identity.
 

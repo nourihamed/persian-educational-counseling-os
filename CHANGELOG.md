@@ -4,6 +4,28 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-11-19 — Supervisor finding F-05 on `8df7d5e` remediated: privileged plan identities and role membership (draft SQL; synthetic)
+`security/test/docs:` GitHub Actions passed at `8df7d5e` (runs 44382515348, 44383233656). The Supervisor then raised F-05 (HIGH).
+- **The defect.** The privileged identities were checked with `pg_has_role(current_user, role, 'MEMBER')`, which any
+  direct or indirect member passes. The bootstrap also trusted a pre-existing role as it found it.
+- **Identity check.** `plan_identity_is()` now requires the session to be the role, with no membership in either
+  direction and none of LOGIN, SUPERUSER, CREATEROLE, BYPASSRLS, REPLICATION, CREATEDB or INHERIT. It re-checks this on
+  every write, and a superuser is refused as itself.
+- **Bootstrap.** It aborts on an unsafe existing role and repairs nothing. Then, in the same transaction,
+  `plan_identity_boundary_violations()` checks the whole boundary for the file's own nine-role inventory:
+  - memberships and paths;
+  - attributes;
+  - who holds the owners of the security objects;
+  - guard triggers enabled;
+  - no PUBLIC or application write on the plan tables or the identity record.
+- **Fixtures.** Rows previously written by a superuser are now written as the writer.
+- **Tests.** F05-00..16 (79 PASS lines) and F05-BOOT-01..14, each with a measured negative control.
+- **CI step numbers corrected:** isolation 15, PlanItem 16, secret scan 30, register 31.
+- **Unchanged:** no runtime write path and no new runtime privilege. WS-ISO-01 stays open (ISO-GAP-01..03), and
+  M-05/M-06 stay MEDIUM technical debt.
+- **Open:** who may provision or assume the privileged identities (Platform Security / Operations).
+- **Local:** 25 steps, 1031 PASS lines, 0 FAIL. Actions: NOT RUN.
+
 ### 2026-11-18 — Supervisor findings F-01..F-04 on `d75d039` remediated; M-05/M-06 recorded (draft SQL; synthetic)
 `fix/security/test/docs:` The Supervisor reviewed `d75d039` as NOT ACCEPTED, although CI passed there (runs
 44376897878, 44376886372).

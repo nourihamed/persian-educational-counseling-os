@@ -996,7 +996,7 @@ depend on an engine. There is no transition graph because the decision fixed the
 
 The Supervisor reviewed `d75d039` as NOT ACCEPTED. The plan suite is now PLN-C1..C4, PLN-01..80 (**75 PASS lines**),
 plus WS-PLN-RACE-01..03 and a new migration suite. Plan rows are now written by `ws_<key>_synth_plan_writer`;
-historical legacy fixtures by `ws_<key>_plan_migrator`. Both are NOLOGIN and checked by role membership.
+historical legacy fixtures by `ws_<key>_plan_migrator`. Both are NOLOGIN and checked by role membership (superseded by F-05 below: identity, not membership).
 
 ### F-01 — the runtime cannot write a plan row in anyone's name
 - **PLN-C2** (rewritten): the runtime holds no INSERT, UPDATE or DELETE on `plan_items` or `plan_item_status_events`
@@ -1046,4 +1046,80 @@ plan draft: one published with JSON, one draft whose JSON is `'{}'`, one draft w
   tests, with a check that neither keeps a private copy.
 
 **NOT RUN:** plan writes under a real counselor or student identity (needs WS-ISO-01 caller binding); a migration at
-volume and its rollback; GitHub Actions at the remediation commit.
+volume and its rollback.
+
+## 2026-11-19 — Supervisor finding F-05 on `8df7d5e`: privileged identities and role membership
+
+**The defect.** `plan_identity_is()` used `pg_has_role(current_user, role, 'MEMBER')`. That is true for any direct or
+indirect member, whatever the INHERIT/SET options. The bootstrap also created the roles `IF NOT EXISTS` and trusted an
+existing one as it was.
+
+**The rule now.**
+- The session must **be** the role.
+- On every write, the role must have no `pg_auth_members` row in either direction and none of LOGIN, SUPERUSER,
+  CREATEROLE, BYPASSRLS, REPLICATION, CREATEDB or INHERIT.
+- A superuser is not accepted as itself.
+
+### `workspace_plan_identity_membership_tests.sql` — F05-00..F05-16 (79 PASS lines)
+Runs after the plan suite in the same database. Every adversarial state uses real GRANT, SET SESSION AUTHORIZATION and
+SET ROLE inside a rolled-back transaction.
+
+| Test | What happens | Result |
+|---|---|---|
+| F05-00 | records the server version in the log; requires 16+ | PASS |
+| F05-01/01b | clean bootstrap: no violation; nobody holds either identity, and neither holds anything | PASS |
+| F05-02 | a superuser is not accepted as either identity | PASS |
+| F05-13a/b/c | ordinary runtime item / event / legacy writes | refused 42501 by privileges |
+| F05-09a..h | runtime, worker and exporter logins `SET ROLE` to the writer, migrator, table owner and function owner | refused 42501 by PostgreSQL |
+| F05-10a..d | runtime and worker try to GRANT the writer, migrator or table owner | refused 42501 |
+| F05-11a..f | ALTER ROLE LOGIN / SUPERUSER / PASSWORD / CREATEROLE, RENAME, DROP on the privileged roles | refused 42501 |
+| F05-12a..k | replace `plan_identity_is()` or a guard; disable or drop a guard trigger; take ownership; `session_replication_role`; rewrite or delete the identity record; create in `public`; create a temp shadow table | refused 42501 |
+| F05-12l/m | pinned `search_path`; the identities own nothing | PASS |
+| F05-03 | runtime **directly** holds the writer WITH INHERIT; PostgreSQL reports membership | item and event writes still refused; violation named |
+| F05-04 | runtime directly holds it WITH SET; the `SET ROLE` **succeeds** and current_user is the writer | writes still refused; violation named |
+| F05-05 | **indirect** chain runtime → mid_b → mid_a → writer | inherited and SET ROLE writes refused; path named |
+| F05-06 | worker holds the migrator | legacy import refused, both inherited and after SET ROLE |
+| F05-07 | nested chain exporter → … → migrator | legacy import refused after SET ROLE; path named |
+| F05-08a..h | the writer made a member of a role, or given LOGIN / CREATEROLE (migrator) / BYPASSRLS after bootstrap | refused on the next write; violation named |
+| F05-15a..g | an owner role held by an application role; a disabled guard; PUBLIC INSERT; column UPDATE on the identity record; CREATEROLE on a login role; a missing identity record | each named as a violation; missing record → nobody can act |
+| F05-14, F05-16b/c | the synthetic writer creates an item and a transition, and the migrator imports a legacy version, as a superuser test session assuming them | accepted — the only trusted path |
+| F05-16a | after every rollback | no violation remains |
+
+### `workspace_plan_identity_bootstrap_tests.sh` — F05-BOOT-01..14
+The unsafe state is created **before** the real bootstrap runs, each case in its own database and key. Each failing
+case also asserts that nothing was repaired (the attribute or membership is still there) and that no identity record
+was written.
+
+| Case | Pre-existing state | Result |
+|---|---|---|
+| 01..04 | writer with LOGIN / SUPERUSER / CREATEROLE / BYPASSRLS | bootstrap aborts |
+| 05..08 | migrator with LOGIN / SUPERUSER / CREATEROLE / BYPASSRLS | bootstrap aborts |
+| 09 | writer with INHERIT | bootstrap aborts |
+| 10 | writer already held by the runtime | bootstrap aborts |
+| 11 | migrator held indirectly by the worker | bootstrap aborts |
+| 12 | runtime login with CREATEROLE (application role) | aborts at the boundary check; no record kept |
+| 13 | clean state | succeeds, both identities recorded, boundary verified |
+| 14 | re-run over safe roles it created | accepted |
+
+| Negative control (measured) | Result |
+|---|---|
+| `plan_identity_is()` reverted to `pg_has_role(..., 'MEMBER')` | fails F05-02 (superuser accepted); with F05-02 removed, fails F05-03b: "statement unexpectedly succeeded" |
+| no-members clause removed | fails F05-04c: SET ROLE path write succeeds |
+| attribute clauses removed | fails F05-08c: LOGIN writer accepted |
+| "held by" clause removed from the boundary check | fails F05-03d |
+| existing-role validation removed from the bootstrap | F05-BOOT-01..09 fail (caught later by the boundary check, wrong reason) |
+| boundary check disabled | fails F05-BOOT-12: bootstrap succeeded |
+| both removed | F05-BOOT-01..12 all fail: bootstrap succeeded with an unsafe role |
+
+**Version.** Tested locally on PostgreSQL 16.15. CI uses `postgres:16`, and F05-00 prints the exact version into the
+job log. PostgreSQL 16 semantics relied on:
+- the INHERIT, SET and ADMIN options of a membership grant;
+- `pg_has_role(..., 'MEMBER')` being true for any of them;
+- `SET ROLE` requiring SET on every link of the chain.
+
+The identity rule does not depend on any of these: it refuses as soon as any membership row exists.
+
+**NOT RUN:**
+- a non-superuser provisioner with CREATEROLE (PostgreSQL 16 gives the creator ADMIN on the role it creates, which the
+  boundary check reports as "held by", so such a bootstrap fails closed; not exercised);
+- GitHub Actions at the F-05 remediation commit.

@@ -41,8 +41,11 @@ INSERT INTO topics(topic_id,chapter_id,title,order_no) VALUES ('a3220000-0000-00
 INSERT INTO student_plans(plan_id,student_id) VALUES ('a3500000-0000-0000-0000-000000000001','$STU');
 INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id)
 VALUES ('a3510000-0000-0000-0000-000000000001','a3500000-0000-0000-0000-000000000001',1,'{}','manual-v1','{}','draft','b3000000-0000-0000-0000-00000000000a');
+-- F-05: only the synthetic writer itself passes the identity check (a superuser does not).
+SET SESSION AUTHORIZATION $RT;
 INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
 VALUES ('$ITEM','a3510000-0000-0000-0000-000000000001','a3500000-0000-0000-0000-000000000001','$STU',1,'a3220000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b3000000-0000-0000-0000-00000000000a');
+RESET SESSION AUTHORIZATION;
 -- F-03: transitions are refused on a DRAFT version's items, so the plan is published first.
 UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='a3510000-0000-0000-0000-000000000001';
 -- Scratch coordination table: no student_id, so no guard or barrier applies to it.

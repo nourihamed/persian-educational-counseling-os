@@ -377,8 +377,12 @@ SELECT pln_true('PLN-61 ... nor its status history',
   counselor_may_access_row('b4000000-0000-0000-0000-00000000000b','plan_item_status_events',
     (SELECT event_id::text FROM plan_item_status_events WHERE plan_item_id='a4600000-0000-0000-0000-000000000001' AND seq_no=1)) = false);
 
+-- F-05: a superuser is not accepted as the synthetic writer (identity, not membership), so the fixture
+-- item is written as the writer itself.
+SET SESSION AUTHORIZATION :"writer_role";
 INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
 VALUES ('a4600000-0000-0000-0000-000000000031','a4510000-0000-0000-0000-000000000003','a4500000-0000-0000-0000-000000000003','e4000000-0000-0000-0000-000000000003',1,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000a');
+RESET SESSION AUTHORIZATION;
 UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='a4510000-0000-0000-0000-000000000003';
 -- a DRAFT v2 for the same plan, created before the freeze, so PLN-62 meets the barrier rather than the
 -- published-version rule
