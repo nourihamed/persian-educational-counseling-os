@@ -23,6 +23,7 @@ SELECT format('ws_%s_exporter', :'workspace_key')         AS exporter_role \gset
 SELECT format('ws_%s_exporter_login', :'workspace_key')   AS exporter_login \gset
 SELECT format('ws_%s_table_owner', :'workspace_key')      AS table_owner \gset
 SELECT format('ws_%s_function_owner', :'workspace_key')   AS function_owner \gset
+SELECT format('ws_%s_governance_owner', :'workspace_key') AS governance_owner \gset
 SELECT format('ws_%s_synth_plan_writer', :'workspace_key') AS writer_role \gset
 SELECT format('ws_%s_plan_migrator', :'workspace_key')    AS migrator_role \gset
 SELECT format('ws_%s_f05_mid_a', :'workspace_key')        AS mid_a \gset
@@ -318,6 +319,142 @@ RESET SESSION AUTHORIZATION;
 SET SESSION AUTHORIZATION :"migrator_role";
 SELECT pln_ok('F05-16c the migrator, assumed by the harness, imports a legacy_json version (its trusted test path)', :'legacy_stmt');
 RESET SESSION AUTHORIZATION;
+-- ======================================================================================================
+-- F-05 FOLLOW-UP (Supervisor review of 38f2561): TRANSITIVE reach to the three OWNER roles.
+-- An owner can replace the security functions, disable the guard triggers or rewrite the identity record,
+-- so reaching an owner through ANY chain is as dangerous as reaching a privileged identity. Each case first
+-- shows what PostgreSQL actually lets the application login DO through the chain (inside a rolled-back
+-- transaction), then that the boundary check names the exact path.
+-- ======================================================================================================
+\set path_pfx 'application role '
+
+-- F05-17: runtime_login -> mid_a -> function_owner, INHERIT TRUE on every link
+BEGIN;
+GRANT :"function_owner" TO :"mid_a" WITH INHERIT TRUE, SET TRUE;
+GRANT :"mid_a" TO :"runtime_login" WITH INHERIT TRUE, SET TRUE;
+SET SESSION AUTHORIZATION :"runtime_login";
+SELECT pln_ok('F05-17a REAL EFFECT: through runtime_login -> mid_a -> function_owner (INHERIT), the runtime login can REPLACE plan_identity_is()',
+  $q$CREATE OR REPLACE FUNCTION public.plan_identity_is(p_purpose text) RETURNS boolean LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS 'SELECT true'$q$);
+RESET SESSION AUTHORIZATION;
+SELECT pln_true('F05-17b the boundary check names the transitive path to the function owner',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'runtime_login'||' can reach owner '||:'function_owner'||' via '||:'runtime_login'||' -> '||:'mid_a'||' -> '||:'function_owner'));
+ROLLBACK;
+
+-- F05-18: worker_login -> mid_a -> table_owner, INHERIT TRUE
+BEGIN;
+GRANT :"table_owner" TO :"mid_a" WITH INHERIT TRUE, SET TRUE;
+GRANT :"mid_a" TO :"worker_login" WITH INHERIT TRUE, SET TRUE;
+SET SESSION AUTHORIZATION :"worker_login";
+SELECT pln_ok('F05-18a REAL EFFECT: through worker_login -> mid_a -> table_owner (INHERIT), the worker login can DISABLE the plan-item guard',
+  'ALTER TABLE public.plan_items DISABLE TRIGGER plan_items_guard');
+RESET SESSION AUTHORIZATION;
+SELECT pln_true('F05-18b the boundary check names the transitive path to the table owner',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'worker_login'||' can reach owner '||:'table_owner'||' via '||:'worker_login'||' -> '||:'mid_a'||' -> '||:'table_owner'));
+ROLLBACK;
+
+-- F05-19: exporter -> mid_b -> mid_a -> governance_owner (nested, starting at the NOLOGIN service role)
+BEGIN;
+GRANT :"governance_owner" TO :"mid_a" WITH INHERIT TRUE, SET TRUE;
+GRANT :"mid_a" TO :"mid_b" WITH INHERIT TRUE, SET TRUE;
+GRANT :"mid_b" TO :"exporter_role" WITH INHERIT TRUE, SET TRUE;
+SET SESSION AUTHORIZATION :"exporter_login";
+SELECT pln_ok('F05-19a REAL EFFECT: through exporter_login -> exporter -> mid_b -> mid_a -> governance_owner, the exporter login can SET ROLE to the governance owner',
+  format('SET ROLE %I', :'governance_owner'));
+RESET ROLE;
+RESET SESSION AUTHORIZATION;
+SELECT pln_true('F05-19b the boundary check names the nested path from the exporter',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'exporter_role'||' can reach owner '||:'governance_owner'||' via '||:'exporter_role'||' -> '||:'mid_b'||' -> '||:'mid_a'||' -> '||:'governance_owner'));
+SELECT pln_true('F05-19c ... and from the exporter login, one link longer',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'exporter_login'||' can reach owner '||:'governance_owner'||' via %'));
+ROLLBACK;
+
+-- F05-20: SET TRUE, INHERIT FALSE: no inherited privilege, but SET ROLE to the owner works
+BEGIN;
+GRANT :"table_owner" TO :"mid_a" WITH INHERIT FALSE, SET TRUE;
+GRANT :"mid_a" TO :"runtime_login" WITH INHERIT FALSE, SET TRUE;
+SET SESSION AUTHORIZATION :"runtime_login";
+SELECT pln_err('F05-20a with INHERIT FALSE the runtime login does NOT inherit ownership (disable refused as itself)',
+  'ALTER TABLE public.plan_items DISABLE TRIGGER plan_items_guard', '42501', 'must be owner of table plan_items');
+SELECT pln_ok('F05-20b REAL EFFECT: with SET TRUE the runtime login can SET ROLE to the table owner through the chain', format('SET ROLE %I', :'table_owner'));
+SELECT pln_ok('F05-20c REAL EFFECT: ... and then disable the guard', 'ALTER TABLE public.plan_items DISABLE TRIGGER plan_items_guard');
+RESET ROLE;
+RESET SESSION AUTHORIZATION;
+SELECT pln_true('F05-20d the boundary check names the SET-only path',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'runtime_login'||' can reach owner '||:'table_owner'||' via '||:'runtime_login'||' -> '||:'mid_a'||' -> '||:'table_owner'));
+ROLLBACK;
+
+-- F05-21: ADMIN OPTION only (INHERIT FALSE, SET FALSE) on the function owner, held by mid_a, which the runtime
+-- login inherits. Neither inheritance nor SET ROLE reaches the owner directly, but ADMIN lets the holder
+-- GRANT the owner to itself, and then SET ROLE works.
+BEGIN;
+GRANT :"function_owner" TO :"mid_a" WITH ADMIN TRUE, INHERIT FALSE, SET FALSE;
+GRANT :"mid_a" TO :"runtime_login" WITH INHERIT TRUE, SET TRUE;
+SET SESSION AUTHORIZATION :"runtime_login";
+SELECT pln_err('F05-21a with ADMIN only, SET ROLE to the function owner is refused at first',
+  format('SET ROLE %I', :'function_owner'), '42501', 'permission denied to set role');
+SELECT pln_ok('F05-21b REAL EFFECT: ... but the inherited ADMIN OPTION lets the runtime login GRANT the function owner to itself',
+  format('GRANT %I TO %I', :'function_owner', :'runtime_login'));
+SELECT pln_ok('F05-21c REAL EFFECT: ... and then SET ROLE to it', format('SET ROLE %I', :'function_owner'));
+RESET ROLE;
+RESET SESSION AUTHORIZATION;
+SELECT pln_true('F05-21d the boundary check names the ADMIN-only path',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'runtime_login'||' can reach owner '||:'function_owner'||' via '||:'runtime_login'||' -> '||:'mid_a'||' -> '||:'function_owner'));
+SELECT pln_true('F05-21e ... and reports the ADMIN option on the link as an unexpected membership',
+  f05_violations(:'inventory'::text[], 'unexpected membership: '||:'mid_a'||' holds '||:'function_owner'||' (admin=t inherit=f set=f)'));
+ROLLBACK;
+
+-- F05-22: without any chain, an application role cannot grant, administer or alter an owner
+SET SESSION AUTHORIZATION :"runtime_login";
+SELECT pln_err('F05-22a runtime login cannot grant itself the function owner', format('GRANT %I TO %I', :'function_owner', :'runtime_login'), '42501', 'permission denied to grant role');
+SELECT pln_err('F05-22b runtime login cannot grant the governance owner to the runtime', format('GRANT %I TO %I', :'governance_owner', :'runtime_role'), '42501', 'permission denied to grant role');
+SELECT pln_err('F05-22c runtime login cannot SET ROLE to the governance owner', format('SET ROLE %I', :'governance_owner'), '42501', 'permission denied to set role');
+SELECT pln_err('F05-22d runtime login cannot give the table owner LOGIN', format('ALTER ROLE %I LOGIN', :'table_owner'), '42501', 'permission denied to alter role');
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION :"worker_login";
+SELECT pln_err('F05-22e worker login cannot grant itself the table owner WITH ADMIN', format('GRANT %I TO %I WITH ADMIN TRUE', :'table_owner', :'worker_login'), '42501', 'permission denied to grant role');
+SELECT pln_err('F05-22f worker login cannot revoke the runtime login''s service role', format('REVOKE %I FROM %I', :'runtime_role', :'runtime_login'), '42501', 'permission denied to revoke role');
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION :"exporter_login";
+SELECT pln_err('F05-22g exporter login cannot SET ROLE to the table owner', format('SET ROLE %I', :'table_owner'), '42501', 'permission denied to set role');
+RESET SESSION AUTHORIZATION;
+
+-- F05-23: the EXPECTED attributes and memberships of all nine roles (detection; superuser-made changes)
+BEGIN;
+ALTER ROLE :"runtime_role" LOGIN;
+SELECT pln_true('F05-23a a service role with LOGIN is a violation (expected NOLOGIN)',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'runtime_role'||': expected NOLOGIN, found LOGIN'));
+ROLLBACK;
+BEGIN;
+ALTER ROLE :"governance_owner" INHERIT;
+SELECT pln_true('F05-23b an owner with INHERIT is a violation (expected NOINHERIT)',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'governance_owner'||': expected NOINHERIT, found INHERIT'));
+ROLLBACK;
+BEGIN;
+ALTER ROLE :"worker_login" NOINHERIT;
+SELECT pln_true('F05-23c a login role with NOINHERIT is a violation (expected INHERIT)',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'worker_login'||': expected INHERIT, found NOINHERIT'));
+ROLLBACK;
+BEGIN;
+ALTER ROLE :"exporter_role" CREATEDB;
+SELECT pln_true('F05-23d a service role with CREATEDB is a violation',
+  f05_violations(:'inventory'::text[], :'path_pfx'||:'exporter_role'||' has CREATEDB'));
+ROLLBACK;
+BEGIN;
+GRANT :"worker_role" TO :"runtime_login";
+SELECT pln_true('F05-23e a login holding ANOTHER service role is an unexpected membership',
+  f05_violations(:'inventory'::text[], 'unexpected membership: '||:'runtime_login'||' holds '||:'worker_role'||'%'));
+ROLLBACK;
+BEGIN;
+REVOKE :"runtime_role" FROM :"runtime_login";
+GRANT :"runtime_role" TO :"runtime_login" WITH ADMIN TRUE;
+SELECT pln_true('F05-23f the expected login -> service grant WITH ADMIN is an unexpected membership',
+  f05_violations(:'inventory'::text[], 'unexpected membership: '||:'runtime_login'||' holds '||:'runtime_role'||' (admin=t%'));
+ROLLBACK;
+SELECT pln_true('F05-23g after every rollback no violation remains, and the three expected grants are exactly what exists',
+  NOT EXISTS (SELECT 1 FROM plan_identity_boundary_violations(:'inventory'::text[]))
+  AND (SELECT count(*) FROM pg_auth_members m WHERE m.member::regrole::text = ANY (:'inventory'::text[])
+                                              OR m.roleid::regrole::text = ANY (:'inventory'::text[])) = 3);
+
 SELECT format('DROP ROLE %I, %I', :'mid_a', :'mid_b') \gexec
 
 \echo 'PLAN IDENTITY MEMBERSHIP TESTS (F-05) COMPLETED'

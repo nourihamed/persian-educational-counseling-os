@@ -8,10 +8,9 @@ prepared for independent review (`docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md
 what was implemented and what the evidence is, not what was approved.
 
 **Branch:** `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, **Draft, open, unmerged**).
-**Last HEAD verified on GitHub:** `8df7d5eea03a3712afed00e4e4ef3028ce01c09e` (F-01..F-04 remediation, parent `d75d039`). GitHub Actions passed there.
-The Supervisor reviewed it and raised **F-05 (HIGH)**: insufficient proof that application roles cannot obtain the
-privileged plan identities through PostgreSQL role membership. This update belongs to the F-05 remediation commit on top
-of `8df7d5e`; its SHA exists only once pushed.
+**Last HEAD verified on GitHub:** `38f2561412540da15626f2aca2b2f1b6802a2c56` (F-05 remediation, parent `8df7d5e`). GitHub Actions passed there.
+The Supervisor reviewed it: **F-05 NOT CLOSED** — owner roles were checked only for a direct member, not a transitive
+chain. This update belongs to the F-05 follow-up commit on top of `38f2561`; its SHA exists only once pushed.
 **Behind `main`:** yes, by two commits — `4004360` (adds `cp_30_role_privilege_tests.sql`, 89 lines) and
 `5bb8e4e` (reverts it). Net content difference from the merge base `ba5e9d8` to `main` `5bb8e4e`: **zero
 files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-pushed (BRANCH-SYNC).
@@ -22,13 +21,14 @@ files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-p
 |---|---|---|
 | **GitHub Actions** (independent of the agent) | runs at `fc3416ed`: **43725323633** and **43725318826** (push and pull_request) | **FAILED.** Reported by the Supervisor: every SQL/database step passed; **step 28, the repository secret scan, failed**; step 29, the register consistency check, was **skipped** because it followed a failed step. The agent has no Actions access and did not read those logs. |
 | **Actions failure, reproduced locally** | the `fc3416ed` scanner run on the exact `fc3416ed` tree | two findings, both in `docs/phase2/workspace/tests/workspace_operations_tests.sql`: line **165** `[iranian-mobile]` and line **171** `[e164]` — the OPS-17/OPS-18 refusal-test fixtures. Neither is a credential. The Supervisor is asked to confirm these against the CI log. |
-| **Local verification** (agent-executed, **not independently reproduced**) | full workflow on a cleared PostgreSQL 16.15 cluster, after `git add`, on the tree of the F-05 remediation commit (parent `8df7d5e`) | **25 implementation steps passed, 1031 PASS assertion lines, 0 FAIL** (852 before WS-PLAN-01; the plan step now prints 179: 75 PLN, 3 WS-PLN-RACE, 8 PLN-M migration, 79 F-05 membership, 14 F-05 bootstrap), plus Python verifier tests (15 + 6, OK); secret scan PASS (incl. history content); register check PASS incl. REG-09. Local evidence is **not** CI evidence. |
+| **Local verification** (agent-executed, **not independently reproduced**) | full workflow on a cleared PostgreSQL 16.15 cluster, after `git add`, on the tree of the F-05 follow-up commit (parent `38f2561`) | **25 implementation steps passed, 1067 PASS assertion lines, 0 FAIL** (852 before WS-PLAN-01; the plan step now prints 215: 75 PLN, 3 WS-PLN-RACE, 8 PLN-M migration, 109 F-05 membership, 20 F-05 bootstrap), plus Python verifier tests (15 + 6, OK); secret scan PASS (incl. history content); register check PASS incl. REG-09. Local evidence is **not** CI evidence. |
 | **GitHub Actions at `467a0294b03f9ffc494509509f9c0ece595b2bd3`** (independent of the agent) | `postgres-draft-tests`, runs [44362679187](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362679187) (job 135008003418) and [44362668276](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44362668276) (job 135007959995) | **success, both** (2026-11-18 17:50 UTC). Read by the agent from the PR's check-run conclusions; the agent did **not** read the step logs, so per-step PASS counts in CI are not reported here. This is the first Actions success on any SQL change since `ad3bf28`. It is CI evidence for the draft SQL and synthetic suites only — **not** approval of anything. |
 | **GitHub Actions at `b51908011404eb79ee01021916ceb2ad34d12200`** | runs 44365217344, 44365200112 | **success, both** (documentation-only commit) |
 | **GitHub Actions at `b7d4b2826036a41c05d46dd3f98b4c92c3f769b9`** (the three Supervisor/Product-Owner decision-recording commits) | runs 44369152676, 44369143862 | **FAILED, both.** Reproduced locally as the register check **REG-08**: the §6 classification row for WS-DOM-05 still read `BLOCKING` while the JSON read `LATER_PHASE`. Realigned in the WS-PLAN-01 commit. The check worked as designed. |
 | **GitHub Actions at `d75d039919c806a27a7d5b50021af6920fdd5f0c`** (WS-PLAN-01 data model) | runs 44376897878, 44376886372 | **passed**, as reported by the Supervisor. CI passing did not make it acceptable: the Supervisor's review found F-01..F-04, which the tests did not cover. |
 | **GitHub Actions at `8df7d5eea03a3712afed00e4e4ef3028ce01c09e`** (F-01..F-04 remediation) | runs [44382515348](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44382515348) (job 135078318581) and [44383233656](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44383233656) (job 135080826317) | **success, both.** The Supervisor's review then found F-05. |
-| **GitHub Actions at the F-05 remediation commit** | — | **NOT RUN** until pushed. |
+| **GitHub Actions at `38f2561412540da15626f2aca2b2f1b6802a2c56`** (F-05 remediation) | runs [44693197767](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44693197767) (job 136143681714) and [44693205261](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44693205261) (job 136143703579) | **success, both.** The Supervisor verified the logs; F-05 not closed (owner-role chains). |
+| **GitHub Actions at the F-05 follow-up commit** | — | **NOT RUN** until pushed. |
 | **Design-only contracts** | documents under `docs/phase2/**` with no executable test | are **not** implementation evidence anywhere in this file |
 
 **CI step numbers.** GitHub numbering (YAML step + 2, for "Set up job" and "Initialize containers"): counselor isolation is step **15**, PlanItem with its race, migration and F-05 suites step **16**, secret scan step **30**, register check step **31**. The 2026-11-18 handoff said 13 and 14 for the first two; that was wrong (YAML numbering), and the Supervisor's correction is adopted.
@@ -74,6 +74,9 @@ Batches 1–8 as recorded in the dated entries below, and on 2026-11-18:
     verifies the whole boundary for its nine-role inventory. A superuser is not accepted as either identity.
     **Open:** who may provision, hold or assume them outside the synthetic test harness (Platform Security /
     Operations).
+  - F-05 follow-up: owner roles (table, function, governance) are checked for **transitive** reach from every
+    application role, whatever the INHERIT/SET/ADMIN options; all nine roles must match their expected attributes,
+    and their memberships must be exactly the three login → service grants (F05-17..23, F05-BOOT-15..20).
   - F-01: the shared runtime can no longer create plan items or status transitions, so it cannot write one in a
     student's or another counselor's name. Writes need a dedicated NOLOGIN synthetic-writer identity, checked by role
     membership. `actor_kind='student'` is refused outright. **No caller binding was invented** — that stays WS-ISO-01.
@@ -109,6 +112,7 @@ Batches 1–8 as recorded in the dated entries below, and on 2026-11-18:
 - At `b7d4b28`: register check REG-08 (both runs failed), fixed in `d75d039`.
 - At `d75d039`: none in GitHub Actions (passed per the Supervisor); the Supervisor's review found F-01..F-04 instead.
 - At `8df7d5e`: none in GitHub Actions (both runs succeeded); the Supervisor's review found F-05 instead.
+- At `38f2561`: none in GitHub Actions (both runs succeeded); the Supervisor found F-05 not closed (owner-role chains).
 
 ## Open questions
 32 register items, all classified in `docs/phase2/UNRESOLVED_ITEM_REGISTER.md` §6. 13 can be resolved partly or
@@ -117,12 +121,26 @@ dependencies that code cannot close.
 
 ## Next actions
 1. The Supervisor confirms the CI failure lines above against the log of runs 43725323633/43725318826.
-2. GitHub Actions at the F-05 remediation commit, then the Supervisor's independent review of it.
+2. GitHub Actions at the F-05 follow-up commit, then the Supervisor's independent review of it.
 3. Platform Security decision on WS-ISO-01 caller binding (option B recommended, A fallback).
 4. Supervisor independent review of the PROVISIONAL exit package. **The implementation agent does not approve
    the phase.**
 
 ---
+
+### Update 2026-11-20 — F-05 follow-up on `38f2561`: owner-role chains (draft SQL; synthetic)
+- **Found by the Supervisor:** owner roles were checked only for a direct member, not for a chain.
+- **Boundary check.** `plan_identity_boundary_violations()` now:
+  - walks every membership chain upward from all nine roles and names any path to an owner or privileged identity;
+  - checks expected LOGIN/INHERIT and the five privileged attributes for every role;
+  - accepts exactly three memberships: `<x>_login` → `<x>`, without ADMIN.
+- **Bootstrap.** It validates every pre-existing application role and aborts on a mismatch; nothing is repaired.
+- **Tests:** F05-17..23 and F05-BOOT-15..20. Each shows the real effect of the chain first, for example:
+  - replacing `plan_identity_is()`;
+  - disabling the guard;
+  - an ADMIN-only link used to grant oneself the owner.
+- **Measured negative controls:** listed in TEST_PLAN.md.
+- **Local:** 25 steps, 1067 PASS lines, 0 FAIL.
 
 ### Update 2026-11-19 — Supervisor finding F-05 on `8df7d5e` remediated (draft SQL; synthetic)
 - **Scope.** Limited to F-05:

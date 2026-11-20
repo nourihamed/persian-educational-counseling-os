@@ -94,9 +94,32 @@ case_fail F05-BOOT-11 0b "held by ws_" \
   "CREATE ROLE ws_KEY_worker NOLOGIN NOINHERIT; CREATE ROLE ws_KEY_x_mid NOLOGIN; CREATE ROLE ws_KEY_plan_migrator NOLOGIN NOINHERIT; GRANT ws_KEY_plan_migrator TO ws_KEY_x_mid; GRANT ws_KEY_x_mid TO ws_KEY_worker" \
   "SELECT pg_has_role('ws_KEY_worker','ws_KEY_plan_migrator','MEMBER')"
 # a clean privileged role, but an APPLICATION role that already has CREATEROLE: caught by the boundary check
-case_fail F05-BOOT-12 0c "nothing recorded: application role ws_a10000000000000000000000000f050c_runtime_login has CREATEROLE" \
+case_fail F05-BOOT-12 0c "pre-existing application role ws_a10000000000000000000000000f050c_runtime_login has unexpected attributes (CREATEROLE)" \
   "CREATE ROLE ws_KEY_runtime_login LOGIN CREATEROLE" \
   "SELECT rolcreaterole FROM pg_roles WHERE rolname='ws_KEY_runtime_login'"
+
+# F-05 follow-up: EVERY pre-existing application role is checked against its expected attributes, and any
+# pre-existing path to an OWNER role aborts the bootstrap.
+case_fail F05-BOOT-15 0d "pre-existing application role ws_a10000000000000000000000000f050d_runtime has unexpected attributes (LOGIN (expected NOLOGIN))" \
+  "CREATE ROLE ws_KEY_runtime LOGIN NOINHERIT" \
+  "SELECT rolcanlogin FROM pg_roles WHERE rolname='ws_KEY_runtime'"
+case_fail F05-BOOT-16 0e "pre-existing application role ws_a10000000000000000000000000f050e_table_owner has unexpected attributes (INHERIT (expected NOINHERIT))" \
+  "CREATE ROLE ws_KEY_table_owner NOLOGIN INHERIT" \
+  "SELECT rolinherit FROM pg_roles WHERE rolname='ws_KEY_table_owner'"
+case_fail F05-BOOT-17 0f "pre-existing application role ws_a10000000000000000000000000f050f_worker_login has unexpected attributes (NOLOGIN (expected LOGIN))" \
+  "CREATE ROLE ws_KEY_worker_login NOLOGIN INHERIT" \
+  "SELECT NOT rolcanlogin FROM pg_roles WHERE rolname='ws_KEY_worker_login'"
+case_fail F05-BOOT-18 10 "pre-existing application role ws_a10000000000000000000000000f0510_governance_owner has unexpected attributes (CREATEDB)" \
+  "CREATE ROLE ws_KEY_governance_owner NOLOGIN NOINHERIT CREATEDB" \
+  "SELECT rolcreatedb FROM pg_roles WHERE rolname='ws_KEY_governance_owner'"
+# attributes all correct, but a pre-existing CHAIN runtime_login -> x_mid -> function_owner
+case_fail F05-BOOT-19 11 "application role ws_a10000000000000000000000000f0511_runtime_login can reach owner ws_a10000000000000000000000000f0511_function_owner via ws_a10000000000000000000000000f0511_runtime_login -> ws_a10000000000000000000000000f0511_x_mid -> ws_a10000000000000000000000000f0511_function_owner" \
+  "CREATE ROLE ws_KEY_function_owner NOLOGIN NOINHERIT; CREATE ROLE ws_KEY_x_mid NOLOGIN NOINHERIT; CREATE ROLE ws_KEY_runtime_login LOGIN INHERIT; GRANT ws_KEY_function_owner TO ws_KEY_x_mid; GRANT ws_KEY_x_mid TO ws_KEY_runtime_login" \
+  "SELECT pg_has_role('ws_KEY_runtime_login','ws_KEY_function_owner','MEMBER')"
+# a pre-existing nested chain exporter -> a -> b -> governance_owner with ADMIN only on the last link
+case_fail F05-BOOT-20 12 "application role ws_a10000000000000000000000000f0512_exporter can reach owner ws_a10000000000000000000000000f0512_governance_owner via ws_a10000000000000000000000000f0512_exporter -> ws_a10000000000000000000000000f0512_x_a -> ws_a10000000000000000000000000f0512_x_b -> ws_a10000000000000000000000000f0512_governance_owner" \
+  "CREATE ROLE ws_KEY_governance_owner NOLOGIN NOINHERIT; CREATE ROLE ws_KEY_x_a NOLOGIN; CREATE ROLE ws_KEY_x_b NOLOGIN; CREATE ROLE ws_KEY_exporter NOLOGIN NOINHERIT; GRANT ws_KEY_governance_owner TO ws_KEY_x_b WITH ADMIN TRUE, INHERIT FALSE, SET FALSE; GRANT ws_KEY_x_b TO ws_KEY_x_a; GRANT ws_KEY_x_a TO ws_KEY_exporter" \
+  "SELECT pg_has_role('ws_KEY_exporter','ws_KEY_governance_owner','MEMBER')"
 
 # The same bootstrap on a clean state succeeds, records both identities and reports a verified boundary.
 key=a10000000000000000000000000f05ff; db=f05_boot_ff; n=$((n+2))

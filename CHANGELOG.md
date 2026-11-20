@@ -4,6 +4,16 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-11-20 — F-05 follow-up on `38f2561`: owner-role chains (draft SQL; synthetic)
+`security/test/docs:` GitHub Actions passed at `38f2561` (runs 44693197767, 44693205261; logs verified by the Supervisor). F-05 was not closed: owner roles were checked only for a direct member.
+- **Chains.** `plan_identity_boundary_violations()` walks every membership chain from all nine roles, whatever the INHERIT, SET or ADMIN option, and names any path to the table, function or governance owner, or to a privileged identity.
+- **Attributes.** Every role is checked against its expected LOGIN/INHERIT and the five privileged attributes.
+- **Memberships.** They must be exactly `<x>_login` → `<x>`, without ADMIN.
+- **Bootstrap.** It validates every pre-existing application role and aborts on a mismatch; nothing is repaired.
+- **Tests:** F05-17..23 and F05-BOOT-15..20. They show real effects through chains, including an ADMIN-only link used to self-grant, and each has a measured negative control.
+- **Unchanged:** no runtime privilege and no runtime write path. WS-ISO-01 stays open.
+- **Local:** 25 steps, 1067 PASS lines, 0 FAIL. Actions: NOT RUN.
+
 ### 2026-11-19 — Supervisor finding F-05 on `8df7d5e` remediated: privileged plan identities and role membership (draft SQL; synthetic)
 `security/test/docs:` GitHub Actions passed at `8df7d5e` (runs 44382515348, 44383233656). The Supervisor then raised F-05 (HIGH).
 - **The defect.** The privileged identities were checked with `pg_has_role(current_user, role, 'MEMBER')`, which any

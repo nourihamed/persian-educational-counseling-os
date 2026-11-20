@@ -133,6 +133,14 @@ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $body$
 $body$;
 
 -- F-05: what the bootstrap must establish, as a list of violations (an empty result is the only pass).
+-- F-05 follow-up (Supervisor review of 38f2561): owner roles are now checked for TRANSITIVE reach, not only a
+-- direct member; every inventory role is checked against its EXPECTED attributes, not a few dangerous ones; and
+-- the inventory's memberships must be EXACTLY the three login -> service grants the bootstrap makes.
+-- Role classes come from the same rule workspace_roles_setup_draft.sql uses to create the roles:
+--   '<...>_owner'  -> owner role:   NOLOGIN, NOINHERIT; holds nothing, held by nothing
+--   '<...>_login'  -> login role:   LOGIN, INHERIT; holds exactly its service role '<...>' (no ADMIN), nothing else
+--   otherwise      -> service role: NOLOGIN, NOINHERIT; held only by its own login role, holds nothing
+-- and every one of them NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS.
 -- p_inventory is the Workspace's application role inventory, passed by workspace_roles_setup_draft.sql
 -- from its own role list: owners, runtime, worker, exporter and their login identities. It does not
 -- exempt anything: the membership checks look at EVERY role in the cluster (pg_auth_members is
@@ -157,7 +165,9 @@ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $body$
                           ('public.student_plan_versions','student_plan_versions_model_guard')),
   owners AS (
     SELECT DISTINCT c.relowner AS oid FROM guarded g JOIN pg_catalog.pg_class c ON c.oid = g.tbl::regclass
-    UNION SELECT p.proowner FROM security_functions f JOIN pg_catalog.pg_proc p ON p.oid = f.sig::regprocedure)
+    UNION SELECT p.proowner FROM security_functions f JOIN pg_catalog.pg_proc p ON p.oid = f.sig::regprocedure
+    -- the three Workspace owner roles are owners whether or not they own a plan object today
+    UNION SELECT r.oid FROM pg_catalog.pg_roles r WHERE r.rolname = ANY (p_inventory) AND r.rolname LIKE '%\_owner')
   -- the privileged identities themselves
   SELECT format('%s: no privileged identity is recorded', n.purpose)
     FROM need n WHERE NOT EXISTS (SELECT 1 FROM public.plan_privileged_identities i WHERE i.purpose = n.purpose)
@@ -188,12 +198,55 @@ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $body$
   UNION ALL SELECT format('application role %s has %s', r.rolname, attr)
     FROM pg_catalog.pg_roles r
     CROSS JOIN LATERAL (VALUES ('SUPERUSER', r.rolsuper), ('CREATEROLE', r.rolcreaterole),
-                               ('BYPASSRLS', r.rolbypassrls), ('REPLICATION', r.rolreplication)) v(attr, val)
+                               ('BYPASSRLS', r.rolbypassrls), ('REPLICATION', r.rolreplication),
+                               ('CREATEDB', r.rolcreatedb)) v(attr, val)
    WHERE r.rolname = ANY (p_inventory) AND v.val
-  UNION ALL SELECT format('application role %s can reach privileged identity %s', a, p.role_name)
-    FROM unnest(p_inventory) a JOIN priv p ON p.oid IS NOT NULL
-   WHERE EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname = a)
-     AND pg_catalog.pg_has_role(a, p.oid, 'MEMBER')
+  -- expected LOGIN / INHERIT per role class (see above)
+  UNION ALL SELECT format('application role %s: expected %s, found %s', r.rolname,
+                          CASE WHEN r.rolname LIKE '%\_login' THEN 'LOGIN' ELSE 'NOLOGIN' END,
+                          CASE WHEN r.rolcanlogin THEN 'LOGIN' ELSE 'NOLOGIN' END)
+    FROM pg_catalog.pg_roles r
+   WHERE r.rolname = ANY (p_inventory) AND r.rolcanlogin <> (r.rolname LIKE '%\_login')
+  UNION ALL SELECT format('application role %s: expected %s, found %s', r.rolname,
+                          CASE WHEN r.rolname LIKE '%\_login' THEN 'INHERIT' ELSE 'NOINHERIT' END,
+                          CASE WHEN r.rolinherit THEN 'INHERIT' ELSE 'NOINHERIT' END)
+    FROM pg_catalog.pg_roles r
+   WHERE r.rolname = ANY (p_inventory) AND r.rolinherit <> (r.rolname LIKE '%\_login')
+  -- the inventory's memberships are EXACTLY '<x>_login' holding '<x>', without ADMIN, for each service role;
+  -- any other row with an inventory role on either side is unexpected, whatever its options
+  UNION ALL SELECT format('unexpected membership: %s holds %s (admin=%s inherit=%s set=%s)',
+                          m.member::regrole, m.roleid::regrole, m.admin_option, m.inherit_option, m.set_option)
+    FROM pg_catalog.pg_auth_members m
+    JOIN pg_catalog.pg_roles rm ON rm.oid = m.member
+    JOIN pg_catalog.pg_roles rr ON rr.oid = m.roleid
+   WHERE (rm.rolname = ANY (p_inventory) OR rr.rolname = ANY (p_inventory))
+     AND NOT (rm.rolname = ANY (p_inventory) AND rr.rolname = ANY (p_inventory)
+              AND rm.rolname LIKE '%\_login' AND rr.rolname NOT LIKE '%\_owner'
+              AND rr.rolname = left(rm.rolname, length(rm.rolname) - 6)
+              AND NOT m.admin_option)
+  -- TRANSITIVE reach: walk every membership chain upward from every inventory role, whatever the
+  -- INHERIT / SET / ADMIN options of each link (a link without SET still lets an ADMIN holder re-grant, and
+  -- options can be changed later by whoever can grant), and report any chain that ends at a privileged
+  -- identity or at an owner role (the three inventory owners and the actual owners of the security objects)
+  UNION ALL
+  SELECT format('application role %s can reach %s %s via %s', w.start_name,
+                CASE WHEN EXISTS (SELECT 1 FROM priv p WHERE p.oid = w.roleid) THEN 'privileged identity' ELSE 'owner' END,
+                w.roleid::regrole,
+                (SELECT string_agg(x::regrole::text, ' -> ' ORDER BY o) FROM unnest(w.path) WITH ORDINALITY u(x, o)))
+    FROM (
+      WITH RECURSIVE up(start_name, roleid, path) AS (
+        SELECT r.rolname::text, m.roleid, ARRAY[r.oid, m.roleid]
+          FROM pg_catalog.pg_roles r JOIN pg_catalog.pg_auth_members m ON m.member = r.oid
+         WHERE r.rolname = ANY (p_inventory)
+        UNION ALL
+        SELECT u.start_name, m.roleid, u.path || m.roleid
+          FROM up u JOIN pg_catalog.pg_auth_members m ON m.member = u.roleid
+         WHERE NOT m.roleid = ANY (u.path))
+      SELECT * FROM up) w
+   WHERE EXISTS (SELECT 1 FROM priv p WHERE p.oid = w.roleid)
+      OR w.roleid IN (SELECT o.oid FROM owners o)
+      OR w.roleid IN (SELECT r.oid FROM pg_catalog.pg_roles r
+                       WHERE r.rolname = ANY (p_inventory) AND r.rolname LIKE '%\_owner')
   -- whoever owns the guarded tables and security functions can disable or replace them, so nobody may hold
   -- an owner role, and an owner is never a privileged identity
   UNION ALL SELECT format('owner %s of the plan security objects is held by %s', o.oid::regrole, m.member::regrole)

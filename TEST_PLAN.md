@@ -1119,6 +1119,39 @@ job log. PostgreSQL 16 semantics relied on:
 
 The identity rule does not depend on any of these: it refuses as soon as any membership row exists.
 
+## 2026-11-20 — F-05 follow-up on `38f2561`: transitive reach to the owner roles
+
+The Supervisor found that owner roles were checked only for a direct member. Each test first shows what PostgreSQL
+actually allows through the chain (inside a rolled-back transaction), then that `plan_identity_boundary_violations()`
+names the exact path.
+
+| Test | Chain / state | Real effect shown | Detection |
+|---|---|---|---|
+| F05-17 | runtime_login → mid_a → function_owner (INHERIT) | runtime login replaces `plan_identity_is()` | path named |
+| F05-18 | worker_login → mid_a → table_owner (INHERIT) | worker login disables the plan-item guard | path named |
+| F05-19 | exporter → mid_b → mid_a → governance_owner | exporter login SET ROLEs to the governance owner | path named, from exporter and exporter_login |
+| F05-20 | runtime_login → mid_a → table_owner (SET TRUE, INHERIT FALSE) | no inherited ownership; SET ROLE then disable works | path named |
+| F05-21 | runtime_login → mid_a → function_owner (ADMIN only) | SET ROLE refused, but the login GRANTs itself the owner, then SET ROLE works | path and ADMIN link named |
+| F05-22a..g | no chain | grant, ADMIN-grant, revoke, alter, SET ROLE on owners | all refused 42501 |
+| F05-23a..f | service with LOGIN; owner with INHERIT; login with NOINHERIT; CREATEDB; login holding another service role; expected grant WITH ADMIN | — | each named |
+| F05-23g | after every rollback | — | no violation; exactly 3 inventory memberships exist |
+| F05-BOOT-15..18 | pre-existing runtime LOGIN; table_owner INHERIT; worker_login NOLOGIN; governance_owner CREATEDB | bootstrap aborts, nothing repaired, no identity record | — |
+| F05-BOOT-19 | pre-existing runtime_login → x_mid → function_owner | bootstrap aborts naming the path | — |
+| F05-BOOT-20 | pre-existing exporter → x_a → x_b → governance_owner (ADMIN only) | bootstrap aborts naming the path | — |
+| F05-BOOT-13/14 | clean state; re-run | succeed | — |
+
+| Negative control (measured) | Result |
+|---|---|
+| transitive path check removed | fails F05-05f; bootstrap: BOOT-19/20 fail for the wrong reason (still caught by the direct "held by" checks) |
+| owner targets removed from the path check | fails F05-17b |
+| the three inventory owners removed from the owner set | fails F05-19b (governance owner unchecked) |
+| expected LOGIN/INHERIT check removed | fails F05-23a |
+| exact-membership check removed | fails F05-21e |
+| existing-role validation in `$roles$` removed | BOOT-12, 15..17 fail (caught later, wrong reason) |
+| both of the last two removed | BOOT-15..17: bootstrap **succeeded** with an unsafe role |
+
+Local: plan step 215 PASS lines (109 F05, 20 F05-BOOT); full workflow 1067, 0 FAIL.
+
 **NOT RUN:**
 - a non-superuser provisioner with CREATEROLE (PostgreSQL 16 gives the creator ADMIN on the role it creates, which the
   boundary check reports as "held by", so such a bootstrap fails closed; not exercised);

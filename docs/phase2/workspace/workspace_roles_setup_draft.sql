@@ -20,6 +20,7 @@ DO $roles$
 DECLARE
   k text := current_setting('app.workspace_key');
   role_name text;
+  bad text;
   role_names text[] := ARRAY[
     'ws_'||k||'_table_owner',
     'ws_'||k||'_function_owner',
@@ -44,6 +45,28 @@ BEGIN
           'CREATE ROLE %I NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS',
           role_name
         );
+      END IF;
+    ELSE
+      -- F-05 follow-up: a role of this name that ALREADY exists is validated against exactly the attributes
+      -- this block would have created it with, and never altered. Roles are cluster-wide, so it may have been
+      -- created by anyone, in any state. Any difference aborts the bootstrap (fail closed, nothing repaired).
+      -- Its memberships are checked after the grants below, by plan_identity_boundary_violations().
+      SELECT string_agg(x, ', ') INTO bad FROM (
+        SELECT unnest(ARRAY[
+          CASE WHEN r.rolcanlogin <> (right(role_name,6)='_login')
+               THEN CASE WHEN r.rolcanlogin THEN 'LOGIN (expected NOLOGIN)' ELSE 'NOLOGIN (expected LOGIN)' END END,
+          CASE WHEN r.rolinherit <> (right(role_name,6)='_login')
+               THEN CASE WHEN r.rolinherit THEN 'INHERIT (expected NOINHERIT)' ELSE 'NOINHERIT (expected INHERIT)' END END,
+          CASE WHEN r.rolsuper       THEN 'SUPERUSER' END,
+          CASE WHEN r.rolcreatedb    THEN 'CREATEDB' END,
+          CASE WHEN r.rolcreaterole  THEN 'CREATEROLE' END,
+          CASE WHEN r.rolreplication THEN 'REPLICATION' END,
+          CASE WHEN r.rolbypassrls   THEN 'BYPASSRLS' END]) AS x
+          FROM pg_roles r WHERE r.rolname = role_name) z
+       WHERE x IS NOT NULL;
+      IF bad IS NOT NULL THEN
+        RAISE EXCEPTION 'F-05: pre-existing application role % has unexpected attributes (%); bootstrap aborted, nothing repaired', role_name, bad
+          USING ERRCODE = 'insufficient_privilege';
       END IF;
     END IF;
   END LOOP;
