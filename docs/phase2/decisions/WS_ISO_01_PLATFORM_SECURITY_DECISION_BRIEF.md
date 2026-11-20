@@ -1,6 +1,8 @@
 # WS-ISO-01 — Platform Security decision brief: caller binding
 
-**Status:** DECISION REQUIRED (Platform Security, with the Product Owner). **CRITICAL / BLOCKING.**
+**Status:** DECIDED 2026-11-20 by the Product Owner — **"B with a test-only key"**; production verification fail-closed until PS-1..PS-4 are approved by Platform Security. Implemented in draft SQL (`workspace_principal_assertion_draft.sql`, `workspace_counselor_rls_draft.sql`); BLOCKING until independent review.
+
+**Original status:** DECISION REQUIRED (Platform Security, with the Product Owner). **CRITICAL / BLOCKING.**
 **Prepared:** 2026-11-20 by the implementation agent. The decision is not made here.
 **Detail:** this brief supersedes nothing in `../workspace/WS_ISO_01_COUNSELOR_ISOLATION_PROPOSAL.md` and adds the
 execution-path analysis the Supervisor asked for.

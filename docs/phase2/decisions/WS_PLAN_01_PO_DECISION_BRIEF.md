@@ -1,6 +1,8 @@
 # WS-PLAN-01 — Product Owner decision brief (A–E)
 
-**Status:** DECISIONS REQUIRED. Nothing in this brief is decided. **Prepared:** 2026-11-20 by the implementation agent.
+**Status:** DECIDED by the Product Owner on 2026-11-20 — **A2, B1, C1, D1, E1** (recorded in `DECISION_LOG.md`). Transitions these decisions do not name stay open and fail-closed. The analysis below is kept as the record of what was weighed.
+
+**Original status:** DECISIONS REQUIRED. **Prepared:** 2026-11-20 by the implementation agent.
 **Baseline:** `bba7281` (implementation `fe08a77`; F-05 accepted at architecture-review level).
 **Until each decision is recorded,** the affected operation stays **fail-closed** as it is today. WS-PLAN-01 stays
 `BLOCKING`.

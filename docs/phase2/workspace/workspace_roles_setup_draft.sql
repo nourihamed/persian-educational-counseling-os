@@ -555,3 +555,44 @@ BEGIN
   RAISE NOTICE 'Workspace role setup complete for key % and database %',
     current_setting('app.workspace_key'),current_database();
 END $done$;
+
+-- ======================================================================================================
+-- WS-ISO-01 caller binding (Product Owner decision 2026-11-20: B with a test-only key).
+-- Applied only where workspace_principal_assertion_draft.sql and workspace_counselor_rls_draft.sql were
+-- loaded. Grants nothing that writes student data: the runtime receives EXECUTE on establish_principal()
+-- only, and that function writes principal bookkeeping the runtime cannot otherwise read or write.
+-- ======================================================================================================
+DO $iso_principal$
+DECLARE
+  k  text := current_setting('app.workspace_key');
+  fo text := 'ws_'||current_setting('app.workspace_key')||'_function_owner';
+  rt text := 'ws_'||current_setting('app.workspace_key')||'_runtime';
+  wr text := 'ws_'||current_setting('app.workspace_key')||'_synth_plan_writer';
+  r  text;
+BEGIN
+  IF to_regclass('public.verified_principal_context') IS NULL THEN
+    RETURN;
+  END IF;
+  -- the definer functions run as the function owner and need exactly these
+  EXECUTE format('GRANT USAGE ON SCHEMA ext_crypto TO %I', fo);
+  EXECUTE format('GRANT EXECUTE ON FUNCTION ext_crypto.hmac(bytea, bytea, text) TO %I', fo);
+  EXECUTE format('GRANT SELECT ON TABLE principal_verification_config, principal_assertion_keys TO %I', fo);
+  EXECUTE format('GRANT SELECT, INSERT ON TABLE principal_assertion_nonces TO %I', fo);
+  EXECUTE format('GRANT SELECT, INSERT, UPDATE ON TABLE verified_principal_context TO %I', fo);
+  EXECUTE format('GRANT SELECT ON TABLE workspace_profile, workspace_memberships, membership_roles, students, '
+                 'enrollments, counselor_assignments, student_plans, test_attempts, student_guardian_links, '
+                 'guardian_permissions TO %I', fo);
+  -- the command boundary: the runtime may present an assertion, and nothing more
+  EXECUTE format('GRANT EXECUTE ON FUNCTION establish_principal(text, text) TO %I', rt);
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = wr) THEN
+    -- the synthetic plan writer acts for a verified principal in the isolated test harness only
+    EXECUTE format('GRANT EXECUTE ON FUNCTION establish_principal(text, text) TO %I', wr);
+  END IF;
+  IF to_regclass('public.iso_application_roles') IS NOT NULL THEN
+    EXECUTE format('GRANT SELECT ON TABLE iso_application_roles TO %I', fo);
+    DELETE FROM iso_application_roles;
+    FOREACH r IN ARRAY ARRAY['runtime','runtime_login','worker','worker_login','exporter','exporter_login'] LOOP
+      INSERT INTO iso_application_roles(role_name) VALUES ('ws_'||k||'_'||r);
+    END LOOP;
+  END IF;
+END $iso_principal$;

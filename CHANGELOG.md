@@ -4,6 +4,26 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-11-20 — WS-ISO-01 caller binding (B, test-only key); WS-PLAN-01 decisions A2/B1/C1/D1/E1 (draft SQL; synthetic)
+`security/feat/test/docs:`
+- **New `workspace_principal_assertion_draft.sql`:** signed, short-lived principal assertions verified in the
+  database.
+  - Production is fail-closed: mode `disabled`, and the key table is structurally test-only.
+  - The principal is bound to the backend, the transaction and the session role.
+- **New `workspace_counselor_rls_draft.sql`:**
+  - RLS is ENABLED and FORCED on every student-scoped table, keyed to the verified principal;
+  - private notes are author-only;
+  - authorship is bound to the principal.
+- **Plan guards:** actors and authors must be the verified principal, and A2/B1/C1/D1/E1 are enforced.
+  Transitions the decisions do not determine are refused.
+- **Tests:**
+  - ISO-P00..P30, ISO-RLS-01..09, ISO-RLS-C3, ISO-P-RACE-01..03;
+  - PLN-A2a..m, PLN-D1a..g, PLN-E1a..f.
+  - The plan, race, migration and F-05 suites now act under verified principals, through the test-only harness.
+- **Measured negative controls:** 21.
+- **Unchanged:** no runtime write path or new runtime privilege; F-05 intact.
+- **Local:** 25 steps, 1155 PASS, 0 FAIL, 0 OPEN. Actions: NOT RUN until pushed.
+
 ### 2026-11-20 — Phase 2 gap matrix, decision briefs, WS-ROLE-17 reporting fix
 `docs/test:`
 - **Gap matrix.** `PHASE2_GAP_MATRIX.md` was built from the SQL, tests and workflow.

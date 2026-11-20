@@ -20,7 +20,7 @@ ok=1; n=0
 
 psql -X -q -d postgres -c "DROP DATABASE IF EXISTS $TPL" >/dev/null
 createdb "$TPL"
-for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_plan_items_draft workspace_operations_draft; do
+for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_principal_assertion_draft workspace_plan_items_draft workspace_operations_draft workspace_counselor_rls_draft; do
   psql -X -q -v ON_ERROR_STOP=1 -d "$TPL" -f "$W/$f.sql" >/dev/null 2>&1 || { echo "FAIL F05-BOOT template load ($f)"; exit 2; }
 done
 

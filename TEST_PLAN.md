@@ -1176,3 +1176,107 @@ Historical "NOT RUN" statements in the sections above keep their date and scope.
 - OPEN lines are fail-open findings printed by design (ISO-GAP-01..03). They are never passes.
 - SKIP lines are not passes. The only one is WS-ROLE-17 in the mirror run of step 22; it executes in the first run of
   the same step.
+
+## 2026-11-20 — WS-ISO-01 caller binding (decision B, test-only key) and WS-PLAN-01 decisions A2/B1/C1/D1/E1
+
+**Where the suites run**
+- **Step 15 (ISO):** `workspace_counselor_isolation_tests.sql`, then `workspace_principal_assertion_tests.sql` and
+  `workspace_principal_assertion_race.sh`.
+  - The predicate tests ISO-01..54 now run as the owner.
+  - The caller-bound tests run as the runtime **login** under verified principals.
+- **Step 16 (plan):** the plan, F-05, race and migration suites act through `workspace_principal_test_harness.sql`.
+  - The harness is test-only. It signs a fresh assertion with the synthetic key and passes it through the real
+    `establish_principal()`.
+
+### Principal assertions (ISO-P)
+
+| Test | What is presented | Result |
+|---|---|---|
+| P00a/b | valid assertion while mode = `disabled` (production default) | refused: fail-closed |
+| P01a/b | a key id or algorithm that is not a synthetic test key | refused by CHECK |
+| P02a..e | runtime reads the key or nonce ledger; sets the mode; writes its own "verified" row; calls the HMAC primitive | 42501 |
+| P10 | valid assertion for A | principal = A |
+| P20 / P20b | actor changed under A's signature; one signature digit changed | signature invalid |
+| P21 | signed with a key the database does not hold | signature invalid |
+| P22a/b/c | expired; not yet valid; lifetime longer than the key allows | refused |
+| P23a/b/c | the same assertion twice in separate transactions | second refused as replay; no principal left |
+| P24 | a valid assertion for another Workspace | refused |
+| P25a/b | a student id presented as a counselor, and the reverse | refused |
+| P26 | verified **student** principal | recorded; reads no row (student read scope undecided) |
+| P27 / P27b/c | suspended membership; an assignment ended **mid-transaction** | refused; the rows vanish in the same transaction |
+| P28 | a second assertion in the same transaction | refused: no identity switch |
+| P29a/b | malformed: extra field, upper-case signature | refused |
+| P30 | revoked key | refused |
+| P-RACE-01..03 | two sessions present the same assertion concurrently | the second blocks, then fails as a replay; the nonce is consumed once |
+
+### Row-level security (ISO-RLS)
+
+| Test | Case | Result |
+|---|---|---|
+| 01, 01b/c/d | (was GAP-01) A reads B's session directly | invisible; A sees own a1, not the ended a2; B sees only B's |
+| 02, 02b | (was GAP-02) private notes | author only; a co-assigned counselor sees shared notes, not private ones |
+| 03 | (was GAP-03) RLS state | ENABLE and FORCE, with the policy, on every student-scoped table |
+| 04a/b/c | B's object ids; supplying B's membership id; B's list and report | nothing returned |
+| 05 | A's report | exactly A's total |
+| 06a..d | write for B's student; update B's row; note in C's name; note in A's own name | refused; 0 rows; refused; accepted |
+| 07 / 07b | no principal | no rows; no writes |
+| 08a/b/c | pooling | principal only within its transaction; the next transaction has none; another session role on the same backend gets none |
+| 09a/c | worker without a principal | reads and updates nothing |
+| C3 | every role holding a privilege on a student table | classified; an unknown role fails |
+
+### Plan decisions (A2 / B1 / C1 / D1 / E1)
+
+| Test | Case | Result |
+|---|---|---|
+| A2a..c | student defers, cancels or skips | refused |
+| A2d / A2g / A2h | actor does not match the principal (student principal naming counselor A; counselor principal naming a student; A naming B) | refused |
+| A2e/f | counselor records `in_progress` or `completed` | refused as **undecided** |
+| A2i | co-assigned counselor who is not responsible cancels | refused |
+| A2j | student s2 acts on s1's item | refused |
+| A2k/l | student: `partially_completed`, then `completed` | accepted |
+| A2m | no principal | refused |
+| 41b | any transition **to** `planned` | refused as **undecided** |
+| D1a..g | `completed`, `cancelled` and `skipped` are terminal for both actors | further transitions refused |
+| 77 (B1) | transition on an item of a draft version | refused |
+| 78 (C1) | publishing an empty version | refused |
+| E1a | editing a legacy version | refused (read-only) |
+| E1b | conversion written in C's name | refused (RLS) |
+| E1c | A creates a new normalized version superseding the legacy one, with a reason | accepted |
+| E1d0 / E1d | counselor B on A's student | sees nothing; refused |
+| E1e | no principal | refused |
+| E1f | the legacy version afterwards | unchanged |
+| PLN-M07 | relabelling a legacy row | refused (read-only) |
+
+### Negative controls (measured)
+
+| Weakening | Fails |
+|---|---|
+| signature check removed | ISO-P20 |
+| Workspace check removed | ISO-P24 |
+| expiry check removed | ISO-P22a |
+| nonce made non-unique (ON CONFLICT DO NOTHING) | ISO-P23b |
+| RLS predicate made `true` | ISO-RLS-01 |
+| transaction binding removed | ISO-RLS-07 |
+| session-role binding removed | ISO-RLS-08c |
+| note-author policy removed | ISO-RLS-06c |
+| mode check removed | ISO-P00b |
+| private-note policy removed | ISO-RLS-02b |
+| live membership-state check removed | ISO-P27 |
+| nonce primary key dropped (race) | ISO-P-RACE-01..03 (both sessions succeed) |
+| terminal check removed | PLN-D1b |
+| student status allowlist removed | PLN-34 |
+| responsible-counselor check weakened to "may access" | PLN-A2i |
+| membership-actor principal binding removed | PLN-A2d |
+| item-author principal binding removed | PLN-11a |
+| legacy read-only removed | PLN-E1a |
+| refusal of transitions to `planned` removed | PLN-41b |
+| student-actor principal binding removed | PLN-A2g |
+
+**Local result:** fresh run, 25 steps, **1155 PASS, 0 FAIL, 0 OPEN, 1 SKIP** (the WS-ROLE-17 mirror run). The 3 ISO-GAP
+OPEN lines are gone because they are now assertions. This is not CI.
+
+**NOT RUN**
+- **Production verification:** PS-1..PS-4 undecided, and fail-closed by design.
+- **Real API or worker paths:** none exist.
+- **A student read scope:** undecided, so denied.
+- **Workspace-level notifications with no student:** these are now invisible to application roles. Recorded as open.

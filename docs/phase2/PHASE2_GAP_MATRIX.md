@@ -31,7 +31,7 @@ status documents alone.
 |---|---|---|---|---|---|---|---|---|---|
 | G-01 | Workspace, Organization, Branch, CounselorAssignment | Tables with composite keys; assignment accepted/active states | WS schema suite (step 17), ISO-01..09 (step 15) | low | Branch scoping of access not defined | Developer / PO | no | branch rules defined or deferred | schema suite |
 | G-02 | Identity, membership, role, permission (WS-DOM-02) | Governance event ledger, projection, receipt boundary, grantability matrix (PO 2026-11-10) | step 18, steps 23–24 | HIGH while no trusted adapter | trusted adapter; enforcement of grantability; API tests | Developer + Platform Security (PS-1..4) | no (fail-closed) | authenticated governance command end-to-end | GOV, RC, VER suites |
-| **G-03** | **Counselor-to-counselor isolation (WS-ISO-01)** | Boundary predicate and functions; caller **not** bound | ISO-C1..54: 42 PASS, **3 OPEN** (ISO-GAP-01..03), step 15 | **CRITICAL, fails open** | caller binding; RLS FORCE on 32 tables; ISO suite as each counselor | **Platform Security** (decision), then Developer | **YES** | brief §4, items 1–11 | ISO suite as own identity; GAP lines as assertions |
+| **G-03** | **Counselor-to-counselor isolation (WS-ISO-01)** | 2026-11-20: decision B with a test-only key — verified principal assertions; RLS ENABLE+FORCE on every student-scoped table bound to the verified principal | ISO-C1..54 (as owner) + ISO-P00..P30, ISO-RLS-01..09, ISO-RLS-C3, ISO-P-RACE-01..03, step 15; 11 controls | production verification fail-closed until PS-1..PS-4 | PS-1..PS-4; student read scope; job identity; manager vocabulary | **Platform Security** (PS-1..PS-4), PO | **YES until reviewed** | brief §4, items 1–11 | ISO suite as own identity; GAP lines as assertions |
 | G-04 | Cross-Workspace isolation | Database per Workspace; per-key roles | WS-ROLE cross-database denial (step 22) | low | — | — | no | — | WS-ROLE |
 | G-05 | Student–guardian relationship and permissions | Append-only link/permission events; effective view | GDN-01..18 | legal authority unencoded | Q-007 legal matrix | PO / Legal | no (fail-closed) | Q-007 decided and encoded | GDN |
 | G-06 | Transfer Saga, outbox, inbox | Per-recipient delivery, leases, dead-letter, generation-fenced inbox; inbox fail-closed | SAGA, SAGA-R, INB (steps 9–10) | service behaviour untested | wire format and signing (OQ-SAGA-1); quarantine resolution (OQ-SAGA-2); workers | PS / PO / later phase | no | — | SAGA, INB |
@@ -39,7 +39,7 @@ status documents alone.
 | G-08 | Approval evidence (three approvals, revocation) | Immutable approval and revocation events | APR-01..13, APR-RACE-01, SEP-01..29 (step 8) | conflict-of-interest exception disabled | TRANSFER-EXC-AUTH | PO / Platform Security | no | — | APR, SEP |
 | G-09 | Credit ledger and entitlement | Non-negative balance, bound reversal, append-only, single guard | CRD-01..47, races (steps 19–21, 26–27) | — | OQ-CRD-2, OQ-CRD-3 (period source, fail-closed) | PO | no (fail-closed) | decisions recorded | CRD |
 | G-10 | Capacity and Workspace lifecycle | Atomic counters, final-slot race, archive and reactivation | CAP race, ARC-01..17 (steps 21, 28) | suspension capacity rule open | suspension policy | PO | no | — | ARC, races |
-| **G-11** | **Plan, PlanVersion, PlanItem, audit (WS-PLAN-01)** | Normalized items, append-only transitions, F-01..F-05 protections | PLN 75, race 3, PLN-M 8, F05 109, F05-BOOT 20 (step 16) | real identities cannot write (fail-closed) | **PO decisions A–E**; caller binding for real actors | **PO**, then Developer | **YES** | decisions recorded; actor, graph, concurrency and migration tests | all step-16 suites |
+| **G-11** | **Plan, PlanVersion, PlanItem, audit (WS-PLAN-01)** | Normalized items; decisions A2/B1/C1/D1/E1 enforced under verified principals; runtime write path still closed | step 16: PLN incl. A2/D1/E1, race (student actors), PLN-M, F05, F05-BOOT; 8 controls | undetermined transitions refused | transitions A2/D1 do not name (open) | **PO**, then Developer | **YES** | decisions recorded; actor, graph, concurrency and migration tests | all step-16 suites |
 | G-12 | Curriculum (Subject, Chapter, Topic, Subtopic) | Hierarchy; no deletes | CUR-01..10 (step 11) | — | Book/Edition (WS-DOM-05) | DEFERRED to Phase 7 (PO) | no | — | CUR |
 | G-13 | Activity, class, participants, assignments | Typed FK sources; participants | ACT-01..26 | — | class recurrence rules | PO | no | — | ACT |
 | G-14 | Exam, test, analysis, per-subject results | Versioned blueprints; per-subject results; analysis versions | AVQ, ASM, EXM-01..42 | — | custom error taxonomy (**NOT IMPL.**); OQ-ASM-1/2 | Developer (taxonomy); PO (OQ-ASM) | no | taxonomy table with tests | EXM, ASM |
@@ -100,7 +100,7 @@ skipped in one of its two runs. The line is corrected to "01..16,18,19" and the 
 
 ## 4. What blocks Phase 2 (agent's view)
 
-1. **G-03 WS-ISO-01**: Platform Security decision (`decisions/WS_ISO_01_PLATFORM_SECURITY_DECISION_BRIEF.md`).
-2. **G-11 WS-PLAN-01**: Product Owner decisions A–E (`decisions/WS_PLAN_01_PO_DECISION_BRIEF.md`).
+1. **G-03 WS-ISO-01**: decided (B, test-only key) and implemented 2026-11-20; independent review; PS-1..PS-4 for production.
+2. **G-11 WS-PLAN-01**: decided (A2/B1/C1/D1/E1) and implemented 2026-11-20; independent review.
 3. **G-32 PR integration**: Product Owner.
 4. **G-15 review integrity and G-26 migration framework**: newly identified, not yet classified by the Supervisor.

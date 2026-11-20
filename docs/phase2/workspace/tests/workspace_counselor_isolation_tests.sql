@@ -162,9 +162,12 @@ BEGIN
 END $t$;
 
 -- ======================================================================================================
--- BEHAVIOUR — run AS THE RUNTIME ROLE, the identity every counselor shares today.
+-- BEHAVIOUR OF THE BOUNDARY PREDICATE — run as the test owner, outside row-level security.
+-- Since WS-ISO-01 decision B (2026-11-20) the runtime role sees student rows only through row-level security
+-- bound to a VERIFIED principal, so these predicate tests, which name both counselors' memberships on
+-- purpose, run as the owner. The same boundary AS EACH COUNSELOR'S OWN IDENTITY is tested in
+-- workspace_principal_assertion_tests.sql (ISO-P*, ISO-RLS*).
 -- ======================================================================================================
-SET SESSION AUTHORIZATION :"runtime_role";
 
 -- Direct student ids.
 SELECT iso_true ('ISO-01 counselor A reaches own student a1',
@@ -201,7 +204,6 @@ SELECT iso_false('ISO-15 A does NOT reach b1''s plan VERSION, which reaches its 
   counselor_may_access_row('b5000000-0000-0000-0000-00000000000a','student_plan_versions','a5610000-0000-0000-0000-0000000000b1'));
 SELECT iso_true ('ISO-15b B DOES reach that plan version (the indirect path resolves, it is not merely denied)',
   counselor_may_access_row('b5000000-0000-0000-0000-00000000000b','student_plan_versions','a5610000-0000-0000-0000-0000000000b1'));
-RESET SESSION AUTHORIZATION;
 -- ISO-16 runs as the owner: the runtime role holds no SELECT on guardian_link_events at all (it is
 -- append-only authority evidence), so a runtime caller cannot reach those rows by any path and the
 -- question only arises for an identity that can read them. The answer must still be "not counselor A".
@@ -209,7 +211,6 @@ SELECT iso_false('ISO-16 A does NOT reach b1''s guardian link EVENT, two hops fr
   counselor_may_access_row('b5000000-0000-0000-0000-00000000000a','guardian_link_events','a5710000-0000-0000-0000-0000000000b1'));
 SELECT iso_true ('ISO-16b B DOES reach it (the two-hop path resolves)',
   counselor_may_access_row('b5000000-0000-0000-0000-00000000000b','guardian_link_events','a5710000-0000-0000-0000-0000000000b1'));
-SET SESSION AUTHORIZATION :"runtime_role";
 SELECT iso_false('ISO-17 A does NOT reach b1''s enrollment',
   counselor_may_access_row('b5000000-0000-0000-0000-00000000000a','enrollments','a5100000-0000-0000-0000-0000000000b1'));
 SELECT iso_false('ISO-18 A does NOT reach counselor B''s ASSIGNMENT row (enrollment-keyed)',
@@ -270,7 +271,6 @@ SELECT iso_err('ISO-43 counselor A cannot be the recipient of a notification abo
              'weekly_summary','v1','{}','iso-idem-43')$q$,
   'able to reach that student');
 
-RESET SESSION AUTHORIZATION;
 
 -- Revocation takes effect immediately, through every surface. Run as the owner because the runtime role
 -- holds no UPDATE on assignments or memberships (and must not).
@@ -291,43 +291,8 @@ SELECT iso_false('ISO-54 suspending the membership removes every remaining stude
 UPDATE workspace_memberships SET status='active' WHERE membership_id='b5000000-0000-0000-0000-00000000000a';
 
 -- ======================================================================================================
--- THE RESIDUAL. These are OPEN lines, deliberately not PASS lines: they measure that WS-ISO-01 is NOT
--- enforced at the database, so nobody can read the PASS count above as proof that it is. Each one FAILS
--- the suite if the measurement changes, so this record cannot silently go stale when isolation is built.
+-- ISO-GAP-01..03 were printed here as OPEN until WS-ISO-01 decision B (2026-11-20). They are now hard
+-- assertions, run as each counselor's own verified identity, in workspace_principal_assertion_tests.sql.
 -- ======================================================================================================
-SET SESSION AUTHORIZATION :"runtime_role";
-DO $t$
-DECLARE v_minutes integer;
-BEGIN
-  SELECT actual_minutes INTO v_minutes FROM public.study_sessions
-   WHERE study_session_id='a5300000-0000-0000-0000-0000000000b1';
-  IF v_minutes IS DISTINCT FROM 999 THEN
-    RAISE EXCEPTION 'FAIL ISO-GAP-01 the runtime role could NOT read counselor B''s study session directly. '
-                    'If that is because isolation is now enforced, update WS-ISO-01 and this test together';
-  END IF;
-  RAISE NOTICE 'OPEN ISO-GAP-01 the runtime role every counselor shares reads counselor B''s study session '
-               'directly (999 minutes); the boundary above is not bound to the caller';
-END $t$;
-DO $t$
-DECLARE v_n integer;
-BEGIN
-  SELECT count(*) INTO v_n FROM public.counselor_notes WHERE visibility='private_to_author';
-  IF v_n < 2 THEN
-    RAISE EXCEPTION 'FAIL ISO-GAP-02 the runtime role no longer reads every private note; update WS-ISO-01';
-  END IF;
-  RAISE NOTICE 'OPEN ISO-GAP-02 the runtime role reads all % private_to_author notes, authors notwithstanding', v_n;
-END $t$;
-RESET SESSION AUTHORIZATION;
-DO $t$
-DECLARE v_rls integer; v_total integer;
-BEGIN
-  SELECT count(*) FILTER (WHERE c.relrowsecurity), count(*) INTO v_rls, v_total
-    FROM student_scoped_tables t JOIN pg_class c ON c.oid = ('public.'||t.table_name)::regclass;
-  IF v_rls <> 0 THEN
-    RAISE EXCEPTION 'FAIL ISO-GAP-03 % of % student-scoped tables now have row-level security; WS-ISO-01 and '
-                    'this record must be updated together', v_rls, v_total;
-  END IF;
-  RAISE NOTICE 'OPEN ISO-GAP-03 0 of % student-scoped tables have row-level security', v_total;
-END $t$;
 
-SELECT 'COUNSELOR ISOLATION TESTS COMPLETED: the BOUNDARY is correct; it is NOT bound to the caller — WS-ISO-01 OPEN' AS result;
+SELECT 'COUNSELOR ISOLATION BOUNDARY TESTS COMPLETED (predicate, as owner); caller binding: see ISO-P / ISO-RLS' AS result;

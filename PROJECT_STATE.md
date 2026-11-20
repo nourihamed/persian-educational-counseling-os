@@ -14,14 +14,14 @@ what was implemented and what the evidence is, not what was approved.
 |---|---|
 | Latest implementation / security-reviewed commit | `fe08a77336557a51aca36313230b5e082e5ed3ad` (F-05 follow-up); CI success, runs 44705627331 and 44705633469 |
 | Latest documentation commit before this one | `bba728193d8d044bb65c4efe3c33662e8ad686c2` (docs only, no implementation change); CI success, runs [44724614335](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44724614335) (job 136248754264) and [44724622970](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44724622970) (job 136248780337) |
-| PR #12 head before this commit | `bba7281`; this commit (gap matrix, decision briefs, WS-ROLE-17 reporting fix) goes on top of it |
+| PR #12 head before this commit | `926c061` (gap matrix, decision briefs); CI success, runs 44764360492 and 44764375914. This commit implements the 2026-11-20 decisions on top of it |
 | `main` | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6` |
 
 | Item | Status |
 |---|---|
 | F-05 | **ACCEPTED — ARCHITECTURE REVIEW LEVEL** (`fe08a77`) |
-| WS-PLAN-01 | **NOT ACCEPTED / BLOCKING** until Product Owner decisions A–E are recorded and implemented |
-| WS-ISO-01 | **CRITICAL / BLOCKING** until ISO-GAP-01..03 are closed |
+| WS-PLAN-01 | **NOT ACCEPTED / BLOCKING** — decisions A2/B1/C1/D1/E1 implemented 2026-11-20; pending independent review |
+| WS-ISO-01 | **CRITICAL / BLOCKING** — decision B (test-only key) implemented 2026-11-20; pending independent review; production fail-closed |
 | Phase 2 | **NOT READY** |
 | Phase 3 | **NOT AUTHORIZED** |
 
@@ -144,6 +144,35 @@ dependencies that code cannot close.
    the phase.**
 
 ---
+
+### Update 2026-11-20 — WS-ISO-01 caller binding (B, test-only key) and WS-PLAN-01 decisions A2/B1/C1/D1/E1 implemented (draft SQL; synthetic)
+- **WS-ISO-01** (`workspace_principal_assertion_draft.sql`, `workspace_counselor_rls_draft.sql`):
+  - `establish_principal()` verifies inside the database:
+    - an HMAC over the exact assertion bytes;
+    - the Workspace;
+    - not-before, expiry and lifetime;
+    - one-time nonce;
+    - that the actor is current.
+  - The principal lives for one backend, one transaction and one session role.
+  - Verification is `disabled` by default, and the key table can hold only synthetic test keys.
+  - Row-level security is ENABLED and FORCED on every student-scoped table. Application roles see and write only
+    rows of students the verified counselor may reach. Private notes are author-only, and authorship is bound to the
+    principal.
+  - ISO-GAP-01..03 are now hard assertions.
+- **WS-PLAN-01:** guards enforce A2/B1/C1/D1/E1. Every actor and author is the verified principal. The runtime
+  transition and item write path is still closed. Refused as undecided (open):
+  - a transition to `planned`;
+  - a counselor recording a student status;
+  - a student recording a counselor status.
+- **Controls:** 21 measured negative controls.
+- **Local:** 25 steps, 1155 PASS lines, 0 FAIL, 0 OPEN.
+- **Open:**
+  - PS-1..PS-4 (production verification);
+  - PS-5;
+  - student read scope;
+  - background-job identity;
+  - manager vocabulary;
+  - Workspace-level notifications, now invisible to application roles.
 
 ### Update 2026-11-20 — Phase 2 gap matrix and decision briefs (docs, plus one test-reporting fix)
 - **New:**

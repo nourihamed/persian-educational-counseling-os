@@ -636,3 +636,41 @@ clarification, not evidence of implementation quality and not gate approval.
 - This decision does not approve proposed defaults for those questions. Until separately decided, do not invent content licensing/ownership policy; Topic-level mastery remains the MVP requirement and subtopic mastery is not mandatory by this decision.
 
 **Status note:** WS-PLAN-01 remains implementation-pending and blocking until its schema, constraints, audit semantics and tests are evidenced. WS-DOM-05 is deferred to Phase 7, with the four governance questions still open. Neither decision approves Phase 2, authorizes Phase 3, or relaxes D-014 synthetic-only restrictions.
+
+
+## 2026-11-20 — Product Owner decisions: WS-PLAN-01 (A–E) and WS-ISO-01 caller binding
+
+**Authority:** Explicit Product Owner decisions in the 2026-11-20 conversation, recorded verbatim in substance. Not
+evidence of implementation quality and not Phase 2 gate approval. No D-number is allocated.
+
+### WS-PLAN-01 — status transitions and legacy plans
+- **A2:** Students may record `in_progress`, `completed` and `partially_completed`. Only the authorized responsible
+  counselor may record `deferred`, `skipped` and `cancelled`.
+- **B1:** Status transitions are prohibited on unpublished/draft PlanVersions.
+- **C1:** An empty PlanVersion cannot be published.
+- **D1:** `completed`, `skipped` and `cancelled` are terminal and cannot be reversed. Corrections are made through
+  a new PlanVersion.
+- **E1:** Legacy JSON-based plans remain read-only. A counselor may explicitly create a new normalized PlanVersion
+  from legacy content when needed.
+- **Instruction:** do not infer or invent additional transition rules. Transitions these decisions do not determine
+  stay documented as open and fail-closed. Enforce actor authorization, student ownership, counselor assignment,
+  publication state and auditability.
+
+### WS-ISO-01 — caller binding: "ISO: B with a test-only key"
+- **Mechanism:** a signed, short-lived identity assertion, verified at the trusted database command boundary,
+  with a strictly test-only key for synthetic tests.
+- **Constraints:**
+  1. The test key is never usable in production and is not a production secret or key-management decision.
+  2. Production verification stays fail-closed until PS-1..PS-4 receive explicit Platform Security approval.
+  3. The signature and all relevant claims are verified at the command boundary. A caller-supplied `verified=true`
+     or an opaque receipt reference is insufficient.
+  4. Negative tests are required for: forged or tampered claims, expiry, replay, cross-tenant and cross-actor use,
+     stale identity and assignment, concurrency and idempotency.
+  5. No production runtime writes, no new runtime privileges, no production key, no real student data.
+  6. The F-05 restrictions and all WS-ISO-01 tenant-isolation requirements are preserved.
+
+**Status note:**
+- Both are implemented in draft SQL with synthetic tests in the commit following `926c061`.
+- Both remain BLOCKING until independent review.
+- **Still OPEN:** PS-1..PS-4 (production verification); what a student principal may read; background-job
+  identity; the manager permission vocabulary; and the transitions A2/D1 do not name.

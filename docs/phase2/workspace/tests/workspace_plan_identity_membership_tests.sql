@@ -72,15 +72,18 @@ VALUES ('a5510000-0000-0000-0000-000000000001','a5500000-0000-0000-0000-00000000
 -- F05-14: the synthetic writer's authorized test operation. The only way to act as it is a superuser session
 -- assuming it — the isolated test harness.
 SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');  -- WS-ISO-01 B: the author is the verified principal
 SELECT pln_ok('F05-14 the synthetic writer, assumed by the isolated test harness, can create a plan item',
   $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
      VALUES ('a5600000-0000-0000-0000-000000000001','a5510000-0000-0000-0000-000000000001','a5500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',1,'a4320000-0000-0000-0000-000000000001','2026-11-23','Asia/Tehran','b4000000-0000-0000-0000-00000000000a')$q$);
+COMMIT;
 RESET SESSION AUTHORIZATION;
 UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='a5510000-0000-0000-0000-000000000001';
 
 -- The two write statements every adversarial case below attempts.
 \set item_stmt 'INSERT INTO public.plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id) VALUES (gen_random_uuid(),''a5510000-0000-0000-0000-000000000003'',''a5500000-0000-0000-0000-000000000003'',''e4000000-0000-0000-0000-000000000001'',1,''a4320000-0000-0000-0000-000000000001'',''2026-11-24'',''Asia/Tehran'',''b4000000-0000-0000-0000-00000000000a'')'
-\set event_stmt 'INSERT INTO public.plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id) VALUES (gen_random_uuid(),''a5600000-0000-0000-0000-000000000001'',''e4000000-0000-0000-0000-000000000001'',1,''planned'',''in_progress'',''f05'',''membership'',''b4000000-0000-0000-0000-00000000000a'')'
+\set event_stmt 'INSERT INTO public.plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id) VALUES (gen_random_uuid(),''a5600000-0000-0000-0000-000000000001'',''e4000000-0000-0000-0000-000000000001'',1,''planned'',''cancelled'',''f05'',''membership'',''b4000000-0000-0000-0000-00000000000a'')'
 \set legacy_stmt 'INSERT INTO public.student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,content_model) VALUES (gen_random_uuid(),''a5500000-0000-0000-0000-000000000002'',1,''{}'',''legacy'',''{"legacy":"f05"}'',''draft'',''legacy_json'')'
 
 -- ======================================================================================================
@@ -314,7 +317,10 @@ ROLLBACK;
 SELECT pln_true('F05-16a every adversarial grant was rolled back: no boundary violation remains',
   NOT EXISTS (SELECT 1 FROM plan_identity_boundary_violations(:'inventory'::text[])));
 SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 SELECT pln_ok('F05-16b the synthetic writer, assumed by the harness, records a transition', :'event_stmt');
+COMMIT;
 RESET SESSION AUTHORIZATION;
 SET SESSION AUTHORIZATION :"migrator_role";
 SELECT pln_ok('F05-16c the migrator, assumed by the harness, imports a legacy_json version (its trusted test path)', :'legacy_stmt');

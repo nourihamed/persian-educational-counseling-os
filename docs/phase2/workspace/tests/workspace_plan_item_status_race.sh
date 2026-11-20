@@ -41,10 +41,18 @@ INSERT INTO topics(topic_id,chapter_id,title,order_no) VALUES ('a3220000-0000-00
 INSERT INTO student_plans(plan_id,student_id) VALUES ('a3500000-0000-0000-0000-000000000001','$STU');
 INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id)
 VALUES ('a3510000-0000-0000-0000-000000000001','a3500000-0000-0000-0000-000000000001',1,'{}','manual-v1','{}','draft','b3000000-0000-0000-0000-00000000000a');
+SELECT 1;
+SQL
+psql -X -v ON_ERROR_STOP=1 -q -v workspace_key="$KEY" -d "$DB" -f "$(dirname "$0")/workspace_principal_test_harness.sql" >/dev/null || { echo "FAIL WS-PLN-RACE harness"; exit 2; }
+psql -X -v ON_ERROR_STOP=1 -q -d "$DB" <<SQL || { echo "FAIL WS-PLN-RACE fixture setup (items)"; exit 2; }
 -- F-05: only the synthetic writer itself passes the identity check (a superuser does not).
+-- WS-ISO-01 B: the item's author is the verified principal of the transaction.
 SET SESSION AUTHORIZATION $RT;
+BEGIN;
+SELECT test_establish('counselor','b3000000-0000-0000-0000-00000000000a');
 INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
 VALUES ('$ITEM','a3510000-0000-0000-0000-000000000001','a3500000-0000-0000-0000-000000000001','$STU',1,'a3220000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b3000000-0000-0000-0000-00000000000a');
+COMMIT;
 RESET SESSION AUTHORIZATION;
 -- F-03: transitions are refused on a DRAFT version's items, so the plan is published first.
 UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='a3510000-0000-0000-0000-000000000001';
@@ -60,8 +68,9 @@ fi
 cat > "$W/a.sql" <<SQL
 SET SESSION AUTHORIZATION $RT;
 BEGIN;
-INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-VALUES (gen_random_uuid(),'$ITEM','$STU',1,'planned','in_progress','race-a','membership','b3000000-0000-0000-0000-00000000000a');
+SELECT test_establish('student','$STU');
+INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+VALUES (gen_random_uuid(),'$ITEM','$STU',1,'planned','in_progress','race-a','student');
 DO \$\$ BEGIN
   FOR i IN 1..1200 LOOP
     EXIT WHEN EXISTS (SELECT 1 FROM public.pln_race_signal WHERE name='go');
@@ -83,8 +92,11 @@ done
 
 cat > "$W/b.sql" <<SQL
 SET SESSION AUTHORIZATION $RT;
-INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-VALUES (gen_random_uuid(),'$ITEM','$STU',1,'planned','completed','race-b','membership','b3000000-0000-0000-0000-00000000000a');
+BEGIN;
+SELECT test_establish('student','$STU');
+INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+VALUES (gen_random_uuid(),'$ITEM','$STU',1,'planned','completed','race-b','student');
+COMMIT;
 SQL
 psql -X -q -d "$DB" -f "$W/b.sql" >"$W/b.log" 2>&1 & pb=$!
 

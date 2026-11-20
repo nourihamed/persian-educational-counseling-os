@@ -15,8 +15,8 @@
 | Item | Status |
 |---|---|
 | F-05 | **ACCEPTED — ARCHITECTURE REVIEW LEVEL** (`fe08a77`) |
-| WS-PLAN-01 | **NOT ACCEPTED / BLOCKING** until Product Owner decisions A–E are recorded and implemented |
-| WS-ISO-01 | **CRITICAL / BLOCKING** until ISO-GAP-01..03 are closed |
+| WS-PLAN-01 | **NOT ACCEPTED / BLOCKING** — decisions A2/B1/C1/D1/E1 recorded and implemented 2026-11-20; pending independent review |
+| WS-ISO-01 | **CRITICAL / BLOCKING** — decision B (test-only key) implemented 2026-11-20; ISO-GAP-01..03 asserted closed at schema level; production fail-closed (PS-1..PS-4); pending independent review |
 | Phase 2 | **NOT READY** |
 | Phase 3 | **NOT AUTHORIZED** |
 

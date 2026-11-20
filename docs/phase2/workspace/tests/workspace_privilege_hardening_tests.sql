@@ -205,7 +205,12 @@ BEGIN
      AND pg_get_function_result(p.oid) <> 'trigger'
      -- assert_student_not_frozen is PUBLIC on purpose: every writer's barrier trigger calls it, it only
      -- reads freeze state and raises, and it returns void.
-     AND p.proname <> 'assert_student_not_frozen';
+     AND p.proname <> 'assert_student_not_frozen'
+     -- WS-ISO-01 row-level policies call these for EVERY reader of a student-scoped table; each answers only
+     -- about the caller's own verified principal (NULL / false without one), returns no row data and writes
+     -- nothing. establish_principal() is NOT here: it is granted to named roles only.
+     AND p.proname NOT IN ('iso_rls_applies','iso_principal_may_reach',
+                           'current_principal_membership','current_principal_student');
   IF v_bad IS NOT NULL THEN
     RAISE EXCEPTION 'FAIL SEC-07 these non-trigger SECURITY DEFINER functions are executable by PUBLIC: %',
       v_bad;

@@ -32,11 +32,13 @@
 --   * No priority, urgency, estimated workload scale, dependencies, conflict groups, generation
 --     provenance, idempotency key or carry-forward link — the contract lists them, the decision did not
 --     settle their vocabularies, and contract §9 forbids inventing weights or thresholds.
---   * No transition graph. The decision fixed the states, not which state may follow which, so the only
---     transition rules enforced are integrity rules: you transition FROM the current state, TO a different
---     one, in order. Whether e.g. `completed` is terminal is an open question.
---   * Which actor may make which transition, and whether a student may edit generated items (contract
---     §9), are open Product Owner questions. They are held FAIL-CLOSED, not answered (see below).
+--   * No full transition graph. Product Owner decisions of 2026-11-20 settle: A2 (students record
+--     in_progress / completed / partially_completed; only the responsible counselor records deferred /
+--     skipped / cancelled), B1 (no transition on a draft version's items), C1 (an empty version cannot be
+--     published), D1 (completed / skipped / cancelled are terminal), E1 (legacy JSON stays read-only).
+--     Everything those decisions do not name is REFUSED and recorded as open: a transition TO planned, a
+--     counselor recording a student status, a student recording a counselor status. Whether a student may
+--     edit generated items (contract §9) is also still open.
 --   * Engine-created items will need a non-membership actor; none exists until Phase 12.
 --
 -- CORRECTED AFTER THE SUPERVISOR REVIEW OF 8df7d5e (2026-11-19), FINDING F-05 (HIGH): the privileged
@@ -283,6 +285,12 @@ $body$;
 CREATE FUNCTION guard_plan_version_model() RETURNS trigger LANGUAGE plpgsql AS $body$
 DECLARE v_prev_plan uuid; v_prev_no integer;
 BEGIN
+  IF TG_OP = 'UPDATE' AND OLD.content_model = 'legacy_json' THEN
+    -- Decision E1 (Product Owner, 2026-11-20): legacy JSON plans remain READ-ONLY. A counselor converts one
+    -- by creating a NEW normalized version that supersedes it, with a reason; the legacy row never changes.
+    RAISE EXCEPTION 'a legacy_json plan version is read-only (decision E1); create a new normalized version '
+                    'that supersedes it' USING ERRCODE='check_violation';
+  END IF;
   IF TG_OP = 'UPDATE' THEN
     IF (NEW.content_model, NEW.supersedes_plan_version_id, NEW.change_reason, NEW.created_by_membership_id)
        IS DISTINCT FROM
@@ -290,13 +298,11 @@ BEGIN
       RAISE EXCEPTION 'a plan version''s content model, supersession, change reason and author are fixed at '
                       'creation' USING ERRCODE='check_violation';
     END IF;
-    -- F-03: whether an EMPTY normalized version may be published is an open Product Owner question. Until it
-    -- is answered, the conservative answer is no: a published plan with nothing in it is a statement that
-    -- the student has nothing planned, and nobody has decided that may be published.
+    -- Decision C1 (Product Owner, 2026-11-20): an EMPTY normalized version cannot be published.
     IF NEW.status = 'published' AND OLD.status <> 'published' AND NEW.content_model = 'normalized'
        AND NOT EXISTS (SELECT 1 FROM public.plan_items i WHERE i.plan_version_id = NEW.plan_version_id) THEN
-      RAISE EXCEPTION 'publishing an EMPTY normalized plan version is refused pending a Product Owner decision '
-                      '(WS-PLAN-01 open question)' USING ERRCODE='check_violation';
+      RAISE EXCEPTION 'publishing an EMPTY normalized plan version is prohibited (Product Owner decision '
+                      'WS-PLAN-01 C1)' USING ERRCODE='check_violation';
     END IF;
     RETURN NEW;
   END IF;
@@ -413,6 +419,13 @@ BEGIN
     RAISE EXCEPTION 'items can only be added to a DRAFT plan version; a published version is immutable'
       USING ERRCODE='check_violation';
   END IF;
+  -- WS-ISO-01 (decision B): the author named on the row must BE the verified principal of this
+  -- transaction. A membership id supplied by the caller is a claim, never proof.
+  IF public.current_principal_membership() IS NULL
+     OR NEW.created_by_membership_id IS DISTINCT FROM public.current_principal_membership() THEN
+    RAISE EXCEPTION 'the plan item author must be the verified principal of this transaction'
+      USING ERRCODE='insufficient_privilege';
+  END IF;
   IF NOT public.counselor_may_access_student(NEW.created_by_membership_id, NEW.student_id) THEN
     RAISE EXCEPTION 'membership % is not an active, accepted counselor of student %; it cannot plan for '
                     'that student', NEW.created_by_membership_id, NEW.student_id USING ERRCODE='check_violation';
@@ -475,23 +488,31 @@ BEGIN
   IF TG_OP <> 'INSERT' THEN
     RAISE EXCEPTION 'plan item status history is append-only' USING ERRCODE='check_violation';
   END IF;
-  -- F-01: neither kind of actor can be authenticated by the database today.
-  IF NEW.actor_kind = 'student' THEN
-    RAISE EXCEPTION 'actor_kind student is refused: the database cannot authenticate a student, and a '
-                    'student_id on the row is not proof of who wrote it (WS-ISO-01)'
-      USING ERRCODE='insufficient_privilege';
-  END IF;
+  -- F-01 / F-05: only the NOLOGIN synthetic writer may write transitions at all; no runtime write path.
   IF NOT public.plan_identity_is('synthetic_plan_writer') THEN
     RAISE EXCEPTION 'no application identity can be authenticated as a plan actor until the WS-ISO-01 caller '
                     'binding exists; transitions are writable only by the synthetic test identity'
       USING ERRCODE='insufficient_privilege';
   END IF;
-  -- F-03: whether status may be recorded on a DRAFT version's items is an open Product Owner question;
-  -- refused until it is answered. A draft is not yet a plan anyone is executing.
+  -- WS-ISO-01 (decision B): the actor named on the row must BE the verified principal of this transaction.
+  -- A student actor is the student who owns the item; a membership actor is that counselor membership.
+  IF NEW.actor_kind = 'student' THEN
+    IF public.current_principal_student() IS NULL OR public.current_principal_student() IS DISTINCT FROM NEW.student_id THEN
+      RAISE EXCEPTION 'a student transition must be made by that student as the verified principal'
+        USING ERRCODE='insufficient_privilege';
+    END IF;
+  ELSE
+    IF public.current_principal_membership() IS NULL
+       OR NEW.actor_membership_id IS DISTINCT FROM public.current_principal_membership() THEN
+      RAISE EXCEPTION 'the transition actor must be the verified principal of this transaction'
+        USING ERRCODE='insufficient_privilege';
+    END IF;
+  END IF;
+  -- Decision B1 (Product Owner, 2026-11-20): no status transition on the items of a draft version.
   IF (SELECT v.status FROM public.plan_items i JOIN public.student_plan_versions v
         ON v.plan_version_id = i.plan_version_id WHERE i.plan_item_id = NEW.plan_item_id) IS DISTINCT FROM 'published' THEN
-    RAISE EXCEPTION 'status transitions on items of a DRAFT plan version are refused pending a Product Owner '
-                    'decision (WS-PLAN-01 open question)' USING ERRCODE='check_violation';
+    RAISE EXCEPTION 'status transitions on items of a DRAFT plan version are prohibited (Product Owner '
+                    'decision WS-PLAN-01 B1)' USING ERRCODE='check_violation';
   END IF;
   SELECT coalesce(max(e.seq_no), 0) + 1 INTO v_next
     FROM public.plan_item_status_events e WHERE e.plan_item_id = NEW.plan_item_id;
@@ -506,13 +527,35 @@ BEGIN
     RAISE EXCEPTION 'plan item % is %, not %; refusing a stale transition',
       NEW.plan_item_id, v_current, NEW.from_status USING ERRCODE='check_violation';
   END IF;
-  IF NEW.actor_kind = 'membership'
-     AND NOT public.counselor_may_access_student(NEW.actor_membership_id, NEW.student_id) THEN
-    RAISE EXCEPTION 'membership % is not an active, accepted counselor of student %',
-      NEW.actor_membership_id, NEW.student_id USING ERRCODE='check_violation';
+  -- Decision D1: completed, skipped and cancelled are terminal and cannot be reversed. A correction is a
+  -- new plan version.
+  IF v_current IN ('completed','skipped','cancelled') THEN
+    RAISE EXCEPTION 'plan item % is %, a terminal status; correct it through a new plan version (decision D1)',
+      NEW.plan_item_id, v_current USING ERRCODE='check_violation';
   END IF;
-  -- actor_kind = 'student' is refused above; the CHECK still allows the value so the decision, once made,
-  -- does not need a schema change.
+  -- Decision A2: students may record in_progress, completed, partially_completed; only the responsible
+  -- counselor may record deferred, skipped, cancelled. Everything these decisions do not name is refused
+  -- and recorded as open: a counselor recording a student status, a student recording a counselor status,
+  -- and any transition TO planned (no actor is named for it).
+  IF NEW.to_status = 'planned' THEN
+    RAISE EXCEPTION 'no actor is authorized to record a transition to planned; undecided, refused (WS-PLAN-01 open)'
+      USING ERRCODE='insufficient_privilege';
+  END IF;
+  IF NEW.actor_kind = 'student' THEN
+    IF NEW.to_status NOT IN ('in_progress','completed','partially_completed') THEN
+      RAISE EXCEPTION 'a student may record only in_progress, completed or partially_completed (decision A2)'
+        USING ERRCODE='insufficient_privilege';
+    END IF;
+  ELSE
+    IF NEW.to_status NOT IN ('deferred','skipped','cancelled') THEN
+      RAISE EXCEPTION 'whether a counselor may record % is undecided; refused (decision A2 names students for it)',
+        NEW.to_status USING ERRCODE='insufficient_privilege';
+    END IF;
+    IF NOT public.counselor_is_responsible_for(NEW.actor_membership_id, NEW.student_id) THEN
+      RAISE EXCEPTION 'membership % is not the responsible counselor of student %',
+        NEW.actor_membership_id, NEW.student_id USING ERRCODE='insufficient_privilege';
+    END IF;
+  END IF;
   RETURN NEW;
 END; $body$;
 CREATE TRIGGER plan_item_status_events_guard

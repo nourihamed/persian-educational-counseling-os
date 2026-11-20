@@ -8,6 +8,11 @@ INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES 
 INSERT INTO membership_roles(membership_id,role_key) VALUES ('b2000000-0000-0000-0000-00000000000a','counselor');
 INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state) VALUES
  ('e2000000-0000-0000-0000-000000000001','f2000000-0000-0000-0000-000000000001','Hist S1','grade_10','active');
+-- an active, accepted, responsible assignment, so the counselor can act on this student under WS-ISO-01 B
+INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state) VALUES
+ ('a2100000-0000-0000-0000-000000000001','e2000000-0000-0000-0000-000000000001',1,'requested');
+INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at) VALUES
+ ('a2200000-0000-0000-0000-000000000001','a2100000-0000-0000-0000-000000000001','b2000000-0000-0000-0000-00000000000a',true,'active',clock_timestamp());
 INSERT INTO student_plans(plan_id,student_id) VALUES
  ('a2500000-0000-0000-0000-000000000001','e2000000-0000-0000-0000-000000000001'),
  ('a2500000-0000-0000-0000-000000000002','e2000000-0000-0000-0000-000000000001');

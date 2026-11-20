@@ -11,7 +11,9 @@
 -- named predecessor and a reason; append-only, ordered, attributable status history; one source of truth
 -- with derived output JSON; the transfer write barrier and the counselor boundary on both new tables.
 -- WHAT THEY DO NOT PROVE: anything about scheduling, ranking, conflicts, generation or replay (Phase 12),
--- and nothing about the CALLER being the actor it names (WS-ISO-01's caller-binding gap applies here).
+-- Since WS-ISO-01 decision B (2026-11-20) every actor is the VERIFIED principal of its transaction
+-- (workspace_principal_test_harness.sql establishes one through the real command boundary), and the
+-- Product Owner's WS-PLAN-01 decisions A2/B1/C1/D1/E1 are enforced (PLN-A*, PLN-D*, PLN-E*).
 \set ON_ERROR_STOP on
 SET app.workspace_key = :'workspace_key';
 SELECT format('ws_%s_runtime', :'workspace_key') AS runtime_role \gset
@@ -48,10 +50,11 @@ INSERT INTO workspace_profile(singleton,workspace_id,workspace_type) VALUES (tru
 INSERT INTO workspace_memberships(membership_id,platform_user_id,status) VALUES
  ('b4000000-0000-0000-0000-00000000000a','c4000000-0000-0000-0000-00000000000a','active'),
  ('b4000000-0000-0000-0000-00000000000b','c4000000-0000-0000-0000-00000000000b','active'),
- ('b4000000-0000-0000-0000-000000000010','c4000000-0000-0000-0000-000000000010','active');
+ ('b4000000-0000-0000-0000-000000000010','c4000000-0000-0000-0000-000000000010','active'),
+ ('b4000000-0000-0000-0000-00000000000c','c4000000-0000-0000-0000-00000000000c','active');
 INSERT INTO membership_roles(membership_id,role_key) VALUES
  ('b4000000-0000-0000-0000-00000000000a','counselor'),('b4000000-0000-0000-0000-00000000000b','counselor'),
- ('b4000000-0000-0000-0000-000000000010','organization_manager');
+ ('b4000000-0000-0000-0000-000000000010','organization_manager'),('b4000000-0000-0000-0000-00000000000c','counselor');
 INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state) VALUES
  ('e4000000-0000-0000-0000-000000000001','f4000000-0000-0000-0000-000000000001','Plan S1','grade_10','active'),
  ('e4000000-0000-0000-0000-000000000002','f4000000-0000-0000-0000-000000000002','Plan S2','grade_10','active'),
@@ -63,7 +66,8 @@ INSERT INTO enrollments(enrollment_id,student_id,ownership_generation,state) VAL
 INSERT INTO counselor_assignments(assignment_id,enrollment_id,counselor_membership_id,is_responsible,state,accepted_at) VALUES
  ('a4200000-0000-0000-0000-000000000001','a4100000-0000-0000-0000-000000000001','b4000000-0000-0000-0000-00000000000a',true,'active',clock_timestamp()),
  ('a4200000-0000-0000-0000-000000000002','a4100000-0000-0000-0000-000000000002','b4000000-0000-0000-0000-00000000000b',true,'active',clock_timestamp()),
- ('a4200000-0000-0000-0000-000000000003','a4100000-0000-0000-0000-000000000003','b4000000-0000-0000-0000-00000000000a',true,'active',clock_timestamp());
+ ('a4200000-0000-0000-0000-000000000003','a4100000-0000-0000-0000-000000000003','b4000000-0000-0000-0000-00000000000a',true,'active',clock_timestamp()),
+ ('a4200000-0000-0000-0000-00000000000c','a4100000-0000-0000-0000-000000000001','b4000000-0000-0000-0000-00000000000c',false,'active',clock_timestamp());
 INSERT INTO subjects(subject_id,subject_key,title,grade_key,source_kind,status) VALUES
  ('a4300000-0000-0000-0000-000000000001','pln-physics-10','Physics','grade_10','workspace_custom','active');
 INSERT INTO chapters(chapter_id,subject_id,title,order_no) VALUES ('a4310000-0000-0000-0000-000000000001','a4300000-0000-0000-0000-000000000001','Motion',1);
@@ -93,6 +97,7 @@ SET SESSION AUTHORIZATION :"migrator_role";
 INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,content_model) VALUES
  ('a4510000-0000-0000-0000-000000000004','a4500000-0000-0000-0000-000000000004',1,'{}','legacy','{"legacy":true}','draft','legacy_json');
 RESET SESSION AUTHORIZATION;
+\ir workspace_principal_test_harness.sql
 
 -- ======================================================================================================
 -- CATALOG
@@ -165,6 +170,8 @@ END $t$;
 -- ITEMS — as the SYNTHETIC writer, the only identity that may write them (F-01)
 -- ======================================================================================================
 SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 SELECT pln_ok('PLN-01 an item on a TOPIC', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,planned_start_local,planned_minutes,timezone_name,created_by_membership_id)
   VALUES ('a4600000-0000-0000-0000-000000000001','a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',1,'a4320000-0000-0000-0000-000000000001','2026-11-21','08:00',45,'Asia/Tehran','b4000000-0000-0000-0000-00000000000a')$q$);
 SELECT pln_ok('PLN-02 an item on a SUBTOPIC', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,subtopic_id,planned_local_date,timezone_name,created_by_membership_id)
@@ -184,12 +191,10 @@ SELECT pln_err('PLN-08 an item with TWO sources is refused', $q$INSERT INTO plan
   VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',7,'a4320000-0000-0000-0000-000000000001','a4420000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000a')$q$,'23514','plan_item_exactly_one_source');
 SELECT pln_err('PLN-09 s1''s plan cannot schedule s2''s EXAM (student-bound source)', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,exam_id,planned_local_date,timezone_name,created_by_membership_id)
   VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',7,'a4410000-0000-0000-0000-000000000002','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000a')$q$,'23503');
-SELECT pln_err('PLN-10 an item cannot claim a different student than its plan', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
-  VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000002',7,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000b')$q$,'23503');
-SELECT pln_err('PLN-11 counselor B cannot plan for counselor A''s student', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
-  VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',7,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000b')$q$,'23514','cannot plan for that student');
+SELECT pln_err('PLN-11a WS-ISO-01: under A''s verified principal, an item NAMING counselor B is refused (impersonation)', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
+  VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',7,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000b')$q$,'42501','must be the verified principal');
 SELECT pln_err('PLN-11b a manager without explicit permission cannot plan for a student', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
-  VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',7,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-000000000010')$q$,'23514','cannot plan for that student');
+  VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',7,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-000000000010')$q$,'42501','must be the verified principal');
 SELECT pln_err('PLN-12 an unknown time zone is refused', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
   VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',7,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Teheran-ish','b4000000-0000-0000-0000-00000000000a')$q$,'23514','unknown time zone');
 SELECT pln_true('PLN-13 the UTC projection is derived: 08:00 Asia/Tehran on 2026-11-21 is 04:30 UTC',
@@ -200,6 +205,17 @@ SELECT pln_true('PLN-14b ... the stored UTC is the derived one, 16:45 UTC',
   (SELECT planned_start_utc FROM plan_items WHERE plan_item_id='a4600000-0000-0000-0000-000000000007') = timestamptz '2026-11-25 16:45:00+00');
 SELECT pln_err('PLN-15 a plan item cannot be UPDATED (no UPDATE privilege)', $q$UPDATE plan_items SET planned_minutes=60 WHERE plan_item_id='a4600000-0000-0000-0000-000000000001'$q$,'42501');
 SELECT pln_err('PLN-16 a plan item cannot be DELETED (no DELETE privilege)', $q$DELETE FROM plan_items WHERE plan_item_id='a4600000-0000-0000-0000-000000000001'$q$,'42501');
+COMMIT;
+-- PLN-11: counselor B, as B's OWN verified principal, still cannot plan for A's student (the boundary)
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000b');
+SELECT pln_err('PLN-11 counselor B, as B, cannot plan for counselor A''s student', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
+  VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',9,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000b')$q$,'23514','cannot plan for that student');
+SELECT pln_err('PLN-10 an item cannot claim a different student than its plan (as B, who does reach s2)', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
+  VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000002',19,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000b')$q$,'23503');
+COMMIT;
+SELECT pln_err('PLN-11c with NO verified principal the writer cannot create an item at all', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
+  VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',9,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000a')$q$,'42501','must be the verified principal');
 RESET SESSION AUTHORIZATION;
 -- PLN-15b/16b: the same refusals for an identity that HAS the privilege, so the rule does not rest on grants alone
 SELECT pln_err('PLN-15b ... and the trigger refuses an UPDATE even where the privilege exists', $q$UPDATE plan_items SET planned_minutes=60 WHERE plan_item_id='a4600000-0000-0000-0000-000000000001'$q$,'23514','insert-only');
@@ -210,23 +226,37 @@ SELECT pln_err('PLN-17 TRUNCATE is refused', $q$TRUNCATE plan_items CASCADE$q$,'
 -- VERSIONS — one source of truth, change with a predecessor and a reason
 -- ======================================================================================================
 SET SESSION AUTHORIZATION :"runtime_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000b');
 SELECT pln_err('PLN-20 a NORMALIZED version cannot also carry JSON content', $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id,supersedes_plan_version_id,change_reason)
   VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000002',2,'{}','manual-v1','{"x":1}','draft','b4000000-0000-0000-0000-00000000000b','a4510000-0000-0000-0000-000000000002','synthetic')$q$,'23514','normalized_version_has_no_json_content');
+COMMIT;
 RESET SESSION AUTHORIZATION;
 SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 SELECT pln_err('PLN-21 items cannot be added to a LEGACY JSON version', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
   VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000004','a4500000-0000-0000-0000-000000000004','e4000000-0000-0000-0000-000000000001',1,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000a')$q$,'23514','only to normalized plan versions');
+COMMIT;
 RESET SESSION AUTHORIZATION;
 SET SESSION AUTHORIZATION :"runtime_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 SELECT pln_err('PLN-22 a normalized version must record its author', $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status)
   VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000002',2,'{}','manual-v1','{}','draft')$q$,'23514','must record the membership');
 SELECT pln_ok('PLN-23 publish v1 of s1''s plan', $q$UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='a4510000-0000-0000-0000-000000000001'$q$);
+COMMIT;
 RESET SESSION AUTHORIZATION;
 SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 SELECT pln_err('PLN-24 no item can be added to a PUBLISHED version', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
   VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000001','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',8,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000a')$q$,'23514','DRAFT plan version');
+COMMIT;
 RESET SESSION AUTHORIZATION;
 SET SESSION AUTHORIZATION :"runtime_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 SELECT pln_err('PLN-25 v2 without a predecessor and a reason is refused', $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id)
   VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000001',2,'{}','manual-v1','{}','draft','b4000000-0000-0000-0000-00000000000a')$q$,'23514','must name the version it supersedes');
 SELECT pln_err('PLN-26 v2 cannot supersede ANOTHER plan''s version', $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id,supersedes_plan_version_id,change_reason)
@@ -240,42 +270,114 @@ SELECT pln_true('PLN-28b F-02: every version the runtime creates is normalized',
 SELECT pln_err('PLN-29 a version''s content model and supersession are fixed at creation', $q$UPDATE student_plan_versions SET change_reason='rewritten' WHERE plan_version_id='a4510000-0000-0000-0000-000000000011'$q$,'23514','fixed at creation');
 SELECT pln_true('PLN-29b the published v1 and its six-plus items are unchanged by v2',
   (SELECT count(*) FROM plan_items WHERE plan_version_id='a4510000-0000-0000-0000-000000000001') = 7);
+COMMIT;
 
 -- ======================================================================================================
 -- STATUS TRANSITIONS — append-only, ordered, attributable, with a reason
 -- ======================================================================================================
 RESET SESSION AUTHORIZATION;
+-- Every transition below is made by the verified principal it names (WS-ISO-01 B) and follows the Product
+-- Owner's decisions: A2 (student: in_progress / completed / partially_completed; responsible counselor:
+-- deferred / skipped / cancelled), B1 (published versions only), D1 (completed / skipped / cancelled are
+-- terminal). One principal per transaction, so each actor gets its own transaction.
 SET SESSION AUTHORIZATION :"writer_role";
-SELECT pln_ok('PLN-30 counselor A starts item 1 (planned -> in_progress), with a reason', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',1,'planned','in_progress','synthetic: started','membership','b4000000-0000-0000-0000-00000000000a')$q$);
-SELECT pln_err('PLN-31 a STALE transition (still believing planned) is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'planned','completed','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514','stale transition');
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
+SELECT pln_ok('PLN-30 student s1, as s1, starts item 1 (planned -> in_progress), with a reason', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',1,'planned','in_progress','synthetic: started','student')$q$);
+SELECT pln_err('PLN-31 a STALE transition (still believing planned) is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'planned','completed','synthetic','student')$q$,'23514','stale transition');
+SELECT pln_err('PLN-34 a status outside the student''s three (here: one outside the approved seven) is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'in_progress','overdue','synthetic','student')$q$,'42501','may record only');
+SELECT pln_err('PLN-A2a a student may NOT defer (decision A2)', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'in_progress','deferred','other','student')$q$,'42501','may record only');
+SELECT pln_err('PLN-A2b a student may NOT cancel', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'in_progress','cancelled','synthetic','student')$q$,'42501','may record only');
+SELECT pln_err('PLN-A2c a student may NOT skip', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'in_progress','skipped','synthetic','student')$q$,'42501','may record only');
+SELECT pln_err('PLN-A2d a student principal cannot record a COUNSELOR actor', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'in_progress','cancelled','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'42501','must be the verified principal');
+COMMIT;
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 SELECT pln_err('PLN-32 deferred WITHOUT a reason code is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
   VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'in_progress','deferred','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514');
 SELECT pln_err('PLN-33 a reason code OUTSIDE the approved ten is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,actor_kind,actor_membership_id)
   VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'in_progress','deferred','tired','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514');
-SELECT pln_err('PLN-34 a status OUTSIDE the approved seven is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'in_progress','overdue','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514');
-SELECT pln_ok('PLN-35 deferred with reason ''other'' and NO note is accepted (the note is optional)', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,actor_kind,actor_membership_id)
+SELECT pln_ok('PLN-35 the RESPONSIBLE counselor A defers with reason ''other'' and NO note (the note is optional)', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,actor_kind,actor_membership_id)
   VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',2,'in_progress','deferred','other','membership','b4000000-0000-0000-0000-00000000000a')$q$);
-SELECT pln_err('PLN-36 a non-deferred transition WITHOUT a reason is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','planned','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514');
-SELECT pln_err('PLN-37 a deferral reason on a NON-deferred transition is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','planned','difficulty','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514');
-SELECT pln_err('PLN-38 a transition with a skipped sequence number is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',5,'deferred','planned','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514','out of order');
-SELECT pln_err('PLN-39 counselor B cannot transition counselor A''s student''s item', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','planned','synthetic','membership','b4000000-0000-0000-0000-00000000000b')$q$,'23514','not an active, accepted counselor');
+SELECT pln_err('PLN-A2e counselor A may NOT record in_progress: undecided by A2, refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','in_progress','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'42501','undecided');
+SELECT pln_err('PLN-A2f counselor A may NOT record completed: undecided by A2, refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','completed','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'42501','undecided');
+SELECT pln_err('PLN-41b NO actor may record a transition TO planned (deferred -> planned): undecided, refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','planned','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'42501','no actor is authorized to record a transition to planned');
+SELECT pln_err('PLN-A2g a counselor principal cannot record a STUDENT actor', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','in_progress','synthetic','student')$q$,'42501','a student transition must be made by that student');
+SELECT pln_err('PLN-A2h under A''s principal, an actor NAMING counselor B is refused (impersonation)', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','cancelled','synthetic','membership','b4000000-0000-0000-0000-00000000000b')$q$,'42501','must be the verified principal');
+COMMIT;
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000c');
+SELECT pln_err('PLN-A2i a co-assigned counselor who is NOT responsible cannot cancel', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','cancelled','synthetic','membership','b4000000-0000-0000-0000-00000000000c')$q$,'42501','not the responsible counselor');
+COMMIT;
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000b');
+SELECT pln_err('PLN-39 counselor B, as B, cannot transition counselor A''s student''s item', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','cancelled','synthetic','membership','b4000000-0000-0000-0000-00000000000b')$q$,'42501','not the responsible counselor');
 SELECT pln_err('PLN-40 an event cannot name a different student than its item', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000002',3,'deferred','planned','synthetic','membership','b4000000-0000-0000-0000-00000000000b')$q$,'23503');
-SELECT pln_ok('PLN-41 counselor A re-plans it (deferred -> planned), attributed and reasoned', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','planned','synthetic: rescheduled after review','membership','b4000000-0000-0000-0000-00000000000a')$q$);
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000002',3,'deferred','cancelled','synthetic','membership','b4000000-0000-0000-0000-00000000000b')$q$,'23503');
+COMMIT;
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000002');
+SELECT pln_err('PLN-A2j student s2 cannot record a transition on s1''s item', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','in_progress','synthetic','student')$q$,'42501','a student transition must be made by that student');
+COMMIT;
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
+SELECT pln_err('PLN-36 a non-deferred transition WITHOUT a reason is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','in_progress','student')$q$,'23514');
+SELECT pln_err('PLN-37 a deferral reason on a NON-deferred transition is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','in_progress','difficulty','synthetic','student')$q$,'23514');
+SELECT pln_err('PLN-38 a transition with a skipped sequence number is refused', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',5,'deferred','in_progress','synthetic','student')$q$,'23514','out of order');
+SELECT pln_ok('PLN-41 student s1 resumes it (deferred -> in_progress), attributed and reasoned', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','in_progress','synthetic: resumed after review','student')$q$);
+SELECT pln_ok('PLN-D1a student s1 COMPLETES item 2 (planned -> completed)', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000002','e4000000-0000-0000-0000-000000000001',1,'planned','completed','synthetic','student')$q$);
+SELECT pln_err('PLN-D1b completed is TERMINAL: s1 cannot move it back to in_progress', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000002','e4000000-0000-0000-0000-000000000001',2,'completed','in_progress','synthetic','student')$q$,'23514','terminal status');
+SELECT pln_ok('PLN-A2k student s1 records partially_completed on item 5 (planned -> partially_completed)', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000005','e4000000-0000-0000-0000-000000000001',1,'planned','partially_completed','synthetic','student')$q$);
+SELECT pln_ok('PLN-A2l ... and then completed (partially_completed -> completed)', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000005','e4000000-0000-0000-0000-000000000001',2,'partially_completed','completed','synthetic','student')$q$);
+COMMIT;
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
+SELECT pln_err('PLN-D1c completed is terminal for the counselor too: A cannot cancel completed item 2', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000002','e4000000-0000-0000-0000-000000000001',2,'completed','cancelled','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514','terminal status');
+SELECT pln_ok('PLN-D1d the responsible counselor CANCELS item 3', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000003','e4000000-0000-0000-0000-000000000001',1,'planned','cancelled','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$);
+SELECT pln_ok('PLN-D1e the responsible counselor SKIPS item 4', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000004','e4000000-0000-0000-0000-000000000001',1,'planned','skipped','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$);
+COMMIT;
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
+SELECT pln_err('PLN-D1f cancelled is TERMINAL: the student cannot restart item 3', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000003','e4000000-0000-0000-0000-000000000001',2,'cancelled','in_progress','synthetic','student')$q$,'23514','terminal status');
+SELECT pln_err('PLN-D1g skipped is TERMINAL: the student cannot complete item 4', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000004','e4000000-0000-0000-0000-000000000001',2,'skipped','completed','synthetic','student')$q$,'23514','terminal status');
+COMMIT;
+SELECT pln_err('PLN-A2m with NO verified principal, even the synthetic writer cannot record a transition', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',4,'in_progress','completed','synthetic','student')$q$,'42501','a student transition must be made by that student');
 SELECT pln_true('PLN-42 the current status is derived from the latest transition',
-  (SELECT status FROM plan_item_current_status WHERE plan_item_id='a4600000-0000-0000-0000-000000000001')='planned'
-  AND (SELECT status FROM plan_item_current_status WHERE plan_item_id='a4600000-0000-0000-0000-000000000002')='planned');
-SELECT pln_true('PLN-43 the full history is retained: planned -> in_progress -> deferred(other) -> planned',
-  (SELECT string_agg(to_status||coalesce('('||deferral_reason||')',''),'>' ORDER BY seq_no) FROM plan_item_status_events
-    WHERE plan_item_id='a4600000-0000-0000-0000-000000000001') = 'in_progress>deferred(other)>planned');
+  (SELECT status FROM plan_item_current_status WHERE plan_item_id='a4600000-0000-0000-0000-000000000001')='in_progress'
+  AND (SELECT status FROM plan_item_current_status WHERE plan_item_id='a4600000-0000-0000-0000-000000000002')='completed'
+  AND (SELECT status FROM plan_item_current_status WHERE plan_item_id='a4600000-0000-0000-0000-000000000006')='planned');
+SELECT pln_true('PLN-43 the full history is retained and attributed: student in_progress > counselor deferred(other) > student in_progress',
+  (SELECT string_agg(to_status||coalesce('('||deferral_reason||')','')||'/'||actor_kind,'>' ORDER BY seq_no) FROM plan_item_status_events
+    WHERE plan_item_id='a4600000-0000-0000-0000-000000000001') = 'in_progress/student>deferred(other)/membership>in_progress/student');
 SELECT pln_err('PLN-44 status history cannot be UPDATED (no UPDATE privilege)', $q$UPDATE plan_item_status_events SET to_status='completed'$q$,'42501');
 RESET SESSION AUTHORIZATION;
 SELECT pln_err('PLN-44b ... nor by an identity holding the privilege', $q$UPDATE plan_item_status_events SET reason_note='rewritten'$q$,'23514','append-only');
@@ -315,17 +417,53 @@ SELECT pln_err('PLN-75 F-02: WITH full INSERT on plan versions, a non-migration 
 RESET SESSION AUTHORIZATION;
 
 SET SESSION AUTHORIZATION :"writer_role";
-SELECT pln_err('PLN-76 F-01: even the synthetic writer cannot record a STUDENT actor — no student identity can be authenticated', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000002','e4000000-0000-0000-0000-000000000001',1,'planned','in_progress','synthetic','student')$q$,'42501','actor_kind student is refused');
-SELECT pln_err('PLN-77 F-03: a transition on an item of a DRAFT version is refused pending a decision', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
+SELECT pln_err('PLN-76 a STUDENT actor without that student''s verified principal is refused (here the principal is counselor A)', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000006','e4000000-0000-0000-0000-000000000001',1,'planned','in_progress','synthetic','student')$q$,'42501','a student transition must be made by that student');
+SELECT pln_err('PLN-77 decision B1: a transition on an item of a DRAFT version is prohibited', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
   VALUES ('a4600000-0000-0000-0000-000000000021','a4510000-0000-0000-0000-000000000011','a4500000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',1,'a4320000-0000-0000-0000-000000000001','2026-11-26','Asia/Tehran','b4000000-0000-0000-0000-00000000000a');
   INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000021','e4000000-0000-0000-0000-000000000001',1,'planned','in_progress','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514','DRAFT plan version');
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000021','e4000000-0000-0000-0000-000000000001',1,'planned','cancelled','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514','DRAFT plan version');
+COMMIT;
 RESET SESSION AUTHORIZATION;
 
 SET SESSION AUTHORIZATION :"runtime_role";
-SELECT pln_err('PLN-78 F-03: publishing an EMPTY normalized version is refused pending a decision', $q$UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='a4510000-0000-0000-0000-000000000002'$q$,'23514','EMPTY normalized plan version');
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000b');
+SELECT pln_err('PLN-78 decision C1: publishing an EMPTY normalized version is prohibited', $q$UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='a4510000-0000-0000-0000-000000000002'$q$,'23514','EMPTY normalized plan version');
+COMMIT;
 RESET SESSION AUTHORIZATION;
+
+-- ======================================================================================================
+-- (fixture for PLN-E1e: an empty plan of s1, created by the test owner)
+-- DECISION E1 — legacy JSON plans stay read-only; a counselor may EXPLICITLY create a new normalized
+-- version from one. Through the runtime, under the counselor's verified principal; row-level security
+-- and the version guard decide.
+-- ======================================================================================================
+INSERT INTO student_plans(plan_id,student_id) VALUES ('a4500000-0000-0000-0000-000000000006','e4000000-0000-0000-0000-000000000001');
+SET SESSION AUTHORIZATION :"runtime_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
+SELECT pln_err('PLN-E1a the legacy version itself cannot be edited (read-only)', $q$UPDATE student_plan_versions SET plan_content='{"edited":true}' WHERE plan_version_id='a4510000-0000-0000-0000-000000000004'$q$,'23514');
+SELECT pln_err('PLN-E1b ... nor written in counselor C''s name (impersonation)', $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id,supersedes_plan_version_id,change_reason)
+  VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000004',2,'{}','manual-v1','{}','draft','b4000000-0000-0000-0000-00000000000c','a4510000-0000-0000-0000-000000000004','synthetic: converted from legacy')$q$,'42501','row-level security');
+SELECT pln_ok('PLN-E1c counselor A explicitly creates a NEW normalized version superseding the legacy one, with a reason', $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id,supersedes_plan_version_id,change_reason)
+  VALUES ('a4510000-0000-0000-0000-000000000014','a4500000-0000-0000-0000-000000000004',2,'{}','manual-v1','{}','draft','b4000000-0000-0000-0000-00000000000a','a4510000-0000-0000-0000-000000000004','synthetic: converted from legacy by the counselor')$q$);
+COMMIT;
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000b');
+SELECT pln_true('PLN-E1d0 counselor B cannot even SEE A''s student''s plan versions (row-level security)',
+  NOT EXISTS (SELECT 1 FROM student_plan_versions WHERE plan_id='a4500000-0000-0000-0000-000000000004'));
+SELECT pln_err('PLN-E1d counselor B cannot do it for A''s student: the predecessor is invisible to B, so the version is refused', $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id,supersedes_plan_version_id,change_reason)
+  VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000004',3,'{}','manual-v1','{}','draft','b4000000-0000-0000-0000-00000000000b','a4510000-0000-0000-0000-000000000014','synthetic')$q$,'23514','EARLIER version of the SAME plan');
+COMMIT;
+SELECT pln_err('PLN-E1e with NO verified principal the runtime cannot create even a first version of A''s student''s plan', $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id)
+  VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000006',1,'{}','manual-v1','{}','draft','b4000000-0000-0000-0000-00000000000a')$q$,'42501','row-level security');
+RESET SESSION AUTHORIZATION;
+SELECT pln_true('PLN-E1f the legacy version is unchanged and still renders its stored JSON',
+  (SELECT rendered FROM plan_version_rendered WHERE plan_version_id='a4510000-0000-0000-0000-000000000004') = '{"legacy":true}'::jsonb
+  AND (SELECT content_model FROM student_plan_versions WHERE plan_version_id='a4510000-0000-0000-0000-000000000014') = 'normalized');
 
 INSERT INTO student_plans(plan_id,student_id) VALUES ('a4500000-0000-0000-0000-000000000005','e4000000-0000-0000-0000-000000000002');
 SET SESSION AUTHORIZATION :"migrator_role";
@@ -363,7 +501,7 @@ SELECT pln_true('PLN-50 the rendered JSON lists the seven items in order, each w
     WHERE r.plan_version_id='a4510000-0000-0000-0000-000000000001') = 'topic,subtopic,activity,exam,review,assignment,topic');
 SELECT pln_true('PLN-51 ... and carries the CURRENT status of each item, not a stored copy',
   (SELECT x->>'status' FROM plan_version_rendered r, jsonb_array_elements(r.rendered->'items') x
-    WHERE r.plan_version_id='a4510000-0000-0000-0000-000000000001' AND x->>'item_no'='1') = 'planned');
+    WHERE r.plan_version_id='a4510000-0000-0000-0000-000000000001' AND x->>'item_no'='1') = 'in_progress');
 SELECT pln_true('PLN-52 a legacy version renders its stored JSON unchanged',
   (SELECT rendered FROM plan_version_rendered WHERE plan_version_id='a4510000-0000-0000-0000-000000000004') = '{"legacy":true}'::jsonb);
 
@@ -380,8 +518,11 @@ SELECT pln_true('PLN-61 ... nor its status history',
 -- F-05: a superuser is not accepted as the synthetic writer (identity, not membership), so the fixture
 -- item is written as the writer itself.
 SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
 VALUES ('a4600000-0000-0000-0000-000000000031','a4510000-0000-0000-0000-000000000003','a4500000-0000-0000-0000-000000000003','e4000000-0000-0000-0000-000000000003',1,'a4320000-0000-0000-0000-000000000001','2026-11-21','Asia/Tehran','b4000000-0000-0000-0000-00000000000a');
+COMMIT;
 RESET SESSION AUTHORIZATION;
 UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='a4510000-0000-0000-0000-000000000003';
 -- a DRAFT v2 for the same plan, created before the freeze, so PLN-62 meets the barrier rather than the
@@ -391,10 +532,14 @@ VALUES ('a4510000-0000-0000-0000-000000000013','a4500000-0000-0000-0000-00000000
 SELECT public.freeze_student_for_transfer('a4700000-0000-0000-0000-000000000001','pln-freeze-1',
   'e4000000-0000-0000-0000-000000000003','a4700000-0000-0000-0000-0000000000ff',1,'pln-ctl-1',0,clock_timestamp()) AS freeze_state;
 SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 SELECT pln_err('PLN-62 a FROZEN student''s plan cannot gain an item', $q$INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
   VALUES (gen_random_uuid(),'a4510000-0000-0000-0000-000000000013','a4500000-0000-0000-0000-000000000003','e4000000-0000-0000-0000-000000000003',1,'a4320000-0000-0000-0000-000000000001','2026-11-22','Asia/Tehran','b4000000-0000-0000-0000-00000000000a')$q$,'23514','is frozen for transfer case');
 SELECT pln_err('PLN-63 ... nor record a status transition', $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind,actor_membership_id)
-  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000031','e4000000-0000-0000-0000-000000000003',1,'planned','in_progress','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514','is frozen for transfer case');RESET SESSION AUTHORIZATION;
+  VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000031','e4000000-0000-0000-0000-000000000003',1,'planned','cancelled','synthetic','membership','b4000000-0000-0000-0000-00000000000a')$q$,'23514','is frozen for transfer case');
+COMMIT;
+RESET SESSION AUTHORIZATION;
 
 
-SELECT 'PLAN ITEM TESTS COMPLETED (PLN-C1..C4, PLN-01..80): the data model is built; no scheduling logic exists' AS result;
+SELECT 'PLAN ITEM TESTS COMPLETED (PLN-C1..C4, PLN-01..80, PLN-A2*, PLN-D1*, PLN-E1*): decisions A2/B1/C1/D1/E1 enforced under verified principals; no scheduling logic exists' AS result;

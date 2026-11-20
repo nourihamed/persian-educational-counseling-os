@@ -38,17 +38,23 @@ SELECT plm_true('PLN-M05 the column default for rows created AFTER the migration
   (SELECT column_default FROM information_schema.columns
     WHERE table_name='student_plan_versions' AND column_name='content_model') LIKE '''normalized''%');
 
+\ir workspace_principal_test_harness.sql
+-- Through the runtime, under the counselor's verified principal (WS-ISO-01 B; decision E1: a counselor
+-- converts a legacy plan by creating a new normalized version that supersedes it).
 SET SESSION AUTHORIZATION :"runtime_role";
+BEGIN;
+SELECT test_establish('counselor','b2000000-0000-0000-0000-00000000000a');
 INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id,supersedes_plan_version_id,change_reason)
 VALUES ('a2510000-0000-0000-0000-000000000011','a2500000-0000-0000-0000-000000000001',3,'{}','manual-v1','{}','draft','b2000000-0000-0000-0000-00000000000a','a2510000-0000-0000-0000-000000000001','synthetic: migrated to normalized items');
 SELECT plm_true('PLN-M06 a version created after the migration is normalized, and may supersede a historical one with a reason',
   (SELECT content_model FROM student_plan_versions WHERE plan_version_id='a2510000-0000-0000-0000-000000000011')='normalized');
-SELECT plm_err('PLN-M07 a historical legacy row cannot be re-labelled normalized in place',
+SELECT plm_err('PLN-M07 a historical legacy row cannot be re-labelled normalized in place (legacy is read-only, E1)',
   $q$UPDATE student_plan_versions SET content_model='normalized' WHERE plan_version_id='a2510000-0000-0000-0000-000000000003'$q$,
-  'fixed at creation');
+  'read-only');
 SELECT plm_err('PLN-M08 a published historical row stays immutable after the migration',
   $q$UPDATE student_plan_versions SET plan_content='{"rewritten":true}' WHERE plan_version_id='a2510000-0000-0000-0000-000000000001'$q$,
   'published versions are immutable');
+COMMIT;
 RESET SESSION AUTHORIZATION;
 
 SELECT 'PLAN ITEM MIGRATION TESTS COMPLETED (PLN-M01..M08): historical rows are preserved and classified legacy_json; new rows are normalized' AS result;

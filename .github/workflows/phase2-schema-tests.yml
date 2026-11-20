@@ -212,17 +212,21 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
 
-      - name: Counselor-to-counselor isolation BOUNDARY (WS-ISO-01 — boundary only; the residual is printed as OPEN, not PASS)
+      - name: Counselor-to-counselor isolation (WS-ISO-01) — boundary, signed principal assertions (test-only key), row-level security
         run: |
           set -euo pipefail
           W=docs/phase2/workspace
           K=a1000000000000000000000000000062
           createdb -h localhost -U postgres workspace_counselor_isolation_test
-          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_operations_draft; do
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_principal_assertion_draft workspace_operations_draft workspace_counselor_rls_draft; do
             psql -X -v ON_ERROR_STOP=1 -d workspace_counselor_isolation_test -f $W/$f.sql
           done
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_counselor_isolation_test -f $W/workspace_roles_setup_draft.sql
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_counselor_isolation_test -f $W/tests/workspace_counselor_isolation_tests.sql
+          # WS-ISO-01 decision B: signed principal assertions (test-only key) and row-level security bound to
+          # the verified principal; ISO-GAP-01..03 asserted closed as each counselor's own identity
+          psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_counselor_isolation_test -f $W/tests/workspace_principal_assertion_tests.sql
+          bash $W/tests/workspace_principal_assertion_race.sh workspace_counselor_isolation_test $K
         env:
           PGHOST: localhost
           PGUSER: postgres
@@ -235,7 +239,7 @@ jobs:
           K=a1000000000000000000000000000063
           load() {
             createdb -h localhost -U postgres "$1"
-            for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_plan_items_draft workspace_operations_draft; do
+            for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_principal_assertion_draft workspace_plan_items_draft workspace_operations_draft workspace_counselor_rls_draft; do
               psql -X -v ON_ERROR_STOP=1 -d "$1" -f $W/$f.sql
             done
             psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d "$1" -f $W/workspace_roles_setup_draft.sql
@@ -250,11 +254,11 @@ jobs:
           # F-04: the migration must be safe on rows that exist BEFORE it runs, so historical rows are loaded
           # between the base drafts and the plan draft.
           createdb -h localhost -U postgres workspace_plan_items_migration
-          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft; do
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_principal_assertion_draft; do
             psql -X -v ON_ERROR_STOP=1 -d workspace_plan_items_migration -f $W/$f.sql
           done
           psql -X -v ON_ERROR_STOP=1 -d workspace_plan_items_migration -f $W/tests/workspace_plan_items_migration_fixture.sql
-          for f in workspace_plan_items_draft workspace_operations_draft; do
+          for f in workspace_plan_items_draft workspace_operations_draft workspace_counselor_rls_draft; do
             psql -X -v ON_ERROR_STOP=1 -d workspace_plan_items_migration -f $W/$f.sql
           done
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_plan_items_migration -f $W/workspace_roles_setup_draft.sql
@@ -475,7 +479,7 @@ jobs:
           createdb -h localhost -U postgres workspace_clock_test
           # workspace_operations_draft is loaded too so the CLK-01 catalog scan covers the Batch 8
           # disposition gate, which decides from an effective date.
-          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_operations_draft; do
+          for f in workspace_schema_draft workspace_activation_transactions workspace_governance_events_draft workspace_archive_transactions workspace_inbox_projection workspace_transfer_freeze workspace_counselor_scope_draft workspace_principal_assertion_draft workspace_operations_draft workspace_counselor_rls_draft; do
             psql -X -v ON_ERROR_STOP=1 -d workspace_clock_test -f $W/$f.sql
           done
           psql -X -v ON_ERROR_STOP=1 -v workspace_key=$K -d workspace_clock_test -f $W/workspace_roles_setup_draft.sql
