@@ -1151,6 +1151,7 @@ names the exact path.
 | both of the last two removed | BOOT-15..17: bootstrap **succeeded** with an unsafe role |
 
 Local: plan step 215 PASS lines (109 F05, 20 F05-BOOT); full workflow 1067, 0 FAIL.
+CI at `fe08a77`: runs 44705627331 and 44705633469, both success. F-05 accepted by the Supervisor at architecture-review level.
 
 **NOT RUN:**
 - a non-superuser provisioner with CREATEROLE (PostgreSQL 16 gives the creator ADMIN on the role it creates, which the

@@ -29,7 +29,7 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | OQ-ASM-1 | Item-bank ownership and `item_ref` | OPEN | MEDIUM | Yes, no cross-boundary reference | Product Owner |
 | OQ-ASM-2 | Which scoring algorithms are permitted | OPEN | MEDIUM (correctness) | Yes, shape enforced, values not | Product Owner |
 | WS-DOM-05 | Curriculum Book/Edition, successor mapping, content ownership | PARTIALLY DECIDED | MEDIUM (correctness, isolation later) | Yes — Phase 7 | Product Owner; four governance questions remain |
-| WS-PLAN-01 | Normalized PlanItem versus opaque `plan_content` JSON | PARTIALLY DECIDED | HIGH for the product promise | Yes — implementation required in Phase 2 | Product Owner decision recorded; implemented at `d75d039`; F-01..F-04 at `8df7d5e`; F-05 at `38f2561`, owner-chain follow-up after it, pending independent review |
+| WS-PLAN-01 | Normalized PlanItem versus opaque `plan_content` JSON | PARTIALLY DECIDED | HIGH for the product promise | Yes — implementation required in Phase 2 | Product Owner decision recorded; implemented at `d75d039`; F-01..F-04 at `8df7d5e`; F-05 at `38f2561` and `fe08a77`, accepted at architecture-review level; WS-PLAN-01 not accepted |
 | WS-ISO-01 | Counselor-to-counselor isolation inside one Workspace | OPEN | **CRITICAL, BLOCKING — fails open** | Other work only; gate may not pass | Product Owner + architecture owner |
 | OQ-D | Control Plane topology — numeric objectives | PARTIALLY DECIDED | HIGH at operation | Yes, schema only | Product Owner + operations |
 | OQ-E | Transfer cutover — boundary, duration, thresholds | PARTIALLY DECIDED | HIGH | Yes; boundary now implemented | Product Owner + operations |
@@ -163,6 +163,12 @@ curriculum rows reference them.
 **Product Owner decision (2026-11-18): Option B — BUILD THE DATA MODEL IN PHASE 2. Gate impact: `BLOCKING` until implementation and tests pass.** The approved PlanItem source set is `topic`, `subtopic`, `activity`, `exam`, `review`, `assignment`. Each PlanItem must reference exactly one source through a typed nullable FK; unrestricted polymorphic `source_type/source_id` is prohibited.
 
 **Approved item statuses:** `planned`, `in_progress`, `completed`, `partially_completed`, `deferred`, `skipped`, `cancelled`. **Approved deferral reasons:** `insufficient_time`, `schedule_conflict`, `prerequisite_not_mastered`, `difficulty`, `illness_or_absence`, `resource_unavailable`, `higher_priority_task`, `student_requested`, `counselor_adjustment`, `other`. `deferred` requires a reason; `other` may carry an explanatory note. These vocabularies do not authorize scheduling logic in Phase 2.
+
+**F-05 accepted 2026-11-20 at architecture-review level (Supervisor review of `fe08a77`; CI runs 44705627331, 44705633469 success).** WS-PLAN-01 as a whole is **not** accepted and stays `BLOCKING`. Open decisions (not made by the implementation agent):
+- who may provision or assume `ws_<key>_synth_plan_writer` and `ws_<key>_plan_migrator` (Platform Security / Operations);
+- a non-superuser provisioning procedure (Platform Security / Operations);
+- production superuser control and audit (Operations / Platform Security);
+- WS-ISO-01 caller binding, with ISO-GAP-01, ISO-GAP-02 and ISO-GAP-03 (Platform Security).
 
 **F-05 follow-up 2026-11-20 (Supervisor review of `38f2561`: F-05 not closed).** Owner roles were checked only for a direct member. Now:
 - every membership chain from the nine application roles is walked, whatever the INHERIT/SET/ADMIN options, and any path to an owner or privileged identity is named;

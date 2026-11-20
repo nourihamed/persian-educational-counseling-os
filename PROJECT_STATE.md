@@ -8,9 +8,8 @@ prepared for independent review (`docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md
 what was implemented and what the evidence is, not what was approved.
 
 **Branch:** `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, **Draft, open, unmerged**).
-**Last HEAD verified on GitHub:** `38f2561412540da15626f2aca2b2f1b6802a2c56` (F-05 remediation, parent `8df7d5e`). GitHub Actions passed there.
-The Supervisor reviewed it: **F-05 NOT CLOSED** — owner roles were checked only for a direct member, not a transitive
-chain. This update belongs to the F-05 follow-up commit on top of `38f2561`; its SHA exists only once pushed.
+**Last HEAD verified on GitHub:** `fe08a77336557a51aca36313230b5e082e5ed3ad` (F-05 follow-up, parent `38f2561`). GitHub Actions passed there.
+**F-05 accepted by the Supervisor at the current architecture-review level (review of `fe08a77`, 2026-11-20). This is not approval of WS-PLAN-01 as a whole, of WS-ISO-01, of Phase 2, of production runtime plan-item writes, or of production writer or migrator privileges.** This documentation-only update belongs to the commit on top of `fe08a77`.
 **Behind `main`:** yes, by two commits — `4004360` (adds `cp_30_role_privilege_tests.sql`, 89 lines) and
 `5bb8e4e` (reverts it). Net content difference from the merge base `ba5e9d8` to `main` `5bb8e4e`: **zero
 files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-pushed (BRANCH-SYNC).
@@ -28,7 +27,8 @@ files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-p
 | **GitHub Actions at `d75d039919c806a27a7d5b50021af6920fdd5f0c`** (WS-PLAN-01 data model) | runs 44376897878, 44376886372 | **passed**, as reported by the Supervisor. CI passing did not make it acceptable: the Supervisor's review found F-01..F-04, which the tests did not cover. |
 | **GitHub Actions at `8df7d5eea03a3712afed00e4e4ef3028ce01c09e`** (F-01..F-04 remediation) | runs [44382515348](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44382515348) (job 135078318581) and [44383233656](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44383233656) (job 135080826317) | **success, both.** The Supervisor's review then found F-05. |
 | **GitHub Actions at `38f2561412540da15626f2aca2b2f1b6802a2c56`** (F-05 remediation) | runs [44693197767](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44693197767) (job 136143681714) and [44693205261](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44693205261) (job 136143703579) | **success, both.** The Supervisor verified the logs; F-05 not closed (owner-role chains). |
-| **GitHub Actions at the F-05 follow-up commit** | — | **NOT RUN** until pushed. |
+| **GitHub Actions at `fe08a77336557a51aca36313230b5e082e5ed3ad`** (F-05 follow-up) | runs [44705627331](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44705627331) (job 136184380490) and [44705633469](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44705633469) (job 136184402186) | **success, both.** F-05 accepted by the Supervisor at architecture-review level. |
+| **GitHub Actions at this documentation commit** | — | not reported here; it changes no SQL, test or workflow file. |
 | **Design-only contracts** | documents under `docs/phase2/**` with no executable test | are **not** implementation evidence anywhere in this file |
 
 **CI step numbers.** GitHub numbering (YAML step + 2, for "Set up job" and "Initialize containers"): counselor isolation is step **15**, PlanItem with its race, migration and F-05 suites step **16**, secret scan step **30**, register check step **31**. The 2026-11-18 handoff said 13 and 14 for the first two; that was wrong (YAML numbering), and the Supervisor's correction is adopted.
@@ -121,12 +121,23 @@ dependencies that code cannot close.
 
 ## Next actions
 1. The Supervisor confirms the CI failure lines above against the log of runs 43725323633/43725318826.
-2. GitHub Actions at the F-05 follow-up commit, then the Supervisor's independent review of it.
+2. ~~F-05~~ — accepted by the Supervisor at architecture-review level (`fe08a77`). WS-PLAN-01 remains BLOCKING.
 3. Platform Security decision on WS-ISO-01 caller binding (option B recommended, A fallback).
 4. Supervisor independent review of the PROVISIONAL exit package. **The implementation agent does not approve
    the phase.**
 
 ---
+
+### Update 2026-11-20 — F-05 accepted at architecture-review level; documentation reconciled (docs only)
+- CI at `fe08a77336557a51aca36313230b5e082e5ed3ad`: runs [44705627331](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44705627331) (job 136184380490) and [44705633469](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44705633469) (job 136184402186), both success.
+- F-05 accepted by the Supervisor at the current architecture-review level (review of `fe08a77`, 2026-11-20). This is not approval of WS-PLAN-01 as a whole, of WS-ISO-01, of Phase 2, of production runtime plan-item writes, or of production writer or migrator privileges.
+- Phase 2: **NOT READY**. WS-ISO-01: **OPEN, CRITICAL**. WS-PLAN-01: **BLOCKING**.
+- Open decisions (not made by the implementation agent):
+  - who may provision or assume `ws_<key>_synth_plan_writer` and `ws_<key>_plan_migrator` (Platform Security / Operations);
+  - a non-superuser provisioning procedure (Platform Security / Operations);
+  - production superuser control and audit (Operations / Platform Security);
+  - WS-ISO-01 caller binding, with ISO-GAP-01, ISO-GAP-02 and ISO-GAP-03 (Platform Security).
+- No SQL, test or workflow file changed in this commit; the F-05 implementation is unchanged.
 
 ### Update 2026-11-20 — F-05 follow-up on `38f2561`: owner-role chains (draft SQL; synthetic)
 - **Found by the Supervisor:** owner roles were checked only for a direct member, not for a chain.

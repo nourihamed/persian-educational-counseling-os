@@ -4,6 +4,12 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-11-20 — F-05 accepted at architecture-review level; documentation reconciled (docs only)
+`docs:` CI at `fe08a77` (runs 44705627331, 44705633469) success. F-05 accepted by the Supervisor at the current architecture-review level (review of `fe08a77`, 2026-11-20). This is not approval of WS-PLAN-01 as a whole, of WS-ISO-01, of Phase 2, of production runtime plan-item writes, or of production writer or migrator privileges.
+- Recorded open: provisioning and assumption of the writer and migrator; a non-superuser provisioning procedure;
+  production superuser control and audit; WS-ISO-01 caller binding with ISO-GAP-01..03.
+- No SQL, test or workflow change. Phase 2 NOT READY. Phase 3 not authorized. D-014 in force.
+
 ### 2026-11-20 — F-05 follow-up on `38f2561`: owner-role chains (draft SQL; synthetic)
 `security/test/docs:` GitHub Actions passed at `38f2561` (runs 44693197767, 44693205261; logs verified by the Supervisor). F-05 was not closed: owner roles were checked only for a direct member.
 - **Chains.** `plan_identity_boundary_violations()` walks every membership chain from all nine roles, whatever the INHERIT, SET or ADMIN option, and names any path to the table, function or governance owner, or to a privileged identity.
