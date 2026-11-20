@@ -4,6 +4,23 @@ Format: Keep it simple — date, phase, summary. Prefixes per Master Prompt §62
 
 ## [Unreleased]
 
+### 2026-11-20 — Phase 2 gap matrix, decision briefs, WS-ROLE-17 reporting fix
+`docs/test:`
+- **Gap matrix.** `PHASE2_GAP_MATRIX.md` was built from the SQL, tests and workflow.
+- **Decision briefs:**
+  - WS-ISO-01 caller binding (Platform Security);
+  - WS-PLAN-01 A–E (Product Owner);
+  - F-05 production-hardening requirements.
+- **Newly registered:** WS-REV-01 (review fields and duplicate prevention) and WS-MIG-01 (no migration framework).
+- **Reporting fix:** "PASS WS-ROLE-01..19" no longer includes the separately reported, and sometimes skipped,
+  WS-ROLE-17.
+- **Status:**
+  - PROJECT_STATE now distinguishes the implementation commit, the documentation commit, the PR head and `main`.
+  - Statuses are made consistent: F-05 ACCEPTED (architecture review level); WS-PLAN-01 NOT ACCEPTED / BLOCKING;
+    WS-ISO-01 CRITICAL / BLOCKING; Phase 2 NOT READY; Phase 3 NOT AUTHORIZED.
+- **Local evidence:** fresh-cluster run: 1067 PASS, 0 FAIL, 3 OPEN, 1 SKIP.
+- **Not implemented:** WS-ISO-01 and WS-PLAN-01 wait for decisions.
+
 ### 2026-11-20 — F-05 accepted at architecture-review level; documentation reconciled (docs only)
 `docs:` CI at `fe08a77` (runs 44705627331, 44705633469) success. F-05 accepted by the Supervisor at the current architecture-review level (review of `fe08a77`, 2026-11-20). This is not approval of WS-PLAN-01 as a whole, of WS-ISO-01, of Phase 2, of production runtime plan-item writes, or of production writer or migrator privileges.
 - Recorded open: provisioning and assumption of the writer and migrator; a non-superuser provisioning procedure;

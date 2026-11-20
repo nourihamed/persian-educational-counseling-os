@@ -1157,3 +1157,22 @@ CI at `fe08a77`: runs 44705627331 and 44705633469, both success. F-05 accepted b
 - a non-superuser provisioner with CREATEROLE (PostgreSQL 16 gives the creator ADMIN on the role it creates, which the
   boundary check reports as "held by", so such a bootstrap fails closed; not exercised);
 - GitHub Actions at the F-05 remediation commit.
+
+## Evidence by exact commit (WS-PLAN-01 / F-05 line, 2026-11-18 .. 2026-11-20)
+
+Historical "NOT RUN" statements in the sections above keep their date and scope. This table is the current record.
+
+| Commit | Kind | Local | GitHub Actions |
+|---|---|---|---|
+| `d75d039` | WS-PLAN-01 data model | 916 PASS | 44376897878, 44376886372: passed (per the Supervisor); NOT ACCEPTED in review (F-01..F-04) |
+| `8df7d5e` | F-01..F-04 remediation | 938 PASS | 44382515348, 44383233656: success; F-05 raised |
+| `38f2561` | F-05 remediation | 1031 PASS | 44693197767, 44693205261: success; F-05 not closed (owner chains) |
+| `fe08a77` | F-05 follow-up | 1067 PASS | 44705627331, 44705633469: success; **F-05 ACCEPTED — ARCHITECTURE REVIEW LEVEL** |
+| `bba7281` | documentation only | — | 44724614335, 44724622970: success |
+| next | gap matrix, decision briefs, WS-ROLE-17 reporting fix | fresh cluster: 1067 PASS, 0 FAIL, 3 OPEN, 1 SKIP | NOT RUN until pushed |
+
+**Counting rules.**
+- A PASS line is an assertion or a named group.
+- OPEN lines are fail-open findings printed by design (ISO-GAP-01..03). They are never passes.
+- SKIP lines are not passes. The only one is WS-ROLE-17 in the mirror run of step 22; it executes in the first run of
+  the same step.

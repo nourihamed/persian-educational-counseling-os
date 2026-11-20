@@ -234,7 +234,7 @@ BEGIN
     RAISE EXCEPTION 'FAIL WS-ROLE-16 unexpected runtime privilege on version question membership';
   END IF;
 
-  RAISE NOTICE 'PASS WS-ROLE-01..19 per-Workspace ownership, role, grant and database isolation assertions';
+  RAISE NOTICE 'PASS WS-ROLE-01..16,18,19 per-Workspace ownership, role, grant and database isolation assertions (WS-ROLE-17 is reported separately below)';
 END $role_test$;
 
 -- WS-ROLE-17: the runtime role HOLDS INSERT/UPDATE on question membership, and is still refused by the
@@ -246,7 +246,7 @@ BEGIN
     FROM public.test_definition_version_questions q2
     JOIN public.test_definition_versions dv ON dv.version_id=q2.version_id AND dv.status='published' LIMIT 1;
   IF v IS NULL THEN
-    RAISE NOTICE 'SKIP WS-ROLE-17 no published version in this database';
+    RAISE NOTICE 'SKIP WS-ROLE-17 no published version in this database (this mirror run is NOT counted as a pass; WS-ROLE-17 executes in the other database of this step)';
     RETURN;
   END IF;
   BEGIN

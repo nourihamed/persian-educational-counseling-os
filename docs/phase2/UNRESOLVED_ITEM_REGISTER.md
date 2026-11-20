@@ -47,6 +47,8 @@ One item below is marked **FACTUALLY CORRECTED** rather than open or resolved: a
 | TRANSFER-EXC-AUTH | Who may authorize an approval-conflict exception | OPEN | HIGH | Yes, exception impossible to enable | Product Owner |
 | PR-8-11-DISPOSITION | Disposition of PR #8–#11 | OPEN | Process only | Yes, no PR touched | Product Owner on Supervisor advice |
 | BRANCH-SYNC | PR #12 branch is behind main by 2 commits, zero net content | OPEN | None technical; reporting integrity | Yes | Product Owner |
+| WS-REV-01 | Review records lack approved fields and duplicate-generation prevention | OPEN | Data integrity | Yes | Supervisor (scope) |
+| WS-MIG-01 | No migration framework; drafts plus a CI load order | OPEN | Schema drift risk | Yes | Supervisor (phase) |
 | OPS-HOLD-AUTH | Who may place and who may release a legal hold | OPEN | HIGH at pilot; zero today | Yes, nobody can write the table | Product Owner + legal |
 | OPS-DISP-AUTH | Who authorizes and who executes an irreversible disposition | OPEN | HIGH at pilot; zero today | Yes, the gate is uncallable | Product Owner + operations |
 | OPS-RETENTION-SCOPE | Disposition completeness beyond the primary row | OPEN | HIGH at pilot, as incompleteness | Yes, completeness not claimed | Product Owner + operations (after OQ-D) |
@@ -542,6 +544,8 @@ named decision, the remaining work is ordinary implementation with tests.
 | TRANSFER-EXC-AUTH | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A decided authority, then tests that only it can authorize and that every exception is audited. |
 | PR-8-11-DISPOSITION | PRODUCT_OWNER_DECISION | no | BLOCKING | A Product Owner instruction per PR (merge, close as superseded, or rebase) and its execution by the Product Owner. |
 | BRANCH-SYNC | PRODUCT_OWNER_DECISION | partly | NON_BLOCKING_FAIL_CLOSED | An authorized merge (or the PR #8-#11 disposition moving main) and a re-verification that the branch contains main. |
+| WS-REV-01 | IMPLEMENTATION_DEFECT | yes | UNKNOWN_UNTIL_DEFINED | Fields present; duplicate generation refused under concurrency; a REV suite with a negative control; or a recorded deferral to Phase 11. |
+| WS-MIG-01 | IMPLEMENTATION_DEFECT | yes | UNKNOWN_UNTIL_DEFINED | Migrations reproduce the draft catalog exactly (catalog diff empty) on PostgreSQL 16 in CI; one rollback tested; or a recorded deferral naming the gate. |
 | OPS-HOLD-AUTH | PRODUCT_OWNER_DECISION | no | NON_BLOCKING_FAIL_CLOSED | A decided authority, a grant to exactly that role, and tests that every other role is refused. |
 | OPS-DISP-AUTH | PRODUCT_OWNER_DECISION, LATER_OPERATIONAL_DEPENDENCY | no | NON_BLOCKING_FAIL_CLOSED | A decided authority matrix with requester != approver, an executor identity, and tests that self-approval is refused. |
 | OPS-RETENTION-SCOPE | LATER_OPERATIONAL_DEPENDENCY | partly | LATER_PHASE | An implemented suppression ledger, a restore drill that re-applies suppression, and a verification report per disposition. |

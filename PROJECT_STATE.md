@@ -8,8 +8,25 @@ prepared for independent review (`docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md
 what was implemented and what the evidence is, not what was approved.
 
 **Branch:** `docs/product-owner-decisions-consolidation-2026-11-07` (PR #12, **Draft, open, unmerged**).
-**Last HEAD verified on GitHub:** `fe08a77336557a51aca36313230b5e082e5ed3ad` (F-05 follow-up, parent `38f2561`). GitHub Actions passed there.
-**F-05 accepted by the Supervisor at the current architecture-review level (review of `fe08a77`, 2026-11-20). This is not approval of WS-PLAN-01 as a whole, of WS-ISO-01, of Phase 2, of production runtime plan-item writes, or of production writer or migrator privileges.** This documentation-only update belongs to the commit on top of `fe08a77`.
+**Commits, kept distinct (verified 2026-11-20 by `git fetch`):**
+
+| Role | SHA |
+|---|---|
+| Latest implementation / security-reviewed commit | `fe08a77336557a51aca36313230b5e082e5ed3ad` (F-05 follow-up); CI success, runs 44705627331 and 44705633469 |
+| Latest documentation commit before this one | `bba728193d8d044bb65c4efe3c33662e8ad686c2` (docs only, no implementation change); CI success, runs [44724614335](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44724614335) (job 136248754264) and [44724622970](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44724622970) (job 136248780337) |
+| PR #12 head before this commit | `bba7281`; this commit (gap matrix, decision briefs, WS-ROLE-17 reporting fix) goes on top of it |
+| `main` | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6` |
+
+| Item | Status |
+|---|---|
+| F-05 | **ACCEPTED — ARCHITECTURE REVIEW LEVEL** (`fe08a77`) |
+| WS-PLAN-01 | **NOT ACCEPTED / BLOCKING** until Product Owner decisions A–E are recorded and implemented |
+| WS-ISO-01 | **CRITICAL / BLOCKING** until ISO-GAP-01..03 are closed |
+| Phase 2 | **NOT READY** |
+| Phase 3 | **NOT AUTHORIZED** |
+
+F-05 acceptance is not approval of WS-PLAN-01 as a whole, of WS-ISO-01, of Phase 2, of production runtime plan-item
+writes, or of production writer or migrator privileges.
 **Behind `main`:** yes, by two commits — `4004360` (adds `cp_30_role_privilege_tests.sql`, 89 lines) and
 `5bb8e4e` (reverts it). Net content difference from the merge base `ba5e9d8` to `main` `5bb8e4e`: **zero
 files**. Re-verified 2026-11-18 with `git fetch`. Not rebased, merged or force-pushed (BRANCH-SYNC).
@@ -127,6 +144,27 @@ dependencies that code cannot close.
    the phase.**
 
 ---
+
+### Update 2026-11-20 — Phase 2 gap matrix and decision briefs (docs, plus one test-reporting fix)
+- **New:**
+  - `docs/phase2/PHASE2_GAP_MATRIX.md`: 33 rows, built from the SQL, tests and workflow.
+  - `docs/phase2/decisions/WS_ISO_01_PLATFORM_SECURITY_DECISION_BRIEF.md`
+  - `docs/phase2/decisions/WS_PLAN_01_PO_DECISION_BRIEF.md` (A–E)
+  - `docs/phase2/F05_PRODUCTION_HARDENING_REQUIREMENTS.md`
+- **Newly found and registered:**
+  - **WS-REV-01:** review records lack the master-prompt §28 fields and duplicate prevention.
+  - **WS-MIG-01:** there is no migration framework.
+  - Both are recommended `UNKNOWN_UNTIL_DEFINED`, pending the Supervisor's scope call.
+- **Test-reporting fix.**
+  - The defect: the group line "PASS WS-ROLE-01..19" included WS-ROLE-17, which is reported separately and is SKIPPED
+    in the mirror run of step 22.
+  - The fix: the line now reads "01..16,18,19", and the skip says it is not counted.
+  - No assertion changed.
+- **Fresh disposable cluster** (new PostgreSQL 16.15 cluster, local):
+  - 25 steps, 1067 PASS lines, 0 FAIL;
+  - 3 OPEN (ISO-GAP-01..03);
+  - 1 SKIP (WS-ROLE-17 mirror run).
+- **Nothing implemented for WS-ISO-01 or WS-PLAN-01.** Both wait for decisions, which have been requested.
 
 ### Update 2026-11-20 — F-05 accepted at architecture-review level; documentation reconciled (docs only)
 - CI at `fe08a77336557a51aca36313230b5e082e5ed3ad`: runs [44705627331](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44705627331) (job 136184380490) and [44705633469](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44705633469) (job 136184402186), both success.

@@ -916,6 +916,52 @@
       "code_resolution_note": "Only a history rewrite removes them, and that is a decision, not code.",
       "recommended_gate_impact": "NON_BLOCKING_FAIL_CLOSED",
       "closure_evidence": "A recorded Product Owner decision; if B, a post-rewrite scan with zero history exceptions."
+    },
+    {
+      "id": "WS-REV-01",
+      "title": "Review records lack the approved fields and duplicate-generation prevention (master prompt section 28)",
+      "status": "OPEN",
+      "why_unresolved": "Found by the 2026-11-20 gap matrix (G-15). Master prompt section 28 requires each review to record its original activity, review method, mastery before and after, result and notes, and requires that duplicate review generation be prevented. The `reviews` table holds only student, optional topic, scheduled time, cadence, state and completion time. Nothing links a review to the activity it reviews, and no uniqueness rule prevents two reviews of the same thing at the same scheduled point. The table is exercised only by a fixture insert in the schema suite.",
+      "security_impact": "Data integrity, not confidentiality: duplicate or unattributable reviews would distort progress and analytics. The table is inside the transfer write barrier and the counselor boundary like every other student-scoped table.",
+      "implementation_may_continue": true,
+      "continue_conditions": "No review engine exists, so nothing generates reviews today. Implementing the fields and a uniqueness rule is developer work once the scope is confirmed; the review intervals themselves (1-3-7 etc.) belong to the later Review Engine phase.",
+      "decision_owner": "Supervisor (scope classification); Product Owner only if the duplicate rule is not fully determined by section 28",
+      "options": [
+        "A. Implement in Phase 2: source-activity link (typed FK like plan items), method, mastery before/after, result, and a uniqueness rule on (source, scheduled review point), with tests.",
+        "B. Record as LATER_PHASE (Phase 11 Review Engine) with the data-model requirement carried forward."
+      ],
+      "recommended_option": "A",
+      "rationale": "Phase 2 is the database and domain model; a uniqueness invariant that prevents duplicate generation is a schema property, cheaper to establish before any engine writes rows.",
+      "item_class": [
+        "IMPLEMENTATION_DEFECT"
+      ],
+      "code_can_resolve": "yes",
+      "code_resolution_note": "Schema and tests only, once the scope is confirmed. No product value needs inventing if the uniqueness key is (review source, scheduled review point).",
+      "recommended_gate_impact": "UNKNOWN_UNTIL_DEFINED",
+      "closure_evidence": "Fields present; duplicate generation refused under concurrency; a REV suite with a negative control; or a recorded deferral to Phase 11."
+    },
+    {
+      "id": "WS-MIG-01",
+      "title": "No migration framework: the schema exists only as draft SQL with a load order encoded in CI",
+      "status": "OPEN",
+      "why_unresolved": "Found by the 2026-11-20 gap matrix (G-26). The master prompt (section 49) requires Alembic and that every schema change be a migration. The repository has draft SQL files applied in a fixed order by the CI workflow, one synthetic historical-migration test (PLN-M01..M08), no rollback path, and no measurement of lock duration or rewrite cost.",
+      "security_impact": "Indirect: an unrepeatable migration path risks schema drift between environments, and drift can silently drop a constraint or grant that a security test relies on.",
+      "implementation_may_continue": true,
+      "continue_conditions": "The drafts remain the reviewed source until migrations are generated from them. No production schema exists (D-014).",
+      "decision_owner": "Supervisor (whether this is a Phase 2 exit requirement or the first task of the implementation phase)",
+      "options": [
+        "A. Phase 2: express the drafts as ordered Alembic migrations, verified by rebuilding and diffing the catalog against the drafts, plus rollback of the most recent revision.",
+        "B. Phase 3 entry gate: carry the requirement forward explicitly."
+      ],
+      "recommended_option": "A",
+      "rationale": "The exit checklist asks for migration safety; without a migration path, 'clean bootstrap' and 'migration from the prior schema' are tested only for one table family.",
+      "item_class": [
+        "IMPLEMENTATION_DEFECT"
+      ],
+      "code_can_resolve": "yes",
+      "code_resolution_note": "Developer work; the Supervisor decides the phase.",
+      "recommended_gate_impact": "UNKNOWN_UNTIL_DEFINED",
+      "closure_evidence": "Migrations reproduce the draft catalog exactly (catalog diff empty) on PostgreSQL 16 in CI; one rollback tested; or a recorded deferral naming the gate."
     }
   ]
 }

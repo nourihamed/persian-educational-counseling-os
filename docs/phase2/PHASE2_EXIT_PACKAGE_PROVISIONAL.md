@@ -10,6 +10,16 @@
 
 ---
 
+**Status (consistent across this package):**
+
+| Item | Status |
+|---|---|
+| F-05 | **ACCEPTED — ARCHITECTURE REVIEW LEVEL** (`fe08a77`) |
+| WS-PLAN-01 | **NOT ACCEPTED / BLOCKING** until Product Owner decisions A–E are recorded and implemented |
+| WS-ISO-01 | **CRITICAL / BLOCKING** until ISO-GAP-01..03 are closed |
+| Phase 2 | **NOT READY** |
+| Phase 3 | **NOT AUTHORIZED** |
+
 ## 1. Exact revision
 
 | Item | Value |
@@ -36,6 +46,7 @@
 | Actions at `d75d039` (WS-PLAN-01 data model) | runs 44376897878, 44376886372 | **passed**, as reported by the Supervisor; reviewed NOT ACCEPTED (F-01..F-04) | independent CI |
 | Actions at `8df7d5e` (F-01..F-04 remediation) | runs [44382515348](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44382515348) (job 135078318581) and [44383233656](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44383233656) (job 135080826317) | **success, both**; reviewed, F-05 raised | independent CI |
 | Actions at `38f2561` (F-05 remediation) | runs [44693197767](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44693197767) (job 136143681714) and [44693205261](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44693205261) (job 136143703579) | **success, both**; logs verified by the Supervisor; F-05 not closed | independent CI |
+| Actions at `bba7281` (documentation only) | runs [44724614335](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44724614335) (job 136248754264) and [44724622970](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44724622970) (job 136248780337) | **success, both** | independent CI |
 | Actions at `fe08a77` (F-05 follow-up) | runs [44705627331](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44705627331) (job 136184380490) and [44705633469](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/44705633469) (job 136184402186) | **success, both**; F-05 accepted at architecture-review level | independent CI |
 
 Step numbering: GitHub's step N is the workflow's step N−2 (GitHub adds "Set up job" and "Initialize
@@ -49,7 +60,7 @@ containers"). The workflow has 29 YAML steps. GitHub numbering (YAML step + 2, f
 | 2 | Clock discipline at security decisions | receipt consume, contact change, guardian effective view | CLK-01..03, RC-FRESH-01..04, CC-FRESH-01..03 | Implemented (schema) |
 | 3 | Student Credit lifecycle | `workspace_schema_draft.sql` ledger guard, entitlements | CRD-01..47, WS-CRD-LOCK, WS-CRD-LAST-01..05 | Implemented (schema); **OQ-CRD-2/3 open**; commercial lifecycle deferred to Phase 21/22 |
 | 4 | Assessment, exam, analysis | `workspace_assessment_exam_draft.sql` | EXM suite | Implemented (schema); **OQ-ASM-1/2 open** |
-| 5 | Curriculum, plan, activity | subtopics; activity taxonomy | CUR-01..10, ACT-01..26 | **Partial** — WS-PLAN-01 decided (B); data model implemented at `d75d039`, reviewed NOT ACCEPTED, F-01..F-04 remediated at `8df7d5e`, F-05 remediated at `38f2561` and followed up after it (`workspace_plan_items_draft.sql`; PLN-C1..C4, PLN-01..80, WS-PLN-RACE-01..03, PLN-M01..M08, F05-00..16, F05-BOOT-01..14), pending independent verification; WS-DOM-05 decided (A), deferred to Phase 7 |
+| 5 | Curriculum, plan, activity | subtopics; activity taxonomy | CUR-01..10, ACT-01..26 | **Partial** — WS-PLAN-01 decided (B); data model implemented at `d75d039`, reviewed NOT ACCEPTED, F-01..F-04 remediated at `8df7d5e`, F-05 **ACCEPTED — ARCHITECTURE REVIEW LEVEL** at `fe08a77` (`workspace_plan_items_draft.sql`; PLN-C1..C4, PLN-01..80, WS-PLN-RACE-01..03, PLN-M01..M08, F05-00..23, F05-BOOT-01..20); WS-PLAN-01 **NOT ACCEPTED / BLOCKING** pending PO decisions A–E; WS-DOM-05 decided (A), deferred to Phase 7 |
 | 6 | Adversarial privilege review | role setup, ownership fixes | SEC-01..10 | Implemented (schema); produced **WS-ISO-01** |
 | 7 | Contact identity, HMAC rotation, concurrency | Control Plane cp_07/cp_08 | CID-RACE-A1..B3, CID-01..05b | Implemented (schema); **PS-1..PS-4 deferred** |
 | 8 | Files, notifications, retention, operations | `workspace_operations_draft.sql` | OPS-01..64 | **Partial** — delivery, erasure completeness and authorities open |
