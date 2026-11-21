@@ -1,5 +1,8 @@
 # API.md
 
+
+> **CURRENT API/AUTHORIZATION OVERRIDE — 2026-11-09 (PR #12, unmerged):** Workspace context is derived from authenticated principal + active membership, never trusted from caller-supplied IDs. Authorization combines Workspace role, explicit permission, relationship, assignment, resource scope and current Control Plane owner/generation. Cross-Workspace and nonexistent resources return indistinguishable 404; 403 is only for visible objects with forbidden actions. Transfer requires verified guardian consent, prior responsible counselor's own authenticated fee-receipt confirmation and authorized destination acceptance; Platform Admin cannot initiate. Database drafts now define initial claim admission and local atomic activation, but they are not HTTP endpoints and do not replace API authentication/authorization. No endpoints or runtime auth services are implemented. Phase 2 remains NOT READY; D-014 remains in force.
+
 Status: DRAFT — Phase 0 — Strategy only. No endpoints implemented yet.
 
 ## 1. Style
@@ -9,7 +12,7 @@ Status: DRAFT — Phase 0 — Strategy only. No endpoints implemented yet.
 
 ## 2. AuthN/AuthZ on every request
 - Every non-public endpoint requires a valid access token (Master Prompt §47).
-- Authorization is resolved from the authenticated principal's role + tenant membership — **never** from a `tenant_id`/`counselor_id` passed in the request body or query string. Client-supplied tenant IDs are, at most, validated against the resolved identity, never trusted as the source of truth (IDOR prevention, ties to ARCHITECTURE.md §3).
+- Authorization is resolved from the authenticated principal's role + tenant membership — **never** from a `workspace_id`/`counselor_id` passed in the request body or query string. Client-supplied tenant IDs are, at most, validated against the resolved identity, never trusted as the source of truth (IDOR prevention, ties to ARCHITECTURE.md §3).
 - Platform Admin endpoints are a separate router group with mandatory audit logging.
 
 ## 3. Planned Resource Groups (names indicative, not final)
@@ -17,9 +20,9 @@ Status: DRAFT — Phase 0 — Strategy only. No endpoints implemented yet.
 ```
 /auth            register, login, logout, refresh, password-reset
 /admin/*         platform admin operations (counselors, plans, programs catalog, reports, audit)
-/counselor/*     counselor-scoped: students, programs, plans, analytics, notes
+/workspace/*     Workspace-scoped: students, memberships, branches, counselor assignments, programs, plans, analytics, notes
 /student/*       student-scoped: today, plan, activities, tests, errors, progress
-/parent/*        parent-scoped: high-level progress views
+/parent/*        per-child/per-permission parent-scoped views (sensitive scopes separately authorized)
 /billing/*        orders, subscriptions, credits (read + purchase-intent; real payment flow deferred)
 /notifications/* in-app notification feed, preferences
 ```

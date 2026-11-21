@@ -1,4 +1,106 @@
-# SUPERVISOR REVIEW — PHASE 1 TRACEABILITY FOLLOW-UP (2026-10-24)
+# SUPERVISOR REVIEW — CURRENT PHASE 2 REVIEW (2026-11-09)
+
+## Phase
+Phase 2 — Database & Domain Model, Control Plane / Workspace reconciliation.
+
+## Scope Reviewed
+Current PR #12 branch tree, including:
+- Product Owner decision consolidation and collision-free decision crosswalk draft.
+- Workspace-centric domain model and canonical architecture notes.
+- Control Plane schema/function drafts cp_01 through cp_07, transfer state machine, HMAC rotation and initial claim admission.
+- Control Plane role provisioning, executor scope and catalog tests.
+- Workspace schema, activation/credit/capacity/audit function, per-Workspace role provisioning and regression/race tests.
+- Transfer Freeze + Final Snapshot contract, API/authorization and security contracts.
+- Project state, roadmap, test plan, changelog and open questions.
+
+Latest successful CI evidence: GitHub Actions Run #336, PostgreSQL 16, exact SHA `52bd0347b3aba4f816d996065122ed0d362bae5f`, completed SUCCESS. It passed the prior CP/Workspace SQL suites and the newly added `WS-CAP-RACE-01` final-capacity-slot race. Run #231 remains historical evidence for its exact earlier tree only. Subsequent commits changed the Workspace role source and fixtures/tests; Run #336 does not cover those changes, and fresh CI for the current HEAD is not yet verified. Subsequent docs were followed by a new capacity last-slot race script and workflow modification, which are not covered by Run #231. Run #336 completed SUCCESS on PostgreSQL 16 at exact SHA `52bd0347b3aba4f816d996065122ed0d362bae5f`, including `WS-CAP-RACE-01` (log explicitly reports PASS). Subsequent Workspace role-source schema and fixture/test changes are not covered by that run; no fresh successful CI is verified for the current branch head. Run #148 is historical evidence for the earlier shared-owner design.
+
+## Summary
+The initial PR #12 state had material defects in HMAC uniqueness across key versions, source-claim validation, transfer state transitions, idempotency and incomplete Workspace activation. Corrective draft SQL and regression suites now cover initial Control Plane claim admission, HMAC alias coverage, atomic Workspace activation/debit/capacity/audit, and database-role separation. The synthetic PostgreSQL workflow passes. The result is substantially improved but remains a design/schema-draft delivery, not a runtime authorization system, production migration, distributed transfer implementation or operational readiness approval.
+
+## Passed
+- Workspace-centric tenant boundary is Organization Workspace or Independent Counselor Workspace; counselor is a membership/assignment, not the tenant root.
+- Control Plane and Workspace DB responsibilities are separated; global ownership and generation are not delegated to Workspace-local projections.
+- Initial claim admission creates Platform Student, owner, claim, encrypted contact-index rows and all active/retiring HMAC aliases atomically.
+- Initial admission is idempotent; same-key/different-payload and duplicate mobile+grade claims are rejected; concurrent cross-Workspace admission yields one winner.
+- HMAC maintenance gate, active-key requirement, alias coverage, key-version overlap and included rotation lifecycle cases pass synthetic SQL tests.
+- Transfer switch checks one valid source claim, owner/generation, aliases, three cumulative approvals and required freeze/snapshot/destination evidence before ownership switch.
+- Post-switch cancellation is rejected; ownership generation/history/outbox writes are included in the Control Plane transaction.
+- Workspace activation checks local generation, active membership and one accepted responsible counselor; credit debit, active-student capacity reservation, enrollment activation and minimal audit event are atomic/idempotent.
+- Wallet-row locking and balance guard reject negative Student Credit; Student Credit unit CRD is distinct from fiat currency.
+- Per-Workspace PostgreSQL role names derive from canonical Workspace UUID; two synthetic databases reject cross-Workspace CONNECT by catalog privilege checks.
+- Control Plane split-owner and Workspace role/privilege catalog suites pass in ephemeral PostgreSQL 16 CI at run #222 / commit `2f60505`.
+- Workspace UUID immutability and column-scoped row-lock grants are covered by regression/catalog assertions.
+- Workspace schema fixtures cover selected membership, branch, assignment, guardian record, educational domain, versioning, credit ledger, capacity, file, notification, legal-hold and audit constraints.
+
+## Findings
+
+### CRITICAL
+- No new CRITICAL defect was demonstrated in the included synthetic SQL scope. This is not a runtime or production security clearance; untested paths remain outside this statement.
+
+### HIGH
+- **Control Plane function-owner blast radius — addressed in the tested draft:** transfer, rotation and identity-admission SECURITY DEFINER functions now have separate NOLOGIN owners. Run #222 passed owner-family, representative allow/deny, executor, sequence, helper/trigger-path and column-scoped row-lock assertions. Production credential binding and exhaustive target-environment privilege-drift checks remain open.
+- **Contact-change workflow missing:** initial claim admission exists, but changing/re-verifying a student's mobile number and updating all active/retiring aliases/ciphertext atomically is not implemented.
+- **Cryptographic trust boundary missing:** no production KMS/HSM, HMAC derivation service, encryption-key lifecycle, authenticated cryptographic backfill or key custody/revocation drill. SQL tests cannot prove two HMAC aliases derive from the same canonical E.164.
+- **Approval authority not proven:** guardian legal authority, prior counselor identity/fee confirmation and destination acceptance are stored as references/snapshots; a trusted authentication/authorization service must bind each approval to the authenticated principal and exact case.
+- **Distributed transfer not implemented:** Control Plane switch is atomic only inside its own DB. Source write-freeze/drain, final snapshot, destination staging, projection update, durable outbox/inbox delivery, retry/reconciliation and crash recovery across separate databases remain absent.
+- **Workspace production credentials not provisioned:** per-Workspace roles/CONNECT ACLs pass catalog tests in synthetic databases, but real login secret binding, KMS, credential rotation/revocation, pool eviction and target-environment verification are NOT RUN.
+- **API/object authorization absent:** no executable API tests for counselor assignment scope, manager permission scope, parent per-child permissions, guessed IDs/404 concealment, file/export access or notification isolation.
+- **Workspace schema remains a draft skeleton:** full lifecycle/retention/legal matrix, curriculum governance, all planning/test-analysis edge cases, credit purchase/refund/renewal and additional capacity dimensions are incomplete.
+- **Operational resilience unverified:** independent backup/restore, failover, split-brain prevention, RPO/RTO, load/capacity benchmark and cell isolation are NOT RUN.
+
+### MEDIUM
+- workspace_roles_setup_draft.sql is a privileged provisioning template; exact production PostgreSQL target/version and deployment process need independent review.
+- activate_student_enrollment receives debit amount and actor membership from a trusted service. Pricing/entitlement calculation and exact action authorization must be implemented server-side; the function's active-membership check is defense-in-depth, not complete RBAC.
+- The Control Plane claim admission function validates alias coverage/length and uniqueness, not E.164 normalization or HMAC correctness.
+- cp_07 implements initial admission only; contact changes and recovery operations remain separate.
+- The test suite covers activation of the same enrollment concurrently, but not two different enrollments racing for the final capacity slot or archived-capacity exclusion.
+- D-028 onward remain unassigned pending crosswalk and individual PO approval; no inferred decision numbering is authorized.
+
+### LOW
+- PR #12 contains many incremental commits; if/when the Product Owner authorizes integration, consider a reviewed squash merge after final SHA verification. This is not a reason to merge now.
+
+## Architecture
+The high-level Control Plane / Workspace split is appropriate. The global registry is authoritative for owner and generation; Workspace DBs contain local projections. Cross-database atomicity is not claimed. The transfer Saga and fail-closed API behavior still need executable service contracts.
+
+## Database
+Control Plane schema now includes initial claim admission and HMAC alias coverage. Workspace schema now includes atomic activation/debit/capacity/audit. The split Control Plane function-owner draft passed synthetic PostgreSQL 16 CI at run #222; production provisioning, credential binding and target-environment privilege-drift verification remain open. Workspace lifecycle/retention and some domain entities/constraints remain incomplete. No production migration is approved.
+
+## API
+The database functions define operations, not a complete API. Authentication, object-level authorization, principal-bound approvals, idempotent HTTP contracts, rate limits, pagination, errors and API-level tenant isolation tests remain required.
+
+## Security
+Synthetic catalog tests pass for current role drafts. Production identity, secret management, KMS/HSM, API authorization, legal guardian verification, file/export authorization, notification isolation and cross-database pool safety remain unverified. D-014 remains mandatory.
+
+## Testing
+Run #222 passes the checked-in PostgreSQL 16 draft SQL workflow at exact branch HEAD `2f60505`. This evidence is limited to the included synthetic fixtures and assertions. API, E2E, crash/recovery, backup/restore, failover, real credentials and target-environment tests remain NOT RUN.
+
+## Documentation
+Decision consolidation, crosswalk draft, Control Plane/Workspace contracts and test evidence were updated. Root canonical documents and remaining open questions must continue to be reconciled against the latest branch and PRs #8–#11. Product Owner decisions are not implementation approval.
+
+## Technical Debt
+- Split Control Plane function-owner grant matrix passed the synthetic PostgreSQL 16 catalog/regression workflow; production credential binding and target-environment verification remain open.
+- Initial admission implemented without contact-change/reverification.
+- No durable cross-database outbox/inbox worker or Saga orchestrator.
+- No production credential/KMS/backup/restore evidence.
+- Some legal/retention/capacity and domain rules remain policy-level or unspecified.
+
+## Required Changes
+1. Preserve the tested split-owner boundary during later integration and add target-environment privilege-drift verification before production.
+2. Implement mobile contact-change/reverification under the identity gate with all-key alias coverage, idempotency and audit.
+3. Define and implement authenticated approval principal/authority verification and exact-case binding.
+4. Complete outbox/inbox delivery, cross-database freeze/drain/final-snapshot Saga, projection update and forward recovery.
+5. Complete API authentication, RBAC/relationship checks, object-level tenant isolation and IDOR/file/export/notification tests.
+6. Complete Workspace domain, retention/legal, credit purchase/refund/renewal and capacity policies without inventing unapproved durations or business values.
+7. Run independent backup/restore, failover, load/capacity, pool-isolation and target-environment security tests.
+8. Re-fetch all PRs and main, reconcile canonical docs, and repeat independent review on the final exact SHA.
+
+## Recommendation
+Do not merge PR #12 or start Phase 3. Continue Phase 2 remediation on the existing draft branch. Keep all real data prohibited. The current SQL test success is meaningful but does not satisfy the outstanding HIGH production-readiness and integration requirements.
+
+## Gate Status
+**NOT READY**
+
 
 ## Phase
 Phase 1 — Architecture & Multi-Tenancy (design/documentation only)
@@ -1001,3 +1103,278 @@ Allowed values: `NOT READY` / `CONDITIONAL PASS` / `APPROVED`
 3. If the verdict is not `APPROVED`, the listed fixes are made and this section is updated again.
 4. If `APPROVED`, the owner records acceptance (Q-019 direction is already recorded in D-016); then a separate commit replaces this section with a dated final entry.
 5. The independent reviewer records APPROVED only when the gate criteria are satisfied; the Product Owner retains PR-merge and next-phase authorization.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Mobile Contact Change Design (2026-11-09)
+
+## Scope
+Reviewed the current Control Plane initial-claim and HMAC-rotation drafts and added `docs/phase2/control_plane/CONTACT_CHANGE_REVERIFICATION_CONTRACT.md`.
+
+## Finding — HIGH (still open)
+Initial identity admission and HMAC rotation have database-side draft functions, but no operation changes the mobile contact for an existing student. Without a separately specified path, the product cannot safely handle a legitimate contact update while preserving global mobile+grade uniqueness, active/retiring HMAC alias coverage, ciphertext consistency, idempotency and ownership fencing.
+
+## Design contract delivered
+The new contract requires:
+- step-up authentication and verified possession of the proposed contact;
+- one-time proof bound to exact student, Workspace, ownership generation, purpose and contact fingerprint;
+- one active encryption key and aliases for every active/retiring HMAC version;
+- atomic updates of all contact-index and claim-alias rows, with uniqueness conflict rollback;
+- serialization against rotation through the identity gate and against transfer through the student ownership row;
+- append-only command/audit evidence and transactional outbox;
+- no plaintext mobile, OTP or key material in DB, source control, logs or events.
+
+## Explicit limitations
+This is a design-only deliverable. No SQL implementation, trusted proof verifier, API, service identity or executable contact-change tests exist. Account recovery without the current contact, guardian-age/authority requirements, notification disclosure and numeric retention periods remain open; no policy was inferred. The existing initial-admission CI does not test this new contract.
+
+## Gate impact
+This addendum does not close the HIGH finding. Control Plane identity readiness remains **NOT READY**. D-014 synthetic-only restriction remains in force; no real data or production operation is authorized.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Transfer Approval Identity & Authority (2026-11-09)
+
+## Scope
+Reviewed Control Plane transfer approval schema and ownership-switch function. Added `docs/phase2/control_plane/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md`.
+
+## HIGH findings
+1. **Approval authenticity is not enforced by SQL:** `switch_student_ownership` currently checks that three approval kinds exist, that references are non-empty, and that approvals are not expired/revoked. It does not cryptographically verify issuer, audience, signature, nonce, authenticated subject or exact authority. The function header itself delegates caller authorization to a later identity layer. A trusted verifier/service boundary and narrowly scoped recording command are required.
+2. **Approval event model cannot support safe re-approval:** `transfer_approvals UNIQUE(case_id, approval_kind)` plus mutable `revoked_at` prevents recording a replacement approval after revocation while preserving the old evidence. Use append-only approval and revocation events or a versioned equivalent; switch must select one current valid event per kind.
+3. **Cutover TOCTOU risk needs explicit serialization:** authority/assignment/guardian relationship may be revoked after initial approval. The case-level switch and revocation commands must serialize and revalidate authority at cutover.
+
+## Contract delivered
+The new contract fixes the required trust boundary and exact role semantics: verified per-child guardian authority, exact source counselor assignment plus explicit fee-received attestation, and destination representative permission. It prohibits Platform Admin substitution and keeps Q-007/legal and conflict-of-interest policy unresolved rather than guessing.
+
+## Gate impact
+No runtime verifier, approval API, revised schema or executable regression tests were implemented in this documentation step. The HIGH findings remain open. Phase 2 Gate remains **NOT READY**; D-014 synthetic-only restriction remains in force.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Cross-Workspace Transfer Saga (2026-11-09)
+
+## Scope
+Added `docs/phase2/transfer/CROSS_WORKSPACE_TRANSFER_SAGA_CONTRACT.md` after reviewing the existing transfer workflow contract and Control Plane switch/outbox/inbox drafts.
+
+## HIGH finding — distributed transfer remains design-only
+The Control Plane switch is one local transaction and writes an outbox row, but there is no verified publisher/consumer runtime, source write-freeze/drain controller, final-snapshot service, destination staging importer, durable Saga orchestrator or reconciliation worker. The presence of outbox/inbox tables does not implement delivery or crash recovery.
+
+## Design refinement delivered
+The new contract specifies at-least-once delivery with lease-fenced publishers, idempotent inbox/projection transactions, exact case/student/Workspace/generation event binding, source-side transactional freeze barriers, drain-before-snapshot, isolated destination staging, cutover revalidation and forward-only post-switch recovery. It explicitly rejects cross-database atomicity claims and source fallback after cutover.
+
+## Gate impact
+No runtime worker or executable distributed failure-injection test was implemented. Numeric operational thresholds remain unselected. The HIGH finding remains open and Phase 2 Gate remains **NOT READY**. D-014 synthetic-only restriction remains in force.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Workspace Domain Schema Completeness (2026-11-09)
+
+## Scope
+Inspected the actual `workspace_schema_draft.sql` table/constraint definitions and companion schema test inventory. Added `docs/phase2/workspace/WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` with reproducible file-level findings and remediation order.
+
+## Findings
+### HIGH
+- WS-DOM-01: assessment attempt counters, response rows, total question count and stored score are not reconciled; inconsistent results can be persisted.
+- WS-DOM-02: membership role exists both as scalar `workspace_memberships.role_key` and as `membership_roles`, with no synchronization constraint; authorization has competing sources of truth.
+- WS-DOM-03: guardian relationship/permission records lack sufficient append-only grant/revocation evidence and authenticated authority proof; Q-007 legal matrix remains open.
+
+### MEDIUM
+- WS-DOM-04..09: assessment version/per-subject result/custom error taxonomy; curriculum subtopics and normalized planning inputs/PlanItem; activity taxonomy; class participation/recurrence; final-slot capacity races and credit purchase/refund/renewal; file scan and notification generation/recipient lifecycle remain incomplete.
+
+## Gate impact
+The current Workspace schema is a useful skeleton but cannot be called a complete domain model. No SQL changes or executable tests were made in this review step. Phase 2 remains **NOT READY**; D-014 synthetic-only restriction remains in force.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Operational Resilience & Backup (2026-11-09)
+
+## Scope
+Added `docs/phase2/operations/OPERATIONAL_RESILIENCE_BACKUP_RECOVERY_CONTRACT.md` to translate OQ-D Option A and D-023 into provider-neutral acceptance criteria.
+
+## HIGH finding — no operational evidence
+Independent backup custody, restore drills, primary fencing, failover, split-brain prevention, pool/credential eviction and measured capacity remain unimplemented/unverified. A primary/replica pair is not a backup; same-account backups do not satisfy the independent backup target.
+
+## Design delivered
+The contract defines failure domains, single-writer/fencing rules, restore quarantine and authoritative ownership reconciliation, encryption-key recovery, isolated restore drills, load/connection measurements and 16 environment-level acceptance criteria. It does not choose unapproved RPO/RTO, replication mode, retention periods, failover automation, provider or capacity values.
+
+## Gate impact
+No infrastructure, operational drill or environment evidence was created. Phase 2 remains **NOT READY**; D-014 synthetic-only restriction remains in force.
+
+
+## Workspace capacity concurrency follow-up (2026-11-09)
+
+Added `workspace_capacity_last_slot_race.sh` and wired it into the PostgreSQL 16 workflow. The test uses two distinct enrollments and sufficient wallet balance so the losing transaction must fail on capacity rather than credit exhaustion. Expected invariant: one active enrollment, one debit, one capacity reservation, one command and one audit event; losing attempt fully rolls back. This is implemented in the branch but is **not yet marked PASS** until a fresh CI run on the exact updated head succeeds.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Phase 2 Exit Criteria Baseline (2026-11-09)
+
+Added `docs/phase2/PHASE2_EXIT_CRITERIA.md` as the single Phase 2 exit/evidence matrix. It distinguishes design/schema completion from later runtime/production implementation gates, enumerates current HIGH/MEDIUM blockers, keeps PO/legal decisions explicit, and defines the exact-SHA CI, PR reconciliation and independent-review conditions for a final gate. This does not change the gate: **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Open Decision Register (2026-11-09)
+
+Added `docs/phase2/PHASE2_OPEN_DECISIONS.md` to consolidate unresolved Product Owner and specialist inputs without inventing policy. It distinguishes business/legal choices from technical closure work and recommends a sequencing order. Q-007, Q-020/OQ-F2, OQ-D/OQ-E, approval conflict policy, recovery path, assessment semantics, activity taxonomy, credit lifecycle, capacity, notifications and file-provider parameters remain open. No new decision is made; Gate remains **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Membership Role Source (2026-11-09)
+
+## Change reviewed
+The Workspace schema draft now removes scalar `workspace_memberships.role_key`; `membership_roles` is the sole role-assignment relation. The schema test suite adds `WS-ROLE-SOURCE-01` to assert that the scalar column is absent and the canonical relation exists. All known synthetic fixture inserts were updated.
+
+## Finding status
+WS-DOM-02 is **PARTIALLY ADDRESSED**: competing role sources are removed in the draft schema. Append-only grant/revocation event history, authenticated actor attribution and direct-DML denial tests remain open. Do not mark role lifecycle auditability complete. Fresh CI on the exact latest tree is pending.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Educational Domain Contracts (2026-11-09)
+
+Added three design contracts: `ASSESSMENT_DOMAIN_CONTRACT.md`, `DETERMINISTIC_PLANNING_DOMAIN_CONTRACT.md` and `CURRICULUM_DOMAIN_CONTRACT.md`. They specify immutable assessment versions and response/score integrity, normalized planning inputs/PlanItems with deterministic replay, and complete curriculum hierarchy with Book/Edition/Subtopic and ownership/versioning. The current Workspace SQL skeleton remains incomplete and these documents do not close WS-DOM-01/04/05/06/07. No executable test or implementation is claimed. Gate remains **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Activity, Credit & Capacity Lifecycle (2026-11-09)
+
+Added three Workspace domain contracts: `ACTIVITY_CLASS_DOMAIN_CONTRACT.md`, `STUDENT_CREDIT_COMMERCIAL_LIFECYCLE_CONTRACT.md` and `CAPACITY_LIFECYCLE_CONTRACT.md`. They define typed Activity/Class/Assignment links, the separation of fiat billing from CRD wallet ledger, and capacity reservation/archive/reactivation/transfer boundaries. They deliberately leave refund, suspension, class-scope and numeric capacity policies unresolved. The current SQL skeleton and tests do not yet implement these lifecycles. Phase 2 remains **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Workspace Authorization-Table Privileges (2026-11-09)
+
+## Finding — HIGH: runtime authorization-table mutation
+The prior Workspace provisioning draft granted the general runtime role INSERT/UPDATE on membership, role, permission, branch, counselor assignment and guardian relationship/permission tables. A compromised runtime could self-assign a role, alter a responsible counselor assignment or grant guardian scope. This violates least privilege and undermines object-level authorization.
+
+## Remediation committed
+- Runtime now receives SELECT only on workspace_memberships, membership_roles, membership_permissions, branches, counselor_assignments, student_guardian_links and guardian_permissions.
+- Activation function owner also has read-only access to those authorization tables; it cannot mutate them.
+- Activation function owner grants were narrowed to required SELECT/INSERT and column-level UPDATE for enrollment state/start time, capacity counters and lock-only columns. Immutable wallet/ledger/command triggers prevent actual writes through lock-only privileges.
+- Catalog tests now assert runtime/function-owner write denial and required read/column grants. A wallet immutability regression test was added.
+
+## Remaining gap
+A dedicated audited authorization-management command/function owner and append-only role/permission/guardian grant-revocation event model are not yet implemented. Authorization mutations are intentionally fail-closed/unavailable to runtime until that path exists. These changes are in the latest branch tree but have not yet been covered by a fresh CI run.
+
+## Gate impact
+This addresses the excessive runtime DML grant in the draft but does not establish API authorization or complete authorization lifecycle. HIGH finding remains partially open pending exact-SHA CI and audited management workflow. Phase 2 remains **NOT READY**.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Transfer Approval Identity & Authority (2026-11-10)
+
+## Scope
+Added `docs/phase2/transfer/TRANSFER_APPROVAL_IDENTITY_AUTHORITY_CONTRACT.md` and cross-linked it from the transfer workflow and Control Plane README.
+
+## HIGH finding confirmed in current SQL
+`transfer_approvals` stores `approver_ref`, `authn_event_ref`, and `authority_snapshot`, but these are text/JSON references. `switch_student_ownership` currently counts three distinct approval kinds with non-empty reference strings and validity timestamps. This does not cryptographically authenticate the issuer/subject, prove the principal's current authority, bind the approval payload to the exact student/source/destination/generation, or revalidate changed authority at cutover. A caller-supplied or forged non-empty string could satisfy the current database predicate if it reaches the privileged workflow boundary.
+
+## Required target
+Trusted issuer/audience-pinned assertion or equivalent opaque proof verification; exact-case/student/direction/generation/payload binding; single-use nonce; append-only approval and revocation events; authority validation at approval and immediately before cutover; guardian legal-authority matrix gated by Q-007; negative, replay, revocation-race and stale-assignment tests.
+
+## Gate impact
+The contract is design-only. No verifier, schema migration, API integration or executable approval-authority tests were implemented in this change. Existing transfer SQL tests do not close this finding. Transfer authority remains **NOT READY**. Synthetic-only D-014 remains mandatory.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Cross-Workspace Transfer Saga (2026-11-10)
+
+## Scope
+Added `docs/phase2/transfer/TRANSFER_SAGA_OUTBOX_INBOX_RECOVERY_CONTRACT.md` and cross-linked it from the transfer workflow and Control Plane README.
+
+## HIGH finding — distributed transfer remains unimplemented
+The current Control Plane switch is a single-database transaction. It does not perform source-side mutation freeze/drain, a consistent final snapshot, destination quarantine/staging and integrity validation, durable Workspace inbox projection updates, retry/reconciliation, or crash recovery across separate databases. A CP outbox row alone is not proof of end-to-end delivery or projection correctness.
+
+## Contract delivered
+Defined stable event/command identity, generation fencing, source write barrier, snapshot manifest, destination staging receipts, CP cutover revalidation, transactional outbox and idempotent inbox, at-least-once delivery, dead-letter/manual intervention, deterministic forward-only recovery, completion predicates, observability and fault-injection test requirements. No numeric timeout/SLO/retention values were invented.
+
+## Gate impact
+Design contract only; no distributed worker, Workspace freeze controller, snapshot/staging service, inbox consumer, chaos tests or production topology was implemented. This HIGH finding remains open. Phase 2 remains **NOT READY** and D-014 synthetic-only remains in force.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Workspace Governance Event Model (2026-11-10)
+
+## Scope
+Reviewed `workspace_schema_draft.sql`, `WORKSPACE_DOMAIN_SCHEMA_REVIEW.md` and the Workspace authorization/domain contracts. Added `WORKSPACE_GOVERNANCE_EVENT_CONTRACT.md` and cross-linked it from the Workspace database design and schema review.
+
+## Findings
+- WS-DOM-02: removal of scalar `workspace_memberships.role_key` establishes `membership_roles` as the single role projection. This is partial remediation only. Append-only grant/revoke events, authenticated actor/authentication evidence, narrow command functions and direct-DML denial tests remain absent.
+- WS-DOM-03: guardian relationship and permission projections remain mutable records. They lack sufficient append-only grant/revoke history and trusted legal-authority revalidation. Q-007 remains open and no Iranian age/custody rules are inferred.
+
+## Contract delivered
+Specified event-sourced grant/revoke evidence, projection consistency, actor/evidence provenance, scoped authority, idempotency, event sequence concurrency, suspension/end behavior and fail-closed guardian permission checks. No legal policy values were invented.
+
+## Gate impact
+Design-only. No event DDL, command functions, API enforcement or executable governance tests were added. WS-DOM-02 and WS-DOM-03 remain HIGH and open. Phase 2 remains **NOT READY**. D-014 synthetic-only remains mandatory.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Transactional Workspace Governance Projections (2026-11-10)
+
+## Scope
+Extended the append-only Workspace governance event function to atomically materialize membership role, permission and membership lifecycle projections. Added a dedicated per-Workspace non-login governance owner and synthetic tests.
+
+## Passed in the draft design
+- Role grant/revoke and permission grant/scope-change/revoke are applied in the same transaction as their immutable event.
+- Membership suspension/end removes current role and permission projections.
+- Same-intent idempotent replay returns the original event without repeating effects, including after the original actor is later suspended; mismatched replay intent rejects.
+- Guardian projection commands fail closed pending Q-007/legal verification.
+- The materializer owner is separated from activation function owner; service roles receive no execute/event-ledger access.
+
+## Remaining findings
+- HIGH: No cryptographic/issuer/subject/scope validation for authn/authority references; these are references, not proof.
+- HIGH: No role-grantability matrix, self-grant/privilege-escalation prevention policy, or trusted authorization service/API adapter.
+- HIGH: Guardian legal authority and permission projection remain unresolved (Q-007); guardian events are intentionally unsupported.
+- HIGH: No concurrent authorization-read vs revoke linearization/freshness test at the API/service boundary.
+
+## Verification status
+CI #474 passed the previous event-ledger-only commit. The projection materializer, dedicated owner provisioning and expanded tests are newer changes; fresh CI is pending. Do not mark them passed until the current branch head completes all workflow steps.
+
+## Recommendation
+Treat this as partial remediation only. Do not grant application execute or begin Phase 3. Phase 2 remains **NOT READY**; D-014 synthetic-only remains mandatory.
+
+
+## Verification update — CI #519 (2026-11-10)
+
+Latest branch commit tested: `d45753924513f9920f714b966361b9697e8264d5`. GitHub Actions run #519 passed all 13 steps. The governance event/projection test step and per-Workspace role boundary step both passed, as did the complete Control Plane, activation, concurrency and capacity suites.
+
+The SQL draft now enforces locked membership state transitions and rejects grants/scope changes for inactive targets. Reactivation does not resurrect old grants. A dedicated governance owner is isolated from the activation function owner; service roles cannot execute the materializer.
+
+**Independent review conclusion:** partial remediation verified at the PostgreSQL draft/test level. The trusted authorization service, cryptographic assertion validation, grantability/anti-escalation policy, API object-level authorization, guardian legal policy and concurrency at the service boundary remain HIGH. Phase 2 remains **NOT READY**; do not start Phase 3.
+
+
+---
+
+# SUPERVISOR REVIEW ADDENDUM — Trusted Governance Authorization Assertion Contract (2026-11-10)
+
+## Scope
+Added `docs/phase2/workspace/WORKSPACE_GOVERNANCE_AUTHORIZATION_ASSERTION_CONTRACT.md` to define the trusted verifier/adapter boundary before membership role/permission commands can be exposed to an application.
+
+## Review
+The contract requires a signed, versioned assertion bound to exact issuer, audience/Workspace, actor and active membership, authentication event/assurance, action, target, role/permission, canonical scope digest, authority basis, policy version, payload digest, nonce and bounded validity. It defines a single-use verification receipt and atomic consume + event + projection boundary. It explicitly prohibits runtime execute and leaves signature algorithm/key lifecycle to Platform Security rather than guessing.
+
+## Product Owner decision — CLOSED (2026-11-10)
+The Product Owner accepted the MVP role grantability matrix in `docs/phase2/workspace/PO_DECISION_ROLE_GRANTABILITY_MATRIX_2026-11-10.md`: Organization Manager may invite/activate/revoke counselors only within its own Workspace; Counselor cannot delegate; Branch Manager is operational-only within assigned Branch; other staff are operational-only and cannot delegate; Platform Admin is limited to narrow Governance operations, including Organization Manager appointment approval, without general Workspace write or student-data access. Deny-by-default, no self-grant, no privilege escalation, strict scope and revocation freshness are mandatory. This closes the policy decision, not implementation.
+
+## Gate impact
+Contract only; no verifier, proof schema, adapter, credential, API or tests implemented. Q-007 guardian policy remains open. WS-DOM-02/03 remain HIGH; Phase 2 remains **NOT READY**.
+
+## Implementation agent self-assessment — Issue #13 corrective patch (NOT a supervisor review)
+- Changes: see CHANGELOG and receipts/README.md.
+- Local runs: see TEST_PLAN.md (author-executed; not independently reproduced).
+- Known limitations: production verifier and cryptographic policy deferred (PS-1..PS-8); revocation freshness not implemented; duplicate-key rejection must occur at ingress; CI for this commit not yet observed.
+- Independent review: PENDING. This section records no supervisor approval.
