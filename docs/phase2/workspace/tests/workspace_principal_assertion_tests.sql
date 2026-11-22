@@ -315,9 +315,9 @@ SELECT iso_true('ISO-RLS-C3 every effective holder of a student-scoped table/col
            OR EXISTS (
              SELECT 1 FROM pg_catalog.pg_attribute a
               WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
-                AND (has_column_privilege(r.oid, c.oid, a.attnum, 'SELECT')
-                  OR has_column_privilege(r.oid, c.oid, a.attnum, 'INSERT')
-                  OR has_column_privilege(r.oid, c.oid, a.attnum, 'UPDATE'))
+                AND (has_column_privilege(r.oid, c.oid, a.attname, 'SELECT')
+                  OR has_column_privilege(r.oid, c.oid, a.attname, 'INSERT')
+                  OR has_column_privilege(r.oid, c.oid, a.attname, 'UPDATE'))
            )
      )
        AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_application_roles)
@@ -326,27 +326,53 @@ SELECT iso_true('ISO-RLS-C3 every effective holder of a student-scoped table/col
   ));
 
 -- Unknown and indirect-grantee roles must not bypass the principal predicate merely because
--- they are absent from the application-role inventory.
+-- they are absent from the application-role inventory. Exercise column grants, inherited grants and PUBLIC.
 DO $roles$
 DECLARE k text := current_setting('app.workspace_key');
 BEGIN
-  EXECUTE format('CREATE ROLE %I NOLOGIN NOINHERIT', 'ws_'||k||'_unclassified');
+  EXECUTE format('CREATE ROLE %I NOLOGIN INHERIT', 'ws_'||k||'_unclassified');
   EXECUTE format('CREATE ROLE %I NOLOGIN NOINHERIT', 'ws_'||k||'_unclassified_group');
   EXECUTE format('GRANT SELECT (student_id) ON TABLE students TO %I', 'ws_'||k||'_unclassified');
   EXECUTE format('GRANT SELECT ON TABLE students TO %I', 'ws_'||k||'_unclassified_group');
   EXECUTE format('GRANT %I TO %I', 'ws_'||k||'_unclassified_group', 'ws_'||k||'_unclassified');
 END $roles$;
-DO $audit$
-DECLARE k text := current_setting('app.workspace_key'); n bigint;
-BEGIN
-  -- has_table_privilege/has_column_privilege are checked by C3; direct row access is exercised by the
-  -- companion psql role-switch block below, because SET ROLE cannot be safely scoped inside this DO block.
-  IF NOT public.iso_rls_bypass(('ws_'||k||'_unclassified')::name) THEN
-    RAISE NOTICE 'PASS ISO-RLS-C4 unknown role is not on the bypass allowlist';
-  ELSE
-    RAISE EXCEPTION 'FAIL ISO-RLS-C4 unknown role is on the bypass allowlist';
-  END IF;
-END $audit$;
+
+SELECT iso_true('ISO-RLS-C4 unknown column-grantee role is NOT exempt',
+  NOT public.iso_rls_bypass(('ws_'||current_setting('app.workspace_key')||'_unclassified')::name));
+SELECT format('SET ROLE %I', 'ws_'||current_setting('app.workspace_key')||'_unclassified') \gexec
+SELECT iso_true('ISO-RLS-C5 unknown role with only a column grant sees no student rows without a principal',
+  NOT EXISTS (SELECT student_id FROM students));
+RESET ROLE;
+
+SELECT iso_true('ISO-RLS-C6 audit detects unclassified direct/column/inherited privilege holders',
+  EXISTS (
+    SELECT 1 FROM pg_catalog.pg_roles r
+     WHERE r.rolname = 'ws_'||current_setting('app.workspace_key')||'_unclassified'
+       AND EXISTS (
+         SELECT 1 FROM public.student_scoped_tables t
+         JOIN pg_catalog.pg_class c ON c.relnamespace='public'::regnamespace AND c.relname=t.table_name
+         WHERE has_table_privilege(r.oid,c.oid,'SELECT')
+            OR EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a
+                        WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped
+                          AND has_column_privilege(r.oid,c.oid,a.attname,'SELECT'))
+       )
+  ));
+
+GRANT SELECT ON TABLE students TO PUBLIC;
+SELECT iso_true('ISO-RLS-C7 audit detects PUBLIC table privileges as unclassified effective access',
+  EXISTS (
+    SELECT 1 FROM pg_catalog.pg_roles r
+     WHERE r.rolname = 'ws_'||current_setting('app.workspace_key')||'_unclassified'
+       AND has_table_privilege(r.oid,'public.students'::regclass,'SELECT')
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_application_roles)
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
+  ));
+SELECT format('SET ROLE %I', 'ws_'||current_setting('app.workspace_key')||'_unclassified') \gexec
+SELECT iso_true('ISO-RLS-C8 PUBLIC grant still cannot bypass verified-principal row filtering',
+  NOT EXISTS (SELECT student_id FROM students));
+RESET ROLE;
+REVOKE SELECT ON TABLE students FROM PUBLIC;
+
 DO $cleanup$
 DECLARE k text := current_setting('app.workspace_key');
 BEGIN
