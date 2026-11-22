@@ -44,6 +44,12 @@ VALUES ('a3510000-0000-0000-0000-000000000001','a3500000-0000-0000-0000-00000000
 SELECT 1;
 SQL
 psql -X -v ON_ERROR_STOP=1 -q -v workspace_key="$KEY" -d "$DB" -f "$(dirname "$0")/workspace_principal_test_harness.sql" >/dev/null || { echo "FAIL WS-PLN-RACE harness"; exit 2; }
+# Test-only allowlist for the two competing transitions. The schema draft itself has no approved edges.
+psql -X -v ON_ERROR_STOP=1 -q -d "$DB" <<'SQL'
+INSERT INTO plan_item_transition_rules(actor_kind,from_status,to_status) VALUES
+ ('student','planned','in_progress'),
+ ('student','planned','completed');
+SQL
 psql -X -v ON_ERROR_STOP=1 -q -d "$DB" <<SQL || { echo "FAIL WS-PLN-RACE fixture setup (items)"; exit 2; }
 -- F-05: only the synthetic writer itself passes the identity check (a superuser does not).
 -- WS-ISO-01 B: the item's author is the verified principal of the transaction.
