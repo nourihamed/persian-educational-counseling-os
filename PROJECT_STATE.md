@@ -38,7 +38,7 @@ These are draft-schema and synthetic-test findings only. They do not approve pro
 4. **Product Owner / Platform Security / Operations:** Q-020 retention durations, hold/disposition authority and full restore-suppression scope.
 5. **Domain integrity:** G-15 Review fields and duplicate-generation invariant; G-16 DailyRoutine counters and G-17 progress/risk explainability need reconciliation against the approved MVP requirements. Do not invent uniqueness semantics, counters or risk formulas.
 6. **Migration:** G-26 Alembic/migration strategy, forward compatibility, rollback/roll-forward and lock/volume evidence. Existing SQL remains draft schema.
-7. **Documentation:** root ARCHITECTURE/DATABASE/API/ROADMAP current-state headers are being reconciled on the Supervisor branch; canonical decision crosswalk and all project-state references still require final verification.
+7. **Documentation:** root ARCHITECTURE/DATABASE/API/ROADMAP current-state headers and PROJECT_STATE top snapshot have been reconciled on the unmerged Supervisor branch; TEST_PLAN, Changelog, decision crosswalk, PR descriptions and SUPERVISOR_REVIEW still require final exact-baseline verification.
 8. **PR integration:** G-32 requires Product Owner disposition of PR #8–#11 and explicit merge/order decision for PR #12/#14. No merge, rebase, force-push or main update has been performed.
 
 ### Phase-gate and operating restrictions
