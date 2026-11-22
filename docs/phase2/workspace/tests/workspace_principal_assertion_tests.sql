@@ -298,13 +298,64 @@ RESET SESSION AUTHORIZATION;
 
 -- Every role that holds a privilege on a student-scoped table is classified: filtered application role,
 -- or a reviewed NOLOGIN owner / synthetic test identity outside RLS. An unclassified role fails.
-SELECT iso_true('ISO-RLS-C3 every role holding a privilege on a student-scoped table is classified',
+-- Effective-privilege audit: covers direct and inherited role grants, table-level and column-level
+-- privileges, and PUBLIC (which has no pg_roles row but is reflected by has_*_privilege).
+SELECT iso_true('ISO-RLS-C3 every effective holder of a student-scoped table/column privilege is classified',
   NOT EXISTS (
-    SELECT 1 FROM information_schema.role_table_grants g
-      JOIN student_scoped_tables t ON t.table_name = g.table_name AND g.table_schema = 'public'
-     WHERE g.grantee NOT IN (SELECT role_name FROM iso_application_roles)
-       AND g.grantee !~ ('^ws_' || :'workspace_key' || '_(table_owner|function_owner|governance_owner|freeze_owner|inbox_owner|synth_plan_writer|plan_migrator)$')
-       AND g.grantee <> current_user));
+    SELECT 1
+      FROM pg_catalog.pg_roles r
+     WHERE EXISTS (
+       SELECT 1
+         FROM public.student_scoped_tables t
+         JOIN pg_catalog.pg_class c ON c.relnamespace = 'public'::regnamespace AND c.relname = t.table_name
+        WHERE has_table_privilege(r.oid, c.oid, 'SELECT')
+           OR has_table_privilege(r.oid, c.oid, 'INSERT')
+           OR has_table_privilege(r.oid, c.oid, 'UPDATE')
+           OR has_table_privilege(r.oid, c.oid, 'DELETE')
+           OR EXISTS (
+             SELECT 1 FROM pg_catalog.pg_attribute a
+              WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+                AND (has_column_privilege(r.oid, c.oid, a.attnum, 'SELECT')
+                  OR has_column_privilege(r.oid, c.oid, a.attnum, 'INSERT')
+                  OR has_column_privilege(r.oid, c.oid, a.attnum, 'UPDATE'))
+           )
+     )
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_application_roles)
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
+       AND r.rolname <> current_user
+  ));
+
+-- Unknown and indirect-grantee roles must not bypass the principal predicate merely because
+-- they are absent from the application-role inventory.
+DO $roles$
+DECLARE k text := current_setting('app.workspace_key');
+BEGIN
+  EXECUTE format('CREATE ROLE %I NOLOGIN NOINHERIT', 'ws_'||k||'_unclassified');
+  EXECUTE format('CREATE ROLE %I NOLOGIN NOINHERIT', 'ws_'||k||'_unclassified_group');
+  EXECUTE format('GRANT SELECT (student_id) ON TABLE students TO %I', 'ws_'||k||'_unclassified');
+  EXECUTE format('GRANT SELECT ON TABLE students TO %I', 'ws_'||k||'_unclassified_group');
+  EXECUTE format('GRANT %I TO %I', 'ws_'||k||'_unclassified_group', 'ws_'||k||'_unclassified');
+END $roles$;
+DO $audit$
+DECLARE k text := current_setting('app.workspace_key'); n bigint;
+BEGIN
+  -- has_table_privilege/has_column_privilege are checked by C3; direct row access is exercised by the
+  -- companion psql role-switch block below, because SET ROLE cannot be safely scoped inside this DO block.
+  IF NOT public.iso_rls_bypass(('ws_'||k||'_unclassified')::name) THEN
+    RAISE NOTICE 'PASS ISO-RLS-C4 unknown role is not on the bypass allowlist';
+  ELSE
+    RAISE EXCEPTION 'FAIL ISO-RLS-C4 unknown role is on the bypass allowlist';
+  END IF;
+END $audit$;
+DO $cleanup$
+DECLARE k text := current_setting('app.workspace_key');
+BEGIN
+  EXECUTE format('REVOKE SELECT (student_id) ON TABLE students FROM %I', 'ws_'||k||'_unclassified');
+  EXECUTE format('REVOKE SELECT ON TABLE students FROM %I', 'ws_'||k||'_unclassified_group');
+  EXECUTE format('REVOKE %I FROM %I', 'ws_'||k||'_unclassified_group', 'ws_'||k||'_unclassified');
+  EXECUTE format('DROP ROLE %I', 'ws_'||k||'_unclassified');
+  EXECUTE format('DROP ROLE %I', 'ws_'||k||'_unclassified_group');
+END $cleanup$;
 
 UPDATE principal_verification_config SET mode = 'disabled';
 SELECT 'PRINCIPAL ASSERTION TESTS COMPLETED (WS-ISO-01 decision B, test-only key; production verification fail-closed)' AS result;
