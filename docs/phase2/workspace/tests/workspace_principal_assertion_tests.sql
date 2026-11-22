@@ -364,8 +364,8 @@ SELECT iso_true('ISO-RLS-C12 principal-required catalog includes app roles and P
 SELECT iso_true('ISO-RLS-C10 bypass allowlist contains exactly the reviewed owner and synthetic identities',
   (SELECT array_agg(role_name ORDER BY role_name) FROM public.iso_rls_bypass_roles)
    = ARRAY[
-     ('ws_'||:'workspace_key'||'_function_owner')::name,
      ('ws_'||:'workspace_key'||'_freeze_owner')::name,
+     ('ws_'||:'workspace_key'||'_function_owner')::name,
      ('ws_'||:'workspace_key'||'_governance_owner')::name,
      ('ws_'||:'workspace_key'||'_inbox_owner')::name,
      ('ws_'||:'workspace_key'||'_plan_migrator')::name,
