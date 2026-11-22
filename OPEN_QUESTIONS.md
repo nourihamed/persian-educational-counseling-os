@@ -489,13 +489,13 @@ This supplement supersedes earlier status wording where it conflicts; earlier da
 
 ### WS-ISO-01 — caller binding and RLS
 
-The Product Owner selected **Option B with a test-only key** on 2026-11-20. The signed short-lived principal assertion, one-time nonce, backend/transaction/session-role binding and live membership/assignment revalidation are implemented in the draft schema and test harness. The mandatory restrictive RLS fence, exact bypass allowlist and effective privilege audit were independently verified in GitHub Actions run 45030847506 (PostgreSQL 16.16; step 15; ISO-RLS-C3..C16).
+The Product Owner selected **Option B with a test-only key** on 2026-11-20. The signed short-lived principal assertion, one-time nonce, backend/transaction/session-role binding and live membership/assignment revalidation are implemented in the draft schema and test harness. The mandatory restrictive RLS fence, exact bypass allowlist and effective privilege audit were independently verified in GitHub Actions run 45032597727 (PostgreSQL 16.16; step 15; ISO-RLS-C3..C16).
 
 This does **not** approve production verification. PS-1..PS-5 cryptographic/key/clock decisions, PS-6 authenticated private service transport, PS-8 end-to-end revocation freshness, M-01 trusted test/production deployment separation, student read scope, background-job identity and manager permission vocabulary remain open. Production verification remains disabled and no production runtime write path is authorized.
 
 ### WS-PLAN-01 — PlanItem status graph
 
-The Product Owner decisions A2/B1/C1/D1/E1 are implemented and tested. H-02 direct published insertion and H-03 publication/item locking with commit/rollback races passed Actions run 45030847506 (step 16). H-04 is remediated fail-closed: the base `plan_item_transition_rules` table is empty and every edge without an exact approved row is refused. Test-only rules in disposable suites are guard-mechanics fixtures, not product decisions.
+The Product Owner decisions A2/B1/C1/D1/E1 are implemented and tested. H-02 direct published insertion and H-03 publication/item locking with commit/rollback races passed Actions run 45032597727 (step 16). H-04 is remediated fail-closed: the base `plan_item_transition_rules` table is empty and every edge without an exact approved row is refused. Test-only rules in disposable suites are guard-mechanics fixtures, not product decisions.
 
 **Still open for Product Owner:** the complete actor × from_status × to_status matrix, including whether `deferred -> completed` is permitted for a student, whether `partially_completed -> deferred` is permitted for a responsible counselor, and whether any edge may target `planned`. No production status execution until that matrix is approved.
 
