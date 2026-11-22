@@ -3,7 +3,7 @@
 
 > **CURRENT SECURITY OVERRIDE — 2026-11-22 (PR #12/#14, unmerged):** Tenant is Workspace, not Counselor. Alt-5 isolation cells and per-Workspace database/credential boundaries remain the target; no production infrastructure is provisioned. H-01 is remediated at schema/test level: RLS ENABLE+FORCE with mandatory restrictive principal fence on every student-scoped table, exact owner/test bypass allowlist, unknown-role fail-closed behavior, and table/column/PUBLIC/indirect-membership plus pg_read_all_data/pg_write_all_data tests (Actions 45030847506 step 15). H-02/H-03/H-04 are also verified on the synthetic draft tree (step 16). Production verifier remains disabled pending PS-1..PS-8 and M-01 trusted deployment separation. Q-007 guardian authority, Q-020 retention, transfer Saga, contact-change, API object authorization, background identity, production credentials, backup/restore and failover remain open. D-014 continues to prohibit real data; no production runtime write path is authorized.
 
-Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14; security controls are requirements only and runtime implementation remains unverified.
+Status: Phase 0 documentation baseline approved/closed by Product Owner on 2026-10-14. Phase 2 has draft database controls and synthetic tests, but no production verifier, API authorization service, deployment boundary or live infrastructure; production implementation remains unverified.
 
 ## اصول پایه
 
