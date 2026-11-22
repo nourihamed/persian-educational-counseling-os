@@ -380,6 +380,25 @@ SELECT iso_true('ISO-RLS-C11 every bypass identity is NOLOGIN, non-superuser, no
           EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m WHERE m.roleid=r.oid OR m.member=r.oid)
   ));
 
+SET ROLE pg_read_all_data;
+SELECT iso_true('ISO-RLS-C13 pg_read_all_data remains subject to the verified-principal RLS fence',
+  NOT EXISTS (SELECT student_id FROM students));
+RESET ROLE;
+SET ROLE pg_write_all_data;
+SELECT iso_true('ISO-RLS-C14 pg_write_all_data remains subject to the verified-principal RLS fence',
+  NOT EXISTS (SELECT student_id FROM students));
+RESET ROLE;
+
+SELECT iso_true('ISO-RLS-C15 every student-scoped table has the mandatory restrictive principal fence',
+  NOT EXISTS (
+    SELECT 1 FROM public.student_scoped_tables t
+    JOIN pg_catalog.pg_class c ON c.relnamespace='public'::regnamespace AND c.relname=t.table_name
+    WHERE NOT EXISTS (
+      SELECT 1 FROM pg_catalog.pg_policy p
+       WHERE p.polrelid=c.oid AND p.polname='iso_counselor_scope' AND p.polpermissive=false
+    )
+  ));
+
 -- Unknown and indirect-grantee roles must not bypass the principal predicate merely because
 -- they are absent from the application-role inventory. Exercise column grants, inherited grants and PUBLIC.
 DO $roles$
