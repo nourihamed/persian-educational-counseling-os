@@ -108,6 +108,7 @@ INSERT INTO plan_item_transition_rules(actor_kind,from_status,to_status) VALUES
  ('student','partially_completed','completed'),
  ('student','deferred','in_progress'),
  ('membership','in_progress','deferred'),
+ ('membership','deferred','cancelled'),
  ('membership','planned','cancelled'),
  ('membership','planned','skipped');
 
