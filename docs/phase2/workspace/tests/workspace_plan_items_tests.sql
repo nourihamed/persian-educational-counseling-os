@@ -268,6 +268,26 @@ SELECT pln_err('PLN-28 F-02: the RUNTIME cannot create a legacy_json version —
 SELECT pln_true('PLN-28b F-02: every version the runtime creates is normalized',
   (SELECT content_model FROM student_plan_versions WHERE plan_version_id='a4510000-0000-0000-0000-000000000011')='normalized');
 SELECT pln_err('PLN-29 a version''s content model and supersession are fixed at creation', $q$UPDATE student_plan_versions SET change_reason='rewritten' WHERE plan_version_id='a4510000-0000-0000-0000-000000000011'$q$,'23514','fixed at creation');
+-- H-02: direct INSERT cannot bypass the guarded publication transition, even for legacy rows.
+SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
+SELECT pln_err('PLN-H2-01 a normalized PlanVersion cannot be inserted directly as published',
+  $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id,supersedes_plan_version_id,change_reason)
+     VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000001',3,'{}','manual-v1','{}','published','b4000000-0000-0000-0000-00000000000a','a4510000-0000-0000-0000-000000000011','synthetic')$q$,
+  '23514','new PlanVersion must be inserted as draft');
+COMMIT;
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION :"migrator_role";
+SELECT pln_err('PLN-H2-02 a migration-created legacy PlanVersion cannot be inserted directly as published',
+  $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,content_model)
+     VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000004',2,'{}','legacy','{"historic":true}','published','legacy_json')$q$,
+  '23514','new PlanVersion must be inserted as draft');
+RESET SESSION AUTHORIZATION;
+SELECT pln_err('PLN-H2-03 a published PlanVersion is immutable, including non-content metadata',
+  $q$UPDATE student_plan_versions SET published_at=clock_timestamp() WHERE plan_version_id='a4510000-0000-0000-0000-000000000001'$q$,
+  '23514','published PlanVersion is immutable');
+
 SELECT pln_true('PLN-29b the published v1 and its six-plus items are unchanged by v2',
   (SELECT count(*) FROM plan_items WHERE plan_version_id='a4510000-0000-0000-0000-000000000001') = 7);
 COMMIT;
