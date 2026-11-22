@@ -511,6 +511,19 @@ LANGUAGE sql STABLE AS $body$
                     WHERE e.plan_item_id = p_item ORDER BY e.seq_no DESC LIMIT 1), 'planned');
 $body$;
 
+-- H-04: the accepted PO decisions authorize actor categories and terminal states, but do NOT define
+-- the complete from_status -> to_status graph. Keep this table EMPTY in the base draft. A later, explicit
+-- Product Owner decision must populate it through a reviewed migration; absent an exact edge, the guard
+-- refuses the transition. Test-only fixtures may populate it in disposable synthetic databases.
+CREATE TABLE plan_item_transition_rules (
+  actor_kind  text NOT NULL CHECK (actor_kind IN ('membership','student')),
+  from_status text NOT NULL CHECK (from_status IN ('planned','in_progress','completed','partially_completed','deferred','skipped','cancelled')),
+  to_status   text NOT NULL CHECK (to_status IN ('planned','in_progress','completed','partially_completed','deferred','skipped','cancelled')),
+  PRIMARY KEY (actor_kind, from_status, to_status),
+  CHECK (from_status <> to_status)
+);
+REVOKE ALL ON TABLE plan_item_transition_rules FROM PUBLIC;
+
 CREATE FUNCTION guard_plan_item_status_event() RETURNS trigger LANGUAGE plpgsql AS $body$
 DECLARE v_current text; v_next integer;
 BEGIN
@@ -584,6 +597,17 @@ BEGIN
       RAISE EXCEPTION 'membership % is not the responsible counselor of student %',
         NEW.actor_membership_id, NEW.student_id USING ERRCODE='insufficient_privilege';
     END IF;
+  END IF;
+  -- H-04: actor/destination authorization is not a substitute for an approved state edge. This table is
+  -- empty in the schema draft; therefore every edge remains refused until the Product Owner approves it.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.plan_item_transition_rules r
+     WHERE r.actor_kind = NEW.actor_kind
+       AND r.from_status = NEW.from_status
+       AND r.to_status = NEW.to_status
+  ) THEN
+    RAISE EXCEPTION 'transition edge % -> % for actor % is not explicitly approved; refused fail-closed (WS-PLAN-01 open)',
+      NEW.from_status, NEW.to_status, NEW.actor_kind USING ERRCODE='insufficient_privilege';
   END IF;
   RETURN NEW;
 END; $body$;
