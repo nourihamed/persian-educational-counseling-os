@@ -1,4 +1,52 @@
-# CURRENT PROJECT STATE — PHASE 2 (updated 2026-11-18)
+# CURRENT PROJECT STATE — PHASE 2 (updated 2026-11-22)
+
+## Authoritative current snapshot
+
+**Gate:** Phase 2 **NOT READY**. Phase 3 is **NOT AUTHORIZED**. D-014 remains synthetic-only.
+
+### GitHub baseline and review stack
+
+| Item | Current evidence |
+|---|---|
+| Main | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6` — unchanged |
+| PR #12 | Open / Draft / Unmerged; head `78155b62f8830fe84c631100ec37bb236e5332e5`; base snapshot `ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114` |
+| PR #14 | Open / Draft / Unmerged; stacked on PR #12 head; head branch `supervisor/phase2-h01-h04-remediation-2026-11-22` |
+| Supervisor branch baseline immediately before this state update | `681ace3eb4b38e07bab0e28cc96c6cfa77722a85` |
+| SQL/test tree independently reviewed | `cad2c0992bda3f1b37e274a14bc4e9c01d5d86cc` |
+| Last fully successful CI for that SQL/test tree | [GitHub Actions 45030847506](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/45030847506), PostgreSQL 16.16; steps 15/16/17 and checks 30/31 passed |
+
+This snapshot is committed on the PR #14 head branch. The exact resulting PR head SHA is the commit that adds this state update; GitHub PR #14 metadata is the authoritative exact reference. Documentation-only reconciliations followed the verified SQL/test SHA; no SQL or test source changed after `cad2c099`. A fresh Actions run is required on the resulting exact PR head.
+
+### Supervisor findings H-01..H-04
+
+| Finding | Status |
+|---|---|
+| H-01 — RLS fail-open for unclassified roles | **REMEDIATED / VERIFIED**: mandatory restrictive principal fence; exact bypass allowlist; table/column/PUBLIC/indirect privilege audit; PostgreSQL broad-data roles remain RLS-bound; ISO-RLS-C3..C16 |
+| H-02 — direct published PlanVersion INSERT | **REMEDIATED / VERIFIED**: normalized and legacy published INSERT rejected; only guarded normalized draft→published |
+| H-03 — PlanItem/publication race | **REMEDIATED / VERIFIED**: both lock orders and both commit/rollback outcomes; bounded lock/statement timeouts; WS-PLN-PUB-RACE-01..11 |
+| H-04 — incomplete PlanItem transition graph | **REMEDIATED AS FAIL-CLOSED / VERIFIED**: base transition-rule table empty; exact actor/from/to edge required; test-only fixture edges are not Product Owner policy |
+
+### Remaining Phase 2 blockers
+
+1. **Product Owner decision — PlanItem status graph:** approve the exact actor × from_status × to_status matrix. Until then, the base rule table remains empty and status transitions fail closed.
+2. **Platform Security — WS-ISO production gate:** PS-1..PS-8, production verifier/crypto/key/channel/freshness controls, and M-01 trusted test/production deployment separation. Production verification stays disabled.
+3. **Legal/Product Owner — Q-007:** guardian legal authority, age/permission matrix and transfer approval authority remain open; Parent APIs and guardian transfer approvals remain fail-closed.
+4. **Retention — Q-020:** durations, hold/disposition authority and full restore-suppression scope remain open.
+5. **Domain model:** G-15 Review record integrity and duplicate prevention remain missing; G-16 DailyRoutine counters and G-17 progress/risk explainability need reconciliation to approved MVP.
+6. **Migration:** G-26 production migration strategy, rollback/forward-compatibility and deployment evidence remain open. SQL files are draft schemas, not production migrations.
+7. **Integration/docs:** G-30 root ARCHITECTURE/DATABASE/API/ROADMAP reconciliation remains open. G-32 PR #8–#11 disposition and PR #12/#14 merge order require Product Owner direction. G-33 approval-evidence wording is reconciled as PARTIAL (schema events DONE; authority/cutover binding open).
+
+### Safety and scope
+
+- No merge, rebase, force-push or main modification.
+- PR #12 and PR #14 remain open/draft; no phase approval is implied.
+- No production runtime write path, production key, real student data, API/worker deployment or live infrastructure operation.
+- `SUPERVISOR_REVIEW.md` was not modified.
+- No product, legal or Platform Security decision was inferred or made on the Product Owner's behalf.
+
+---
+
+## Historical snapshot — 2026-11-18 (preserved)
 
 **Current phase:** Phase 2 — Database & Domain Model. **Milestone:** all eight implementation batches of the
 Supervisor brief attempted, plus the 2026-11-18 Supervisor corrections; a **PROVISIONAL** exit evidence package
