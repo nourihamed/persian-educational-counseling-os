@@ -271,7 +271,8 @@ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $body$
   -- runtime's column-scoped INSERT on it is intended (F-02) and asserted by PLN-C2/PLN-28.
   UNION ALL SELECT format('%s holds %s on %s', a, priv_name, t.tbl)
     FROM unnest(p_inventory || ARRAY['public']) a
-    CROSS JOIN (VALUES ('public.plan_items'), ('public.plan_item_status_events'), ('public.plan_privileged_identities')) t(tbl)
+    CROSS JOIN (VALUES ('public.plan_items'), ('public.plan_item_status_events'), ('public.plan_privileged_identities'),
+                         ('public.plan_item_transition_rules')) t(tbl)
     CROSS JOIN (VALUES ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE')) v(priv_name)
    WHERE (a = 'public' OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname = a))
      AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_roles r ON r.oid = c.relowner
