@@ -32,13 +32,14 @@
 --   * No priority, urgency, estimated workload scale, dependencies, conflict groups, generation
 --     provenance, idempotency key or carry-forward link — the contract lists them, the decision did not
 --     settle their vocabularies, and contract §9 forbids inventing weights or thresholds.
---   * No full transition graph. Product Owner decisions of 2026-11-20 settle: A2 (students record
---     in_progress / completed / partially_completed; only the responsible counselor records deferred /
---     skipped / cancelled), B1 (no transition on a draft version's items), C1 (an empty version cannot be
---     published), D1 (completed / skipped / cancelled are terminal), E1 (legacy JSON stays read-only).
---     Everything those decisions do not name is REFUSED and recorded as open: a transition TO planned, a
---     counselor recording a student status, a student recording a counselor status. Whether a student may
---     edit generated items (contract §9) is also still open.
+--   * No Product Owner-approved from_status -> to_status graph. Decisions A2/B1/C1/D1/E1 settle actor
+--     categories, draft publication state, empty publication, terminal destinations and legacy read-only
+--     semantics, but do not approve exact edges. The base schema therefore creates an EMPTY
+--     plan_item_transition_rules table: every edge fails closed until a separate PO decision and reviewed
+--     migration populate it. Test suites seed disposable test-only edges solely to exercise guard mechanics;
+--     those fixtures are not production policy and are not evidence that the PO approved those edges.
+--     A transition TO planned, counselor recording a student status, and student recording a counselor
+--     status remain explicitly refused. Whether a student may edit generated items (contract §9) is open.
 --   * Engine-created items will need a non-membership actor; none exists until Phase 12.
 --
 -- CORRECTED AFTER THE SUPERVISOR REVIEW OF 8df7d5e (2026-11-19), FINDING F-05 (HIGH): the privileged
