@@ -463,6 +463,7 @@ DO $plan$
 DECLARE
   k text := current_setting('app.workspace_key');
   rt text := 'ws_'||k||'_runtime';
+  fo text := 'ws_'||k||'_function_owner';
   wr text := 'ws_'||k||'_synth_plan_writer';
   mg text := 'ws_'||k||'_plan_migrator';
   k0 text := current_setting('app.workspace_key');  -- k is reused as a loop variable below
