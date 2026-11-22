@@ -92,18 +92,18 @@ END $rls$;
 
 -- Private notes: their author only (ISO-GAP-02).
 CREATE POLICY iso_private_note_author ON counselor_notes AS RESTRICTIVE FOR SELECT TO PUBLIC
-  USING (NOT public.iso_rls_applies(current_user) OR visibility <> 'private_to_author'
+  USING (public.iso_rls_bypass(current_user) OR visibility <> 'private_to_author'
          OR author_membership_id = public.current_principal_membership());
 -- Authorship: an application role cannot write a note or a plan version in another counselor's name.
 CREATE POLICY iso_note_author_is_principal ON counselor_notes AS RESTRICTIVE FOR INSERT TO PUBLIC
-  WITH CHECK (NOT public.iso_rls_applies(current_user) OR author_membership_id = public.current_principal_membership());
+  WITH CHECK (public.iso_rls_bypass(current_user) OR author_membership_id = public.current_principal_membership());
 -- (The author column exists once workspace_plan_items_draft.sql is loaded; without it there is no author to bind.)
 DO $pv$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.student_plan_versions'::regclass
                 AND attname = 'created_by_membership_id' AND NOT attisdropped) THEN
     CREATE POLICY iso_plan_version_author_is_principal ON student_plan_versions AS RESTRICTIVE FOR INSERT TO PUBLIC
-      WITH CHECK (NOT public.iso_rls_applies(current_user) OR created_by_membership_id = public.current_principal_membership());
+      WITH CHECK (public.iso_rls_bypass(current_user) OR created_by_membership_id = public.current_principal_membership());
   END IF;
 END $pv$;
 
