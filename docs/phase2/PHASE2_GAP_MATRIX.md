@@ -7,7 +7,7 @@
 | Item | SHA |
 |---|---|
 | PR #12 head | `78155b62f8830fe84c631100ec37bb236e5332e5` |
-| Supervisor remediation branch head | `cad2c0992bda3f1b37e274a14bc4e9c01d5d86cc` |
+| Supervisor remediation branch head | `e92bf8f6ea47d5c406e764447f6fd4ce9ac152cd` |
 | `main` | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6` |
 | PR #12 merge base | `ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114` |
 
@@ -59,7 +59,7 @@
 | G-29 | No secret material | History-content scan | SEC-REPO (step 30) | fixtures in history | REPO-HIST-CONTACTS | PO | no | — | scan |
 | G-30 | Register and documentation consistency | REG-01..09 | step 31 | root docs (ARCHITECTURE, DATABASE, API, ROADMAP) not reconciled to Batches 1–8 | reconcile root docs | Developer | no | — | REG |
 | G-31 | M-05 duplicate JSON keys; M-06 shared canonicalization vectors | not implemented | — | MEDIUM | as defined by the Supervisor | Developer | no (technical debt) | Supervisor closure criteria | — |
-| G-32 | PR integration | PR #8–#11 remain open; PR #12 head `78155b6`; supervisor remediation branch is stacked on PR #12; current `main` remains `5bb8e4e` | GitHub refs and PR metadata | no merge or rebase performed | PO disposition of PR #8–#11 and review/merge order for #12/#13 | PO | **YES** (register) | explicit disposition and approved merge order | — |
+| G-32 | PR integration | PR #8–#11 remain open; PR #12 head `78155b6`; PR #14 is stacked on PR #12; current `main` remains `5bb8e4e` | GitHub refs and PR metadata | no merge or rebase performed | PO disposition of PR #8–#11 and review/merge order for #12/#13 | PO | **YES** (register) | explicit disposition and approved merge order | — |
 | G-33 | Approval-evidence status consistency | RESOLVED 2026-11-22: §2 now says PARTIAL; §3 says approval/revocation event schema DONE, while legal/authority binding and cutover revalidation remain open | `PHASE2_EXIT_CRITERIA.md` §2 and §3 | low | none for this wording; underlying Q-007/transfer authority remains open | Supervisor | no | consistent partial-vs-schema-complete wording | — |
 
 ## 2. Executed-test accounting (fresh disposable PostgreSQL 16.15 cluster, 2026-11-20, local)
@@ -127,6 +127,6 @@ This is evidence for the synthetic draft schema and tests only. It is **not** pr
 2. **G-11 WS-PLAN-01**: A2/B1/C1/D1/E1 enforced and H-02/H-03/H-04 technical guards pass CI. The exact transition graph is deliberately empty and remains a Product Owner decision; production status execution is not authorized.
 3. **G-15 Review records**: required fields and duplicate-generation invariant remain missing; implement from master §28 before gate.
 4. **G-16/G-17**: daily routine counters and normalized progress/risk explainability remain incomplete; reconcile against master requirements and approved MVP.
-5. **G-32 PR integration**: PR #8–#11 disposition and stacked PR #12/#13 sequence remain Product Owner-controlled; no merge performed.
+5. **G-32 PR integration**: PR #8–#11 disposition and stacked PR #12/#14 sequence remain Product Owner-controlled; no merge performed.
 6. **G-30**: root ARCHITECTURE/DATABASE/API/ROADMAP reconciliation remains open. **G-33** approval-evidence wording is reconciled; underlying legal/authority binding remains open under Q-007.
 7. **G-26 migration framework**: DDL remains a draft, not a production migration; migration strategy and rollback/forward-compatibility evidence remain required before implementation deployment.
