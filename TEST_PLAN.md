@@ -1,7 +1,7 @@
 # TEST_PLAN.md
 ## Phase 2 Control Plane + Workspace acceptance contracts (reconciled 2026-11-22)
 
-**Latest successful execution:** GitHub Actions [45030847506](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/45030847506), PostgreSQL 16.16, exact remediation tree `cad2c0992bda3f1b37e274a14bc4e9c01d5d86cc` (SUCCESS). Steps 15/16/17 and repository secret/register checks 30/31 passed. It includes the restrictive RLS audit (ISO-RLS-C3..C16), direct published PlanVersion INSERT rejection (PLN-H2-01..03), fail-closed transition graph tests (PLN-H4-01..04), all four PlanItem/publication lock/rollback cases (WS-PLN-PUB-RACE-01..11), the final-capacity-slot race (WS-CAP-RACE-01), and full schema regression. This is synthetic draft-SQL evidence only; it is not API/runtime/production/HA approval.
+**Latest successful execution:** GitHub Actions [45032597727](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/45032597727), PostgreSQL 16.16, exact remediation tree `adddd4a1f199f0a8fe4eaef88c126950d1d6e9dd` (SUCCESS). Steps 15/16/17 and repository secret/register checks 30/31 passed. It includes the restrictive RLS audit (ISO-RLS-C3..C16), direct published PlanVersion INSERT rejection (PLN-H2-01..03), fail-closed transition graph tests (PLN-H4-01..04), all four PlanItem/publication lock/rollback cases (WS-PLN-PUB-RACE-01..11), the final-capacity-slot race (WS-CAP-RACE-01), and full schema regression. This is synthetic draft-SQL evidence only; it is not API/runtime/production/HA approval.
 
 | ID | Required test | Status |
 |---|---|---|
@@ -30,7 +30,7 @@
 | CP-FAIL-01 | Control Plane outage/ambiguous ownership denies student-data access | NOT RUN (runtime fail-closed integration absent) |
 | WS-SCHEMA-01 | Workspace membership, branch/type, assignments, guardian record shape, educational domain, immutable versions, credit ledger, capacity, files, notifications, legal holds and audit | EXECUTED / PASS for included schema fixtures |
 | WS-ROLE-01 | Per-Workspace unique role names, object owners, no elevated runtime attributes, least-privilege grants and two-database CONNECT denial | EXECUTED / PASS in two synthetic databases; production credentials and API/data isolation NOT RUN |
-| WS-ISO-01 | Workspace A cannot access Workspace B data through API/repository/files/jobs | EXECUTED / PASS for synthetic DB principal/RLS fence, including ISO-RLS-C3..C16 and principal races (Actions 45030847506 step 15); API/repository/file/job E2E remains NOT RUN because those surfaces do not exist |
+| WS-ISO-01 | Workspace A cannot access Workspace B data through API/repository/files/jobs | EXECUTED / PASS for synthetic DB principal/RLS fence, including ISO-RLS-C3..C16 and principal races (Actions 45032597727 step 15); API/repository/file/job E2E remains NOT RUN because those surfaces do not exist |
 | WS-AUTH-01 | Counselor/manager object and assignment scope enforced | NOT RUN (runtime authorization absent) |
 | WS-PARENT-01 | Per-child/per-permission parent isolation; expiry/revocation/legal matrix | NOT RUN |
 | WS-VERSION-01 | Published ProgramVersion/StudentPlanVersion immutable | EXECUTED / PASS |
@@ -40,7 +40,7 @@
 | WS-ACT-RACE-01 | Concurrent activation of the same enrollment yields one debit, capacity reservation and audit event | EXECUTED / PASS |
 | WS-CREDIT-01 | Wallet balance cannot go negative; reversals are exact, append-only and single-use | EXECUTED / PASS for included ledger cases; payment/refund/renewal policy NOT RUN |
 | WS-CREDIT-UNIT-01 | Student Credit unit is CRD, not a fiat currency code | EXECUTED / PASS |
-| WS-CAP-01 | Atomic active-student capacity ceiling and idempotent capacity event | EXECUTED / PASS; final-slot race WS-CAP-RACE-01 and archive exclusion ARC-15 passed in Actions 45030847506 |
+| WS-CAP-01 | Atomic active-student capacity ceiling and idempotent capacity event | EXECUTED / PASS; final-slot race WS-CAP-RACE-01 and archive exclusion ARC-15 passed in Actions 45032597727 |
 | OPS-RESTORE-01 | Independent encrypted backup restore drill, failover and consistency evidence | NOT RUN |
 
 A test may be marked IMPLEMENTED only when an executable test exists, EXECUTED only with reproducible logs on the exact reviewed SQL/test tree, and PASS only after successful execution. Static review is not execution. Phase 2 cannot pass while required critical security/integrity tests remain NOT RUN.
@@ -1253,7 +1253,7 @@ Historical "NOT RUN" statements in the sections above keep their date and scope.
 
 | Test | Case | Result |
 |---|---|---|
-| ISO-RLS-C3..C16 | all effective table/column privileges; direct/indirect membership; exact bypass and principal-required catalogs; PUBLIC ACLs; restrictive-policy widening; PostgreSQL broad-data roles | PASS — Actions 45030847506 step 15 |
+| ISO-RLS-C3..C16 | all effective table/column privileges; direct/indirect membership; exact bypass and principal-required catalogs; PUBLIC ACLs; restrictive-policy widening; PostgreSQL broad-data roles | PASS — Actions 45032597727 step 15 |
 | PLN-H2-01 | runtime column-granted INSERT cannot create a normalized PlanVersion directly as published | PASS — SQLSTATE check_violation |
 | PLN-H2-02 | migration identity cannot insert a legacy PlanVersion directly as published | PASS — SQLSTATE check_violation |
 | PLN-H2-03 | published PlanVersion mutation is refused | PASS — immutable-version guard |
@@ -1288,7 +1288,7 @@ Historical "NOT RUN" statements in the sections above keep their date and scope.
 | refusal of transitions to `planned` removed | PLN-41b |
 | student-actor principal binding removed | PLN-A2g |
 
-**Historical local result (2026-11-20):** fresh run, 25 steps, **1155 PASS, 0 FAIL, 0 OPEN, 1 SKIP** (WS-ROLE-17 mirror run). The newer exact-tree CI evidence is Actions 45030847506 above.
+**Historical local result (2026-11-20):** fresh run, 25 steps, **1155 PASS, 0 FAIL, 0 OPEN, 1 SKIP** (WS-ROLE-17 mirror run). The newer exact-tree CI evidence is Actions 45032597727 above.
 
 **NOT RUN**
 - **Production verification:** PS-1..PS-8 undecided, and fail-closed by design; M-01 trusted test/production deployment separation still needs Platform Security evidence.
