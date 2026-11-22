@@ -517,6 +517,7 @@ BEGIN
   -- This does not grant an application identity a write path: function_owner is NOLOGIN, membership-free,
   -- and only reviewed SECURITY DEFINER functions execute under it.
   EXECUTE format('GRANT SELECT, UPDATE(status) ON TABLE student_plan_versions TO %I', fo);
+  EXECUTE format('GRANT SELECT ON TABLE plan_item_transition_rules TO %I', fo);
 
   -- runtime: create plan versions WITHOUT being able to choose legacy_json
   EXECUTE format('REVOKE INSERT ON TABLE student_plan_versions FROM %I', rt);
