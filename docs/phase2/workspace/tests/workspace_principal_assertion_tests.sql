@@ -325,6 +325,27 @@ SELECT iso_true('ISO-RLS-C3 every effective holder of a student-scoped table/col
        AND r.rolname <> current_user
   ));
 
+SELECT iso_true('ISO-RLS-C10 bypass allowlist contains exactly the reviewed owner and synthetic identities',
+  (SELECT array_agg(role_name ORDER BY role_name) FROM public.iso_rls_bypass_roles)
+   = ARRAY[
+     ('ws_'||:'workspace_key'||'_function_owner')::name,
+     ('ws_'||:'workspace_key'||'_freeze_owner')::name,
+     ('ws_'||:'workspace_key'||'_governance_owner')::name,
+     ('ws_'||:'workspace_key'||'_inbox_owner')::name,
+     ('ws_'||:'workspace_key'||'_plan_migrator')::name,
+     ('ws_'||:'workspace_key'||'_synth_exec')::name,
+     ('ws_'||:'workspace_key'||'_synth_inbox')::name,
+     ('ws_'||:'workspace_key'||'_synth_plan_writer')::name,
+     ('ws_'||:'workspace_key'||'_table_owner')::name
+   ]::name[]);
+SELECT iso_true('ISO-RLS-C11 every bypass identity is NOLOGIN, non-superuser, non-BYPASSRLS and membership-free',
+  NOT EXISTS (
+    SELECT 1 FROM public.iso_rls_bypass_roles b
+    JOIN pg_catalog.pg_roles r ON r.rolname=b.role_name
+    WHERE r.rolcanlogin OR r.rolsuper OR r.rolbypassrls OR
+          EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m WHERE m.roleid=r.oid OR m.member=r.oid)
+  ));
+
 -- Unknown and indirect-grantee roles must not bypass the principal predicate merely because
 -- they are absent from the application-role inventory. Exercise column grants, inherited grants and PUBLIC.
 DO $roles$
