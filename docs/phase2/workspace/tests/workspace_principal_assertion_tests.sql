@@ -318,7 +318,7 @@ BEGIN
                      OR has_column_privilege(r.oid,c.oid,a.attname,'INSERT')
                      OR has_column_privilege(r.oid,c.oid,a.attname,'UPDATE')))
    )
-   AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_application_roles)
+   AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_principal_required_roles)
    AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
    AND r.rolname <> current_user;
   RAISE NOTICE 'ISO-RLS-C3 unclassified effective roles: %', coalesce(v,'none');
@@ -343,11 +343,24 @@ SELECT iso_true('ISO-RLS-C3 every effective holder of a student-scoped table/col
                   OR has_column_privilege(r.oid, c.oid, a.attname, 'UPDATE'))
            )
      )
-       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_application_roles)
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_principal_required_roles)
        AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
        AND r.rolname <> current_user
   ));
 
+SELECT iso_true('ISO-RLS-C12 principal-required catalog includes app roles and PostgreSQL broad-data roles',
+  (SELECT array_agg(role_name ORDER BY role_name) FROM public.iso_principal_required_roles)
+   = ARRAY[
+     ('pg_read_all_data')::name,
+     ('pg_write_all_data')::name,
+     ('ws_'||:'workspace_key'||'_exporter')::name,
+     ('ws_'||:'workspace_key'||'_exporter_login')::name,
+     ('ws_'||:'workspace_key'||'_runtime')::name,
+     ('ws_'||:'workspace_key'||'_runtime_login')::name,
+     ('ws_'||:'workspace_key'||'_transfer_ctl')::name,
+     ('ws_'||:'workspace_key'||'_worker')::name,
+     ('ws_'||:'workspace_key'||'_worker_login')::name
+   ]::name[]);
 SELECT iso_true('ISO-RLS-C10 bypass allowlist contains exactly the reviewed owner and synthetic identities',
   (SELECT array_agg(role_name ORDER BY role_name) FROM public.iso_rls_bypass_roles)
    = ARRAY[
@@ -409,7 +422,7 @@ SELECT iso_true('ISO-RLS-C7 audit detects PUBLIC table privileges as unclassifie
     SELECT 1 FROM pg_catalog.pg_roles r
      WHERE r.rolname = 'ws_'||current_setting('app.workspace_key')||'_unclassified'
        AND has_table_privilege(r.oid,'public.students'::regclass,'SELECT')
-       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_application_roles)
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_principal_required_roles)
        AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
   ));
 SELECT format('SET ROLE %I', 'ws_'||current_setting('app.workspace_key')||'_unclassified') \gexec
