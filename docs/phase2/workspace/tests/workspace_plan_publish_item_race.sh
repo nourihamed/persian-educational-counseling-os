@@ -48,6 +48,8 @@ psql -X -v ON_ERROR_STOP=1 -v workspace_key="$KEY" -q -d "$DB" \
 
 # Seed one item in V2, so the publication-first case can pass C1 and hold the version lock.
 psql -X -v ON_ERROR_STOP=1 -q -d "$DB" <<SQL
+SET lock_timeout='8s';
+SET statement_timeout='15s';
 SET SESSION AUTHORIZATION $WRITER;
 BEGIN;
 SELECT test_establish('counselor','b7500000-0000-0000-0000-000000000001');
@@ -71,16 +73,18 @@ VALUES ('$ITEM_A','$V1','a7580000-0000-0000-0000-000000000001','$STU',1,
 COMMIT;
 RESET SESSION AUTHORIZATION;
 SQL
-psql -X -q -d "$DB" -f "$W/a1.sql" >"$W/a1.log" 2>&1 & PA=$!
+psql -X -v ON_ERROR_STOP=1 -q -d "$DB" -f "$W/a1.sql" >"$W/a1.log" 2>&1 & PA=$!
 for _ in $(seq 1 200); do [ -f "$W/a1_ready" ] && break; kill -0 "$PA" 2>/dev/null || { cat "$W/a1.log"; exit 1; }; sleep 0.05; done
 [ -f "$W/a1_ready" ] || { echo "FAIL WS-PLN-PUB-RACE-01 item session did not acquire the version lock"; cat "$W/a1.log"; exit 1; }
 
 cat > "$W/b1.sql" <<SQL
+SET lock_timeout='8s';
+SET statement_timeout='15s';
 BEGIN;
 UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='$V1';
 COMMIT;
 SQL
-psql -X -q -d "$DB" -f "$W/b1.sql" >"$W/b1.log" 2>&1 & PB=$!
+psql -X -v ON_ERROR_STOP=1 -q -d "$DB" -f "$W/b1.sql" >"$W/b1.log" 2>&1 & PB=$!
 BLOCKED=0
 for _ in $(seq 1 200); do
   N="$(psql -X -tA -d "$DB" -c "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%$V1%'")"
@@ -98,17 +102,21 @@ echo "PASS WS-PLN-PUB-RACE-01/02/03 item-first: publisher waits, sees the item, 
 
 # CASE B — Publisher locks a non-empty draft first; late item insert blocks, then fails after publication.
 cat > "$W/b2.sql" <<SQL
+SET lock_timeout='8s';
+SET statement_timeout='15s';
 BEGIN;
 UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='$V2';
 \! touch "$W/b2_ready"
 \! while [ ! -f "$W/b2_go" ]; do sleep 0.05; done
 COMMIT;
 SQL
-psql -X -q -d "$DB" -f "$W/b2.sql" >"$W/b2.log" 2>&1 & PB2=$!
+psql -X -v ON_ERROR_STOP=1 -q -d "$DB" -f "$W/b2.sql" >"$W/b2.log" 2>&1 & PB2=$!
 for _ in $(seq 1 200); do [ -f "$W/b2_ready" ] && break; kill -0 "$PB2" 2>/dev/null || { cat "$W/b2.log"; exit 1; }; sleep 0.05; done
 [ -f "$W/b2_ready" ] || { echo "FAIL WS-PLN-PUB-RACE-04 publisher did not hold its row lock"; cat "$W/b2.log"; exit 1; }
 
 cat > "$W/a2.sql" <<SQL
+SET lock_timeout='8s';
+SET statement_timeout='15s';
 SET SESSION AUTHORIZATION $WRITER;
 BEGIN;
 SELECT test_establish('counselor','b7500000-0000-0000-0000-000000000001');
@@ -118,7 +126,7 @@ VALUES ('$ITEM_B2','$V2','a7580000-0000-0000-0000-000000000002','$STU',2,
 COMMIT;
 RESET SESSION AUTHORIZATION;
 SQL
-psql -X -q -d "$DB" -f "$W/a2.sql" >"$W/a2.log" 2>&1 & PA2=$!
+psql -X -v ON_ERROR_STOP=1 -q -d "$DB" -f "$W/a2.sql" >"$W/a2.log" 2>&1 & PA2=$!
 BLOCKED=0
 for _ in $(seq 1 200); do
   N="$(psql -X -tA -d "$DB" -c "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%$ITEM_B2%'")"
