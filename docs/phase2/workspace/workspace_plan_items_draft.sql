@@ -292,19 +292,39 @@ BEGIN
                     'that supersedes it' USING ERRCODE='check_violation';
   END IF;
   IF TG_OP = 'UPDATE' THEN
+    -- Publication serializes against PlanItem insertion. The UPDATE already takes a NO KEY UPDATE row
+    -- lock; restate the lock here as part of the documented protocol. Item insertion takes FOR SHARE
+    -- on this same PlanVersion row before checking its status and inserting the item.
+    PERFORM 1 FROM public.student_plan_versions v
+      WHERE v.plan_version_id = OLD.plan_version_id FOR NO KEY UPDATE;
     IF (NEW.content_model, NEW.supersedes_plan_version_id, NEW.change_reason, NEW.created_by_membership_id)
        IS DISTINCT FROM
        (OLD.content_model, OLD.supersedes_plan_version_id, OLD.change_reason, OLD.created_by_membership_id) THEN
       RAISE EXCEPTION 'a plan version''s content model, supersession, change reason and author are fixed at '
                       'creation' USING ERRCODE='check_violation';
     END IF;
-    -- Decision C1 (Product Owner, 2026-11-20): an EMPTY normalized version cannot be published.
-    IF NEW.status = 'published' AND OLD.status <> 'published' AND NEW.content_model = 'normalized'
-       AND NOT EXISTS (SELECT 1 FROM public.plan_items i WHERE i.plan_version_id = NEW.plan_version_id) THEN
-      RAISE EXCEPTION 'publishing an EMPTY normalized plan version is prohibited (Product Owner decision '
-                      'WS-PLAN-01 C1)' USING ERRCODE='check_violation';
+    IF NEW.status IS DISTINCT FROM OLD.status THEN
+      -- The only approved publication transition is normalized draft -> published. Legacy JSON is
+      -- read-only (E1), and all other lifecycle edges remain undecided and fail-closed.
+      IF OLD.status <> 'draft' OR NEW.status <> 'published' OR NEW.content_model <> 'normalized' THEN
+        RAISE EXCEPTION 'only a normalized draft may be published; other PlanVersion status transitions are '
+                        'undecided and refused (WS-PLAN-01)' USING ERRCODE='check_violation';
+      END IF;
+      -- Decision C1: count only after the PlanVersion row lock is held, so an item insert cannot race
+      -- between the emptiness check and publication.
+      IF NOT EXISTS (SELECT 1 FROM public.plan_items i WHERE i.plan_version_id = NEW.plan_version_id) THEN
+        RAISE EXCEPTION 'publishing an EMPTY normalized plan version is prohibited (Product Owner decision '
+                        'WS-PLAN-01 C1)' USING ERRCODE='check_violation';
+      END IF;
     END IF;
     RETURN NEW;
+  END IF;
+
+  -- H-02: every newly inserted PlanVersion, including a migration-created legacy row, starts as draft.
+  -- Historical rows that predate this trigger are untouched. Publication is a separate guarded UPDATE.
+  IF NEW.status <> 'draft' THEN
+    RAISE EXCEPTION 'a new PlanVersion must be inserted as draft; direct published insertion is prohibited'
+      USING ERRCODE='check_violation';
   END IF;
 
   IF NEW.content_model = 'legacy_json' THEN
@@ -409,8 +429,13 @@ BEGIN
                     'caller binding exists; plan items are writable only by the synthetic test identity'
       USING ERRCODE='insufficient_privilege';
   END IF;
+  -- Shared lock is the other half of the publication protocol: publication's UPDATE/NO KEY UPDATE
+  -- lock conflicts with this FOR SHARE. If item insertion wins, publication waits and then sees the item;
+  -- if publication wins, this waits and then observes published, refusing the late item.
   SELECT v.status, v.content_model INTO v_status, v_model
-    FROM public.student_plan_versions v WHERE v.plan_version_id = NEW.plan_version_id;
+    FROM public.student_plan_versions v
+   WHERE v.plan_version_id = NEW.plan_version_id
+   FOR SHARE;
   IF v_model IS DISTINCT FROM 'normalized' THEN
     RAISE EXCEPTION 'plan items belong only to normalized plan versions; a legacy_json version keeps its '
                     'content in plan_content' USING ERRCODE='check_violation';
