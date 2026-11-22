@@ -588,11 +588,12 @@ BEGIN
     -- the synthetic plan writer acts for a verified principal in the isolated test harness only
     EXECUTE format('GRANT EXECUTE ON FUNCTION establish_principal(text, text) TO %I', wr);
   END IF;
-  IF to_regclass('public.iso_application_roles') IS NOT NULL THEN
-    EXECUTE format('GRANT SELECT ON TABLE iso_application_roles TO %I', fo);
-    DELETE FROM iso_application_roles;
-    FOREACH r IN ARRAY ARRAY['runtime','runtime_login','worker','worker_login','exporter','exporter_login','transfer_ctl'] LOOP
-      INSERT INTO iso_application_roles(role_name) VALUES ('ws_'||k||'_'||r);
+  IF to_regclass('public.iso_principal_required_roles') IS NOT NULL THEN
+    EXECUTE format('GRANT SELECT ON TABLE iso_principal_required_roles TO %I', fo);
+    DELETE FROM iso_principal_required_roles;
+    FOREACH r IN ARRAY ARRAY['runtime','runtime_login','worker','worker_login','exporter','exporter_login','transfer_ctl',
+                              'pg_read_all_data','pg_write_all_data'] LOOP
+      INSERT INTO iso_principal_required_roles(role_name) VALUES (CASE WHEN r LIKE 'pg\\_%' THEN r ELSE 'ws_'||k||'_'||r END);
     END LOOP;
   END IF;
   IF to_regclass('public.iso_rls_bypass_roles') IS NOT NULL THEN
