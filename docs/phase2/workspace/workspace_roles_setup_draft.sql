@@ -593,7 +593,7 @@ BEGIN
     DELETE FROM iso_principal_required_roles;
     FOREACH r IN ARRAY ARRAY['runtime','runtime_login','worker','worker_login','exporter','exporter_login','transfer_ctl',
                               'pg_read_all_data','pg_write_all_data'] LOOP
-      INSERT INTO iso_principal_required_roles(role_name) VALUES (CASE WHEN r LIKE 'pg\\_%' THEN r ELSE 'ws_'||k||'_'||r END);
+      INSERT INTO iso_principal_required_roles(role_name) VALUES (CASE WHEN left(r,3) = 'pg_' THEN r ELSE 'ws_'||k||'_'||r END);
     END LOOP;
   END IF;
   IF to_regclass('public.iso_rls_bypass_roles') IS NOT NULL THEN
