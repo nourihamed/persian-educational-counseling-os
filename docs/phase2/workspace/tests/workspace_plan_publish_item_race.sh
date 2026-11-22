@@ -167,8 +167,8 @@ SELECT test_establish('counselor','b7500000-0000-0000-0000-000000000001');
 INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
 VALUES ('$ITEM_C','$V3','a7580000-0000-0000-0000-000000000003','$STU',1,
         'a7570000-0000-0000-0000-000000000001','2026-11-22','Asia/Tehran','b7500000-0000-0000-0000-000000000001');
-\\! touch "$W/a3_ready"
-\\! while [ ! -f "$W/a3_go" ]; do sleep 0.05; done
+\! touch "$W/a3_ready"
+\! while [ ! -f "$W/a3_go" ]; do sleep 0.05; done
 ROLLBACK;
 RESET SESSION AUTHORIZATION;
 SQL
@@ -209,8 +209,8 @@ SET lock_timeout='8s';
 SET statement_timeout='15s';
 BEGIN;
 UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='$V4';
-\\! touch "$W/b4_ready"
-\\! while [ ! -f "$W/b4_go" ]; do sleep 0.05; done
+\! touch "$W/b4_ready"
+\! while [ ! -f "$W/b4_go" ]; do sleep 0.05; done
 ROLLBACK;
 SQL
 psql -X -v ON_ERROR_STOP=1 -q -d "$DB" -f "$W/b4.sql" >"$W/b4.log" 2>&1 & PB4=$!
