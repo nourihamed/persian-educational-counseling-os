@@ -1,7 +1,7 @@
 # TEST_PLAN.md
-## Phase 2 Control Plane + Workspace acceptance contracts (2026-11-09)
+## Phase 2 Control Plane + Workspace acceptance contracts (reconciled 2026-11-22)
 
-**Latest successful execution:** GitHub Actions Run #336, PostgreSQL 16, exact SQL/test tree at commit `52bd0347b3aba4f816d996065122ed0d362bae5f` (run status SUCCESS). It includes `WS-CAP-RACE-01`. Run #231 remains evidence only for its exact historical tree. Later documentation commits were followed by a new executable capacity-race script and workflow change, so the latest test tree is not covered by Run #231. Run #336 completed SUCCESS on PostgreSQL 16 at exact SHA `52bd0347b3aba4f816d996065122ed0d362bae5f`; log confirms `PASS WS-CAP-RACE-01` for two different enrollments competing for the final slot. Later Workspace role-source schema/fixture/test commits are not covered; fresh CI for current HEAD remains pending. This is synthetic draft-SQL evidence, not API/runtime/production/HA approval.
+**Latest successful execution:** GitHub Actions [45032597727](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/45032597727), PostgreSQL 16.16, exact remediation tree `adddd4a1f199f0a8fe4eaef88c126950d1d6e9dd` (SUCCESS). Steps 15/16/17 and repository secret/register checks 30/31 passed. It includes the restrictive RLS audit (ISO-RLS-C3..C16), direct published PlanVersion INSERT rejection (PLN-H2-01..03), fail-closed transition graph tests (PLN-H4-01..04), all four PlanItem/publication lock/rollback cases (WS-PLN-PUB-RACE-01..11), the final-capacity-slot race (WS-CAP-RACE-01), and full schema regression. This is synthetic draft-SQL evidence only; it is not API/runtime/production/HA approval.
 
 | ID | Required test | Status |
 |---|---|---|
@@ -30,7 +30,7 @@
 | CP-FAIL-01 | Control Plane outage/ambiguous ownership denies student-data access | NOT RUN (runtime fail-closed integration absent) |
 | WS-SCHEMA-01 | Workspace membership, branch/type, assignments, guardian record shape, educational domain, immutable versions, credit ledger, capacity, files, notifications, legal holds and audit | EXECUTED / PASS for included schema fixtures |
 | WS-ROLE-01 | Per-Workspace unique role names, object owners, no elevated runtime attributes, least-privilege grants and two-database CONNECT denial | EXECUTED / PASS in two synthetic databases; production credentials and API/data isolation NOT RUN |
-| WS-ISO-01 | Workspace A cannot access Workspace B data through API/repository/files/jobs | NOT RUN (database CONNECT ACL only was tested) |
+| WS-ISO-01 | Workspace A cannot access Workspace B data through API/repository/files/jobs | EXECUTED / PASS for synthetic DB principal/RLS fence, including ISO-RLS-C3..C16 and principal races (Actions 45032597727 step 15); API/repository/file/job E2E remains NOT RUN because those surfaces do not exist |
 | WS-AUTH-01 | Counselor/manager object and assignment scope enforced | NOT RUN (runtime authorization absent) |
 | WS-PARENT-01 | Per-child/per-permission parent isolation; expiry/revocation/legal matrix | NOT RUN |
 | WS-VERSION-01 | Published ProgramVersion/StudentPlanVersion immutable | EXECUTED / PASS |
@@ -40,7 +40,7 @@
 | WS-ACT-RACE-01 | Concurrent activation of the same enrollment yields one debit, capacity reservation and audit event | EXECUTED / PASS |
 | WS-CREDIT-01 | Wallet balance cannot go negative; reversals are exact, append-only and single-use | EXECUTED / PASS for included ledger cases; payment/refund/renewal policy NOT RUN |
 | WS-CREDIT-UNIT-01 | Student Credit unit is CRD, not a fiat currency code | EXECUTED / PASS |
-| WS-CAP-01 | Atomic active-student capacity ceiling and idempotent capacity event | EXECUTED / PASS for included cases; two different students racing for last slot and archived exclusion NOT RUN |
+| WS-CAP-01 | Atomic active-student capacity ceiling and idempotent capacity event | EXECUTED / PASS; final-slot race WS-CAP-RACE-01 and archive exclusion ARC-15 passed in Actions 45032597727 |
 | OPS-RESTORE-01 | Independent encrypted backup restore drill, failover and consistency evidence | NOT RUN |
 
 A test may be marked IMPLEMENTED only when an executable test exists, EXECUTED only with reproducible logs on the exact reviewed SQL/test tree, and PASS only after successful execution. Static review is not execution. Phase 2 cannot pass while required critical security/integrity tests remain NOT RUN.
@@ -1224,6 +1224,8 @@ Historical "NOT RUN" statements in the sections above keep their date and scope.
 | 09a/c | worker without a principal | reads and updates nothing |
 | C3 | every role holding a privilege on a student table | classified; an unknown role fails |
 
+**Transition-graph caveat (important):** A2/B1/C1/D1/E1 do not approve a complete from-status → to-status matrix. The base schema's `plan_item_transition_rules` table is intentionally EMPTY and every unlisted edge is refused. The plan test suite seeds disposable synthetic rules only to exercise the guard mechanics; those fixture edges are not production policy or Product Owner approval.
+
 ### Plan decisions (A2 / B1 / C1 / D1 / E1)
 
 | Test | Case | Result |
@@ -1246,6 +1248,20 @@ Historical "NOT RUN" statements in the sections above keep their date and scope.
 | E1e | no principal | refused |
 | E1f | the legacy version afterwards | unchanged |
 | PLN-M07 | relabelling a legacy row | refused (read-only) |
+
+### Supervisor remediation regression tests (2026-11-22)
+
+| Test | Case | Result |
+|---|---|---|
+| ISO-RLS-C3..C16 | all effective table/column privileges; direct/indirect membership; exact bypass and principal-required catalogs; PUBLIC ACLs; restrictive-policy widening; PostgreSQL broad-data roles | PASS — Actions 45032597727 step 15 |
+| PLN-H2-01 | runtime column-granted INSERT cannot create a normalized PlanVersion directly as published | PASS — SQLSTATE check_violation |
+| PLN-H2-02 | migration identity cannot insert a legacy PlanVersion directly as published | PASS — SQLSTATE check_violation |
+| PLN-H2-03 | published PlanVersion mutation is refused | PASS — immutable-version guard |
+| WS-PLN-PUB-RACE-01..03 | item insert locks first; publisher waits and then sees the committed item | PASS |
+| WS-PLN-PUB-RACE-04..06 | publisher locks first; late item waits and then refuses published version | PASS |
+| WS-PLN-PUB-RACE-07..09 | item insert locks first but rolls back; publisher waits and rejects empty publication | PASS |
+| WS-PLN-PUB-RACE-10..11 | publisher locks first but rolls back; waiting item insert proceeds against restored draft | PASS |
+| PLN-H4-01..04 | exact unapproved status edges refused; application/synthetic actors cannot modify transition-rule catalog | PASS |
 
 ### Negative controls (measured)
 
@@ -1272,11 +1288,12 @@ Historical "NOT RUN" statements in the sections above keep their date and scope.
 | refusal of transitions to `planned` removed | PLN-41b |
 | student-actor principal binding removed | PLN-A2g |
 
-**Local result:** fresh run, 25 steps, **1155 PASS, 0 FAIL, 0 OPEN, 1 SKIP** (the WS-ROLE-17 mirror run). The 3 ISO-GAP
-OPEN lines are gone because they are now assertions. This is not CI.
+**Historical local result (2026-11-20):** fresh run, 25 steps, **1155 PASS, 0 FAIL, 0 OPEN, 1 SKIP** (WS-ROLE-17 mirror run). The newer exact-tree CI evidence is Actions 45032597727 above.
 
 **NOT RUN**
-- **Production verification:** PS-1..PS-4 undecided, and fail-closed by design.
+- **Production verification:** PS-1..PS-8 undecided, and fail-closed by design; M-01 trusted test/production deployment separation still needs Platform Security evidence.
 - **Real API or worker paths:** none exist.
 - **A student read scope:** undecided, so denied.
+- **Background-job identity and manager permission vocabulary:** undecided, so no student rows are visible to those roles.
+- **Production API/repository/file/export/notification paths:** not implemented; no E2E isolation claim.
 - **Workspace-level notifications with no student:** these are now invisible to application roles. Recorded as open.

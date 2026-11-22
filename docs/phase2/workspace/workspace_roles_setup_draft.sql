@@ -463,6 +463,7 @@ DO $plan$
 DECLARE
   k text := current_setting('app.workspace_key');
   rt text := 'ws_'||k||'_runtime';
+  fo text := 'ws_'||k||'_function_owner';
   wr text := 'ws_'||k||'_synth_plan_writer';
   mg text := 'ws_'||k||'_plan_migrator';
   k0 text := current_setting('app.workspace_key');  -- k is reused as a loop variable below
@@ -510,7 +511,13 @@ BEGIN
   -- runtime: read plan items, history and derived views; never write them
   EXECUTE format('REVOKE ALL ON TABLE plan_items, plan_item_status_events FROM %I', rt);
   EXECUTE format('GRANT SELECT ON TABLE plan_items, plan_item_status_events, plan_item_current_status, '
-                 'plan_version_rendered, plan_privileged_identities TO %I', rt);
+                 'plan_version_rendered, plan_privileged_identities, plan_item_transition_rules TO %I', rt);
+  -- The synthetic writer's BEFORE triggers execute as invoker so plan_identity_is() sees the real
+  -- NOLOGIN writer identity. PostgreSQL requires UPDATE on at least one column for SELECT ... FOR SHARE /
+  -- FOR NO KEY UPDATE; grant only status, whose draft->published edge is guarded by the trigger. Runtime
+  -- receives no UPDATE privilege. The writer is synthetic-only and membership-free (F-05).
+  EXECUTE format('GRANT UPDATE(status) ON TABLE student_plan_versions TO %I', wr);
+
   -- runtime: create plan versions WITHOUT being able to choose legacy_json
   EXECUTE format('REVOKE INSERT ON TABLE student_plan_versions FROM %I', rt);
   EXECUTE format('GRANT INSERT (plan_version_id, plan_id, version_no, source_program_version_id, input_snapshot, '
@@ -521,7 +528,7 @@ BEGIN
   -- synthetic writer: exactly what writing items and transitions needs, and nothing else
   EXECUTE format('GRANT SELECT, INSERT ON TABLE plan_items, plan_item_status_events TO %I', wr);
   EXECUTE format('GRANT SELECT ON TABLE plan_item_current_status, plan_version_rendered, plan_privileged_identities, '
-                 'student_plan_versions, student_plans, counselor_assignments, enrollments, workspace_memberships, '
+                 'plan_item_transition_rules, student_plan_versions, student_plans, counselor_assignments, enrollments, workspace_memberships, '
                  'membership_roles, students, topics, subtopics, activities, exams, reviews, assignments TO %I', wr);
 
   -- migration identity: insert plan versions (including legacy_json) and read what the guard reads
@@ -588,11 +595,20 @@ BEGIN
     -- the synthetic plan writer acts for a verified principal in the isolated test harness only
     EXECUTE format('GRANT EXECUTE ON FUNCTION establish_principal(text, text) TO %I', wr);
   END IF;
-  IF to_regclass('public.iso_application_roles') IS NOT NULL THEN
-    EXECUTE format('GRANT SELECT ON TABLE iso_application_roles TO %I', fo);
-    DELETE FROM iso_application_roles;
-    FOREACH r IN ARRAY ARRAY['runtime','runtime_login','worker','worker_login','exporter','exporter_login'] LOOP
-      INSERT INTO iso_application_roles(role_name) VALUES ('ws_'||k||'_'||r);
+  IF to_regclass('public.iso_principal_required_roles') IS NOT NULL THEN
+    EXECUTE format('GRANT SELECT ON TABLE iso_principal_required_roles TO %I', fo);
+    DELETE FROM iso_principal_required_roles;
+    FOREACH r IN ARRAY ARRAY['runtime','runtime_login','worker','worker_login','exporter','exporter_login','transfer_ctl',
+                              'pg_read_all_data','pg_write_all_data'] LOOP
+      INSERT INTO iso_principal_required_roles(role_name) VALUES (CASE WHEN left(r,3) = 'pg_' THEN r ELSE 'ws_'||k||'_'||r END);
+    END LOOP;
+  END IF;
+  IF to_regclass('public.iso_rls_bypass_roles') IS NOT NULL THEN
+    EXECUTE format('GRANT SELECT ON TABLE iso_rls_bypass_roles TO %I', fo);
+    DELETE FROM iso_rls_bypass_roles;
+    FOREACH r IN ARRAY ARRAY['table_owner','function_owner','governance_owner','freeze_owner',
+                              'inbox_owner','synth_plan_writer','plan_migrator'] LOOP
+      INSERT INTO iso_rls_bypass_roles(role_name) VALUES ('ws_'||k||'_'||r);
     END LOOP;
   END IF;
 END $iso_principal$;

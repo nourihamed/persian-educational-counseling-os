@@ -32,13 +32,14 @@
 --   * No priority, urgency, estimated workload scale, dependencies, conflict groups, generation
 --     provenance, idempotency key or carry-forward link — the contract lists them, the decision did not
 --     settle their vocabularies, and contract §9 forbids inventing weights or thresholds.
---   * No full transition graph. Product Owner decisions of 2026-11-20 settle: A2 (students record
---     in_progress / completed / partially_completed; only the responsible counselor records deferred /
---     skipped / cancelled), B1 (no transition on a draft version's items), C1 (an empty version cannot be
---     published), D1 (completed / skipped / cancelled are terminal), E1 (legacy JSON stays read-only).
---     Everything those decisions do not name is REFUSED and recorded as open: a transition TO planned, a
---     counselor recording a student status, a student recording a counselor status. Whether a student may
---     edit generated items (contract §9) is also still open.
+--   * No Product Owner-approved from_status -> to_status graph. Decisions A2/B1/C1/D1/E1 settle actor
+--     categories, draft publication state, empty publication, terminal destinations and legacy read-only
+--     semantics, but do not approve exact edges. The base schema therefore creates an EMPTY
+--     plan_item_transition_rules table: every edge fails closed until a separate PO decision and reviewed
+--     migration populate it. Test suites seed disposable test-only edges solely to exercise guard mechanics;
+--     those fixtures are not production policy and are not evidence that the PO approved those edges.
+--     A transition TO planned, counselor recording a student status, and student recording a counselor
+--     status remain explicitly refused. Whether a student may edit generated items (contract §9) is open.
 --   * Engine-created items will need a non-membership actor; none exists until Phase 12.
 --
 -- CORRECTED AFTER THE SUPERVISOR REVIEW OF 8df7d5e (2026-11-19), FINDING F-05 (HIGH): the privileged
@@ -158,7 +159,8 @@ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $body$
       LEFT JOIN public.plan_privileged_identities i ON i.purpose = n.purpose
       LEFT JOIN pg_catalog.pg_roles r ON r.rolname = i.role_name),
   guarded(tbl) AS (VALUES ('public.plan_items'), ('public.plan_item_status_events'),
-                          ('public.student_plan_versions'), ('public.plan_privileged_identities')),
+                          ('public.student_plan_versions'), ('public.plan_privileged_identities'),
+                          ('public.plan_item_transition_rules')),
   security_functions(sig) AS (VALUES ('public.plan_identity_is(text)'), ('public.guard_plan_item()'),
                           ('public.guard_plan_item_status_event()'), ('public.guard_plan_version_model()'),
                           ('public.plan_identity_boundary_violations(text[])')),
@@ -269,7 +271,8 @@ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $body$
   -- runtime's column-scoped INSERT on it is intended (F-02) and asserted by PLN-C2/PLN-28.
   UNION ALL SELECT format('%s holds %s on %s', a, priv_name, t.tbl)
     FROM unnest(p_inventory || ARRAY['public']) a
-    CROSS JOIN (VALUES ('public.plan_items'), ('public.plan_item_status_events'), ('public.plan_privileged_identities')) t(tbl)
+    CROSS JOIN (VALUES ('public.plan_items'), ('public.plan_item_status_events'), ('public.plan_privileged_identities'),
+                         ('public.plan_item_transition_rules')) t(tbl)
     CROSS JOIN (VALUES ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE')) v(priv_name)
    WHERE (a = 'public' OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname = a))
      AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_roles r ON r.oid = c.relowner
@@ -292,19 +295,43 @@ BEGIN
                     'that supersedes it' USING ERRCODE='check_violation';
   END IF;
   IF TG_OP = 'UPDATE' THEN
+    IF OLD.status = 'published' THEN
+      RAISE EXCEPTION 'a published PlanVersion is immutable; create a superseding version'
+        USING ERRCODE='check_violation';
+    END IF;
+    -- Publication serializes against PlanItem insertion. The UPDATE already takes a NO KEY UPDATE row
+    -- lock; restate the lock here as part of the documented protocol. Item insertion takes FOR SHARE
+    -- on this same PlanVersion row before checking its status and inserting the item.
+    PERFORM 1 FROM public.student_plan_versions v
+      WHERE v.plan_version_id = OLD.plan_version_id FOR NO KEY UPDATE;
     IF (NEW.content_model, NEW.supersedes_plan_version_id, NEW.change_reason, NEW.created_by_membership_id)
        IS DISTINCT FROM
        (OLD.content_model, OLD.supersedes_plan_version_id, OLD.change_reason, OLD.created_by_membership_id) THEN
       RAISE EXCEPTION 'a plan version''s content model, supersession, change reason and author are fixed at '
                       'creation' USING ERRCODE='check_violation';
     END IF;
-    -- Decision C1 (Product Owner, 2026-11-20): an EMPTY normalized version cannot be published.
-    IF NEW.status = 'published' AND OLD.status <> 'published' AND NEW.content_model = 'normalized'
-       AND NOT EXISTS (SELECT 1 FROM public.plan_items i WHERE i.plan_version_id = NEW.plan_version_id) THEN
-      RAISE EXCEPTION 'publishing an EMPTY normalized plan version is prohibited (Product Owner decision '
-                      'WS-PLAN-01 C1)' USING ERRCODE='check_violation';
+    IF NEW.status IS DISTINCT FROM OLD.status THEN
+      -- The only approved publication transition is normalized draft -> published. Legacy JSON is
+      -- read-only (E1), and all other lifecycle edges remain undecided and fail-closed.
+      IF OLD.status <> 'draft' OR NEW.status <> 'published' OR NEW.content_model <> 'normalized' THEN
+        RAISE EXCEPTION 'only a normalized draft may be published; other PlanVersion status transitions are '
+                        'undecided and refused (WS-PLAN-01)' USING ERRCODE='check_violation';
+      END IF;
+      -- Decision C1: count only after the PlanVersion row lock is held, so an item insert cannot race
+      -- between the emptiness check and publication.
+      IF NOT EXISTS (SELECT 1 FROM public.plan_items i WHERE i.plan_version_id = NEW.plan_version_id) THEN
+        RAISE EXCEPTION 'publishing an EMPTY normalized plan version is prohibited (Product Owner decision '
+                        'WS-PLAN-01 C1)' USING ERRCODE='check_violation';
+      END IF;
     END IF;
     RETURN NEW;
+  END IF;
+
+  -- H-02: every newly inserted PlanVersion, including a migration-created legacy row, starts as draft.
+  -- Historical rows that predate this trigger are untouched. Publication is a separate guarded UPDATE.
+  IF NEW.status <> 'draft' THEN
+    RAISE EXCEPTION 'a new PlanVersion must be inserted as draft; direct published insertion is prohibited'
+      USING ERRCODE='check_violation';
   END IF;
 
   IF NEW.content_model = 'legacy_json' THEN
@@ -409,8 +436,13 @@ BEGIN
                     'caller binding exists; plan items are writable only by the synthetic test identity'
       USING ERRCODE='insufficient_privilege';
   END IF;
+  -- Shared lock is the other half of the publication protocol: publication's UPDATE/NO KEY UPDATE
+  -- lock conflicts with this FOR SHARE. If item insertion wins, publication waits and then sees the item;
+  -- if publication wins, this waits and then observes published, refusing the late item.
   SELECT v.status, v.content_model INTO v_status, v_model
-    FROM public.student_plan_versions v WHERE v.plan_version_id = NEW.plan_version_id;
+    FROM public.student_plan_versions v
+   WHERE v.plan_version_id = NEW.plan_version_id
+   FOR SHARE;
   IF v_model IS DISTINCT FROM 'normalized' THEN
     RAISE EXCEPTION 'plan items belong only to normalized plan versions; a legacy_json version keeps its '
                     'content in plan_content' USING ERRCODE='check_violation';
@@ -481,6 +513,19 @@ LANGUAGE sql STABLE AS $body$
   SELECT coalesce((SELECT e.to_status FROM public.plan_item_status_events e
                     WHERE e.plan_item_id = p_item ORDER BY e.seq_no DESC LIMIT 1), 'planned');
 $body$;
+
+-- H-04: the accepted PO decisions authorize actor categories and terminal states, but do NOT define
+-- the complete from_status -> to_status graph. Keep this table EMPTY in the base draft. A later, explicit
+-- Product Owner decision must populate it through a reviewed migration; absent an exact edge, the guard
+-- refuses the transition. Test-only fixtures may populate it in disposable synthetic databases.
+CREATE TABLE plan_item_transition_rules (
+  actor_kind  text NOT NULL CHECK (actor_kind IN ('membership','student')),
+  from_status text NOT NULL CHECK (from_status IN ('planned','in_progress','completed','partially_completed','deferred','skipped','cancelled')),
+  to_status   text NOT NULL CHECK (to_status IN ('planned','in_progress','completed','partially_completed','deferred','skipped','cancelled')),
+  PRIMARY KEY (actor_kind, from_status, to_status),
+  CHECK (from_status <> to_status)
+);
+REVOKE ALL ON TABLE plan_item_transition_rules FROM PUBLIC;
 
 CREATE FUNCTION guard_plan_item_status_event() RETURNS trigger LANGUAGE plpgsql AS $body$
 DECLARE v_current text; v_next integer;
@@ -555,6 +600,17 @@ BEGIN
       RAISE EXCEPTION 'membership % is not the responsible counselor of student %',
         NEW.actor_membership_id, NEW.student_id USING ERRCODE='insufficient_privilege';
     END IF;
+  END IF;
+  -- H-04: actor/destination authorization is not a substitute for an approved state edge. This table is
+  -- empty in the schema draft; therefore every edge remains refused until the Product Owner approves it.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.plan_item_transition_rules r
+     WHERE r.actor_kind = NEW.actor_kind
+       AND r.from_status = NEW.from_status
+       AND r.to_status = NEW.to_status
+  ) THEN
+    RAISE EXCEPTION 'transition edge % -> % for actor % is not explicitly approved; refused fail-closed (WS-PLAN-01 open)',
+      NEW.from_status, NEW.to_status, NEW.actor_kind USING ERRCODE='insufficient_privilege';
   END IF;
   RETURN NEW;
 END; $body$;

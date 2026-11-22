@@ -750,3 +750,11 @@ This evidence applies only to the synthetic SQL/schema cases in the workflow. Pr
 - Added: contact-change draft (one-time proof, atomic command, audit, outbox, separate role family) with tests and a race test.
 - Added: Workspace archive command with atomic capacity release, idempotency and a counter-reconciliation view, with tests under the runtime role.
 - Drafts and synthetic data only. No credit policy on archive, no reactivation, no production verifier. Not an approval.
+
+### Phase 2 supervisor remediation — 2026-11-22 (draft branch, unmerged)
+- H-01: RLS policy is now a mandatory RESTRICTIVE principal fence across every student-scoped table. Unknown roles fail closed; only exact owner/test identities bypass the principal check. Effective table/column privileges, indirect memberships, PUBLIC ACLs and PostgreSQL broad-data roles are audited and tested (ISO-RLS-C3..C16).
+- H-02: new PlanVersions must be inserted as draft, including legacy rows; direct published INSERT is refused. Only normalized draft→published is permitted, and published versions remain immutable.
+- H-03: PlanItem insertion and publication share a row-lock protocol. Two-session tests cover item-first/publisher-first order and commit/rollback outcomes with bounded lock/statement timeouts (WS-PLN-PUB-RACE-01..11).
+- H-04: exact actor × from_status × to_status authorization is required. The base transition-rule table is intentionally empty; unapproved edges fail closed. Test-only fixture edges are not Product Owner policy.
+- GitHub Actions run 45030847506 on PostgreSQL 16.16 passed the RLS, PlanItem, schema-regression, secret-scan and unresolved-register checks.
+- Still open: Product Owner transition graph; Platform Security PS-1..PS-8 and trusted test/production separation (M-01); Q-007/Q-020; Review/DailyRoutine/Progress domain gaps; migration strategy; PR integration. Phase 2 remains NOT READY; Phase 3 unauthorized; D-014 synthetic-only.

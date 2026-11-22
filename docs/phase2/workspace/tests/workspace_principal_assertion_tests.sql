@@ -298,13 +298,201 @@ RESET SESSION AUTHORIZATION;
 
 -- Every role that holds a privilege on a student-scoped table is classified: filtered application role,
 -- or a reviewed NOLOGIN owner / synthetic test identity outside RLS. An unclassified role fails.
-SELECT iso_true('ISO-RLS-C3 every role holding a privilege on a student-scoped table is classified',
+-- Effective-privilege audit: covers direct and inherited role grants, table-level and column-level
+-- privileges, and PUBLIC (which has no pg_roles row but is reflected by has_*_privilege).
+DO $diag$
+DECLARE v text;
+BEGIN
+  SELECT string_agg(r.rolname, ', ' ORDER BY r.rolname) INTO v
+    FROM pg_catalog.pg_roles r
+   WHERE EXISTS (
+     SELECT 1 FROM public.student_scoped_tables t
+     JOIN pg_catalog.pg_class c ON c.relnamespace='public'::regnamespace AND c.relname=t.table_name
+     WHERE has_table_privilege(r.oid,c.oid,'SELECT')
+        OR has_table_privilege(r.oid,c.oid,'INSERT')
+        OR has_table_privilege(r.oid,c.oid,'UPDATE')
+        OR has_table_privilege(r.oid,c.oid,'DELETE')
+        OR has_table_privilege(r.oid,c.oid,'TRUNCATE')
+        OR has_table_privilege(r.oid,c.oid,'REFERENCES')
+        OR has_table_privilege(r.oid,c.oid,'TRIGGER')
+        OR EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0
+                    AND NOT a.attisdropped AND
+                    (has_column_privilege(r.oid,c.oid,a.attname,'SELECT')
+                     OR has_column_privilege(r.oid,c.oid,a.attname,'INSERT')
+                     OR has_column_privilege(r.oid,c.oid,a.attname,'UPDATE')
+                     OR has_column_privilege(r.oid,c.oid,a.attname,'REFERENCES')))
+   )
+   AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_principal_required_roles)
+   AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
+   AND r.rolname <> current_user;
+  RAISE NOTICE 'ISO-RLS-C3 unclassified effective roles: %', coalesce(v,'none');
+END $diag$;
+SELECT iso_true('ISO-RLS-C3 every effective holder of a student-scoped table/column privilege is classified',
   NOT EXISTS (
-    SELECT 1 FROM information_schema.role_table_grants g
-      JOIN student_scoped_tables t ON t.table_name = g.table_name AND g.table_schema = 'public'
-     WHERE g.grantee NOT IN (SELECT role_name FROM iso_application_roles)
-       AND g.grantee !~ ('^ws_' || :'workspace_key' || '_(table_owner|function_owner|governance_owner|freeze_owner|inbox_owner|synth_plan_writer|plan_migrator)$')
-       AND g.grantee <> current_user));
+    SELECT 1
+      FROM pg_catalog.pg_roles r
+     WHERE EXISTS (
+       SELECT 1
+         FROM public.student_scoped_tables t
+         JOIN pg_catalog.pg_class c ON c.relnamespace = 'public'::regnamespace AND c.relname = t.table_name
+        WHERE has_table_privilege(r.oid, c.oid, 'SELECT')
+           OR has_table_privilege(r.oid, c.oid, 'INSERT')
+           OR has_table_privilege(r.oid, c.oid, 'UPDATE')
+           OR has_table_privilege(r.oid, c.oid, 'DELETE')
+           OR has_table_privilege(r.oid, c.oid, 'TRIGGER')
+           OR has_table_privilege(r.oid, c.oid, 'REFERENCES')
+           OR has_table_privilege(r.oid, c.oid, 'TRUNCATE')
+           OR EXISTS (
+             SELECT 1 FROM pg_catalog.pg_attribute a
+              WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+                AND (has_column_privilege(r.oid, c.oid, a.attname, 'SELECT')
+                  OR has_column_privilege(r.oid, c.oid, a.attname, 'INSERT')
+                  OR has_column_privilege(r.oid, c.oid, a.attname, 'UPDATE')
+                  OR has_column_privilege(r.oid, c.oid, a.attname, 'REFERENCES'))
+           )
+     )
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_principal_required_roles)
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
+       AND r.rolname <> current_user
+  ));
+
+SELECT iso_true('ISO-RLS-C12 principal-required catalog includes app roles and PostgreSQL broad-data roles',
+  (SELECT array_agg(role_name ORDER BY role_name) FROM public.iso_principal_required_roles)
+   = ARRAY[
+     ('pg_read_all_data')::name,
+     ('pg_write_all_data')::name,
+     ('ws_'||:'workspace_key'||'_exporter')::name,
+     ('ws_'||:'workspace_key'||'_exporter_login')::name,
+     ('ws_'||:'workspace_key'||'_runtime')::name,
+     ('ws_'||:'workspace_key'||'_runtime_login')::name,
+     ('ws_'||:'workspace_key'||'_transfer_ctl')::name,
+     ('ws_'||:'workspace_key'||'_worker')::name,
+     ('ws_'||:'workspace_key'||'_worker_login')::name
+   ]::name[]);
+SELECT iso_true('ISO-RLS-C10 bypass allowlist contains exactly the reviewed owner and synthetic identities',
+  (SELECT array_agg(role_name ORDER BY role_name) FROM public.iso_rls_bypass_roles)
+   = ARRAY[
+     ('ws_'||:'workspace_key'||'_freeze_owner')::name,
+     ('ws_'||:'workspace_key'||'_function_owner')::name,
+     ('ws_'||:'workspace_key'||'_governance_owner')::name,
+     ('ws_'||:'workspace_key'||'_inbox_owner')::name,
+     ('ws_'||:'workspace_key'||'_plan_migrator')::name,
+     ('ws_'||:'workspace_key'||'_synth_plan_writer')::name,
+     ('ws_'||:'workspace_key'||'_table_owner')::name
+   ]::name[]);
+SELECT iso_true('ISO-RLS-C11 every bypass identity is NOLOGIN, non-superuser, non-BYPASSRLS and membership-free',
+  NOT EXISTS (
+    SELECT 1 FROM public.iso_rls_bypass_roles b
+    JOIN pg_catalog.pg_roles r ON r.rolname=b.role_name
+    WHERE r.rolcanlogin OR r.rolsuper OR r.rolbypassrls OR
+          EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m WHERE m.roleid=r.oid OR m.member=r.oid)
+  ));
+
+SET ROLE pg_read_all_data;
+SELECT iso_true('ISO-RLS-C13 pg_read_all_data remains subject to the verified-principal RLS fence',
+  NOT EXISTS (SELECT student_id FROM students));
+RESET ROLE;
+GRANT USAGE ON SCHEMA public TO pg_write_all_data;
+SET ROLE pg_write_all_data;
+DO $write_fence$
+BEGIN
+  BEGIN
+    INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state)
+    VALUES (gen_random_uuid(),gen_random_uuid(),'RLS write-fence negative control','grade_10','active');
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS ISO-RLS-C14 pg_write_all_data cannot insert a student without a verified principal';
+    RETURN;
+  END;
+  RAISE EXCEPTION 'FAIL ISO-RLS-C14 pg_write_all_data inserted a student without a verified principal';
+END $write_fence$;
+RESET ROLE;
+REVOKE USAGE ON SCHEMA public FROM pg_write_all_data;
+
+SELECT iso_true('ISO-RLS-C15 every student-scoped table has the mandatory restrictive principal fence',
+  NOT EXISTS (
+    SELECT 1 FROM public.student_scoped_tables t
+    JOIN pg_catalog.pg_class c ON c.relnamespace='public'::regnamespace AND c.relname=t.table_name
+    WHERE NOT EXISTS (
+      SELECT 1 FROM pg_catalog.pg_policy p
+       WHERE p.polrelid=c.oid AND p.polname='iso_counselor_scope' AND p.polpermissive=false
+    )
+  ));
+
+SELECT iso_true('ISO-RLS-C16 no PUBLIC table-level or column-level privileges exist on student-scoped tables',
+  NOT EXISTS (
+    SELECT 1 FROM public.student_scoped_tables t
+    JOIN pg_catalog.pg_class c ON c.relnamespace='public'::regnamespace AND c.relname=t.table_name
+    WHERE EXISTS (
+      SELECT 1 FROM pg_catalog.aclexplode(coalesce(c.relacl,pg_catalog.acldefault('r',c.relowner))) x
+       WHERE x.grantee=0 AND x.privilege_type IN ('SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER')
+    ) OR EXISTS (
+      SELECT 1 FROM pg_catalog.pg_attribute a,
+           LATERAL pg_catalog.aclexplode(a.attacl) x
+       WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped
+         AND x.grantee=0 AND x.privilege_type IN ('SELECT','INSERT','UPDATE','REFERENCES')
+    )
+  ));
+
+-- Unknown and indirect-grantee roles must not bypass the principal predicate merely because
+-- they are absent from the application-role inventory. Exercise column grants, inherited grants and PUBLIC.
+DO $roles$
+DECLARE k text := current_setting('app.workspace_key');
+BEGIN
+  EXECUTE format('CREATE ROLE %I NOLOGIN INHERIT', 'ws_'||k||'_unclassified');
+  EXECUTE format('CREATE ROLE %I NOLOGIN NOINHERIT', 'ws_'||k||'_unclassified_group');
+  EXECUTE format('GRANT SELECT (student_id) ON TABLE students TO %I', 'ws_'||k||'_unclassified');
+  EXECUTE format('GRANT SELECT ON TABLE students TO %I', 'ws_'||k||'_unclassified_group');
+  EXECUTE format('GRANT %I TO %I', 'ws_'||k||'_unclassified_group', 'ws_'||k||'_unclassified');
+END $roles$;
+
+SELECT iso_true('ISO-RLS-C4 unknown column-grantee role is NOT exempt',
+  NOT public.iso_rls_bypass(('ws_'||current_setting('app.workspace_key')||'_unclassified')::name));
+-- An additional permissive policy must not OR-widen the mandatory restrictive tenant fence.
+CREATE POLICY iso_test_widening_policy ON students AS PERMISSIVE FOR SELECT TO PUBLIC USING (true);
+SELECT format('SET ROLE %I', 'ws_'||current_setting('app.workspace_key')||'_unclassified') \gexec
+SELECT iso_true('ISO-RLS-C5 unknown role with only a column grant sees no student rows without a principal',
+  NOT EXISTS (SELECT student_id FROM students));
+RESET ROLE;
+DROP POLICY iso_test_widening_policy ON students;
+
+SELECT iso_true('ISO-RLS-C6 audit detects unclassified direct/column/inherited privilege holders',
+  EXISTS (
+    SELECT 1 FROM pg_catalog.pg_roles r
+     WHERE r.rolname = 'ws_'||current_setting('app.workspace_key')||'_unclassified'
+       AND EXISTS (
+         SELECT 1 FROM public.student_scoped_tables t
+         JOIN pg_catalog.pg_class c ON c.relnamespace='public'::regnamespace AND c.relname=t.table_name
+         WHERE has_table_privilege(r.oid,c.oid,'SELECT')
+            OR EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a
+                        WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped
+                          AND has_column_privilege(r.oid,c.oid,a.attname,'SELECT'))
+       )
+  ));
+
+GRANT SELECT ON TABLE students TO PUBLIC;
+SELECT iso_true('ISO-RLS-C7 audit detects PUBLIC table privileges as unclassified effective access',
+  EXISTS (
+    SELECT 1 FROM pg_catalog.pg_roles r
+     WHERE r.rolname = 'ws_'||current_setting('app.workspace_key')||'_unclassified'
+       AND has_table_privilege(r.oid,'public.students'::regclass,'SELECT')
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_principal_required_roles)
+       AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
+  ));
+SELECT format('SET ROLE %I', 'ws_'||current_setting('app.workspace_key')||'_unclassified') \gexec
+SELECT iso_true('ISO-RLS-C8 PUBLIC grant still cannot bypass verified-principal row filtering',
+  NOT EXISTS (SELECT student_id FROM students));
+RESET ROLE;
+REVOKE SELECT ON TABLE students FROM PUBLIC;
+
+DO $cleanup$
+DECLARE k text := current_setting('app.workspace_key');
+BEGIN
+  EXECUTE format('REVOKE SELECT (student_id) ON TABLE students FROM %I', 'ws_'||k||'_unclassified');
+  EXECUTE format('REVOKE SELECT ON TABLE students FROM %I', 'ws_'||k||'_unclassified_group');
+  EXECUTE format('REVOKE %I FROM %I', 'ws_'||k||'_unclassified_group', 'ws_'||k||'_unclassified');
+  EXECUTE format('DROP ROLE %I', 'ws_'||k||'_unclassified');
+  EXECUTE format('DROP ROLE %I', 'ws_'||k||'_unclassified_group');
+END $cleanup$;
 
 UPDATE principal_verification_config SET mode = 'disabled';
 SELECT 'PRINCIPAL ASSERTION TESTS COMPLETED (WS-ISO-01 decision B, test-only key; production verification fail-closed)' AS result;

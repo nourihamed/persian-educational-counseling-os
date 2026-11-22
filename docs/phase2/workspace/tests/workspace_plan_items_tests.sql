@@ -99,6 +99,19 @@ INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snaps
 RESET SESSION AUTHORIZATION;
 \ir workspace_principal_test_harness.sql
 
+-- TEST FIXTURES ONLY: these edges exercise the guard mechanics. They are NOT Product Owner-approved
+-- production transition rules. The base draft leaves plan_item_transition_rules empty (fail-closed).
+INSERT INTO plan_item_transition_rules(actor_kind,from_status,to_status) VALUES
+ ('student','planned','in_progress'),
+ ('student','planned','completed'),
+ ('student','planned','partially_completed'),
+ ('student','partially_completed','completed'),
+ ('student','deferred','in_progress'),
+ ('membership','in_progress','deferred'),
+ ('membership','deferred','cancelled'),
+ ('membership','planned','cancelled'),
+ ('membership','planned','skipped');
+
 -- ======================================================================================================
 -- CATALOG
 -- ======================================================================================================
@@ -276,6 +289,27 @@ COMMIT;
 -- STATUS TRANSITIONS — append-only, ordered, attributable, with a reason
 -- ======================================================================================================
 RESET SESSION AUTHORIZATION;
+-- H-02: direct INSERT cannot bypass the guarded publication transition, even for legacy rows.
+SET SESSION AUTHORIZATION :"runtime_role";
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
+SELECT pln_err('PLN-H2-01 a normalized PlanVersion cannot be inserted directly as published',
+  $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,created_by_membership_id,supersedes_plan_version_id,change_reason)
+     VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000001',3,'{}','manual-v1','{}','published','b4000000-0000-0000-0000-00000000000a','a4510000-0000-0000-0000-000000000011','synthetic')$q$,
+  '23514','new PlanVersion must be inserted as draft');
+COMMIT;
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION :"migrator_role";
+SELECT pln_err('PLN-H2-02 a migration-created legacy PlanVersion cannot be inserted directly as published',
+  $q$INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snapshot,rule_version,plan_content,status,content_model)
+     VALUES (gen_random_uuid(),'a4500000-0000-0000-0000-000000000004',2,'{}','legacy','{"historic":true}','published','legacy_json')$q$,
+  '23514','new PlanVersion must be inserted as draft');
+RESET SESSION AUTHORIZATION;
+SELECT pln_err('PLN-H2-03 a published PlanVersion is immutable, including non-content metadata',
+  $q$UPDATE student_plan_versions SET published_at=clock_timestamp() WHERE plan_version_id='a4510000-0000-0000-0000-000000000001'$q$,
+  '23514','published versions are immutable');
+
+
 -- Every transition below is made by the verified principal it names (WS-ISO-01 B) and follows the Product
 -- Owner's decisions: A2 (student: in_progress / completed / partially_completed; responsible counselor:
 -- deferred / skipped / cancelled), B1 (published versions only), D1 (completed / skipped / cancelled are
@@ -542,4 +576,51 @@ COMMIT;
 RESET SESSION AUTHORIZATION;
 
 
-SELECT 'PLAN ITEM TESTS COMPLETED (PLN-C1..C4, PLN-01..80, PLN-A2*, PLN-D1*, PLN-E1*): decisions A2/B1/C1/D1/E1 enforced under verified principals; no scheduling logic exists' AS result;
+SELECT pln_true('PLN-H4-04 no application or synthetic actor can write the transition-policy catalog',
+  NOT has_table_privilege('ws_'||:'workspace_key'||'_runtime','plan_item_transition_rules','INSERT')
+  AND NOT has_table_privilege('ws_'||:'workspace_key'||'_runtime','plan_item_transition_rules','UPDATE')
+  AND NOT has_table_privilege('ws_'||:'workspace_key'||'_synth_plan_writer','plan_item_transition_rules','INSERT')
+  AND NOT has_table_privilege('ws_'||:'workspace_key'||'_plan_migrator','plan_item_transition_rules','INSERT')
+  AND NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c, LATERAL pg_catalog.aclexplode(c.relacl) x
+     WHERE c.oid='public.plan_item_transition_rules'::regclass AND x.grantee=0
+       AND x.privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE')));
+
+-- H-04 negative controls: an actor may be authorized for a destination status but NOT for an
+-- unapproved from->to edge. The test-only rules above are the complete fixture allowlist.
+SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
+SELECT pln_ok('PLN-H4-00a test-only setup: item 6 planned -> in_progress',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000006','e4000000-0000-0000-0000-000000000001',1,'planned','in_progress','synthetic','student')$q$);
+COMMIT;
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
+SELECT pln_ok('PLN-H4-00b test-only setup: item 6 in_progress -> deferred',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,actor_kind,actor_membership_id)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000006','e4000000-0000-0000-0000-000000000001',2,'in_progress','deferred','other','membership','b4000000-0000-0000-0000-00000000000a')$q$);
+COMMIT;
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
+SELECT pln_err('PLN-H4-01 student deferred -> completed is refused because this exact edge is unapproved',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000006','e4000000-0000-0000-0000-000000000001',3,'deferred','completed','synthetic','student')$q$,
+  '42501','not explicitly approved');
+COMMIT;
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
+SELECT pln_ok('PLN-H4-02 test-only setup: item 7 moves planned -> partially_completed',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000007','e4000000-0000-0000-0000-000000000001',1,'planned','partially_completed','synthetic','student')$q$);
+COMMIT;
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
+SELECT pln_err('PLN-H4-03 responsible counselor partially_completed -> deferred is refused because the edge is unapproved',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,actor_kind,actor_membership_id)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000007','e4000000-0000-0000-0000-000000000001',2,'partially_completed','deferred','other','membership','b4000000-0000-0000-0000-00000000000a')$q$,
+  '42501','not explicitly approved');
+COMMIT;
+RESET SESSION AUTHORIZATION;
+
+SELECT 'PLAN ITEM TESTS COMPLETED (PLN-C1..C4, PLN-01..80, PLN-A2*, PLN-D1*, PLN-E1*, PLN-H4*): actor/publication/terminal rules enforced; exact transition graph remains PO-open and base schema is empty; test-only edges used for guard mechanics; no scheduling logic exists' AS result;

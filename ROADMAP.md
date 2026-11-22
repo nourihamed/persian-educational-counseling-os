@@ -1,7 +1,5 @@
 # ROADMAP.md
-> **2026-11-18:** the current Phase 2 status is in `PROJECT_STATE.md` (top block) and the provisional exit
-> package `docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md`. Gate NOT READY. The 2026-11-09 addendum below is
-> history and was not re-reconciled against Batches 1–8.
+> **CURRENT ROADMAP STATUS — 2026-11-22:** Phase 2 remains **NOT READY**; Phase 3 is **NOT AUTHORIZED**; D-014 remains synthetic-only. PR #12 and stacked remediation PR #14 are Open/Draft/Unmerged; main is unchanged. H-01..H-04 are independently verified on the synthetic draft schema. Latest successful SQL/test evidence: GitHub Actions 45032597727 (PostgreSQL 16.16) at code/test SHA adddd4a1; subsequent branch changes are documentation-only and are being re-run by CI. Remaining gates: Product Owner PlanItem transition graph; Platform Security PS-1..PS-8 and M-01 trusted deployment separation; Q-007/Q-020; G-15/G-16/G-17 domain reconciliation; G-26 migration strategy; G-30 root-doc reconciliation; G-32 PR integration. The 2026-11-09 addendum below is historical, not current status.
 
 ## Phase 2 status — 2026-11-09 (historical addendum; superseded by PROJECT_STATE.md)
 

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - docs/product-owner-decisions-consolidation-2026-11-07
+      - supervisor/phase2-h01-h04-remediation-2026-11-22
   pull_request:
     branches: [main]
     paths:
@@ -251,6 +252,9 @@ jobs:
           # The race needs its own database: it adds a scratch signal table and its fixtures.
           load workspace_plan_items_race
           bash $W/tests/workspace_plan_item_status_race.sh workspace_plan_items_race $K
+          # H-03: explicit two-session race for item-first and publisher-first lock orders.
+          load workspace_plan_publish_race
+          bash $W/tests/workspace_plan_publish_item_race.sh workspace_plan_publish_race $K
           # F-04: the migration must be safe on rows that exist BEFORE it runs, so historical rows are loaded
           # between the base drafts and the plan draft.
           createdb -h localhost -U postgres workspace_plan_items_migration
