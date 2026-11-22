@@ -63,29 +63,22 @@ These are now approved at the product-policy level and must be reflected in the 
 
 The transfer exception authority remains a Product Owner/specialist decision item. Q-007 and Q-020 remain open. Production verifier/key policy remains deferred to Platform Security. Phase 2 remains NOT READY.
 
-## 5. WS-PLAN-01 — exact PlanItem status transition graph (Product Owner OPEN, 2026-11-22)
+## 5. WS-PLAN-01 — exact PlanItem status transition graph (Product Owner APPROVED, 2026-11-22)
 
-The Product Owner decisions A2/B1/C1/D1/E1 authorize actor categories, draft/publication constraints,
-empty-publication refusal, terminal statuses and legacy read-only behavior. They do **not** specify the
-complete `from_status -> to_status` graph. No transition edge is inferred from conventional workflow
-assumptions or from the existing test history.
+The Product Owner explicitly approved **Option A**: the Supervisor's proposed PlanItem transition graph is
+approved exactly as listed in [WS_PLAN_01_TRANSITION_GRAPH_PROPOSAL.md](WS_PLAN_01_TRANSITION_GRAPH_PROPOSAL.md).
+The approval covers only the 21 actor/from/to tuples in that matrix. Every tuple not listed remains denied.
 
-The Phase 2 schema now contains `plan_item_transition_rules`, intentionally **empty** in the base draft.
-The status-event guard requires an exact (actor_kind, from_status, to_status) row and refuses every missing
-edge. Disposable test suites seed synthetic rows only to exercise guard mechanics; those rows are not
-production policy and are not PO approval.
+The approved graph preserves the existing A2/B1/C1/D1/E1 constraints: student and responsible-counselor
+actor restrictions, no status changes on draft/unpublished PlanVersions, no empty publication, terminal
+`completed`/`skipped`/`cancelled` statuses, and legacy JSON read-only behavior. A `deferred` transition
+requires a valid deferral reason. No transition to `planned`, same-status transition, actor-mismatched
+transition, or unlisted edge is authorized.
 
-**Decision required before status execution is enabled:** review the Supervisor's unapproved proposal at [`WS_PLAN_01_TRANSITION_GRAPH_PROPOSAL.md`](WS_PLAN_01_TRANSITION_GRAPH_PROPOSAL.md), then approve it exactly, amend exact rows, or keep the rule table empty. The proposal is not policy. Approve an explicit matrix of:
-- actor kind (`student` or responsible `membership`);
-- source status;
-- destination status;
-- any required reason/deferral metadata.
-
-At minimum, explicitly decide whether a student may complete or partially-complete from `deferred`, whether
-a responsible counselor may defer from `partially_completed`, and whether any transition may return to
-`planned`. D1 terminal states remain non-reversible unless the Product Owner makes a separate decision.
-Until then, all unlisted edges remain refused and no production status-write path is enabled.
-
+**Implementation status remains OPEN/BLOCKING:** the policy decision is resolved, but schema/migration
+population, runtime immutability, exhaustive positive/negative tests, concurrency/replay/rollback tests,
+fresh exact-commit CI, and independent review remain required. This decision does not enable production
+status writes, approve Phase 2 exit, authorize Phase 3, or relax D-014 synthetic-only restrictions.
 ## 6. WS-ISO-01 — production isolation of synthetic verifier mode (Platform Security OPEN)
 
 The test-only HMAC key and `synthetic_test` mode exist only in the disposable test harness. The schema default
