@@ -511,6 +511,12 @@ BEGIN
   EXECUTE format('REVOKE ALL ON TABLE plan_items, plan_item_status_events FROM %I', rt);
   EXECUTE format('GRANT SELECT ON TABLE plan_items, plan_item_status_events, plan_item_current_status, '
                  'plan_version_rendered, plan_privileged_identities, plan_item_transition_rules TO %I', rt);
+  -- The trusted SECURITY DEFINER plan guards run as function_owner. It needs SELECT plus the narrow
+  -- UPDATE(status) privilege PostgreSQL requires for SELECT ... FOR SHARE / FOR NO KEY UPDATE row locks.
+  -- This does not grant an application identity a write path: function_owner is NOLOGIN, membership-free,
+  -- and only reviewed SECURITY DEFINER functions execute under it.
+  EXECUTE format('GRANT SELECT, UPDATE(status) ON TABLE student_plan_versions TO %I', fo);
+
   -- runtime: create plan versions WITHOUT being able to choose legacy_json
   EXECUTE format('REVOKE INSERT ON TABLE student_plan_versions FROM %I', rt);
   EXECUTE format('GRANT INSERT (plan_version_id, plan_id, version_no, source_program_version_id, input_snapshot, '
