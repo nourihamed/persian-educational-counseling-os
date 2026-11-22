@@ -11,11 +11,11 @@
 | Main | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6` — unchanged |
 | PR #12 | Open / Draft / Unmerged; head `78155b62f8830fe84c631100ec37bb236e5332e5`; base snapshot `ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114` |
 | PR #14 | Open / Draft / Unmerged; stacked on PR #12 head; head branch `supervisor/phase2-h01-h04-remediation-2026-11-22` |
-| Supervisor branch baseline immediately before this state update | `681ace3eb4b38e07bab0e28cc96c6cfa77722a85` |
-| SQL/test tree independently reviewed | `cad2c0992bda3f1b37e274a14bc4e9c01d5d86cc` |
-| Last fully successful CI for that SQL/test tree | [GitHub Actions 45030847506](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/45030847506), PostgreSQL 16.16; steps 15/16/17 and checks 30/31 passed |
+| Last exact-head CI snapshot before the final documentation reconciliation batch | `adddd4a1f199f0a8fe4eaef88c126950d1d6e9dd` |
+| SQL/test tree independently reviewed | `cad2c0992bda3f1b37e274a14bc4e9c01d5d86cc` (SQL/test content unchanged after this SHA) |
+| Latest exact-PR-head CI success | [GitHub Actions 45032597727](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/45032597727), PostgreSQL 16.16, head `adddd4a1f199f0a8fe4eaef88c126950d1d6e9dd`; steps 15/16/17 and checks 30/31 passed |
 
-This snapshot is committed on the PR #14 head branch. The exact resulting PR head SHA is the commit that adds this state update; GitHub PR #14 metadata is the authoritative exact reference. Documentation-only reconciliations followed the verified SQL/test SHA; no SQL or test source changed after `cad2c099`. A fresh Actions run is required on the resulting exact PR head.
+This snapshot is committed on the PR #14 head branch. The exact resulting PR head SHA is the commit that adds this state update; GitHub PR #14 metadata is the authoritative exact reference. SQL/test source has not changed since `cad2c099`; the exact PR head `adddd4a1` passed Actions run 45032597727. Subsequent documentation-only commits are being re-run by CI on the current PR head.
 
 ### Supervisor findings H-01..H-04
 
