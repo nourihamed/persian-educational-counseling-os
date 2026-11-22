@@ -34,7 +34,7 @@ This snapshot is committed on the PR #14 head branch. The exact resulting PR hea
 4. **Retention — Q-020:** durations, hold/disposition authority and full restore-suppression scope remain open.
 5. **Domain model:** G-15 Review record integrity and duplicate prevention remain missing; G-16 DailyRoutine counters and G-17 progress/risk explainability need reconciliation to approved MVP.
 6. **Migration:** G-26 production migration strategy, rollback/forward-compatibility and deployment evidence remain open. SQL files are draft schemas, not production migrations.
-7. **Integration/docs:** G-30 root ARCHITECTURE/DATABASE/API/ROADMAP reconciliation remains open. G-32 PR #8–#11 disposition and PR #12/#14 merge order require Product Owner direction. G-33 approval-evidence wording is reconciled as PARTIAL (schema events DONE; authority/cutover binding open).
+7. **Integration/docs:** G-30 current root-document override blocks were reconciled 2026-11-22; detailed body-level traceability remains partial. G-32 PR #8–#11 disposition and PR #12/#14 merge order require Product Owner direction. G-33 approval-evidence wording is reconciled as PARTIAL (schema events DONE; authority/cutover binding open).
 
 ### Safety and scope
 
