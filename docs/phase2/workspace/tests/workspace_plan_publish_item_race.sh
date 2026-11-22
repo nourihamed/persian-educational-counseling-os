@@ -66,8 +66,8 @@ SELECT test_establish('counselor','b7500000-0000-0000-0000-000000000001');
 INSERT INTO plan_items(plan_item_id,plan_version_id,plan_id,student_id,item_no,topic_id,planned_local_date,timezone_name,created_by_membership_id)
 VALUES ('$ITEM_A','$V1','a7580000-0000-0000-0000-000000000001','$STU',1,
         'a7570000-0000-0000-0000-000000000001','2026-11-22','Asia/Tehran','b7500000-0000-0000-0000-000000000001');
-\\! touch "$W/a1_ready"
-\\! while [ ! -f "$W/a1_go" ]; do sleep 0.05; done
+\! touch "$W/a1_ready"
+\! while [ ! -f "$W/a1_go" ]; do sleep 0.05; done
 COMMIT;
 RESET SESSION AUTHORIZATION;
 SQL
@@ -100,8 +100,8 @@ echo "PASS WS-PLN-PUB-RACE-01/02/03 item-first: publisher waits, sees the item, 
 cat > "$W/b2.sql" <<SQL
 BEGIN;
 UPDATE student_plan_versions SET status='published', published_at=clock_timestamp() WHERE plan_version_id='$V2';
-\\! touch "$W/b2_ready"
-\\! while [ ! -f "$W/b2_go" ]; do sleep 0.05; done
+\! touch "$W/b2_ready"
+\! while [ ! -f "$W/b2_go" ]; do sleep 0.05; done
 COMMIT;
 SQL
 psql -X -q -d "$DB" -f "$W/b2.sql" >"$W/b2.log" 2>&1 & PB2=$!
