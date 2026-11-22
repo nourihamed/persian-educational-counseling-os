@@ -1,7 +1,11 @@
 # ROADMAP.md
-> **2026-11-18:** the current Phase 2 status is in `PROJECT_STATE.md` (top block) and the provisional exit
-> package `docs/phase2/PHASE2_EXIT_PACKAGE_PROVISIONAL.md`. Gate NOT READY. The 2026-11-09 addendum below is
-> history and was not re-reconciled against Batches 1–8.
+> **Current snapshot — 2026-11-22:** Phase 2 remains NOT READY; Phase 3 is NOT AUTHORIZED; D-014 synthetic-only.
+> PR #12 is Open/Draft/Unmerged at `78155b62f8830fe84c631100ec37bb236e5332e5`. PR #14 is Open/Draft/Unmerged,
+> stacked on PR #12, with review-start head `7ea1918a3a42df1215ec4af77a0080915c3721e4`.
+> H-01..H-04 SQL/test source tree `cad2c0992bda3f1b37e274a14bc4e9c01d5d86cc` passed Actions run
+> `45030847506`; no fresh run is established for the exact PR #14 head. See `PROJECT_STATE.md` and
+> `docs/phase2/PHASE2_EXIT_CRITERIA.md` for remaining blockers. The dated status sections below are historical
+> snapshots unless explicitly marked current.
 
 ## Phase 2 status — 2026-11-09 (historical addendum; superseded by PROJECT_STATE.md)
 
