@@ -25,14 +25,14 @@ The successful run is bound to `cad2c099`, not to the later PR #14 head. Nine do
 | H-01 — RLS fail-open for unclassified roles | **REMEDIATED / CI VERIFIED** on `cad2c099`: mandatory restrictive principal fence, exact bypass allowlist, table/column/PUBLIC/indirect privilege audit, broad-data roles remain RLS-bound |
 | H-02 — direct published PlanVersion INSERT | **REMEDIATED / CI VERIFIED**: normalized and legacy direct published INSERT rejected; publication only by guarded normalized draft→published |
 | H-03 — PlanItem/publication race | **REMEDIATED / CI VERIFIED**: shared PlanVersion lock; both lock orders and commit/rollback outcomes tested |
-| H-04 — incomplete PlanItem transition graph | **FAIL-CLOSED / CI VERIFIED**: base rule table intentionally empty; exact actor/from/to edge required; test fixtures do not constitute PO policy |
+| H-04 — incomplete PlanItem transition graph | **FAIL-CLOSED / CI VERIFIED**: base rule table intentionally empty; exact actor/from/to edge required. PO approved exact 21-edge graph on 2026-11-22; implementation and exhaustive tests remain pending |
 | F-05 | **ACCEPTED — ARCHITECTURE REVIEW LEVEL**, absent a concrete regression |
 
 These are draft-schema and synthetic-test findings only. They do not approve production verification, runtime writes, API authorization, workers, migrations or deployment.
 
 ### Remaining Phase 2 blockers
 
-1. **Product Owner:** exact PlanItem actor × from_status × to_status matrix. Until separately approved, the base rule table stays empty and all unapproved edges fail closed.
+1. **WS-PLAN-01 implementation:** Product Owner approved the exact 21-edge actor × from_status × to_status matrix on 2026-11-22. Populate only those tuples after implementation review; exhaustively test every approved and denied edge. Until then the base rule table stays empty and fail-closed.
 2. **Platform Security / Operations:** PS-1..PS-8 production verifier, cryptography, key management, authenticated private channel, freshness/revocation and trusted test-vs-production deployment separation (M-01). Production verification stays disabled.
 3. **Product Owner / qualified Iran legal review:** Q-007 guardian legal authority, age and permission matrix; parent/guardian API and transfer approvals remain fail-closed.
 4. **Product Owner / Platform Security / Operations:** Q-020 retention durations, hold/disposition authority and full restore-suppression scope.
