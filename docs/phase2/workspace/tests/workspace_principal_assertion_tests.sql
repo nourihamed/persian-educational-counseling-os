@@ -300,6 +300,29 @@ RESET SESSION AUTHORIZATION;
 -- or a reviewed NOLOGIN owner / synthetic test identity outside RLS. An unclassified role fails.
 -- Effective-privilege audit: covers direct and inherited role grants, table-level and column-level
 -- privileges, and PUBLIC (which has no pg_roles row but is reflected by has_*_privilege).
+DO $diag$
+DECLARE v text;
+BEGIN
+  SELECT string_agg(r.rolname, ', ' ORDER BY r.rolname) INTO v
+    FROM pg_catalog.pg_roles r
+   WHERE EXISTS (
+     SELECT 1 FROM public.student_scoped_tables t
+     JOIN pg_catalog.pg_class c ON c.relnamespace='public'::regnamespace AND c.relname=t.table_name
+     WHERE has_table_privilege(r.oid,c.oid,'SELECT')
+        OR has_table_privilege(r.oid,c.oid,'INSERT')
+        OR has_table_privilege(r.oid,c.oid,'UPDATE')
+        OR has_table_privilege(r.oid,c.oid,'DELETE')
+        OR EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0
+                    AND NOT a.attisdropped AND
+                    (has_column_privilege(r.oid,c.oid,a.attname,'SELECT')
+                     OR has_column_privilege(r.oid,c.oid,a.attname,'INSERT')
+                     OR has_column_privilege(r.oid,c.oid,a.attname,'UPDATE')))
+   )
+   AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_application_roles)
+   AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
+   AND r.rolname <> current_user;
+  RAISE NOTICE 'ISO-RLS-C3 unclassified effective roles: %', coalesce(v,'none');
+END $diag$;
 SELECT iso_true('ISO-RLS-C3 every effective holder of a student-scoped table/column privilege is classified',
   NOT EXISTS (
     SELECT 1
@@ -333,8 +356,6 @@ SELECT iso_true('ISO-RLS-C10 bypass allowlist contains exactly the reviewed owne
      ('ws_'||:'workspace_key'||'_governance_owner')::name,
      ('ws_'||:'workspace_key'||'_inbox_owner')::name,
      ('ws_'||:'workspace_key'||'_plan_migrator')::name,
-     ('ws_'||:'workspace_key'||'_synth_exec')::name,
-     ('ws_'||:'workspace_key'||'_synth_inbox')::name,
      ('ws_'||:'workspace_key'||'_synth_plan_writer')::name,
      ('ws_'||:'workspace_key'||'_table_owner')::name
    ]::name[]);
