@@ -99,6 +99,18 @@ INSERT INTO student_plan_versions(plan_version_id,plan_id,version_no,input_snaps
 RESET SESSION AUTHORIZATION;
 \ir workspace_principal_test_harness.sql
 
+-- TEST FIXTURES ONLY: these edges exercise the guard mechanics. They are NOT Product Owner-approved
+-- production transition rules. The base draft leaves plan_item_transition_rules empty (fail-closed).
+INSERT INTO plan_item_transition_rules(actor_kind,from_status,to_status) VALUES
+ ('student','planned','in_progress'),
+ ('student','planned','completed'),
+ ('student','planned','partially_completed'),
+ ('student','partially_completed','completed'),
+ ('student','deferred','in_progress'),
+ ('membership','in_progress','deferred'),
+ ('membership','planned','cancelled'),
+ ('membership','planned','skipped');
+
 -- ======================================================================================================
 -- CATALOG
 -- ======================================================================================================
@@ -561,5 +573,30 @@ SELECT pln_err('PLN-63 ... nor record a status transition', $q$INSERT INTO plan_
 COMMIT;
 RESET SESSION AUTHORIZATION;
 
+
+-- H-04 negative controls: an actor may be authorized for a destination status but NOT for an
+-- unapproved from->to edge. The test-only rules above are the complete fixture allowlist.
+SET SESSION AUTHORIZATION :"writer_role";
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
+SELECT pln_err('PLN-H4-01 student deferred -> completed is refused because this exact edge is unapproved',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','completed','synthetic','student')$q$,
+  '42501','not explicitly approved');
+COMMIT;
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
+SELECT pln_ok('PLN-H4-02 test-only setup: item 7 moves planned -> partially_completed',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000007','e4000000-0000-0000-0000-000000000001',1,'planned','partially_completed','synthetic','student')$q$);
+COMMIT;
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
+SELECT pln_err('PLN-H4-03 responsible counselor partially_completed -> deferred is refused because the edge is unapproved',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,actor_kind,actor_membership_id)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000007','e4000000-0000-0000-0000-000000000001',2,'partially_completed','deferred','other','membership','b4000000-0000-0000-0000-00000000000a')$q$,
+  '42501','not explicitly approved');
+COMMIT;
+RESET SESSION AUTHORIZATION;
 
 SELECT 'PLAN ITEM TESTS COMPLETED (PLN-C1..C4, PLN-01..80, PLN-A2*, PLN-D1*, PLN-E1*): decisions A2/B1/C1/D1/E1 enforced under verified principals; no scheduling logic exists' AS result;
