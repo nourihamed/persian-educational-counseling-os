@@ -574,6 +574,13 @@ COMMIT;
 RESET SESSION AUTHORIZATION;
 
 
+SELECT pln_true('PLN-H4-04 no application or synthetic actor can write the transition-policy catalog',
+  NOT has_table_privilege('ws_'||:'workspace_key'||'_runtime','plan_item_transition_rules','INSERT')
+  AND NOT has_table_privilege('ws_'||:'workspace_key'||'_runtime','plan_item_transition_rules','UPDATE')
+  AND NOT has_table_privilege('ws_'||:'workspace_key'||'_synth_plan_writer','plan_item_transition_rules','INSERT')
+  AND NOT has_table_privilege('ws_'||:'workspace_key'||'_plan_migrator','plan_item_transition_rules','INSERT')
+  AND NOT has_table_privilege('public','plan_item_transition_rules','INSERT'));
+
 -- H-04 negative controls: an actor may be authorized for a destination status but NOT for an
 -- unapproved from->to edge. The test-only rules above are the complete fixture allowlist.
 SET SESSION AUTHORIZATION :"writer_role";
