@@ -62,3 +62,38 @@ These are now approved at the product-policy level and must be reflected in the 
 | MEDIUM scope | Supervisor's base-schema/security-contract allocation accepted | Deferred provider/operational implementations must not remove required base ownership, audit, authorization or idempotency contracts |
 
 The transfer exception authority remains a Product Owner/specialist decision item. Q-007 and Q-020 remain open. Production verifier/key policy remains deferred to Platform Security. Phase 2 remains NOT READY.
+
+## 5. WS-PLAN-01 — exact PlanItem status transition graph (Product Owner OPEN, 2026-11-22)
+
+The Product Owner decisions A2/B1/C1/D1/E1 authorize actor categories, draft/publication constraints,
+empty-publication refusal, terminal statuses and legacy read-only behavior. They do **not** specify the
+complete `from_status -> to_status` graph. No transition edge is inferred from conventional workflow
+assumptions or from the existing test history.
+
+The Phase 2 schema now contains `plan_item_transition_rules`, intentionally **empty** in the base draft.
+The status-event guard requires an exact (actor_kind, from_status, to_status) row and refuses every missing
+edge. Disposable test suites seed synthetic rows only to exercise guard mechanics; those rows are not
+production policy and are not PO approval.
+
+**Decision required before status execution is enabled:** approve an explicit matrix of:
+- actor kind (`student` or responsible `membership`);
+- source status;
+- destination status;
+- any required reason/deferral metadata.
+
+At minimum, explicitly decide whether a student may complete or partially-complete from `deferred`, whether
+a responsible counselor may defer from `partially_completed`, and whether any transition may return to
+`planned`. D1 terminal states remain non-reversible unless the Product Owner makes a separate decision.
+Until then, all unlisted edges remain refused and no production status-write path is enabled.
+
+## 6. WS-ISO-01 — production isolation of synthetic verifier mode (Platform Security OPEN)
+
+The test-only HMAC key and `synthetic_test` mode exist only in the disposable test harness. The schema default
+is `disabled`; application roles cannot read key material, change mode, or write the verified-principal row.
+Production verification remains fail-closed pending PS-1..PS-5 and Platform Security approval.
+
+A database cannot reliably attest its own deployment class against a superuser. Therefore an environment
+separation guard must be supplied and evidenced by the trusted deployment/security boundary; a caller-set GUC,
+database-name convention, or ordinary SQL flag is not accepted as an unforgeable production/test boundary.
+This item remains open rather than being falsely marked fixed by a database-only check.
+
