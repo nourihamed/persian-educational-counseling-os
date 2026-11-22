@@ -306,7 +306,7 @@ SELECT pln_err('PLN-H2-02 a migration-created legacy PlanVersion cannot be inser
 RESET SESSION AUTHORIZATION;
 SELECT pln_err('PLN-H2-03 a published PlanVersion is immutable, including non-content metadata',
   $q$UPDATE student_plan_versions SET published_at=clock_timestamp() WHERE plan_version_id='a4510000-0000-0000-0000-000000000001'$q$,
-  '23514','published PlanVersion is immutable');
+  '23514','published versions are immutable');
 
 
 -- Every transition below is made by the verified principal it names (WS-ISO-01 B) and follows the Product
