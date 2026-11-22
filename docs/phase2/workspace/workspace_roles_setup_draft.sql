@@ -591,7 +591,7 @@ BEGIN
   IF to_regclass('public.iso_application_roles') IS NOT NULL THEN
     EXECUTE format('GRANT SELECT ON TABLE iso_application_roles TO %I', fo);
     DELETE FROM iso_application_roles;
-    FOREACH r IN ARRAY ARRAY['runtime','runtime_login','worker','worker_login','exporter','exporter_login'] LOOP
+    FOREACH r IN ARRAY ARRAY['runtime','runtime_login','worker','worker_login','exporter','exporter_login','transfer_ctl'] LOOP
       INSERT INTO iso_application_roles(role_name) VALUES ('ws_'||k||'_'||r);
     END LOOP;
   END IF;
@@ -599,7 +599,7 @@ BEGIN
     EXECUTE format('GRANT SELECT ON TABLE iso_rls_bypass_roles TO %I', fo);
     DELETE FROM iso_rls_bypass_roles;
     FOREACH r IN ARRAY ARRAY['table_owner','function_owner','governance_owner','freeze_owner',
-                              'inbox_owner','synth_exec','synth_inbox','synth_plan_writer','plan_migrator'] LOOP
+                              'inbox_owner','synth_plan_writer','plan_migrator'] LOOP
       INSERT INTO iso_rls_bypass_roles(role_name) VALUES ('ws_'||k||'_'||r);
     END LOOP;
   END IF;
