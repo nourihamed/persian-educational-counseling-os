@@ -1,7 +1,7 @@
 -- WS-ISO-01 — ROW-LEVEL SECURITY bound to the VERIFIED principal (closes ISO-GAP-01..03 at schema level).
 -- NOT a migration. Draft SQL. SYNTHETIC ONLY (D-014).
 -- Apply LAST among the drafts (after every student-scoped table exists) and BEFORE
--- workspace_roles_setup_draft.sql, which fills iso_application_roles and grants the principal functions.
+-- workspace_roles_setup_draft.sql, which fills iso_principal_required_roles and grants the principal functions.
 --
 -- THE RULE
 --   For an APPLICATION role — the runtime, worker and exporter service roles and their login identities —
@@ -14,7 +14,7 @@
 --   as its author.
 --
 -- WHO IT DOES NOT APPLY TO, AND WHY
---   Roles outside iso_application_roles: the NOLOGIN owners, whose reviewed SECURITY DEFINER functions are
+--   Roles outside iso_principal_required_roles: the NOLOGIN owners, whose reviewed SECURITY DEFINER functions are
 --   the legitimate cross-student paths (activation, archive, transfer, ledgers), and the NOLOGIN synthetic
 --   test identities, which are governed by their own guards. ISO-RLS-C3 classifies every role holding a
 --   privilege on a student-scoped table and FAILS on any role it cannot classify, so a new role cannot slip
@@ -26,31 +26,16 @@
 BEGIN;
 
 -- The application roles of this Workspace. Filled by workspace_roles_setup_draft.sql from its own inventory.
-CREATE TABLE iso_application_roles (
+CREATE TABLE iso_principal_required_roles (
   role_name name PRIMARY KEY
 );
 
 -- Exact identities allowed to use reviewed owner/test command paths without a caller principal.
--- This is deliberately separate from iso_application_roles: every role not on this explicit list
+-- This is deliberately separate from iso_principal_required_roles: every role not on this explicit list
 -- MUST satisfy the verified-principal predicate, including newly-created or otherwise unknown roles.
 CREATE TABLE iso_rls_bypass_roles (
   role_name name PRIMARY KEY
 );
-
--- Does the RLS rule apply to the current identity? Identity by name, as PostgreSQL sets current_user —
--- never membership (the F-05 lesson). SET ROLE from a login to its service role keeps it in the list.
--- current_user and NOT session_user: inside a reviewed SECURITY DEFINER command current_user is that
--- function's NOLOGIN owner, and those commands are the legitimate cross-student paths. A definer that
--- exposes student rows to its caller is therefore a reviewed boundary of its own (SEC-07 governs which
--- definers an application role may execute).
--- The role is passed IN by the policy expression, which PostgreSQL evaluates as the querying role, so
--- `current_user` there is the caller. Inside this SECURITY DEFINER function current_user would be the
--- owner instead, which is why the function cannot read it itself. Calling it directly with another name
--- only answers a question about that name; it grants nothing.
-CREATE FUNCTION iso_rls_applies(p_role name) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $body$
-  SELECT EXISTS (SELECT 1 FROM public.iso_application_roles a WHERE a.role_name = p_role);
-$body$;
 
 -- A role is exempt from the principal predicate only when it is explicitly registered by the
 -- Workspace bootstrap as a reviewed NOLOGIN owner or synthetic test identity. Unknown roles fail closed.
