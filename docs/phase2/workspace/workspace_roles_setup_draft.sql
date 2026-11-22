@@ -512,12 +512,11 @@ BEGIN
   EXECUTE format('REVOKE ALL ON TABLE plan_items, plan_item_status_events FROM %I', rt);
   EXECUTE format('GRANT SELECT ON TABLE plan_items, plan_item_status_events, plan_item_current_status, '
                  'plan_version_rendered, plan_privileged_identities, plan_item_transition_rules TO %I', rt);
-  -- The trusted SECURITY DEFINER plan guards run as function_owner. It needs SELECT plus the narrow
-  -- UPDATE(status) privilege PostgreSQL requires for SELECT ... FOR SHARE / FOR NO KEY UPDATE row locks.
-  -- This does not grant an application identity a write path: function_owner is NOLOGIN, membership-free,
-  -- and only reviewed SECURITY DEFINER functions execute under it.
-  EXECUTE format('GRANT SELECT, UPDATE(status) ON TABLE student_plan_versions TO %I', fo);
-  EXECUTE format('GRANT SELECT ON TABLE plan_item_transition_rules TO %I', fo);
+  -- The synthetic writer's BEFORE triggers execute as invoker so plan_identity_is() sees the real
+  -- NOLOGIN writer identity. PostgreSQL requires UPDATE on at least one column for SELECT ... FOR SHARE /
+  -- FOR NO KEY UPDATE; grant only status, whose draft->published edge is guarded by the trigger. Runtime
+  -- receives no UPDATE privilege. The writer is synthetic-only and membership-free (F-05).
+  EXECUTE format('GRANT UPDATE(status) ON TABLE student_plan_versions TO %I', wr);
 
   -- runtime: create plan versions WITHOUT being able to choose legacy_json
   EXECUTE format('REVOKE INSERT ON TABLE student_plan_versions FROM %I', rt);
