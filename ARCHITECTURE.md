@@ -3,7 +3,7 @@
 
 > **CURRENT ARCHITECTURE OVERRIDE — 2026-11-22 (PR #12/#14, unmerged):** The active tenant boundary is Workspace (Organization or Independent Counselor); counselors are memberships/assignments, not tenant roots. Control Plane owns global Platform Student identity, Workspace ownership/generation and global mobile+grade claims; Workspace DB owns local educational projections and ledgers. The Control Plane/Workspace SQL remains draft-only. Supervisor findings H-01..H-04 are remediated and independently verified on the synthetic draft tree: restrictive principal RLS with exact bypass allowlist, direct published PlanVersion INSERT rejection, PlanItem/publication row-lock and rollback tests, and fail-closed PlanItem transition rules. The base transition-rule table is empty pending Product Owner approval. Production verifier/crypto/deployment boundary PS-1..PS-8 and M-01, legal Q-007, retention Q-020, migration framework, remaining domain gaps and API object authorization remain open. No cross-database FK or atomic cross-database transaction is claimed. Phase 2 remains NOT READY; Phase 3 is unauthorized; PR #12 and stacked PR #14 remain unmerged; D-014 forbids real data.
 
-Status: conceptual architecture baseline; no implementation yet. Current tenant-isolation topology is governed by D-020/D-023 and Phase 1 design docs.
+Status: architecture and schema/test contracts have draft implementations; no production runtime services or infrastructure are deployed. Current tenant-isolation topology is governed by D-020/D-023 and Phase 1 design docs.
 
 ## 1. Layering
 
