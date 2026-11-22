@@ -595,4 +595,12 @@ BEGIN
       INSERT INTO iso_application_roles(role_name) VALUES ('ws_'||k||'_'||r);
     END LOOP;
   END IF;
+  IF to_regclass('public.iso_rls_bypass_roles') IS NOT NULL THEN
+    EXECUTE format('GRANT SELECT ON TABLE iso_rls_bypass_roles TO %I', fo);
+    DELETE FROM iso_rls_bypass_roles;
+    FOREACH r IN ARRAY ARRAY['table_owner','function_owner','governance_owner','freeze_owner',
+                              'inbox_owner','synth_plan_writer','plan_migrator'] LOOP
+      INSERT INTO iso_rls_bypass_roles(role_name) VALUES ('ws_'||k||'_'||r);
+    END LOOP;
+  END IF;
 END $iso_principal$;
