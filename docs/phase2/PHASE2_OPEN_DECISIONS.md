@@ -90,7 +90,7 @@ Until then, all unlisted edges remain refused and no production status-write pat
 
 The test-only HMAC key and `synthetic_test` mode exist only in the disposable test harness. The schema default
 is `disabled`; application roles cannot read key material, change mode, or write the verified-principal row.
-Production verification remains fail-closed pending PS-1..PS-5 and Platform Security approval.
+Production verification remains fail-closed pending PS-1..PS-8 and Platform Security approval.
 
 A database cannot reliably attest its own deployment class against a superuser. Therefore an environment
 separation guard must be supplied and evidenced by the trusted deployment/security boundary; a caller-set GUC,
