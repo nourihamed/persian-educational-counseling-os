@@ -611,4 +611,4 @@ SELECT pln_err('PLN-H4-03 responsible counselor partially_completed -> deferred 
 COMMIT;
 RESET SESSION AUTHORIZATION;
 
-SELECT 'PLAN ITEM TESTS COMPLETED (PLN-C1..C4, PLN-01..80, PLN-A2*, PLN-D1*, PLN-E1*): decisions A2/B1/C1/D1/E1 enforced under verified principals; no scheduling logic exists' AS result;
+SELECT 'PLAN ITEM TESTS COMPLETED (PLN-C1..C4, PLN-01..80, PLN-A2*, PLN-D1*, PLN-E1*, PLN-H4*): actor/publication/terminal rules enforced; exact transition graph remains PO-open and base schema is empty; test-only edges used for guard mechanics; no scheduling logic exists' AS result;
