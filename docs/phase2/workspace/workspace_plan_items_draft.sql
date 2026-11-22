@@ -292,6 +292,10 @@ BEGIN
                     'that supersedes it' USING ERRCODE='check_violation';
   END IF;
   IF TG_OP = 'UPDATE' THEN
+    IF OLD.status = 'published' THEN
+      RAISE EXCEPTION 'a published PlanVersion is immutable; create a superseding version'
+        USING ERRCODE='check_violation';
+    END IF;
     -- Publication serializes against PlanItem insertion. The UPDATE already takes a NO KEY UPDATE row
     -- lock; restate the lock here as part of the documented protocol. Item insertion takes FOR SHARE
     -- on this same PlanVersion row before checking its status and inserting the item.
