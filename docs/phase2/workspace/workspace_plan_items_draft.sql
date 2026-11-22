@@ -158,7 +158,8 @@ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $body$
       LEFT JOIN public.plan_privileged_identities i ON i.purpose = n.purpose
       LEFT JOIN pg_catalog.pg_roles r ON r.rolname = i.role_name),
   guarded(tbl) AS (VALUES ('public.plan_items'), ('public.plan_item_status_events'),
-                          ('public.student_plan_versions'), ('public.plan_privileged_identities')),
+                          ('public.student_plan_versions'), ('public.plan_privileged_identities'),
+                          ('public.plan_item_transition_rules')),
   security_functions(sig) AS (VALUES ('public.plan_identity_is(text)'), ('public.guard_plan_item()'),
                           ('public.guard_plan_item_status_event()'), ('public.guard_plan_version_model()'),
                           ('public.plan_identity_boundary_violations(text[])')),
