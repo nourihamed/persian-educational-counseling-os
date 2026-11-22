@@ -30,6 +30,13 @@ CREATE TABLE iso_application_roles (
   role_name name PRIMARY KEY
 );
 
+-- Exact identities allowed to use reviewed owner/test command paths without a caller principal.
+-- This is deliberately separate from iso_application_roles: every role not on this explicit list
+-- MUST satisfy the verified-principal predicate, including newly-created or otherwise unknown roles.
+CREATE TABLE iso_rls_bypass_roles (
+  role_name name PRIMARY KEY
+);
+
 -- Does the RLS rule apply to the current identity? Identity by name, as PostgreSQL sets current_user —
 -- never membership (the F-05 lesson). SET ROLE from a login to its service role keeps it in the list.
 -- current_user and NOT session_user: inside a reviewed SECURITY DEFINER command current_user is that
@@ -43,6 +50,13 @@ CREATE TABLE iso_application_roles (
 CREATE FUNCTION iso_rls_applies(p_role name) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $body$
   SELECT EXISTS (SELECT 1 FROM public.iso_application_roles a WHERE a.role_name = p_role);
+$body$;
+
+-- A role is exempt from the principal predicate only when it is explicitly registered by the
+-- Workspace bootstrap as a reviewed NOLOGIN owner or synthetic test identity. Unknown roles fail closed.
+CREATE FUNCTION iso_rls_bypass(p_role name) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $body$
+  SELECT EXISTS (SELECT 1 FROM public.iso_rls_bypass_roles b WHERE b.role_name = p_role);
 $body$;
 
 -- May the verified principal reach the owner of this row? Resolution is the transfer barrier's own
@@ -62,7 +76,7 @@ DO $rls$
 DECLARE r record; v_pred text;
 BEGIN
   FOR r IN SELECT table_name, key_column, key_kind FROM public.student_scoped_tables ORDER BY table_name LOOP
-    v_pred := format('(NOT public.iso_rls_applies(current_user) OR public.iso_principal_may_reach(%L, %I))',
+    v_pred := format('(public.iso_rls_bypass(current_user) OR public.iso_principal_may_reach(%L, %I))',
                      r.key_kind, r.key_column);
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', r.table_name);
     EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY', r.table_name);
