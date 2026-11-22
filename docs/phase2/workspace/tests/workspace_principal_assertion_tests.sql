@@ -410,6 +410,21 @@ SELECT iso_true('ISO-RLS-C15 every student-scoped table has the mandatory restri
     )
   ));
 
+SELECT iso_true('ISO-RLS-C16 no PUBLIC table-level or column-level privileges exist on student-scoped tables',
+  NOT EXISTS (
+    SELECT 1 FROM public.student_scoped_tables t
+    JOIN pg_catalog.pg_class c ON c.relnamespace='public'::regnamespace AND c.relname=t.table_name
+    WHERE EXISTS (
+      SELECT 1 FROM pg_catalog.aclexplode(coalesce(c.relacl,pg_catalog.acldefault('r',c.relowner))) x
+       WHERE x.grantee=0 AND x.privilege_type IN ('SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER')
+    ) OR EXISTS (
+      SELECT 1 FROM pg_catalog.pg_attribute a,
+           LATERAL pg_catalog.aclexplode(a.attacl) x
+       WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped
+         AND x.grantee=0 AND x.privilege_type IN ('SELECT','INSERT','UPDATE','REFERENCES')
+    )
+  ));
+
 -- Unknown and indirect-grantee roles must not bypass the principal predicate merely because
 -- they are absent from the application-role inventory. Exercise column grants, inherited grants and PUBLIC.
 DO $roles$
