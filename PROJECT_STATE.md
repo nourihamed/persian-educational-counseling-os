@@ -1,3 +1,56 @@
+# CURRENT PROJECT STATE — PHASE 2 (Supervisor reconciliation 2026-11-22)
+
+## Authoritative current snapshot
+
+**Gate:** Phase 2 **NOT READY**. Phase 3 **NOT AUTHORIZED**. D-014 synthetic-only remains mandatory; no real student/customer data is permitted.
+
+### GitHub baseline at start of this reconciliation
+
+| Item | Verified state |
+|---|---|
+| `main` | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6`; unchanged |
+| PR #12 | Open / Draft / Unmerged; head `78155b62f8830fe84c631100ec37bb236e5332e5` |
+| PR #14 | Open / Draft / Unmerged; stacked on PR #12; review-start head `7ea1918a3a42df1215ec4af77a0080915c3721e4` |
+| H-01..H-04 SQL/test source tree | `cad2c0992bda3f1b37e274a14bc4e9c01d5d86cc` |
+| Last successful Actions evidence for that SQL/test tree | Run [45030847506](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/45030847506), PostgreSQL 16.16; steps 15/16/17 and repository checks 30/31 passed |
+| Exact PR #14 head CI | NOT FOUND by the available commit-run lookup; fresh exact-head CI remains required |
+| Supervisor documentation reconciliation | Branch `supervisor/phase2-final-reconciliation-2026-11-22`, derived from PR #14 review-start head; unmerged and not part of PR #14 unless separately proposed |
+
+The successful run is bound to `cad2c099`, not to the later PR #14 head. Nine documentation-only commits followed the SQL/test source tree. No SQL/test source was changed in those nine commits, but the exact final head still requires fresh CI.
+
+### Independent review of H-01..H-04
+
+| Finding | Current assessment |
+|---|---|
+| H-01 — RLS fail-open for unclassified roles | **REMEDIATED / CI VERIFIED** on `cad2c099`: mandatory restrictive principal fence, exact bypass allowlist, table/column/PUBLIC/indirect privilege audit, broad-data roles remain RLS-bound |
+| H-02 — direct published PlanVersion INSERT | **REMEDIATED / CI VERIFIED**: normalized and legacy direct published INSERT rejected; publication only by guarded normalized draft→published |
+| H-03 — PlanItem/publication race | **REMEDIATED / CI VERIFIED**: shared PlanVersion lock; both lock orders and commit/rollback outcomes tested |
+| H-04 — incomplete PlanItem transition graph | **FAIL-CLOSED / CI VERIFIED**: base rule table intentionally empty; exact actor/from/to edge required; test fixtures do not constitute PO policy |
+| F-05 | **ACCEPTED — ARCHITECTURE REVIEW LEVEL**, absent a concrete regression |
+
+These are draft-schema and synthetic-test findings only. They do not approve production verification, runtime writes, API authorization, workers, migrations or deployment.
+
+### Remaining Phase 2 blockers
+
+1. **Product Owner:** exact PlanItem actor × from_status × to_status matrix. Until separately approved, the base rule table stays empty and all unapproved edges fail closed.
+2. **Platform Security / Operations:** PS-1..PS-8 production verifier, cryptography, key management, authenticated private channel, freshness/revocation and trusted test-vs-production deployment separation (M-01). Production verification stays disabled.
+3. **Product Owner / qualified Iran legal review:** Q-007 guardian legal authority, age and permission matrix; parent/guardian API and transfer approvals remain fail-closed.
+4. **Product Owner / Platform Security / Operations:** Q-020 retention durations, hold/disposition authority and full restore-suppression scope.
+5. **Domain integrity:** G-15 Review fields and duplicate-generation invariant; G-16 DailyRoutine counters and G-17 progress/risk explainability need reconciliation against the approved MVP requirements. Do not invent uniqueness semantics, counters or risk formulas.
+6. **Migration:** G-26 Alembic/migration strategy, forward compatibility, rollback/roll-forward and lock/volume evidence. Existing SQL remains draft schema.
+7. **Documentation:** root ARCHITECTURE/DATABASE/API/ROADMAP current-state headers are being reconciled on the Supervisor branch; canonical decision crosswalk and all project-state references still require final verification.
+8. **PR integration:** G-32 requires Product Owner disposition of PR #8–#11 and explicit merge/order decision for PR #12/#14. No merge, rebase, force-push or main update has been performed.
+
+### Phase-gate and operating restrictions
+
+- Phase 3 is not authorized.
+- No production runtime write path, production verifier key, live API/worker deployment or real student data.
+- No PO or Platform Security decision is inferred from technical implementation.
+- PR #12 and PR #14 remain Draft/Unmerged; this Supervisor reconciliation branch is also unmerged.
+- The detailed historical implementation reports below are retained as history. Where they conflict with this top snapshot, this snapshot governs the current status.
+
+---
+
 # CURRENT PROJECT STATE — PHASE 2 (updated 2026-11-18)
 
 **Current phase:** Phase 2 — Database & Domain Model. **Milestone:** all eight implementation batches of the
