@@ -51,7 +51,7 @@ These are draft-schema and synthetic-test findings only. They do not approve pro
 
 ---
 
-# CURRENT PROJECT STATE — PHASE 2 (updated 2026-11-18)
+# HISTORICAL PROJECT STATE SNAPSHOT — 2026-11-18 (superseded by the authoritative 2026-11-22 snapshot above)
 
 **Current phase:** Phase 2 — Database & Domain Model. **Milestone:** all eight implementation batches of the
 Supervisor brief attempted, plus the 2026-11-18 Supervisor corrections; a **PROVISIONAL** exit evidence package
