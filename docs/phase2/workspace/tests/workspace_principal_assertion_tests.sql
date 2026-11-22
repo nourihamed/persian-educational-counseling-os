@@ -384,10 +384,21 @@ SET ROLE pg_read_all_data;
 SELECT iso_true('ISO-RLS-C13 pg_read_all_data remains subject to the verified-principal RLS fence',
   NOT EXISTS (SELECT student_id FROM students));
 RESET ROLE;
+GRANT USAGE ON SCHEMA public TO pg_write_all_data;
 SET ROLE pg_write_all_data;
-SELECT iso_true('ISO-RLS-C14 pg_write_all_data remains subject to the verified-principal RLS fence',
-  NOT EXISTS (SELECT student_id FROM students));
+DO $write_fence$
+BEGIN
+  BEGIN
+    INSERT INTO students(student_id,platform_student_id,display_name,grade_key,lifecycle_state)
+    VALUES (gen_random_uuid(),gen_random_uuid(),'RLS write-fence negative control','grade_10','active');
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS ISO-RLS-C14 pg_write_all_data cannot insert a student without a verified principal';
+    RETURN;
+  END;
+  RAISE EXCEPTION 'FAIL ISO-RLS-C14 pg_write_all_data inserted a student without a verified principal';
+END $write_fence$;
 RESET ROLE;
+REVOKE USAGE ON SCHEMA public FROM pg_write_all_data;
 
 SELECT iso_true('ISO-RLS-C15 every student-scoped table has the mandatory restrictive principal fence',
   NOT EXISTS (
