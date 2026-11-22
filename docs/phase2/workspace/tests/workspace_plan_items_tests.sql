@@ -281,7 +281,7 @@ SELECT pln_true('PLN-28b F-02: every version the runtime creates is normalized',
   (SELECT content_model FROM student_plan_versions WHERE plan_version_id='a4510000-0000-0000-0000-000000000011')='normalized');
 SELECT pln_err('PLN-29 a version''s content model and supersession are fixed at creation', $q$UPDATE student_plan_versions SET change_reason='rewritten' WHERE plan_version_id='a4510000-0000-0000-0000-000000000011'$q$,'23514','fixed at creation');
 -- H-02: direct INSERT cannot bypass the guarded publication transition, even for legacy rows.
-SET SESSION AUTHORIZATION :"writer_role";
+SET SESSION AUTHORIZATION :"runtime_role";
 BEGIN;
 SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
 SELECT pln_err('PLN-H2-01 a normalized PlanVersion cannot be inserted directly as published',
