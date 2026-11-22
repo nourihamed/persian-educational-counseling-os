@@ -579,9 +579,21 @@ RESET SESSION AUTHORIZATION;
 SET SESSION AUTHORIZATION :"writer_role";
 BEGIN;
 SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
+SELECT pln_ok('PLN-H4-00a test-only setup: item 6 planned -> in_progress',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000006','e4000000-0000-0000-0000-000000000001',1,'planned','in_progress','synthetic','student')$q$);
+COMMIT;
+BEGIN;
+SELECT test_establish('counselor','b4000000-0000-0000-0000-00000000000a');
+SELECT pln_ok('PLN-H4-00b test-only setup: item 6 in_progress -> deferred',
+  $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,deferral_reason,actor_kind,actor_membership_id)
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000006','e4000000-0000-0000-0000-000000000001',2,'in_progress','deferred','other','membership','b4000000-0000-0000-0000-00000000000a')$q$);
+COMMIT;
+BEGIN;
+SELECT test_establish('student','e4000000-0000-0000-0000-000000000001');
 SELECT pln_err('PLN-H4-01 student deferred -> completed is refused because this exact edge is unapproved',
   $q$INSERT INTO plan_item_status_events(event_id,plan_item_id,student_id,seq_no,from_status,to_status,reason_note,actor_kind)
-     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000001','e4000000-0000-0000-0000-000000000001',3,'deferred','completed','synthetic','student')$q$,
+     VALUES (gen_random_uuid(),'a4600000-0000-0000-0000-000000000006','e4000000-0000-0000-0000-000000000001',3,'deferred','completed','synthetic','student')$q$,
   '42501','not explicitly approved');
 COMMIT;
 BEGIN;
