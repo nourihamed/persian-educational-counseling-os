@@ -339,10 +339,13 @@ END $roles$;
 
 SELECT iso_true('ISO-RLS-C4 unknown column-grantee role is NOT exempt',
   NOT public.iso_rls_bypass(('ws_'||current_setting('app.workspace_key')||'_unclassified')::name));
+-- An additional permissive policy must not OR-widen the mandatory restrictive tenant fence.
+CREATE POLICY iso_test_widening_policy ON students AS PERMISSIVE FOR SELECT TO PUBLIC USING (true);
 SELECT format('SET ROLE %I', 'ws_'||current_setting('app.workspace_key')||'_unclassified') \gexec
 SELECT iso_true('ISO-RLS-C5 unknown role with only a column grant sees no student rows without a principal',
   NOT EXISTS (SELECT student_id FROM students));
 RESET ROLE;
+DROP POLICY iso_test_widening_policy ON students;
 
 SELECT iso_true('ISO-RLS-C6 audit detects unclassified direct/column/inherited privilege holders',
   EXISTS (
