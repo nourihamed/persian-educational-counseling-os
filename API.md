@@ -3,7 +3,7 @@
 
 > **CURRENT API/AUTHORIZATION OVERRIDE — 2026-11-22 (PR #12/#14, unmerged):** Workspace context must be derived from the authenticated principal and active membership, never trusted from caller-supplied Workspace/counselor IDs. Authorization must combine Workspace role, explicit permission, relationship, counselor assignment, resource scope and current Control Plane owner/generation. Cross-Workspace and nonexistent resources return indistinguishable 404; 403 is reserved for visible resources with forbidden actions. Transfer prerequisites remain cumulative: verified guardian/legal authority and consent, previous responsible counselor's own authenticated fee-receipt confirmation, and authorized destination acceptance; Platform Admin cannot initiate. Database drafts define claim admission, contact-change, governance/approval event, transfer Saga/freeze/inbox, activation/credit/capacity and isolation boundaries, but they are not HTTP endpoints and do not establish API authentication/authorization. No FastAPI routes, runtime auth service, worker or production verifier is implemented/approved. Parent and guardian operations remain fail-closed under Q-007; production identity verification remains disabled pending Platform Security. Phase 2 NOT READY; D-014 synthetic-only.
 
-Status: DRAFT — Phase 0 — Strategy only. No endpoints implemented yet.
+Status: Phase 2 authorization and service-boundary contract. No HTTP endpoints, FastAPI routers or runtime authorization services are implemented.
 
 ## 1. Style
 - FastAPI, Pydantic v2 schemas for request/response (never expose ORM models directly).
