@@ -80,7 +80,12 @@ BEGIN
                      r.key_kind, r.key_column);
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', r.table_name);
     EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY', r.table_name);
-    EXECUTE format('CREATE POLICY iso_counselor_scope ON public.%I AS PERMISSIVE FOR ALL TO PUBLIC '
+    -- A permissive baseline is intentionally unconditional; the restrictive policy below is the
+    -- mandatory tenant/principal fence. Any later permissive policy is OR-combined with this baseline
+    -- but remains AND-constrained by the restrictive fence, so it cannot widen access.
+    EXECUTE format('CREATE POLICY iso_base_access ON public.%I AS PERMISSIVE FOR ALL TO PUBLIC '
+                   'USING (true) WITH CHECK (true)', r.table_name);
+    EXECUTE format('CREATE POLICY iso_counselor_scope ON public.%I AS RESTRICTIVE FOR ALL TO PUBLIC '
                    'USING %s WITH CHECK %s', r.table_name, v_pred, v_pred);
   END LOOP;
 END $rls$;
