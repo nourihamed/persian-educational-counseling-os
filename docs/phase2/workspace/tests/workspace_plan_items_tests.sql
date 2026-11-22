@@ -280,6 +280,14 @@ SELECT pln_err('PLN-28 F-02: the RUNTIME cannot create a legacy_json version —
 SELECT pln_true('PLN-28b F-02: every version the runtime creates is normalized',
   (SELECT content_model FROM student_plan_versions WHERE plan_version_id='a4510000-0000-0000-0000-000000000011')='normalized');
 SELECT pln_err('PLN-29 a version''s content model and supersession are fixed at creation', $q$UPDATE student_plan_versions SET change_reason='rewritten' WHERE plan_version_id='a4510000-0000-0000-0000-000000000011'$q$,'23514','fixed at creation');
+SELECT pln_true('PLN-29b the published v1 and its six-plus items are unchanged by v2',
+  (SELECT count(*) FROM plan_items WHERE plan_version_id='a4510000-0000-0000-0000-000000000001') = 7);
+COMMIT;
+
+-- ======================================================================================================
+-- STATUS TRANSITIONS — append-only, ordered, attributable, with a reason
+-- ======================================================================================================
+RESET SESSION AUTHORIZATION;
 -- H-02: direct INSERT cannot bypass the guarded publication transition, even for legacy rows.
 SET SESSION AUTHORIZATION :"runtime_role";
 BEGIN;
@@ -300,14 +308,7 @@ SELECT pln_err('PLN-H2-03 a published PlanVersion is immutable, including non-co
   $q$UPDATE student_plan_versions SET published_at=clock_timestamp() WHERE plan_version_id='a4510000-0000-0000-0000-000000000001'$q$,
   '23514','published PlanVersion is immutable');
 
-SELECT pln_true('PLN-29b the published v1 and its six-plus items are unchanged by v2',
-  (SELECT count(*) FROM plan_items WHERE plan_version_id='a4510000-0000-0000-0000-000000000001') = 7);
-COMMIT;
 
--- ======================================================================================================
--- STATUS TRANSITIONS — append-only, ordered, attributable, with a reason
--- ======================================================================================================
-RESET SESSION AUTHORIZATION;
 -- Every transition below is made by the verified principal it names (WS-ISO-01 B) and follows the Product
 -- Owner's decisions: A2 (student: in_progress / completed / partially_completed; responsible counselor:
 -- deferred / skipped / cancelled), B1 (published versions only), D1 (completed / skipped / cancelled are
