@@ -5,6 +5,7 @@ on:
     branches:
       - docs/product-owner-decisions-consolidation-2026-11-07
       - supervisor/phase2-h01-h04-remediation-2026-11-22
+      - supervisor/phase2-final-reconciliation-2026-11-22
   pull_request:
     branches: [main]
     paths:
