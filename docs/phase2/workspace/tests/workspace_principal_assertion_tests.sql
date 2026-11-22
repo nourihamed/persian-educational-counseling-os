@@ -312,11 +312,15 @@ BEGIN
         OR has_table_privilege(r.oid,c.oid,'INSERT')
         OR has_table_privilege(r.oid,c.oid,'UPDATE')
         OR has_table_privilege(r.oid,c.oid,'DELETE')
+        OR has_table_privilege(r.oid,c.oid,'TRUNCATE')
+        OR has_table_privilege(r.oid,c.oid,'REFERENCES')
+        OR has_table_privilege(r.oid,c.oid,'TRIGGER')
         OR EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0
                     AND NOT a.attisdropped AND
                     (has_column_privilege(r.oid,c.oid,a.attname,'SELECT')
                      OR has_column_privilege(r.oid,c.oid,a.attname,'INSERT')
-                     OR has_column_privilege(r.oid,c.oid,a.attname,'UPDATE')))
+                     OR has_column_privilege(r.oid,c.oid,a.attname,'UPDATE')
+                     OR has_column_privilege(r.oid,c.oid,a.attname,'REFERENCES')))
    )
    AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_principal_required_roles)
    AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_rls_bypass_roles)
@@ -335,12 +339,16 @@ SELECT iso_true('ISO-RLS-C3 every effective holder of a student-scoped table/col
            OR has_table_privilege(r.oid, c.oid, 'INSERT')
            OR has_table_privilege(r.oid, c.oid, 'UPDATE')
            OR has_table_privilege(r.oid, c.oid, 'DELETE')
+           OR has_table_privilege(r.oid, c.oid, 'TRIGGER')
+           OR has_table_privilege(r.oid, c.oid, 'REFERENCES')
+           OR has_table_privilege(r.oid, c.oid, 'TRUNCATE')
            OR EXISTS (
              SELECT 1 FROM pg_catalog.pg_attribute a
               WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
                 AND (has_column_privilege(r.oid, c.oid, a.attname, 'SELECT')
                   OR has_column_privilege(r.oid, c.oid, a.attname, 'INSERT')
-                  OR has_column_privilege(r.oid, c.oid, a.attname, 'UPDATE'))
+                  OR has_column_privilege(r.oid, c.oid, a.attname, 'UPDATE')
+                  OR has_column_privilege(r.oid, c.oid, a.attname, 'REFERENCES'))
            )
      )
        AND r.rolname NOT IN (SELECT role_name::text FROM public.iso_principal_required_roles)
