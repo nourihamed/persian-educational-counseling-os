@@ -75,7 +75,7 @@ The status-event guard requires an exact (actor_kind, from_status, to_status) ro
 edge. Disposable test suites seed synthetic rows only to exercise guard mechanics; those rows are not
 production policy and are not PO approval.
 
-**Decision required before status execution is enabled:** approve an explicit matrix of:
+**Decision required before status execution is enabled:** review the Supervisor's unapproved proposal at [`WS_PLAN_01_TRANSITION_GRAPH_PROPOSAL.md`](WS_PLAN_01_TRANSITION_GRAPH_PROPOSAL.md), then approve it exactly, amend exact rows, or keep the rule table empty. The proposal is not policy. Approve an explicit matrix of:
 - actor kind (`student` or responsible `membership`);
 - source status;
 - destination status;
