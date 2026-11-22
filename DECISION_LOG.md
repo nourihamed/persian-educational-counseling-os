@@ -674,3 +674,20 @@ evidence of implementation quality and not Phase 2 gate approval. No D-number is
 - Both remain BLOCKING until independent review.
 - **Still OPEN:** PS-1..PS-4 (production verification); what a student principal may read; background-job
   identity; the manager permission vocabulary; and the transitions A2/D1 do not name.
+
+
+## 2026-11-22 — Product Owner approval: WS-PLAN-01 exact PlanItem transition graph
+
+**Authority:** Explicit Product Owner approval of Option A on 2026-11-22. The proposed graph is approved
+exactly as listed in `docs/phase2/WS_PLAN_01_TRANSITION_GRAPH_PROPOSAL.md`; the separate decision record is
+`docs/phase2/PO_DECISION_WS_PLAN_01_TRANSITIONS_2026-11-22.md`.
+
+- Exactly the 21 actor/from/to tuples in the approved matrix are allowed; every unlisted tuple remains denied.
+- Existing A2/B1/C1/D1/E1 constraints remain in force: student/responsible-counselor actor limits, no status
+  transitions on draft/unpublished PlanVersions, terminal `completed`/`skipped`/`cancelled`, legacy JSON
+  read-only, and mandatory deferral reason.
+- No production transition-write path is approved by this decision. Implementation, catalog immutability,
+  exhaustive positive/negative tests, race/replay/rollback tests, exact-commit CI and independent review remain
+  blocking.
+- This is not Phase 2 gate approval and does not authorize Phase 3 or real student data. D-014 remains
+  synthetic-only.
