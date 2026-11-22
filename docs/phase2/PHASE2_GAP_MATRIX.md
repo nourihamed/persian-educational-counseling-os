@@ -7,7 +7,7 @@
 | Item | SHA |
 |---|---|
 | PR #12 head | `78155b62f8830fe84c631100ec37bb236e5332e5` |
-| Supervisor remediation branch head | `e92bf8f6ea47d5c406e764447f6fd4ce9ac152cd` |
+| Supervisor remediation branch head at this baseline snapshot | `862be71dfc4261d4c90a6a03934c7e8d6b25371a` |
 | `main` | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6` |
 | PR #12 merge base | `ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114` |
 
