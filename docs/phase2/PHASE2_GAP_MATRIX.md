@@ -7,11 +7,13 @@
 | Item | SHA |
 |---|---|
 | PR #12 head | `78155b62f8830fe84c631100ec37bb236e5332e5` |
-| Supervisor remediation branch head | `e92bf8f6ea47d5c406e764447f6fd4ce9ac152cd` |
+| PR #14 / supervisor remediation head at review start | `7ea1918a3a42df1215ec4af77a0080915c3721e4` |
 | `main` | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6` |
 | PR #12 merge base | `ba5e9d8a9577e5b87e2fc27caaf0bfb07f929114` |
 
 **Gate:** Phase 2 NOT READY. Phase 3 not authorized. D-014: synthetic data only.
+
+**Evidence boundary:** PR #14 head at review start is `7ea1918a3a42df1215ec4af77a0080915c3721e4`. The H-01..H-04 SQL/test source tree is `cad2c0992bda3f1b37e274a14bc4e9c01d5d86cc`; Actions run 45030847506 passed on that exact source commit. Nine documentation-only commits followed that SQL/test tree, ending at the review-start head. No fresh Actions run was found for the exact PR #14 head; it remains required. This matrix is a review-start snapshot, not a claim that later commits were tested.
 
 **How to read it**
 - **Status:**
