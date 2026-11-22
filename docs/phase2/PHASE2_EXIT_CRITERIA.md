@@ -76,7 +76,7 @@ closure is the independent Supervisor's call. Nothing here claims Phase 2 is app
 | Student Credit ledger: append-only on UPDATE as well as DELETE | **DONE** (schema) | CRD-05 covered DELETE only. Now CRD-44/45. |
 | OQ-CRD-2 disposition of a reserved entitlement after its period ends | **DEFERRED** | Undecided. No expiry, extension, forfeiture or automatic return is implemented; `expired_reserved_entitlements` only shows the affected rows. Decision request in `UNRESOLVED_ITEM_REGISTER.md`. |
 | Workspace lifecycle and capacity archive/reactivation transitions | **DONE** (schema) | Archive with atomic capacity release and the reactivation command with counselor validation. ARC-01..17, CRD-01..31, WS-REACT-RACE-01, WS-CRD-LOCK-01/02. Suspension capacity treatment remains an open policy question. |
-| Final-capacity-slot concurrency test needs a fresh successful CI result | **PARTIAL** | The test runs green locally on every full run and in CI on `8abbbe3`. A fresh CI result is required on the final HEAD of this remediation batch and is **NOT VERIFIED by the implementation agent**. |
+| Final-capacity-slot concurrency test | **DONE (schema/test)** | `workspace_capacity_last_slot_race.sh`; WS-CAP-RACE-01 passed in fresh GitHub Actions run 45030847506 on PostgreSQL 16.16; exactly one enrollment wins the final active-student slot. |
 
 ### MEDIUM
 | Item | Status | Evidence / what remains |
