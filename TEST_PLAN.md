@@ -1291,7 +1291,7 @@ Historical "NOT RUN" statements in the sections above keep their date and scope.
 **Historical local result (2026-11-20):** fresh run, 25 steps, **1155 PASS, 0 FAIL, 0 OPEN, 1 SKIP** (WS-ROLE-17 mirror run). The newer exact-tree CI evidence is Actions 45030847506 above.
 
 **NOT RUN**
-- **Production verification:** PS-1..PS-5 undecided, and fail-closed by design; M-01 trusted test/production deployment separation still needs Platform Security evidence.
+- **Production verification:** PS-1..PS-8 undecided, and fail-closed by design; M-01 trusted test/production deployment separation still needs Platform Security evidence.
 - **Real API or worker paths:** none exist.
 - **A student read scope:** undecided, so denied.
 - **Background-job identity and manager permission vocabulary:** undecided, so no student rows are visible to those roles.
