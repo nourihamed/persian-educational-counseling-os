@@ -4,19 +4,21 @@
 
 **Gate:** Phase 2 **NOT READY**. Phase 3 **NOT AUTHORIZED**. D-014 synthetic-only remains mandatory; no real student/customer data is permitted.
 
-### GitHub baseline at start of this reconciliation
+### GitHub baseline at this snapshot (2026-11-22)
 
 | Item | Verified state |
 |---|---|
 | `main` | `5bb8e4ed07a7c770ecba7c506a1d2c278e36b6d6`; unchanged |
 | PR #12 | Open / Draft / Unmerged; head `78155b62f8830fe84c631100ec37bb236e5332e5` |
-| PR #14 | Open / Draft / Unmerged; stacked on PR #12; review-start head `7ea1918a3a42df1215ec4af77a0080915c3721e4` |
+| PR #14 | Open / Draft / Unmerged; current head `bcb2019383f662ef871ccf124584d37f6946cdc4`; PR description still has stale text saying the PO transition graph is open |
 | H-01..H-04 SQL/test source tree | `cad2c0992bda3f1b37e274a14bc4e9c01d5d86cc` |
-| Last successful Actions evidence for that SQL/test tree | Run [45030847506](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/45030847506), PostgreSQL 16.16; steps 15/16/17 and repository checks 30/31 passed |
-| Exact PR #14 head CI | NOT FOUND by the available commit-run lookup; fresh exact-head CI remains required |
-| Supervisor documentation reconciliation | Branch `supervisor/phase2-final-reconciliation-2026-11-22`, derived from PR #14 review-start head; unmerged and not part of PR #14 unless separately proposed |
+| Last successful Actions evidence cited for SQL/test tree | Run [45030847506](https://github.com/nourihamed/persian-educational-counseling-os/actions/runs/45030847506), PostgreSQL 16.16; steps 15/16/17 and repository checks 30/31 passed |
+| Exact PR #14 current-head CI | Not independently established for `bcb2019`; exact-head CI remains required |
+| Supervisor documentation branch | `supervisor/phase2-final-reconciliation-2026-11-22`; current snapshot commit `0b77b072d000826a83eac063673ab6bdd0b43458`; unmerged and not part of PR #14 |
+| Supervisor branch vs PR #14 | Diverged from common base `7ea1918`: Supervisor branch is 32 commits ahead and 25 behind PR #14; compare reports documentation-only file differences. No merge/rebase performed |
+| CI on current Supervisor head | No workflow run returned for exact SHA `0b77b07`; documentation-only branch changes are not CI evidence |
 
-The successful run is bound to `cad2c099`, not to the later PR #14 head. Nine documentation-only commits followed the SQL/test source tree. No SQL/test source was changed in those nine commits, but the exact final head still requires fresh CI.
+The successful Actions run is evidence for the SQL/test source tree at `cad2c099`, not proof of exact current PR #14 or Supervisor-head CI. The Supervisor branch has only documentation changes relative to PR #14's current head; it has not been merged or rebased.
 
 ### Independent review of H-01..H-04
 
@@ -36,8 +38,9 @@ These are draft-schema and synthetic-test findings only. They do not approve pro
 2. **Platform Security / Operations:** PS-1..PS-8 production verifier, cryptography, key management, authenticated private channel, freshness/revocation and trusted test-vs-production deployment separation (M-01). Production verification stays disabled.
 3. **Product Owner / qualified Iran legal review:** Q-007 guardian legal authority, age and permission matrix; parent/guardian API and transfer approvals remain fail-closed.
 4. **Product Owner / Platform Security / Operations:** Q-020 retention durations, hold/disposition authority and full restore-suppression scope.
-5. **Domain integrity:** G-15 Review fields and duplicate-generation invariant; G-16 DailyRoutine counters and G-17 progress/risk explainability need reconciliation against the approved MVP requirements. Do not invent uniqueness semantics, counters or risk formulas.
-6. **Migration:** G-26 Alembic/migration strategy, forward compatibility, rollback/roll-forward and lock/volume evidence. Existing SQL remains draft schema.
+5. **Domain integrity:** G-15 Review original-activity link, required fields and duplicate-generation semantics remain open ([proposal](docs/phase2/REVIEW_DOMAIN_G15_PROPOSAL.md)); G-16 numeric target/completed counter cardinality and units remain open ([proposal](docs/phase2/DAILY_ROUTINE_G16_PROPOSAL.md)); G-17 Phase 2 base-fact vs Phase 16 engine boundary remains open ([proposal](docs/phase2/PROGRESS_RISK_G17_BOUNDARY_PROPOSAL.md)).
+6. **Migration:** G-26 has a Supervisor acceptance contract ([contract](docs/phase2/MIGRATION_G26_ACCEPTANCE_CONTRACT.md)); implementation, upgrade/recovery evidence and lock/volume measurement remain absent. Existing SQL remains draft schema.
+7. **Policy consistency:** public ranking/result wording conflicts between current canonical docs and a prior PO direction; no individual public result should be implemented until the canonical decision is reconciled.
 7. **Documentation:** root ARCHITECTURE/DATABASE/API/ROADMAP current-state headers and PROJECT_STATE top snapshot have been reconciled on the unmerged Supervisor branch; TEST_PLAN, Changelog, decision crosswalk, PR descriptions and SUPERVISOR_REVIEW still require final exact-baseline verification.
 8. **PR integration:** G-32 requires Product Owner disposition of PR #8–#11 and explicit merge/order decision for PR #12/#14. No merge, rebase, force-push or main update has been performed.
 
