@@ -510,7 +510,7 @@ BEGIN
   -- runtime: read plan items, history and derived views; never write them
   EXECUTE format('REVOKE ALL ON TABLE plan_items, plan_item_status_events FROM %I', rt);
   EXECUTE format('GRANT SELECT ON TABLE plan_items, plan_item_status_events, plan_item_current_status, '
-                 'plan_version_rendered, plan_privileged_identities TO %I', rt);
+                 'plan_version_rendered, plan_privileged_identities, plan_item_transition_rules TO %I', rt);
   -- runtime: create plan versions WITHOUT being able to choose legacy_json
   EXECUTE format('REVOKE INSERT ON TABLE student_plan_versions FROM %I', rt);
   EXECUTE format('GRANT INSERT (plan_version_id, plan_id, version_no, source_program_version_id, input_snapshot, '
@@ -521,7 +521,7 @@ BEGIN
   -- synthetic writer: exactly what writing items and transitions needs, and nothing else
   EXECUTE format('GRANT SELECT, INSERT ON TABLE plan_items, plan_item_status_events TO %I', wr);
   EXECUTE format('GRANT SELECT ON TABLE plan_item_current_status, plan_version_rendered, plan_privileged_identities, '
-                 'student_plan_versions, student_plans, counselor_assignments, enrollments, workspace_memberships, '
+                 'plan_item_transition_rules, student_plan_versions, student_plans, counselor_assignments, enrollments, workspace_memberships, '
                  'membership_roles, students, topics, subtopics, activities, exams, reviews, assignments TO %I', wr);
 
   -- migration identity: insert plan versions (including legacy_json) and read what the guard reads
