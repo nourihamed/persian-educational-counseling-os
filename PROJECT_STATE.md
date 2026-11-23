@@ -1,4 +1,4 @@
-# CURRENT PROJECT STATE — PHASE 2 (Supervisor reconciliation 2026-11-23)
+# CURRENT PROJECT STATE — PHASE 2 (2026-11-22 baseline; G-16 addendum 2026-11-23)
 
 ## Authoritative current snapshot
 
