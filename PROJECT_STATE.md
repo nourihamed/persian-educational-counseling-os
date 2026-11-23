@@ -1,4 +1,4 @@
-# CURRENT PROJECT STATE — PHASE 2 (Supervisor reconciliation 2026-11-22)
+# CURRENT PROJECT STATE — PHASE 2 (Supervisor reconciliation 2026-11-23)
 
 ## Authoritative current snapshot
 
@@ -38,7 +38,7 @@ These are draft-schema and synthetic-test findings only. They do not approve pro
 2. **Platform Security / Operations:** PS-1..PS-8 production verifier, cryptography, key management, authenticated private channel, freshness/revocation and trusted test-vs-production deployment separation (M-01). Production verification stays disabled.
 3. **Product Owner / qualified Iran legal review:** Q-007 guardian legal authority, age and permission matrix; parent/guardian API and transfer approvals remain fail-closed.
 4. **Product Owner / Platform Security / Operations:** Q-020 retention durations, hold/disposition authority and full restore-suppression scope.
-5. **Domain integrity:** G-15 Review original-activity link, required fields and duplicate-generation semantics remain open ([proposal](docs/phase2/REVIEW_DOMAIN_G15_PROPOSAL.md)); G-16 numeric target/completed counter cardinality and units remain open ([proposal](docs/phase2/DAILY_ROUTINE_G16_PROPOSAL.md)); G-17 Phase 2 base-fact vs Phase 16 engine boundary remains open ([proposal](docs/phase2/PROGRESS_RISK_G17_BOUNDARY_PROPOSAL.md)).
+5. **Domain integrity:** G-15 Review original-activity link, required fields and duplicate-generation semantics remain open ([proposal](docs/phase2/REVIEW_DOMAIN_G15_PROPOSAL.md)); G-16 Product Owner semantics are recorded and closed for the choices explicitly listed in the [decision record](docs/phase2/PO_DECISION_G16_DAILY_ROUTINE_COUNTERS_2026-11-23.md), with a [schema/acceptance contract](docs/phase2/DAILY_ROUTINE_G16_PROPOSAL.md). G-16 normalized schema, actor enforcement, immutable event ledger, idempotency/concurrency, Platform configuration, timezone edge semantics, remaining numeric/event details and tests are **NOT IMPLEMENTED / BLOCKING**; no G-16 acceptance is claimed. G-17 Phase 2 base-fact vs Phase 16 engine boundary remains open ([proposal](docs/phase2/PROGRESS_RISK_G17_BOUNDARY_PROPOSAL.md)).
 6. **Migration:** G-26 has a Supervisor acceptance contract ([contract](docs/phase2/MIGRATION_G26_ACCEPTANCE_CONTRACT.md)); implementation, upgrade/recovery evidence and lock/volume measurement remain absent. Existing SQL remains draft schema.
 7. **Policy consistency:** public ranking/result wording conflicts between current canonical docs and a prior PO direction; no individual public result should be implemented until the canonical decision is reconciled.
 8. **Documentation:** root ARCHITECTURE/DATABASE/API/ROADMAP current-state headers and PROJECT_STATE top snapshot have been reconciled on the unmerged Supervisor branch; TEST_PLAN, Changelog, decision crosswalk, PR descriptions and SUPERVISOR_REVIEW still require final exact-baseline verification.
