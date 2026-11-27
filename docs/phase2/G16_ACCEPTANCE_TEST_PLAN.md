@@ -1,7 +1,8 @@
 # G-16 — DailyRoutine Counters: Acceptance and Regression Test Plan
 
-**Status:** PLAN ONLY — no test is written, run or passing. READY FOR INDEPENDENT SUPERVISOR DESIGN REVIEW — **NOT APPROVED**
-**Base:** `supervisor/phase2-final-reconciliation-2026-11-22` @ `64fc9b19d97dd460b9a10a7ef964c5568bc8a226`
+**Status:** PLAN ONLY — no test is written, run or passing. READY FOR ANOTHER INDEPENDENT SUPERVISOR REVIEW — **NOT APPROVED**
+**Revision:** 2 — adds the authority-race, predicate and lock-order groups required by Supervisor finding **H-01** (DRC-PRD, DRC-RAUTH, DRC-LCK), plus PLT-09..11, AUT-25..26 and ISO-13..15; ISO-11 changes from blocked to a fail-closed assertion.
+**Base (revision 1):** branch `design/g16-daily-routine-counters-2026-11-24` @ `49c5b48207c34d77ccd7d221eb270e7ccb6b997c`, parent `64fc9b19d97dd460b9a10a7ef964c5568bc8a226`
 **Companions:** `G16_TECHNICAL_DESIGN.md`, `G16_UNRESOLVED_DECISIONS.md`
 **Constraint:** D-014 synthetic data only. No production key. No real student data.
 
@@ -19,6 +20,7 @@ Tags: **[APPROVED]** rule IDs `A-xx`/`N-xx` from the PO decision record. **[PROP
 6. Evidence kinds are never merged: local run ≠ GitHub Actions ≠ design-only contract. CI evidence is tied to an **exact commit SHA**; documentation commits after that SHA are not covered.
 7. Fixtures are synthetic and marked. No plaintext contact numbers, credentials or real names. The synthetic principal key is test-only and derived from a public string.
 8. Absence of a run is not success. A planned ID with no executed assertion is **NOT RUN**, never "pass".
+9. Authority races (DRC-RAUTH) use the **existing command as the revoker wherever one exists** (governance suspend / end / role revoke, archive, freeze, activation, reactivation). Where none exists in the repository (ending or changing a single assignment, changing responsibility) a fixture performs the row `UPDATE`; such a test measures the **lock**, not a command, and its row says so.
 
 ## 2. Environment
 
@@ -65,7 +67,7 @@ Columns: **ID · Scenario · Expected · Source/Decision**. "Control" means a me
 | UNT-07 | unit `status='retired'` insert | rejected unless U-06 approves | **[BLOCKED: U-06]** |
 | UNT-08 | unit row lacking `scale` or bounds | rejected at projection insert | U-01 |
 
-### 3.3 DRC-PLT — Platform-only mutation (8)
+### 3.3 DRC-PLT — Platform-only mutation and write-disabled projections (11)
 
 | ID | Scenario | Expected | Source |
 |---|---|---|---|
@@ -77,8 +79,11 @@ Columns: **ID · Scenario · Expected · Source/Decision**. "Control" means a me
 | PLT-06 | config with threshold > window, non-positive window, negative skew | rejected | U-07 |
 | PLT-07 | projection tables contain no student data (no `student_id` column) | pass | design §17 |
 | PLT-08 | maker-checker on unit publish and negative-enable | enforced | **[BLOCKED: X-02]** |
+| PLT-09 | `platform_projection_config.mode = 'disabled'` (default): INSERT/UPDATE/DELETE/TRUNCATE on every projection table, by every role including owner functions and the test projector | refused | X-03; design §12.6 |
+| PLT-10 | mode `synthetic_test` with a `source_ref` that does not match `^synthetic-test-` | refused by CHECK — a non-test row cannot be stored | X-03; design §12.6 |
+| PLT-11 | catalog: no production projector role exists; no application role holds DML on any projection; changing the mode requires a superuser | pass | X-03; design §12.6 |
 
-### 3.4 DRC-AUT — actor authorization (24)
+### 3.4 DRC-AUT — actor authorization (26)
 
 | ID | Scenario | Expected | Source |
 |---|---|---|---|
@@ -106,6 +111,8 @@ Columns: **ID · Scenario · Expected · Source/Decision**. "Control" means a me
 | AUT-22 | direct INSERT on the ledger by runtime/worker/exporter | denied | N-03 |
 | AUT-23 | EXECUTE on command functions held only by the synthetic writer identity; none by PUBLIC or runtime | pass | design §8 |
 | AUT-24 | counter creation/revision/archive by student | denied | **[BLOCKED: U-10]** (expected per P-A) |
+| AUT-25 | assigned-but-**non-responsible** counselor: may read the counter (WS-ISO-01 read predicate) but **append progress** is denied | read allowed, write denied | A-04; design §8.5 |
+| AUT-26 | assigned-but-**non-responsible** counselor: **append correction** denied for any event of the student, including an event authored by a counselor who was responsible at the time | denied | A-06, I-1; design §8.5 |
 
 ### 3.5 DRC-LED — immutable ledger (12)
 
@@ -287,12 +294,12 @@ Columns: **ID · Scenario · Expected · Source/Decision**. "Control" means a me
 | RACE-08 | same key, same payload, two sessions | exactly one event | remove advisory lock → duplicate/error observed |
 | RACE-09 | same key, different payload / counter, two sessions | one wins, other rejected, deterministic | — |
 | RACE-10 | revision (target) vs append | serialized | remove lock → fails |
-| RACE-11 | assignment end vs append | event valid iff it serialized first | remove `FOR SHARE` → fails |
+| RACE-11 | assignment end vs append (smoke only; the full matrix is DRC-RAUTH-04/05) | event valid iff it serialized first | remove `FOR SHARE` → fails |
 | RACE-12 | transfer freeze vs append, **both** FK and non-FK-path modes | no event after the barrier watermark | remove barrier lock → `nofk` mode fails |
 | RACE-13 | two sessions racing one principal nonce | one succeeds | existing |
 | RACE-14 | randomized interleavings of RACE-01..11 pairs | no `deadlock_detected`; lock order holds | lock-order inversion fixture → deadlock observed |
 
-### 3.16 DRC-ISO — tenant and counselor isolation (12)
+### 3.16 DRC-ISO — tenant, counselor and student-read isolation (15)
 
 | ID | Scenario | Expected | Source |
 |---|---|---|---|
@@ -306,8 +313,11 @@ Columns: **ID · Scenario · Expected · Source/Decision**. "Control" means a me
 | ISO-08 | `pg_read_all_data`/`pg_write_all_data` remain RLS-bound | pass | H-01 |
 | ISO-09 | command error text never contains key values (FK `DETAIL`) | pass | R-07 |
 | ISO-10 | notification/report/background-job paths for counters | none exist (asserted) | G-19, G-28 |
-| ISO-11 | student read scope for counters | pass | **[BLOCKED: WS-ISO-01 student read scope]** |
+| ISO-11 | a **student principal** reads no row of the three G-16 tables (direct, through the views, through correction links); every read returns the uniform not-found | no rows — **fail-closed until WS-ISO-01 closes student read scope** | WS-ISO-01; design §8.6 |
 | ISO-12 | existing ISO suites unchanged | pass | regression |
+| ISO-13 | catalog: G-16 adds **no** student SELECT policy; the generator's restrictive fence is the only policy on the three tables | pass | design §17.3 |
+| ISO-14 | a student's append response contains only `outcome` and `event_id` — no counter state, totals, definitions or other events | pass | design §8.6, §18.0 |
+| ISO-15 | the new NOLOGIN owner roles are registered in `iso_rls_bypass_roles`; ISO-RLS-C3 classification passes; an unregistered owner fails it **by name** | pass / named failure | design §17.1 |
 
 ### 3.17 DRC-FRZ — transfer fence (6)
 
@@ -359,7 +369,71 @@ Columns: **ID · Scenario · Expected · Source/Decision**. "Control" means a me
 | REG-09 | every **[BLOCKED]** test has an executed expectation for the PO-chosen option (none left as placeholder) | pass | gate |
 | REG-10 | negative controls recorded for every guard (table of control → failing assertion) | complete | evidence rule 1 |
 
-**Planned IDs:** SCH 14 · UNT 8 · PLT 8 · AUT 24 · LED 12 · IDM 14 · NUM 12 · TIM 14 · CFG 8 · TZ 12 · NEG 10 · COR 14 · ARC 10 · AGG 10 · RACE 14 · ISO 12 · FRZ 6 · PRV 10 · RET 4 · REG 10 = **226**. These are planning IDs; the executed suite will report its own counts and any difference is recorded.
+### 3.21 DRC-PRD — the responsible-counselor predicate, conjunct by conjunct (14)
+
+Each row is evaluated with every **other** conjunct satisfied, so a failure isolates one condition. `m` = counselor membership, `s` = student.
+
+| ID | Scenario | Expected | Source |
+|---|---|---|---|
+| PRD-01 | active member + `counselor` role + active, accepted, responsible assignment of an `active` enrollment + `active` student | authorized (progress and correction) | A-04, A-06; design §8.2 |
+| PRD-02 | membership status `invited`, `suspended`, `ended` (each separately) | denied | design §8.2 P-RC(1) |
+| PRD-03 | no `(m,'counselor')` role row | denied | P-RC(2) |
+| PRD-04 | only a different role key (a manager role); no counselor role | denied — no manager path | P-RC(2); counselor-scope draft |
+| PRD-05 | assignment `state = 'ended'` | denied | P-RC(3) |
+| PRD-06 | assignment `accepted_at IS NULL` | denied | P-RC(3) |
+| PRD-07 | assignment `is_responsible = false`: `counselor_may_access_student` is true, the write is denied, the read is allowed | write denied | A-04; P-RC(3) |
+| PRD-08 | the responsible assignment's enrollment belongs to **another** student | denied | P-RC(3) |
+| PRD-09 | responsible for student A, acting on student B's counter | denied (uniform not-found) | N-01 |
+| PRD-10 | two assignment rows for the same counselor and student: an older `ended` one and a current `active` responsible one | authorized through the active row only; the ended row alone is denied | design §8.3 step 3 |
+| PRD-11 | enrollment `state` in `requested`, `awaiting_consent`, `suspended`, `ended`, `archived` | per the chosen option; fallback E-B: **denied** | **[BLOCKED: X-05]** |
+| PRD-12 | student `lifecycle_state = 'archived'` (counselor actor) | denied under the fallback | **[BLOCKED: X-05]** |
+| PRD-13 | catalog: the G-16 commands call `counselor_is_responsible_for` and contain no second copy of the predicate; the function body still carries the `is_responsible` clause (CRD-47-style tripwire) | pass | design §8.0 |
+| PRD-14 | student actor: principal student = counter's student and active → authorized; any other student principal → uniform not-found | pass | P-STU |
+
+### 3.22 DRC-RAUTH — authority racing with append (14)
+
+**Harness.** Two sessions, a fresh database per ID. Session **A** establishes a principal and calls the command; because the command function returns before `COMMIT`, session A can hold its transaction open with its locks. Session **R** performs the authority-removing operation. The driver sends explicit go-signals and **observes** the second session blocked in `pg_stat_activity` as a *diagnostic only*; the evidence is the outcome assertions (event present or absent, `event_seq`, idempotency key stored or not, revoker applied or not).
+
+**Four commit orders per execution:**
+
+| Order | Sequence | Expected |
+|---|---|---|
+| **A-commit** | A runs the command and holds; R starts and blocks; A commits; R proceeds | event retained, attributed to the actor; the revoker applied **after** |
+| **A-rollback** | A runs and holds; R blocks; A rolls back; R proceeds | no event, no `event_seq`, no key; revoker applied |
+| **R-commit** | R performs the change and holds; A runs the command and blocks; R commits; A resumes | A **denied** (uniform not-found); no event, no `event_seq`, no key |
+| **R-rollback** | R holds; A blocks; R rolls back; A resumes | event created; authority unchanged |
+
+**Each ID below runs for both `AppendProgressEvent` and `AppendCorrectionEvent` and for all four orders: 8 executions per ID.**
+
+| ID | Authority-removing change (revoker) | Revoker is | Lock under test | Control |
+|---|---|---|---|---|
+| RAUTH-01 | membership **suspended** | existing `append_workspace_governance_event`, `membership_suspended` | K3, K4 | remove K3 → R-commit order accepts a stale event |
+| RAUTH-02 | membership **terminated** | existing governance, `membership_ended` | K3, K4 | remove K3 → fails |
+| RAUTH-03 | counselor **role revoked** | existing governance, `role_revoked` | K4 (K3 via the aggregate) | remove K4 → fails |
+| RAUTH-04 | a **single assignment ended** | **fixture** `UPDATE` — no command exists | K2 | remove K2 → fails |
+| RAUTH-05 | **responsibility** demoted and promoted to another counselor | **fixture** two `UPDATE`s — no command exists | K2 | remove K2 → fails |
+| RAUTH-06 | **student archived** (ends all assignments, archives the student) | existing `archive_student_enrollment` | K1 (and K2 through archive's ordering) | remove K1 → fails |
+| RAUTH-07 | **transfer freeze**, and separately the permanent fence | existing `freeze_student_for_transfer` / fence | K1 | remove K1 → `nofk` mode fails |
+| RAUTH-08 | revocation commits **after** `establish_principal` but **before** the command, inside session A's one transaction | existing governance | all of K1–K4 plus the post-lock evaluation | evaluate **before** locking → fails |
+| RAUTH-09 | two counselors: responsibility moves A → B while both append | fixture `UPDATE`s | K2 | remove K2 → both or neither accepted |
+| RAUTH-10 | enrollment lifecycle command vs append (activation, archive, reactivation) | existing commands | K1 anchor (R-ORD-1) | **[BLOCKED: X-05]** expectation per chosen option |
+| RAUTH-11 | the command invoked under `REPEATABLE READ` and `SERIALIZABLE` | n/a | isolation guard | `READ COMMITTED` accepted; others **refused** |
+| RAUTH-12 | **negative controls** for RAUTH-01..09: remove each of K1, K2, K3, K4 in turn, and swap "evaluate" before "lock" | n/a | all | the named test(s) above must fail; a control that still passes is invalid |
+| RAUTH-13 | a revoker holds a conflicting lock indefinitely | any | `lock_timeout` | A fails **retryably** after the configured timeout and leaves no row, `event_seq` or key — **value: T-09, not chosen here** |
+| RAUTH-14 | randomized interleavings of the RAUTH-01..09 operations with appends, including freeze, archive, the activation wrapper and governance | existing commands | whole order K0–K7 | **no `deadlock_detected` involving a G-16 transaction**; pre-existing interleavings between existing commands (OBS-1) are run separately as **measurements**, reported, and not asserted |
+
+### 3.23 DRC-LCK — lock-order conformance (6)
+
+| ID | Scenario | Expected | Source |
+|---|---|---|---|
+| LCK-01 | every locking statement in each G-16 function carries a `-- LOCK Kn` marker; markers are non-decreasing within each function body | pass | design §10.4 |
+| LCK-02 | R-ORD-3: no function requests K1 or K2 after K3 or K4; and the non-G-16 function that holds K3/K4 (governance) requests none of K1, K2, K5–K7 (static check over its body) | pass | design §10.4 |
+| LCK-03 | R-ORD-4: no G-16 function requests K1–K5 after K6 or K7 | pass | design §10.4 |
+| LCK-04 | the isolation-level guard is the first statement of every command; in event commands the K0 advisory lock precedes every row lock, and the authority-evaluation statement follows the last authority lock (K4) | pass | design §8.3, §10.2 |
+| LCK-05 | the ledger and definition guard triggers take **no** lock and refuse any insert lacking the transaction-scoped command marker (§10.7) | pass | design §10.7 |
+| LCK-06 | **drift tripwire:** a pinned fingerprint of the observed lock sequences of `freeze_student_for_transfer`, `archive_student_enrollment`, `activate_student_enrollment` (wrapper and inner), `reactivate_student_enrollment` and `append_workspace_governance_event`; a change in any of them fails the test and requires a recorded re-review of design §10.3 | pass | design §10.3 |
+
+**Planned IDs:** SCH 14 · UNT 8 · PLT 11 · AUT 26 · LED 12 · IDM 14 · NUM 12 · TIM 14 · CFG 8 · TZ 12 · NEG 10 · COR 14 · ARC 10 · AGG 10 · RACE 14 · ISO 15 · FRZ 6 · PRV 10 · RET 4 · REG 10 · PRD 14 · RAUTH 14 · LCK 6 = **268** (revision 1: 226; revision 2 adds 42: PRD 14, RAUTH 14, LCK 6, PLT 3, AUT 2, ISO 3). RAUTH-01..09 each run 8 executions (2 commands × 4 commit orders), so the executed assertion count will exceed the ID count. These are planning IDs; the executed suite will report its own counts and any difference is recorded.
 
 ## 4. API-phase contract tests (not Phase 2)
 
@@ -387,6 +461,8 @@ When an API exists (G-27): schema validation; decimals only as strings; RFC 3339
 
 Every **[BLOCKED]** row must be resolved before implementation review. For each, the expected result under every candidate option is given in `G16_UNRESOLVED_DECISIONS.md`; the test is written against the **PO-chosen** option only, and REG-09 verifies none remains a placeholder. No test is allowed to encode a guessed option.
 
+Revision 2 adds two blocked groups of expectations that depend on **X-05**: PRD-11, PRD-12 and RAUTH-10. Their fallback expectation (E-B: deny) is stated, but a test is not to be written against it as if approved.
+
 ## 7. Acceptance criteria for G-16 (all required)
 
 1. Every non-blocked test passes locally and in GitHub Actions at the **exact reviewed head**, run id recorded.
@@ -399,4 +475,4 @@ Every **[BLOCKED]** row must be resolved before implementation review. For each,
 
 No test exists or has run. This plan does not approve G-16, Phase 2, Phase 3, a production write path, a production key or real-data use. D-014 remains in force.
 
-**Final status: READY FOR INDEPENDENT SUPERVISOR DESIGN REVIEW — NOT APPROVED.**
+**Final status: READY FOR ANOTHER INDEPENDENT SUPERVISOR REVIEW — NOT APPROVED.** No test has been written or run, and no CI run is claimed.

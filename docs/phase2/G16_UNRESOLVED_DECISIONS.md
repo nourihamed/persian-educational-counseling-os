@@ -1,7 +1,8 @@
 # G-16 — Unresolved Decisions: Options, Consequences, Recommendations
 
-**Status:** DESIGN INPUT — recommendations are **not** decisions. READY FOR INDEPENDENT SUPERVISOR DESIGN REVIEW — **NOT APPROVED**
-**Base:** `supervisor/phase2-final-reconciliation-2026-11-22` @ `64fc9b19d97dd460b9a10a7ef964c5568bc8a226`
+**Status:** DESIGN INPUT — recommendations are **not** decisions. READY FOR ANOTHER INDEPENDENT SUPERVISOR REVIEW — **NOT APPROVED**
+**Revision:** 2 — changed only to clarify the authorization dependency raised by Supervisor finding **H-01** (new open item **X-05**, parameter **T-09**, and fail-closed notes on X-02/X-03). No other decision item was changed.
+**Base (revision 1):** branch `design/g16-daily-routine-counters-2026-11-24` @ `49c5b48207c34d77ccd7d221eb270e7ccb6b997c`, parent `64fc9b19d97dd460b9a10a7ef964c5568bc8a226` on `supervisor/phase2-final-reconciliation-2026-11-22`
 **Companions:** `G16_TECHNICAL_DESIGN.md`, `G16_ACCEPTANCE_TEST_PLAN.md`
 **Rule applied:** no numeric value, unit of measure, default, or product semantic is invented here. Where a safe fallback is needed it is the **strictest fail-closed behavior**, and it is labelled a fallback, not an approved default.
 
@@ -11,7 +12,7 @@ Tags: **[APPROVED]** = PO decision record `PO_DECISION_G16_DAILY_ROUTINE_COUNTER
 
 ## 1. Index
 
-The eleven requested items are **U-01 … U-11**. While analysing them, four further gaps surfaced that the eleven cannot be answered without; they are **X-01 … X-04**. They are listed first where they gate other items.
+The eleven requested items are **U-01 … U-11**. While analysing them, five further gaps surfaced that the eleven cannot be answered without; they are **X-01 … X-05** (X-05 was added in revision 2 for Supervisor finding H-01). They are listed first where they gate other items.
 
 | ID | Topic | PO approval needed? | Recommendation (short) | Blocks |
 |---|---|---|---|---|
@@ -30,6 +31,7 @@ The eleven requested items are **U-01 … U-11**. While analysing them, four fur
 | **X-02** | Platform governance workflow for units and per-counter negative policy | **Yes** | Maker-checker + signed projection; forbid prohibiting policy while a bucket is negative | PLT tests |
 | **X-03** | Distribution of Platform reference data into Workspace databases | No (Platform Security / architecture); PO informed | Dedicated verified, versioned, one-way projection channel | everything (fail-closed until present) |
 | **X-04** | Workspace timezone storage/authority; `daily_routines.timezone_name`; routine lifecycle vs counters | **Yes** (authority, default) | Append-only Workspace tz versions; leave routine column untouched; refuse events on inactive routine | TZ, AUT tests |
+| **X-05** | Enrollment-state / student-lifecycle conjuncts of **write** authority (responsible counselor and student) | **Yes** (shared with WS-ISO-01) | Provisional fail-closed fallback: writes require `students.lifecycle_state='active'` and an `active` enrollment; adopt whatever WS-ISO-01 decides | PRD, AUT tests |
 
 ### 1.1 Recommended decision order
 
@@ -101,7 +103,7 @@ Recommendation **T1**: keeps "prohibited ⇒ no negative bucket" a universal inv
 
 **Recommendation.** **D** for approval/audit shape (Platform Security to define signing); **T1** for tightening.
 **PO approval required: Yes** (who may change, whether maker-checker applies, tightening behavior).
-**Fail-closed until decided:** projections writable only by the projector; no publish path exists in the Workspace API; no policy rows ⇒ prohibited.
+**Fail-closed until decided:** projections are **not writable in production** (`platform_projection_config.mode = 'disabled'`, no projector identity, design §12.6); no publish path exists in the Workspace API; no policy rows ⇒ prohibited.
 **Tests affected:** PLT, NEG, RACE (policy vs insert).
 
 ---
@@ -125,7 +127,7 @@ Recommendation **T1**: keeps "prohibited ⇒ no negative bucket" a universal inv
 
 **Recommendation.** **A.**
 **PO approval required: No** (Platform Security + Supervisor architecture decision; PO informed).
-**Fail-closed until decided:** projections stay empty ⇒ every event command is refused (`config_unavailable` / `unit_unavailable`).
+**Fail-closed until decided:** projections stay empty ⇒ every event command is refused (`config_unavailable` / `unit_unavailable`). Writes to the projections are **structurally refused** until this channel is approved **and verified**: mode `'disabled'`, a synthetic-only `source_ref` constraint, and no production projector role (design §12.6). Enabling any non-synthetic distribution is a reviewed schema change, not a flag.
 **Tests affected:** PLT, CFG (all event tests need synthetic projection fixtures; the projector is a test-only identity).
 
 ---
@@ -152,6 +154,32 @@ Recommendation **T1**: keeps "prohibited ⇒ no negative bucket" a universal inv
 **PO approval required: Yes** (authority, whether `Asia/Tehran` is the initial value, inactive-routine behavior).
 **Fail-closed until decided:** no timezone version ⇒ `timezone_unavailable`; inactive routine ⇒ `routine_inactive`.
 **Tests affected:** TZ, AUT, TIM.
+
+### X-05 — Enrollment-state and student-lifecycle conjuncts of write authority (added in revision 2; Supervisor finding H-01)
+
+**What is unresolved.** The canonical responsible-counselor predicate, `counselor_is_responsible_for(membership, student)` in `workspace_principal_assertion_draft.sql`, tests: member `active`; role `counselor`; an assignment that is `active`, accepted and `is_responsible`; and that the assignment's enrollment belongs to the student. It does **not** test the enrollment's `state`, the student's `lifecycle_state` or `ownership_generation`. The counselor-scope draft records, under WS-ISO-01, that whether a suspended or awaiting-consent **enrollment** narrows a counselor's access is **undecided**. Supervisor finding H-01 asked the G-16 predicate to cover "exact student/enrollment/Workspace ownership". G-16 therefore needs an answer, for **writes**, to:
+
+1. may a responsible counselor write while the enrollment is `requested`, `awaiting_consent`, `suspended`, `ended` or `archived`?
+2. may a student write while their enrollment is not `active`?
+3. does the answer to (1) differ from the WS-ISO-01 answer for **reads**?
+
+**Options**
+
+| | Description |
+|---|---|
+| E-A | **Canonical only.** Write authority is exactly the assignment-based predicate; no enrollment or student-lifecycle test. |
+| E-B | Writes by **both** actor kinds require `students.lifecycle_state = 'active'` **and** an `active` enrollment (reads unchanged). |
+| E-C | Counselor writes require an `active` enrollment; student writes depend on the student's lifecycle only. |
+| E-D | A per-state matrix (for example, allow a counselor to prepare counters while `awaiting_consent`) — requires the PO to supply the matrix; nothing is invented here. |
+
+**Consequences.** E-A is the simplest and matches the canonical read rule, but lets data be written for a student whose enrollment is suspended. E-B is the strictest: a student with a suspended enrollment cannot record progress, and a counselor cannot prepare counters before activation. E-C is asymmetrical and needs a stated reason. E-D is the only option that can express nuance, at the price of a PO-authored matrix.
+
+**Security / integrity.** Every option that reads `enrollments.state` depends on the ordering obligation **R-ORD-1** (design §10.4): G-16 deliberately takes **no** enrollment-row lock, and the `students` row is the anchor that serializes the enrollment lifecycle commands that exist today (activation, archive, reactivation, freeze all lock it exclusively). E-A removes that dependency. None of the options changes the transfer fence, which already stops writes after a freeze.
+
+**Recommendation.** Keep **E-B as a provisional, fail-closed fallback** until the PO decides, and adopt whatever WS-ISO-01 ultimately decides for counselor access rather than letting G-16 diverge from it. This is a recommendation and a fallback, **not** an approved rule; it removes no authority that A-04 grants, because A-04 does not mention enrollment state.
+**PO approval required: Yes** (shared with the WS-ISO-01 enrollment-narrowing question).
+**Fail-closed until decided:** E-B.
+**Tests affected:** PRD-11, PRD-12, AUT-24..26 (expected values are conditional on the chosen option).
 
 ---
 
@@ -465,16 +493,26 @@ Not product decisions, but values that need setting in implementation review. **
 | T-06 | maximum events per command batch / per counter growth guard and command rate limits |
 | T-07 | `display_name` length |
 | T-08 | maximum tolerated staleness of Platform projections (Platform Security) |
+| T-09 | `lock_timeout` applied to every G-16 command (design §8.7); a blocked command must fail retryably and leave no row, `event_seq` or key |
 
 ---
 
 ## 6. Summary for the Product Owner
 
-**Yes — decision requested (12):** X-01, U-01 (shape), U-02, U-03, U-04, U-06, U-07, U-08, U-09, U-10, X-02, X-04, plus confirmation of interpretation notes I-1 … I-7.
+**Yes — decision requested (13):** X-01, U-01 (shape), U-02, U-03, U-04, U-06, U-07, U-08, U-09, U-10, X-02, X-04, X-05, plus confirmation of interpretation notes I-1 … I-7.
 **Clarification only (1):** U-05 (I-2).
 **No PO decision (2):** U-11 (unless eventual consistency becomes user-visible as authoritative), X-03 (Platform Security / architecture).
 
-If the PO wants the smallest first slice, the minimum set that unblocks a coherent v1 is **X-01, U-03, U-04, U-07, U-08, U-09, X-04** (what a value is, how it is corrected, when an entry is valid); the rest can follow with the fallbacks above.
+If the PO wants the smallest first slice, the minimum set that unblocks a coherent v1 is **X-01, U-03, U-04, U-07, U-08, U-09, X-04** (what a value is, how it is corrected, when an entry is valid); the rest can follow with the fallbacks above. X-05 does not block that slice because it has a fail-closed fallback (E-B).
+
+### 6.1 Authorization dependencies that are **not** G-16 decisions
+
+| Dependency | Owner | G-16 behavior until resolved |
+|---|---|---|
+| WS-ISO-01 **student read scope** | WS-ISO-01 / Product Owner | **fail-closed:** student principals read nothing; G-16 adds no student policy (design §8.6) |
+| PS-1..PS-8 production principal verifier, keys, channel | Platform Security | commands runnable only in the synthetic harness |
+| Alignment of existing commands with lock-order obligations R-ORD-1..4 and the student/enrollment ordering question (OBS-1) | Supervisor | G-16's lock-order argument (design §10.3) holds only if those obligations hold; not changed here |
+| X-03 distribution channel | Platform Security / Supervisor | Platform projections **unusable for writes**; every event command fails closed |
 
 ---
 
@@ -483,4 +521,5 @@ If the PO wants the smallest first slice, the minimum set that unblocks a cohere
 * No decision is made here; no numeric default, unit of measure or product semantic is invented.
 * Where a fallback is stated, it is the strictest fail-closed behavior, not an approved default.
 * No file other than the three G-16 design documents is produced; the unresolved-item register and `PHASE2_OPEN_DECISIONS.md` are **not** modified by this document.
-* Final status: **READY FOR INDEPENDENT SUPERVISOR DESIGN REVIEW — NOT APPROVED.**
+* Revision 2 adds **X-05** and **T-09** as open items and decides nothing; U-03, U-04, U-07, U-08, U-09, U-10, X-01, X-02 and X-04 are unchanged.
+* Final status: **READY FOR ANOTHER INDEPENDENT SUPERVISOR REVIEW — NOT APPROVED.**
